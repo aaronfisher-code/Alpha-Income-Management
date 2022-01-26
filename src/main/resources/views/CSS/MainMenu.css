@@ -1,0 +1,33 @@
+.sideBarButton {
+    -fx-font-family: "Montserrat Medium";
+    -fx-font-size: 15px;
+    -fx-font-smoothing-type: gray;
+}
+
+.logOutButton {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 12px;
+}
+
+.animated-option-button {
+    -fx-pref-width:50px;
+    -fx-background-color:#0F60FF;
+    -fx-background-radius:50px;
+    -fx-pref-height:50px;
+    -fx-text-fill:white;
+}
+
+.animated-option-sub-button {
+    -fx-pref-width:50px;
+    -fx-background-radius:50px;
+    -fx-pref-height:50px;
+    -fx-text-fill:white;
+}
+
+.userNameText {
+    -fx-font-family: "Montserrat";
+    -fx-font-size: 14px;
+}
+
+
+

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.jfoenix.controls.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.paint.*?>
+<?import javafx.scene.text.*?>
+
+<AnchorPane prefHeight="161.0" prefWidth="291.0" xmlns="http://javafx.com/javafx/9.0.4" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EditRosterDayController">
+   <children>
+      <JFXButton layoutX="28.0" layoutY="111.0" onAction="#addDayInfo" prefHeight="25.0" prefWidth="238.0" ripplerFill="#99bdff" style="-fx-background-color: #0f60ff;" text="Add Changes" textFill="WHITE" />
+      <JFXRadioButton layoutX="32.0" layoutY="29.0" selected="true" text="Open">
+         <toggleGroup>
+            <ToggleGroup fx:id="status" />
+         </toggleGroup>
+         <font>
+            <Font size="17.0" />
+         </font>
+         <selectedColor>
+            <Color red="0.05882352963089943" green="0.3764705955982208" blue="1.0" />
+         </selectedColor>
+      </JFXRadioButton>
+      <JFXRadioButton layoutX="121.0" layoutY="29.0" text="Public Holiday" toggleGroup="$status">
+         <font>
+            <Font size="17.0" />
+         </font>
+         <selectedColor>
+            <Color red="0.05882352963089943" green="0.3764705955982208" blue="1.0" />
+         </selectedColor></JFXRadioButton>
+      <JFXTextField fx:id="noteField" focusColor="#0f60ff" layoutX="78.0" layoutY="69.0" prefHeight="25.0" prefWidth="188.0" style="-fx-background-color: #FFFFFF;" />
+      <Label layoutX="28.0" layoutY="68.0" text="Note:">
+         <font>
+            <Font size="17.0" />
+         </font>
+      </Label>
+   </children>
+</AnchorPane>

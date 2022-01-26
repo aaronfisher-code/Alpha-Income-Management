@@ -1,0 +1,161 @@
+@import 'Common.css';
+@import 'MFXColors.css';
+
+.controlButton {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 13px;
+}
+
+.headingText {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 14px;
+}
+
+.refreshButton{
+    -fx-font-family: "Montserrat Medium";
+    -fx-font-size: 15px;
+}
+
+/********************
+Date Picker
+********************/
+.mfx-date-picker {
+    -fx-padding: 3 5 3 5;
+}
+
+.mfx-date-picker:focused {
+    -fx-border-color: #0F60FF;
+}
+
+.mfx-date-picker .mfx-icon-wrapper .mfx-ripple-generator {
+    -mfx-ripple-radius: 24;
+    -mfx-ripple-color: #F3F1F6;
+}
+
+.mfx-date-picker:focused .icon {
+    -mfx-color: #0F60FF;
+}
+
+.mfx-date-picker:disabled .icon {
+    -mfx-color: #bcbcbc;
+    -fx-border-color: #0F60FF;
+}
+
+/********************
+Popup
+********************/
+.mfx-date-picker .date-picker-popup .content {
+    -fx-background-color: white;
+    -fx-background-radius: 10;
+    -fx-border-color: #0F60FF;
+    -fx-border-radius: 10;
+    -fx-padding: 15;
+    -fx-min-height: 300;
+}
+
+.mfx-date-picker .date-picker-popup .left-arrow:disabled,
+.mfx-date-picker .date-picker-popup .right-arrow:disabled {
+    -fx-opacity: 0.5;
+}
+
+
+.mfx-date-picker .date-picker-popup .left-arrow .mfx-ripple-generator,
+.mfx-date-picker .date-picker-popup .right-arrow .mfx-ripple-generator {
+    -mfx-ripple-color: #F0E9FF;
+}
+
+.mfx-date-picker .date-picker-popup .week-day {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-text-fill: -mfx-text-he;
+    -fx-padding: 0 0 5 0;
+}
+
+ .mfx-date-picker.date-picker-popup .mfx-date-cell {
+    -fx-text-fill: white;
+}
+
+.mfx-date-picker .date-picker-popup .mfx-date-cell:extra {
+    -fx-text-fill: rgba(255, 255, 255, 0.5);
+}
+
+.mfx-date-picker .date-picker-popup .mfx-date-cell:current {
+    -fx-background-color: #f8f7fa;
+    -fx-border-width: 2;
+    -fx-text-fill: #0F60FF;
+}
+
+.mfx-date-picker .date-picker-popup .mfx-date-cell:selected {
+    -fx-background-color: #0F60FF;
+    -fx-text-fill: white;
+}
+
+
+.mfx-date-picker .date-picker-popup .months-combo,
+.mfx-date-picker .date-picker-popup .years-combo {
+    -fx-border-color: transparent;
+    -fx-border-radius: 0;
+    -fx-background-color: white;
+    -fx-text-fill: -mfx-text-he;
+
+    -fx-padding: 4;
+    -fx-background-insets: 0;
+    -fx-font-family: "Montserrat Medium";
+}
+
+.mfx-date-picker .date-picker-popup .months-combo:focused,
+.mfx-date-picker .date-picker-popup .years-combo:focused {
+    -fx-text-fill: #0F60FF;
+    -mfx-color: #0F60FF;
+}
+
+.mfx-date-picker .date-picker-popup .months-combo:focused .caret .mfx-font-icon,
+.mfx-date-picker .date-picker-popup .years-combo:focused .caret .mfx-font-icon {
+    -mfx-color: #0F60FF;
+    -fx-text-fill: #0F60FF;
+}
+
+.mfx-date-picker .date-picker-popup .months-combo:focused .virtual-flow .floating-text,
+.mfx-date-picker .date-picker-popup .years-combo:focused .virtual-flow .floating-text{
+    -fx-text-fill: #0F60FF;
+}
+
+.mfx-date-picker .date-picker-popup .months-combo .virtual-flow,
+.mfx-date-picker .date-picker-popup .years-combo .virtual-flow {
+    -track-color: derive(#0F60FF, 100%);
+    -thumb-color: derive(#0F60FF, 70%);
+    -thumb-hover-color: derive(#0F60FF, 45%);
+    -fx-text-fill: #0F60FF;
+    -mfx-color: #0F60FF;
+}
+
+.mfx-date-picker .date-picker-popup .months-combo .virtual-flow .mfx-combo-box-cell,
+.mfx-date-picker .date-picker-popup .years-combo .virtual-flow .mfx-combo-box-cell {
+    -fx-font-family: 'Montserrat Medium';
+    -fx-text-fill: #0F60FF;
+    -mfx-color: #0F60FF;
+}
+
+.mfx-date-picker .date-picker-popup .months-combo .virtual-flow .mfx-combo-box-cell:selected .label,
+.mfx-date-picker .date-picker-popup .years-combo .virtual-flow .mfx-combo-box-cell:selected .label {
+    -fx-text-fill: #0F60FF;
+    -mfx-color: #0F60FF;
+}
+
+.mfx-date-picker .date-picker-popup .months-combo .virtual-flow .mfx-combo-box-cell:selected .data-label,
+.mfx-date-picker .date-picker-popup .years-combo .virtual-flow .mfx-combo-box-cell:selected .data-label {
+    -fx-text-fill: #0F60FF;
+    -mfx-color: #0F60FF;
+}
+
+.mfx-date-picker .date-picker-popup .months-combo .virtual-flow .mfx-combo-box-cell:hover,
+.mfx-date-picker .date-picker-popup .years-combo .virtual-flow .mfx-combo-box-cell:hover,
+.mfx-date-picker .date-picker-popup .months-combo .virtual-flow .mfx-combo-box-cell:selected,
+.mfx-date-picker .date-picker-popup .years-combo .virtual-flow .mfx-combo-box-cell:selected {
+    -fx-background-color: derive(#0F60FF, 130%);
+    -fx-text-fill: #0F60FF;
+    -mfx-color: #0F60FF;
+}
+
+
+
+

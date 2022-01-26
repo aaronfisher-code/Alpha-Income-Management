@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.net.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.effect.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.paint.*?>
+<?import javafx.scene.text.*?>
+
+<BorderPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" styleClass="tile" xmlns="http://javafx.com/javafx/11.0.2" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.GraphTileController">
+   <center>
+      <StackPane fx:id="graphPane" prefHeight="150.0" prefWidth="200.0" BorderPane.alignment="CENTER" />
+   </center>
+   <top>
+      <BorderPane prefHeight="80.0" BorderPane.alignment="CENTER">
+         <left>
+            <VBox alignment="CENTER_LEFT" BorderPane.alignment="CENTER">
+               <children>
+                  <Label styleClass="chartTitle" text="Scripts on File" textFill="#6e6b7b">
+                     <font>
+                        <Font size="27.0" />
+                     </font>
+                  </Label>
+                  <Label styleClass="chartSubTitle" text="As of 23/01/22" textFill="#6e6b7b">
+                     <font>
+                        <Font size="16.0" />
+                     </font>
+                  </Label>
+               </children>
+               <BorderPane.margin>
+                  <Insets />
+               </BorderPane.margin>
+               <padding>
+                  <Insets left="20.0" />
+               </padding>
+            </VBox>
+         </left>
+         <right>
+            <FlowPane alignment="CENTER_RIGHT" columnHalignment="RIGHT" prefWrapLength="200.0" BorderPane.alignment="CENTER">
+               <children>
+                  <Label styleClass="legendLabel" text="Target" textFill="#6e6b7b">
+                     <graphic>
+                        <Region prefHeight="15.0" prefWidth="15.0" style="-fx-background-color: #e9967a;" styleClass="legendColor" />
+                     </graphic>
+                     <font>
+                        <Font size="15.0" />
+                     </font>
+                     <FlowPane.margin>
+                        <Insets right="15.0" />
+                     </FlowPane.margin>
+                  </Label>
+                  <Label layoutX="356.0" layoutY="42.0" styleClass="legendLabel" text="Actual" textFill="#6e6b7b">
+                     <graphic>
+                        <Region prefHeight="15.0" prefWidth="15.0" style="-fx-background-color: #0F60FF;" styleClass="legendColor" />
+                     </graphic>
+                     <font>
+                        <Font size="15.0" />
+                     </font>
+                  </Label>
+               </children>
+               <BorderPane.margin>
+                  <Insets right="30.0" />
+               </BorderPane.margin>
+            </FlowPane>
+         </right>
+         <padding>
+            <Insets left="10.0" right="10.0" />
+         </padding>
+      </BorderPane>
+   </top>
+   <padding>
+      <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+   </padding>
+   <effect>
+      <DropShadow blurType="GAUSSIAN" height="12.15" offsetY="2.0" radius="5.5625" width="12.1">
+         <color>
+            <Color opacity="0.4099999964237213" />
+         </color>
+      </DropShadow>
+   </effect>
+   <stylesheets>
+      <URL value="@../CSS/application.css" />
+      <URL value="@../CSS/GraphTile.css" />
+   </stylesheets>
+</BorderPane>

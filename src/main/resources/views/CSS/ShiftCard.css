@@ -1,0 +1,27 @@
+.staffName {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 15px;
+    -fx-font-smoothing-type: gray;
+}
+
+.staffRole {
+    -fx-font-family: "Montserrat Light";
+    -fx-font-size: 13px;
+    -fx-font-smoothing-type: gray;
+}
+
+.timeText {
+    -fx-font-family: "Montserrat";
+    -fx-font-size: 20px;
+    -fx-font-smoothing-type: gray;
+}
+
+.ampmText {
+    -fx-font-family: "Montserrat";
+    -fx-font-size: 9px;
+    -fx-font-smoothing-type: gray;
+}
+
+
+
+

@@ -1,0 +1,54 @@
+.tile{
+    -fx-background-color: #FFFFFF;
+    -fx-background-radius: 10;
+}
+
+.chart {
+    -fx-font-family: "Montserrat";
+    -fx-font-smoothing-type: gray;
+    -fx-text-fill:#6e6b7b;
+    -fx-background-radius: 5;
+}
+
+.chart-plot-background {
+    -fx-background-color:transparent;
+}
+
+.chart-series-area-fill{
+    -fx-fill: linear-gradient(to top,transparent, #0F60FF45);
+}
+
+.default-color0.chart-series-area-line {
+    -fx-stroke: #0F60FF;
+    -fx-stroke-width: 3px;
+}
+
+.default-color0.chart-series-line {
+    -fx-stroke: #e9967a;
+    -fx-stroke-width: 2px;
+}
+
+
+.chartTitle{
+    -fx-font-family: "Montserrat Medium";
+    -fx-font-size: 20px;
+}
+
+.chartSubTitle{
+    -fx-font-family: "Montserrat";
+    -fx-font-size: 16px;
+}
+
+.legendLabel{
+    -fx-font-family: "Montserrat";
+    -fx-font-size: 16px;
+}
+
+.legendColor{
+    -fx-background-radius: 15px;
+}
+
+
+
+
+
