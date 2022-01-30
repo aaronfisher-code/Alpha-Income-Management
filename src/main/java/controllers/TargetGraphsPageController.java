@@ -1,36 +1,33 @@
 package controllers;
 
 import application.Main;
-import components.CurvedFittedAreaChart;
 import eu.hansolo.medusa.Gauge;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.geometry.Insets;
-import javafx.scene.chart.LineChart;
-import javafx.scene.chart.NumberAxis;
-import javafx.scene.chart.XYChart;
-import javafx.scene.effect.BlurType;
-import javafx.scene.effect.DropShadow;
-import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
+import javafx.scene.AccessibleRole;
+import javafx.scene.Node;
+import javafx.scene.control.Label;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Region;
 import models.User;
 
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.util.concurrent.ThreadLocalRandom;
 
 public class TargetGraphsPageController extends Controller{
 	
 	@FXML
 	private GridPane graphGrid;
+	@FXML
+	private BorderPane wtdButton,mtdButton,ytdButton;
 
     private Connection con = null;
     PreparedStatement preparedStatement = null;
     ResultSet resultSet = null;
     private Main main;
-    private MainMenuController parent;
     private User selectedUser;
 	
 	 @FXML
@@ -45,10 +42,9 @@ public class TargetGraphsPageController extends Controller{
 		this.con = c;
 	}
 
-	public void setParent(MainMenuController p){this.parent = p;}
-
 	@Override
 	public void fill() {
+
 	 	graphGrid.add(loadGraph(),0,0);
 		graphGrid.add(loadGraph(),1,0);
 		graphGrid.add(loadGraph(),0,1);
@@ -72,6 +68,50 @@ public class TargetGraphsPageController extends Controller{
 		gtc.setParent(this);
 		gtc.fill();
 		return graphTile;
+	}
+
+	public void wtdView(){
+		formatTabSelect(wtdButton);
+		formatTabDeselect(mtdButton);
+		formatTabDeselect(ytdButton);
+	}
+
+	public void mtdView(){
+		formatTabSelect(mtdButton);
+		formatTabDeselect(wtdButton);
+		formatTabDeselect(ytdButton);
+	}
+
+	public void ytdView(){
+		formatTabSelect(ytdButton);
+		formatTabDeselect(wtdButton);
+		formatTabDeselect(mtdButton);
+	}
+
+	public void formatTabSelect(BorderPane b){
+		for (Node n:b.getChildren()) {
+			if(n.getAccessibleRole() == AccessibleRole.TEXT){
+				Label a = (Label) n;
+				a.setStyle("-fx-text-fill: #0F60FF");
+			}
+			if(n.getAccessibleRole() == AccessibleRole.PARENT){
+				Region a = (Region) n;
+				a.setStyle("-fx-background-color: #0F60FF");
+			}
+		}
+	}
+
+	public void formatTabDeselect(BorderPane b){
+		for (Node n:b.getChildren()) {
+			if(n.getAccessibleRole() == AccessibleRole.TEXT){
+				Label a = (Label) n;
+				a.setStyle("-fx-text-fill: #6e6b7b");
+			}
+			if(n.getAccessibleRole() == AccessibleRole.PARENT){
+				Region a = (Region) n;
+				a.setStyle("");
+			}
+		}
 	}
 
 

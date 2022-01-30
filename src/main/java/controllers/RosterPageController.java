@@ -51,7 +51,6 @@ public class RosterPageController extends Controller {
     PreparedStatement preparedStatement = null;
     ResultSet resultSet = null;
     private Main main;
-    private MainMenuController parent;
 
     public void setMain(Main main) {
         this.main = main;
@@ -59,10 +58,6 @@ public class RosterPageController extends Controller {
 
     public void setConnection(Connection c) {
         this.con = c;
-    }
-
-    public void setParent(MainMenuController parent) {
-        this.parent = parent;
     }
 
     public void fill() {

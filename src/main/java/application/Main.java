@@ -1,18 +1,12 @@
 package application;
 
 
-import com.goxr3plus.fxborderlessscene.application.MainWindowController;
 import com.goxr3plus.fxborderlessscene.borderless.BorderlessScene;
-import com.goxr3plus.fxborderlessscene.borderless.CustomStage;
 import controllers.Controller;
-import insidefx.undecorator.Undecorator;
-import insidefx.undecorator.UndecoratorScene;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.image.Image;
-import javafx.scene.layout.Region;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -85,6 +79,7 @@ public class Main extends Application {
 	public void changeUser(User newUser){
 		this.currentUser = newUser;
 	}
+
 
 	public Stage getStg(){
 		return stg;

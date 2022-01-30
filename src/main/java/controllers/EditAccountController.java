@@ -37,7 +37,6 @@ public class EditAccountController extends Controller{
     PreparedStatement preparedStatement = null;
     ResultSet resultSet = null;
     private Main main;
-    private MainMenuController parent;
     private User selectedUser;
 	
 	 @FXML
@@ -51,8 +50,6 @@ public class EditAccountController extends Controller{
 	public void setConnection(Connection c) {
 		this.con = c;
 	}
-
-	public void setParent(MainMenuController p){this.parent = p;}
 
 	@Override
 	public void fill() {
@@ -84,7 +81,9 @@ public class EditAccountController extends Controller{
 				new StringFilter<>("Role",User::getRole)
 		);
 		loadEmployees(true);
+		accountsTable.setFooterVisible(true);
 		accountsTable.autosizeColumnsOnInitialization();
+
 
 		When.onChanged(accountsTable.currentPageProperty())
 				.then((oldValue,newValue) -> accountsTable.autosizeColumns())

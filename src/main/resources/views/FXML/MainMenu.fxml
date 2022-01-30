@@ -1,16 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import java.net.*?>
-<?import javafx.geometry.*?>
-<?import javafx.scene.*?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.effect.*?>
-<?import javafx.scene.image.*?>
-<?import javafx.scene.layout.*?>
-<?import javafx.scene.shape.*?>
-<?import javafx.scene.text.*?>
+<?import io.github.palexdev.materialfx.controls.MFXFilterComboBox?>
+<?import java.net.URL?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.Cursor?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.SVGPath?>
+<?import javafx.scene.text.Font?>
 
-<StackPane prefHeight="800.0" prefWidth="1500.0" xmlns="http://javafx.com/javafx/11.0.2" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.MainMenuController">
+<StackPane prefHeight="800.0" prefWidth="1500.0" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.MainMenuController">
    <children>
       <BorderPane fx:id="contentPane" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-background-color: #EDF0F7;" StackPane.alignment="CENTER_LEFT">
          <StackPane.margin>
@@ -25,11 +31,22 @@
             <DropShadow color="#0000000d" height="37.35" offsetY="6.0" radius="10.0875" spread="0.06" width="5.0" />
          </effect>
          <right>
-            <HBox fx:id="controlBox" alignment="CENTER_RIGHT" onMouseClicked="#showUserMenu" BorderPane.alignment="CENTER">
+            <HBox fx:id="controlBox" alignment="CENTER_RIGHT" BorderPane.alignment="CENTER">
                <children>
                   <VBox alignment="TOP_CENTER">
                      <children>
-                        <HBox fx:id="userNameBox" alignment="CENTER_LEFT" style="-fx-background-color: #F0F0F0; -fx-background-radius: 3;">
+                        <MFXFilterComboBox fx:id="storeSearchCombo" floatMode="DISABLED" graphicTextGap="5.0" minHeight="40.0" minWidth="245.0" style="-fx-background-color: #F0F0F0; -fx-border-color: #F0F0F0;">
+                           <cursor>
+                              <Cursor fx:constant="HAND" />
+                           </cursor></MFXFilterComboBox>
+                     </children>
+                     <HBox.margin>
+                        <Insets right="10.0" />
+                     </HBox.margin>
+                  </VBox>
+                  <VBox alignment="TOP_CENTER">
+                     <children>
+                        <HBox fx:id="userNameBox" alignment="CENTER_LEFT" minHeight="40.0" onMouseClicked="#showUserMenu" style="-fx-background-color: #F0F0F0; -fx-background-radius: 3;">
                            <children>
                               <Label fx:id="userLabel" alignment="CENTER" contentDisplay="CENTER" graphicTextGap="0.0" minHeight="25.0" minWidth="25.0" prefHeight="25.0" prefWidth="25.0" styleClass="profileIcon" text="A" textAlignment="CENTER">
                                  <font>
@@ -52,12 +69,12 @@
                                     <Font size="9.0" />
                                  </font>
                                  <HBox.margin>
-                                    <Insets left="5.0" />
+                                    <Insets left="10.0" />
                                  </HBox.margin>
                               </Label>
                            </children>
                            <padding>
-                              <Insets bottom="4.0" left="6.0" right="6.0" top="7.0" />
+                              <Insets bottom="4.0" left="10.0" right="10.0" top="7.0" />
                            </padding>
                            <cursor>
                               <Cursor fx:constant="HAND" />
@@ -155,7 +172,7 @@
                   <Insets bottom="5.0" left="15.0" right="15.0" top="5.0" />
                </VBox.margin>
             </Button>
-            <Button fx:id="rosterButton1" alignment="BASELINE_LEFT" contentDisplay="GRAPHIC_ONLY" graphicTextGap="15.0" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#loadRosterPage" style="-fx-background-color: #283046;" styleClass="sideBarButton" text="EOD Data Entry" textFill="#b4b7bd" textOverrun="CLIP">
+            <Button fx:id="eodDataEntryButton" alignment="BASELINE_LEFT" contentDisplay="GRAPHIC_ONLY" graphicTextGap="15.0" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#loadEODDataEntry" style="-fx-background-color: #283046;" styleClass="sideBarButton" text="EOD Data Entry" textFill="#b4b7bd" textOverrun="CLIP">
                <graphic>
                   <SVGPath content="m13.498.795.149-.149a1.207 1.207 0 1 1 1.707 1.708l-.149.148a1.5 1.5 0 0 1-.059 2.059L4.854 14.854a.5.5 0 0 1-.233.131l-4 1a.5.5 0 0 1-.606-.606l1-4a.5.5 0 0 1 .131-.232l9.642-9.642a.5.5 0 0 0-.642.056L6.854 4.854a.5.5 0 1 1-.708-.708L9.44.854A1.5 1.5 0 0 1 11.5.796a1.5 1.5 0 0 1 1.998-.001zm-.644.766a.5.5 0 0 0-.707 0L1.95 11.756l-.764 3.057 3.057-.764L14.44 3.854a.5.5 0 0 0 0-.708l-1.585-1.585z&#10;" fill="#b5b8bd" scaleX="1.5" scaleY="1.5" />
                </graphic>

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.paint.Color?>
+
+<StackPane prefHeight="674.0" prefWidth="1289.0" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EODDataEntryPageController">
+   <children>
+      <BorderPane prefHeight="200.0" prefWidth="200.0">
+         <top>
+            <BorderPane prefHeight="88.0" prefWidth="682.0" BorderPane.alignment="CENTER">
+               <left>
+                  <Button mnemonicParsing="false" text="Import EOD file" BorderPane.alignment="CENTER">
+                     <BorderPane.margin>
+                        <Insets left="20.0" />
+                     </BorderPane.margin>
+                  </Button>
+               </left>
+            </BorderPane>
+         </top>
+         <StackPane.margin>
+            <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+         </StackPane.margin>
+         <center>
+            <BorderPane prefHeight="200.0" prefWidth="200.0" style="-fx-background-radius: 5; -fx-border-radius: 5;" BorderPane.alignment="CENTER">
+               <center>
+                  <VBox fx:id="dataEntryRowPane" prefHeight="516.0" prefWidth="1026.0" style="-fx-background-color: #FFFFFF;" BorderPane.alignment="CENTER" />
+               </center>
+               <top>
+                  <GridPane fx:id="headerRow" style="-fx-background-color: #F3F2F7;" BorderPane.alignment="CENTER">
+                    <rowConstraints>
+                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                    </rowConstraints>
+                  </GridPane>
+               </top>
+               <effect>
+                  <DropShadow height="12.2" offsetY="2.0" radius="5.574999999999999" width="12.1">
+                     <color>
+                        <Color opacity="0.4099999964237213" />
+                     </color>
+                  </DropShadow>
+               </effect>
+            </BorderPane>
+         </center>
+      </BorderPane>
+   </children>
+</StackPane>

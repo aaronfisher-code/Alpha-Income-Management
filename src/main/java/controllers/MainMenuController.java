@@ -2,6 +2,7 @@ package controllers;
 
 
 import application.Main;
+import io.github.palexdev.materialfx.controls.MFXFilterComboBox;
 import javafx.animation.*;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -30,23 +31,25 @@ import java.sql.ResultSet;
 public class MainMenuController extends Controller {
 
     @FXML
-    private Label userNameLabel,  userLabel;
+    private Label userNameLabel,  userLabel, storeNameLabel;
     @FXML
     private VBox sidebar;
     @FXML
-    private Button rosterButton,accountsButton,targetGraphButton;
+    private Button rosterButton,accountsButton,targetGraphButton,eodDataEntryButton;
     @FXML
     private BorderPane contentPane,topPane;
     @FXML
-    private HBox controlBox,userNameBox;
+    private HBox controlBox,userNameBox,storeNameBox;
     @FXML
     private Button maximize,minimize,close;
+    @FXML
+    private MFXFilterComboBox storeSearchCombo;
 
     private Connection con = null;
     PreparedStatement preparedStatement = null;
     ResultSet resultSet = null;
     private Main main;
-    private PopOver currentUserPopover;
+    private PopOver currentUserPopover,currentStorePopover;
 
     public void setMain(Main main) {
         this.main = main;
@@ -61,6 +64,11 @@ public class MainMenuController extends Controller {
         userLabel.setText(String.valueOf(main.currentUser.getFirst_name().charAt(0)));
         userLabel.setStyle("-fx-background-color: " + main.currentUser.getBgColour() + ";");
         userLabel.setTextFill(Paint.valueOf(main.currentUser.getTextColour()));
+        storeSearchCombo.getItems().add("Rainbow Health Pharmacy");
+        storeSearchCombo.getItems().add("Caresaver Discount Chemist");
+        storeSearchCombo.getItems().add("Direct Chemist Outlet Westsprings");
+        storeSearchCombo.getItems().add("Direct Chemist Outlet Cobblebank");
+
         for(Node b:sidebar.getChildren()){
             if(b.getAccessibleRole() == AccessibleRole.BUTTON){
                 Button a = (Button) b;
@@ -219,7 +227,7 @@ public class MainMenuController extends Controller {
 //                currentUserPopover.hide();
             currentUserPopover = userMenu;
             userMenu.show(controlBox,
-                    main.getStg().getX()+controlBox.getLayoutX()+userNameBox.getWidth(),
+                    main.getStg().getX()+controlBox.getLayoutX()+userNameBox.getWidth()+storeSearchCombo.getWidth()+10,
                     main.getStg().getY()+controlBox.getLayoutY()+userNameBox.getHeight()+10);
         }
 
@@ -228,54 +236,39 @@ public class MainMenuController extends Controller {
 
     public void loadRosterPage(){
         formatSelected(rosterButton);
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/RosterPage.fxml"));
-        StackPane rosterPage = null;
-        try {
-            rosterPage = loader.load();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        RosterPageController rpc = loader.getController();
-        rpc.setMain(main);
-        rpc.setConnection(con);
-        rpc.setParent(this);
-        rpc.fill();
-        contentPane.setCenter(rosterPage);
+        changePage("/views/FXML/RosterPage.fxml");
     }
 
     public void loadAccountsPage(){
         formatSelected(accountsButton);
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/AccountEdit.fxml"));
-        StackPane accountPage = null;
-        try {
-            accountPage = loader.load();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        EditAccountController ac = loader.getController();
-        ac.setMain(main);
-        ac.setConnection(con);
-        ac.setParent(this);
-        ac.fill();
-        contentPane.setCenter(accountPage);
+        changePage("/views/FXML/AccountEdit.fxml");
     }
 
     public void loadTargetGraphs(){
         formatSelected(targetGraphButton);
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/TargetGraphsPage.fxml"));
-        StackPane targetGraphsPage = null;
+        changePage("/views/FXML/TargetGraphsPage.fxml");
+    }
+
+    public void loadEODDataEntry(){
+        formatSelected(eodDataEntryButton);
+        changePage("/views/FXML/EODDataEntryPage.fxml");
+    }
+
+    public void changePage(String fxml){
+        FXMLLoader loader = new FXMLLoader(getClass().getResource(fxml));
+        StackPane pageContent = null;
         try {
-            targetGraphsPage = loader.load();
+            pageContent = loader.load();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        TargetGraphsPageController ac = loader.getController();
+        Controller ac = loader.getController();
         ac.setMain(main);
         ac.setConnection(con);
-        ac.setParent(this);
+        //ac.setParent(this);
         ac.fill();
-        contentPane.setCenter(targetGraphsPage);
-//        contentPane.setFocusTraversable(false);
+        contentPane.setCenter(pageContent);
+
     }
 }
 
