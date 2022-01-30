@@ -9,6 +9,7 @@ import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.*;
+import javafx.scene.text.TextAlignment;
 import models.User;
 
 import java.io.IOException;
@@ -47,20 +48,20 @@ public class EODDataEntryPageController extends Controller{
 
 	@Override
 	public void fill() {
-	 	headerRow.add(createHeaderLabel("Day of Month"),0,0);
-		headerRow.add(createHeaderLabel("Cash"),1,0);
+	 	headerRow.add(createHeaderLabel("DAY OF MONTH"),0,0);
+		headerRow.add(createHeaderLabel("CASH"),1,0);
 		headerRow.add(createHeaderLabel("EFTPOS"),2,0);
-		headerRow.add(createHeaderLabel("Amex"),3,0);
-		headerRow.add(createHeaderLabel("Google Square"),4,0);
-		headerRow.add(createHeaderLabel("Cheque"),5,0);
-		headerRow.add(createHeaderLabel("Clinical Interventions"),6,0);
-		headerRow.add(createHeaderLabel("Medschecks"),7,0);
-		headerRow.add(createHeaderLabel("Stock on hand"),8,0);
-		headerRow.add(createHeaderLabel("Scripts on file count"),9,0);
-		headerRow.add(createHeaderLabel("SMS Patients"),10,0);
-		headerRow.add(createHeaderLabel("Till balance"),11,0);
-		headerRow.add(createHeaderLabel("Running Till Balance"),12,0);
-		headerRow.add(createHeaderLabel("Comments"),13,0);
+		headerRow.add(createHeaderLabel("AMEX"),3,0);
+		headerRow.add(createHeaderLabel("GOOGLE SQUARE"),4,0);
+		headerRow.add(createHeaderLabel("CHEQUE"),5,0);
+		headerRow.add(createHeaderLabel("CLINICAL INTERVENTIONS"),6,0);
+		headerRow.add(createHeaderLabel("MEDSCHECKS"),7,0);
+		headerRow.add(createHeaderLabel("STOCK ON HAND"),8,0);
+		headerRow.add(createHeaderLabel("SCRIPTS ON FILE"),9,0);
+		headerRow.add(createHeaderLabel("SMS PATIENTS"),10,0);
+		headerRow.add(createHeaderLabel("TILL BALANCE"),11,0);
+		headerRow.add(createHeaderLabel("RUNNING TILL BALANCE"),12,0);
+		headerRow.add(createHeaderLabel("NOTES"),13,0);
 		for (int i = 0; i< headerRow.getColumnCount(); i++) {
 			ColumnConstraints col = new ColumnConstraints();
 			col.setFillWidth(true);
@@ -73,7 +74,10 @@ public class EODDataEntryPageController extends Controller{
 	private Label createHeaderLabel(String labelText){
 	 	Label l = new Label(labelText);
 	 	l.setMaxWidth(Double.MAX_VALUE);
+	 	l.setMinWidth(Region.USE_COMPUTED_SIZE+20);
+		l.setPrefWidth(Region.USE_COMPUTED_SIZE+20);
 	 	l.setWrapText(true);
+	 	l.setTextAlignment(TextAlignment.LEFT);
 	 	return l;
 	}
 	

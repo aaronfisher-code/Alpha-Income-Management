@@ -1,0 +1,15 @@
+.buttonText {
+    -fx-font-family: "Montserrat";
+    -fx-font-size: 15px;
+}
+
+.headerRow {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 12px;
+    -fx-text-fill: #6e6b7b;
+}
+
+
+
+
+
