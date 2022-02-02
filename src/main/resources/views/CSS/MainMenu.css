@@ -29,5 +29,31 @@
     -fx-font-size: 14px;
 }
 
+.mfx-combo-box {
+    -fx-border-color: transparent;
+    -fx-border-radius: 0;
+    -fx-background-color: #F0F0F0;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-family: "Montserrat";
+    -fx-padding: 4;
+    -fx-background-insets: 0;
+}
+
+.mfx-combo-box .text-field {
+    -fx-prompt-text-fill: white;
+}
+
+.mfx-combo-box .combo-popup .text-field {
+    -fx-prompt-text-fill: -mfx-text-me;
+}
+
+.mfx-combo-box .caret .mfx-font-icon {
+    -mfx-color: #6e6b7b;
+}
+
+.mfx-combo-box .caret .mfx-ripple-generator {
+    -mfx-ripple-color: rgba(255, 255, 255, 0.5);
+}
+
 
 

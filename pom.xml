@@ -29,12 +29,12 @@
         <dependency>
             <groupId>com.dlsc.gemsfx</groupId>
             <artifactId>gemsfx</artifactId>
-            <version>1.33.0</version>
+            <version>1.35.0</version>
         </dependency>
         <dependency>
             <groupId>com.dlsc.gemsfx</groupId>
             <artifactId>gemsfx-demo</artifactId>
-            <version>1.33.0</version>
+            <version>1.35.0</version>
         </dependency>
         <dependency>
             <groupId>mysql</groupId>

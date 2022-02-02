@@ -1,7 +1,8 @@
 package controllers;
 
 import application.Main;
-import com.dlsc.gemsfx.demo.FilterViewApp;
+import com.dlsc.gemsfx.FilterView;
+import com.dlsc.gemsfx.FilterView.FilterGroup;
 import io.github.palexdev.materialfx.controls.MFXPaginatedTableView;
 import io.github.palexdev.materialfx.controls.MFXTableColumn;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
@@ -10,7 +11,10 @@ import io.github.palexdev.materialfx.utils.others.observables.When;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.geometry.Insets;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import models.User;
 
 import java.io.IOException;
@@ -19,18 +23,16 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Comparator;
-import java.util.function.Function;
 
 public class EditAccountController extends Controller{
 
 	@FXML
-	private MFXPaginatedTableView<User> accountsTable;
+	private StackPane backgroundPane;
+	private MFXPaginatedTableView<User> accountsTable = new MFXPaginatedTableView<User>();
 	private MFXTableColumn<User> usernameCol;
 	private MFXTableColumn<User> firstNameCol;
 	private MFXTableColumn<User> lastNameCol;
 	private MFXTableColumn<User> roleCol;
-	@FXML
-	private FilterViewApp filteredTable;
 	
 	
     private Connection con = null;
@@ -38,6 +40,8 @@ public class EditAccountController extends Controller{
     ResultSet resultSet = null;
     private Main main;
     private User selectedUser;
+
+	private ObservableList<User> allUsers = FXCollections.observableArrayList();
 	
 	 @FXML
 	private void initialize() throws IOException {}
@@ -53,18 +57,13 @@ public class EditAccountController extends Controller{
 
 	@Override
 	public void fill() {
-//	 	username.setText("");
-//	 	password.setText("");
-//	 	re_password.setText("");
-//	 	firstName.setText("");
-//	 	lastName.setText("");
-//	 	roleSelect.setText("");
-//	 	bgColourPicker.setValue(Color.WHITE);
-//		textColourPicker.setValue(Color.WHITE);
-//		signUpError.setText("");
-//		textChange();
-//		backgroundChange();
-//		labelChange();
+
+		FilterView<User> filterView = new FilterView<>();
+		filterView.setTitle("Current Users");
+		filterView.setSubtitle("Double click on a user for more actions");
+		filterView.setTextFilterProvider(text -> user -> user.getFirst_name().toLowerCase().contains(text) || user.getLast_name().toLowerCase().contains(text) || user.getRole().toLowerCase().contains(text));
+		allUsers = filterView.getFilteredItems();
+
 		usernameCol = new MFXTableColumn<>("Username",false, Comparator.comparing(User::getUsername));
 		firstNameCol = new MFXTableColumn<>("First Name",false, Comparator.comparing(User::getFirst_name));
 		lastNameCol = new MFXTableColumn<>("Last Name",false, Comparator.comparing(User::getLast_name));
@@ -80,36 +79,40 @@ public class EditAccountController extends Controller{
 				new StringFilter<>("Last Name",User::getLast_name),
 				new StringFilter<>("Role",User::getRole)
 		);
-		loadEmployees(true);
+
+		String sql = null;
+		sql = "SELECT * FROM accounts";
+		try {
+			preparedStatement = con.prepareStatement(sql);
+			resultSet = preparedStatement.executeQuery();
+			while (resultSet.next()) {
+				filterView.getItems().add(new User(resultSet));
+			}
+		} catch (SQLException throwables) {
+			throwables.printStackTrace();
+		}
+
+
 		accountsTable.setFooterVisible(true);
 		accountsTable.autosizeColumnsOnInitialization();
-
 
 		When.onChanged(accountsTable.currentPageProperty())
 				.then((oldValue,newValue) -> accountsTable.autosizeColumns())
 				.listen();
 
-	}
+		accountsTable.setMaxWidth(Double.MAX_VALUE);
+		accountsTable.setRowsPerPage(10);
+		accountsTable.setItems(allUsers);
 
-	private void loadEmployees(boolean showInactive){
-		String sql = null;
-		ObservableList<User> allUsers = FXCollections.observableArrayList();
-		if(showInactive){
-			sql = "SELECT * FROM accounts";
-		}else{
-			sql = "SELECT * FROM accounts WHERE inactiveDate IS NULL;";
-		}
+		VBox box = new VBox(filterView,accountsTable);
+		box.setPadding(new Insets(20));
+		box.setSpacing(10);
 
-		try {
-			preparedStatement = con.prepareStatement(sql);
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				allUsers.add(new User(resultSet));
-			}
-			accountsTable.setItems(allUsers);
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
-		}
+		VBox.setVgrow(accountsTable, Priority.ALWAYS);
+		backgroundPane.getChildren().add(box);
+		accountsTable.setItems(allUsers);
+
+
 	}
 
 //	// On register page

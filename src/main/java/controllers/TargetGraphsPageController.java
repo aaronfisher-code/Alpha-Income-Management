@@ -49,8 +49,8 @@ public class TargetGraphsPageController extends Controller{
 		graphGrid.add(loadGraph(),1,0);
 		graphGrid.add(loadGraph(),0,1);
 		graphGrid.add(loadGraph(),1,1);
-		graphGrid.add(new Gauge(Gauge.SkinType.SLIM),2,0);
-		graphGrid.add(new Gauge(Gauge.SkinType.SLIM),2,1);
+		graphGrid.add(loadGauge(),2,0);
+		graphGrid.add(loadGauge(),2,1);
 	}
 
 	public BorderPane loadGraph() {
@@ -68,6 +68,23 @@ public class TargetGraphsPageController extends Controller{
 		gtc.setParent(this);
 		gtc.fill();
 		return graphTile;
+	}
+
+	public BorderPane loadGauge() {
+		FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/GaugeTile.fxml"));
+		BorderPane gaugeTile = null;
+		try {
+			gaugeTile = loader.load();
+		} catch (IOException e) {
+
+			e.printStackTrace();
+		}
+		GaugeTileController gtc = loader.getController();
+		gtc.setMain(main);
+		gtc.setConnection(con);
+		gtc.setParent(this);
+		gtc.fill();
+		return gaugeTile;
 	}
 
 	public void wtdView(){

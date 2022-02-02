@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.net.URL?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.paint.Color?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" styleClass="tile" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.GaugeTileController">
+   <center>
+      <StackPane fx:id="gaugePane" prefHeight="150.0" prefWidth="200.0" BorderPane.alignment="CENTER" />
+   </center>
+   <top>
+      <BorderPane prefHeight="80.0" BorderPane.alignment="CENTER">
+         <padding>
+            <Insets left="10.0" right="10.0" />
+         </padding>
+         <center>
+            <VBox alignment="TOP_CENTER" BorderPane.alignment="CENTER">
+               <children>
+                  <Label styleClass="chartTitle" text="Medschecks" textAlignment="CENTER" textFill="#6e6b7b">
+                     <font>
+                        <Font size="27.0" />
+                     </font>
+                  </Label>
+                  <Label styleClass="chartSubTitle" text="As of 23/01/22" textAlignment="CENTER" textFill="#6e6b7b">
+                     <font>
+                        <Font size="16.0" />
+                     </font>
+                  </Label>
+               </children>
+               <BorderPane.margin>
+                  <Insets />
+               </BorderPane.margin>
+            </VBox>
+         </center>
+      </BorderPane>
+   </top>
+   <padding>
+      <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+   </padding>
+   <effect>
+      <DropShadow blurType="GAUSSIAN" height="12.15" offsetY="2.0" radius="5.5625" width="12.1">
+         <color>
+            <Color opacity="0.4099999964237213" />
+         </color>
+      </DropShadow>
+   </effect>
+   <stylesheets>
+      <URL value="@../CSS/application.css" />
+      <URL value="@../CSS/GraphTile.css" />
+   </stylesheets>
+</BorderPane>
