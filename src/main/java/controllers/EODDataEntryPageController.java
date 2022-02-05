@@ -10,6 +10,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.*;
 import javafx.scene.text.TextAlignment;
+import javafx.stage.FileChooser;
 import models.User;
 
 import java.io.IOException;
@@ -79,6 +80,13 @@ public class EODDataEntryPageController extends Controller{
 	 	l.setWrapText(true);
 	 	l.setTextAlignment(TextAlignment.LEFT);
 	 	return l;
+	}
+
+	public void importFiles(){
+		FileChooser fileChooser = new FileChooser();
+		fileChooser.setTitle("Import Till/Dispense data from file");
+		fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
+		fileChooser.showOpenDialog(main.getStg());
 	}
 	
 }

@@ -4,6 +4,8 @@ import application.Main;
 import com.jfoenix.controls.JFXComboBox;
 import com.jfoenix.controls.JFXDatePicker;
 import com.jfoenix.controls.JFXTextField;
+import io.github.palexdev.materialfx.controls.MFXComboBox;
+import io.github.palexdev.materialfx.controls.MFXTextField;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.input.Clipboard;
@@ -31,10 +33,10 @@ public class ExportToolController extends Controller {
 
 
     @FXML
-    private JFXComboBox monthPicker;
+    private MFXComboBox monthPicker;
 
     @FXML
-    private JFXTextField yearPicker;
+    private MFXTextField yearPicker;
 
     private Connection con = null;
     PreparedStatement preparedStatement = null;
@@ -122,7 +124,7 @@ public class ExportToolController extends Controller {
         String[] leaveArray = new String[(int) (daysBetween+1)];
         Shift s = null;
 
-        String sql = "SELECT * FROM shifts Where username = ?";
+        String sql = "SELECT * FROM shifts JOIN accounts a on a.username = shifts.username Where shifts.username = ? ";
         try {
             preparedStatement = con.prepareStatement(sql);
             preparedStatement.setString(1, u.getUsername());

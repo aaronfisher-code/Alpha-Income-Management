@@ -3,6 +3,7 @@ package controllers;
 
 import application.Main;
 import io.github.palexdev.materialfx.controls.MFXFilterComboBox;
+import io.github.palexdev.materialfx.controls.MFXScrollPane;
 import javafx.animation.*;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -31,19 +32,22 @@ import java.sql.ResultSet;
 public class MainMenuController extends Controller {
 
     @FXML
-    private Label userNameLabel,  userLabel, storeNameLabel;
+    private Label userNameLabel,  userLabel, logoLabel;
     @FXML
-    private VBox sidebar;
+    private VBox sidebar,buttonPane;
     @FXML
-    private Button rosterButton,accountsButton,targetGraphButton,eodDataEntryButton;
+    private Button targetGraphButton,eodDataEntryButton,accountPaymentsButton,rosterButton,accountsButton,
+            invoiceTrackingButton,expiryTrackerButton,basCheckerButton,monthlySummaryButton,settingsButton;
     @FXML
     private BorderPane contentPane,topPane;
     @FXML
-    private HBox controlBox,userNameBox,storeNameBox;
+    private HBox controlBox,userNameBox;
     @FXML
     private Button maximize,minimize,close;
     @FXML
     private MFXFilterComboBox storeSearchCombo;
+    @FXML
+    private MFXScrollPane sidebarScroll;
 
     private Connection con = null;
     PreparedStatement preparedStatement = null;
@@ -89,9 +93,6 @@ public class MainMenuController extends Controller {
 
         maximize.setOnAction(a -> this.main.getBs().maximizeStage());
 
-
-//        aeroSnap.selectedProperty().bindBidirectional(Main.borderlessScene.snapProperty());
-
         loadTargetGraphs();
     }
 
@@ -100,42 +101,33 @@ public class MainMenuController extends Controller {
     public void extendMenu(){
         changeSize(sidebar,260);
         contentPane.setEffect(new GaussianBlur(5));
-        for(Node b:sidebar.getChildren()){
-            if(b.getAccessibleRole() == AccessibleRole.TEXT){
-                Label a = (Label) b;
-                a.setContentDisplay(ContentDisplay.LEFT);
-            }else{
-                Button a = (Button) b;
-                a.setContentDisplay(ContentDisplay.LEFT);
-                if(a.getStyle().equals("-fx-background-color: #161D31;")) {
-                    a.setStyle("-fx-background-color: #0F60FF;");
-                    DropShadow d = new DropShadow(BlurType.THREE_PASS_BOX, Color.web("#0F60FF", 1.0), 10.0, 0.0, 0.0, 0.0);
-                    d.setHeight(21);
-                    d.setWidth(21);
-                    b.setEffect(d);
-                }
+        logoLabel.setContentDisplay(ContentDisplay.LEFT);
+        sidebarScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        for(Node n:buttonPane.getChildren()) {
+            Button a = (Button) n;
+            a.setContentDisplay(ContentDisplay.LEFT);
+            if (a.getStyle().equals("-fx-background-color: #161D31;")) {
+                a.setStyle("-fx-background-color: #0F60FF;");
+                DropShadow d = new DropShadow(BlurType.THREE_PASS_BOX, Color.web("#0F60FF", 1.0), 10.0, 0.0, 0.0, 0.0);
+                d.setHeight(21);
+                d.setWidth(21);
+                a.setEffect(d);
             }
-
         };
     }
 
     public void retractMenu(){
         changeSize(sidebar,80);
         contentPane.setEffect(null);
-        for(Node b:sidebar.getChildren()){
-            if(b.getAccessibleRole() == AccessibleRole.TEXT){
-                Label a = (Label) b;
-                a.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-            }else{
-                Button a = (Button) b;
-                a.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-                if(a.getStyle().equals("-fx-background-color: #0F60FF;")){
-                    a.setStyle("-fx-background-color: #161D31;");
-                    b.setEffect(null);
-                }
-
+        logoLabel.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+        sidebarScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        for(Node n:buttonPane.getChildren()) {
+            Button a = (Button) n;
+            a.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+            if(a.getStyle().equals("-fx-background-color: #0F60FF;")){
+                a.setStyle("-fx-background-color: #161D31;");
+                a.setEffect(null);
             }
-
         };
     }
 
@@ -168,7 +160,7 @@ public class MainMenuController extends Controller {
     }
 
     public void formatSelected(Button b){
-        for(Node c:sidebar.getChildren()){
+        for(Node c:buttonPane.getChildren()){
             if(c.getAccessibleRole() == AccessibleRole.BUTTON){
                 Button a = (Button) c;
                 a.setEffect(null);
@@ -222,9 +214,6 @@ public class MainMenuController extends Controller {
             userMenu.setHideOnEscape(true);
             userMenu.setCornerRadius(10);
             userMenu.setArrowIndent(-10);
-//            userMenu.setY(100);
-//            if(currentUserPopover!=null)
-//                currentUserPopover.hide();
             currentUserPopover = userMenu;
             userMenu.show(controlBox,
                     main.getStg().getX()+controlBox.getLayoutX()+userNameBox.getWidth()+storeSearchCombo.getWidth()+10,
@@ -234,27 +223,22 @@ public class MainMenuController extends Controller {
 
     }
 
-    public void loadRosterPage(){
-        formatSelected(rosterButton);
-        changePage("/views/FXML/RosterPage.fxml");
-    }
+    //Page Routing
+    public void loadTargetGraphs(){changePage(targetGraphButton,"/views/FXML/TargetGraphsPage.fxml");}
+    public void loadEODDataEntry(){changePage(eodDataEntryButton,"/views/FXML/EODDataEntryPage.fxml");}
+    public void loadAccountPayments(){changePage(accountPaymentsButton,"/views/FXML/EODDataEntryPage.fxml");}
+    public void loadRosterPage(){changePage(rosterButton,"/views/FXML/RosterPage.fxml");}
+    public void loadAccountsPage(){changePage(accountsButton,"/views/FXML/AccountEdit.fxml");}
+    public void loadInvoiceTracking(){changePage(invoiceTrackingButton,"/views/FXML/AccountEdit.fxml");}
+    public void loadExpiryTracker(){changePage(expiryTrackerButton,"/views/FXML/AccountEdit.fxml");}
+    public void loadBASChecker(){changePage(basCheckerButton,"/views/FXML/AccountEdit.fxml");}
+    public void loadMonthlySummary(){changePage(monthlySummaryButton,"/views/FXML/AccountEdit.fxml");}
+    public void loadSettings(){changePage(settingsButton,"/views/FXML/AccountEdit.fxml");}
 
-    public void loadAccountsPage(){
-        formatSelected(accountsButton);
-        changePage("/views/FXML/AccountEdit.fxml");
-    }
 
-    public void loadTargetGraphs(){
-        formatSelected(targetGraphButton);
-        changePage("/views/FXML/TargetGraphsPage.fxml");
-    }
 
-    public void loadEODDataEntry(){
-        formatSelected(eodDataEntryButton);
-        changePage("/views/FXML/EODDataEntryPage.fxml");
-    }
-
-    public void changePage(String fxml){
+    public void changePage(Button b, String fxml){
+        formatSelected(b);
         FXMLLoader loader = new FXMLLoader(getClass().getResource(fxml));
         StackPane pageContent = null;
         try {
@@ -265,7 +249,6 @@ public class MainMenuController extends Controller {
         Controller ac = loader.getController();
         ac.setMain(main);
         ac.setConnection(con);
-        //ac.setParent(this);
         ac.fill();
         contentPane.setCenter(pageContent);
 

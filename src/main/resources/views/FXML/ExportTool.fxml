@@ -1,26 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import com.jfoenix.controls.JFXButton?>
-<?import com.jfoenix.controls.JFXComboBox?>
-<?import com.jfoenix.controls.JFXTextField?>
-<?import javafx.scene.control.Label?>
+<?import io.github.palexdev.materialfx.controls.MFXButton?>
+<?import io.github.palexdev.materialfx.controls.MFXComboBox?>
+<?import io.github.palexdev.materialfx.controls.MFXTextField?>
 <?import javafx.scene.layout.AnchorPane?>
-<?import javafx.scene.text.Font?>
 
-<AnchorPane prefHeight="187.0" prefWidth="285.0" xmlns="http://javafx.com/javafx/9.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.ExportToolController">
+<AnchorPane prefHeight="187.0" prefWidth="285.0" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.ExportToolController">
    <children>
-      <JFXButton layoutX="23.0" layoutY="147.0" onAction="#copyToClipboard" prefHeight="25.0" prefWidth="238.0" ripplerFill="#99bdff" style="-fx-background-color: #0f60ff;" text="Copy to clipboard" textFill="WHITE" />
-      <Label layoutX="21.0" layoutY="22.0" prefHeight="26.0" prefWidth="84.0" text="Month">
-         <font>
-            <Font size="17.0" />
-         </font>
-      </Label>
-      <Label layoutX="21.0" layoutY="90.0" prefHeight="26.0" prefWidth="136.0" text="Year">
-         <font>
-            <Font size="17.0" />
-         </font>
-      </Label>
-      <JFXComboBox fx:id="monthPicker" layoutX="99.0" layoutY="22.0" prefHeight="26.0" prefWidth="171.0" style="-fx-background-color: #FFFFFF;" />
-      <JFXTextField fx:id="yearPicker" layoutX="99.0" layoutY="91.0" prefHeight="26.0" prefWidth="171.0" style="-fx-background-color: #FFFFFF;" />
+      <MFXComboBox fx:id="monthPicker" floatMode="BORDER" floatingText="Month" layoutX="23.0" layoutY="14.0" prefHeight="8.0" prefWidth="238.0" />
+      <MFXTextField fx:id="yearPicker" floatMode="BORDER" floatingText="Year" layoutX="23.0" layoutY="68.0" prefHeight="49.0" prefWidth="238.0" />
+      <MFXButton layoutX="23.0" layoutY="141.0" onAction="#copyToClipboard" prefHeight="26.0" prefWidth="238.0" style="-fx-background-color: #0F60FF;" text="Copy to Clipboard" textFill="WHITE" />
    </children>
 </AnchorPane>

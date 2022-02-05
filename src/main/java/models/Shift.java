@@ -40,12 +40,19 @@ public class Shift {
 			this.daysPerRepeat = resultSet.getInt("daysPerRepeat");
 			if(resultSet.getString("shiftType") != null && !resultSet.getString("shiftType").isEmpty())
 				this.shiftType = resultSet.getString("shiftType");
-			this.password = resultSet.getString("password");
-			this.first_name = resultSet.getString("first_name");
-			this.last_name = resultSet.getString("last_name");
-			this.role = resultSet.getString("role");
-			this.profileBG = resultSet.getString("profileBG");
-			this.profileText = resultSet.getString("profileText");
+			if(resultSet.getString("password") != null && !resultSet.getString("password").isEmpty())
+				this.password = resultSet.getString("password");
+			if(resultSet.getString("first_name") != null && !resultSet.getString("first_name").isEmpty())
+				this.first_name = resultSet.getString("first_name");
+			if(resultSet.getString("last_name") != null && !resultSet.getString("last_name").isEmpty())
+				this.last_name = resultSet.getString("last_name");
+			if(resultSet.getString("role") != null && !resultSet.getString("role").isEmpty())
+				this.role = resultSet.getString("role");
+			if(resultSet.getString("profileBG") != null && !resultSet.getString("profileBG").isEmpty())
+				this.profileBG = resultSet.getString("profileBG");
+			if(resultSet.getString("profileText") != null && !resultSet.getString("profileText").isEmpty())
+				this.profileText = resultSet.getString("profileText");
+
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}

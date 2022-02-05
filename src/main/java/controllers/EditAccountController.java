@@ -101,7 +101,7 @@ public class EditAccountController extends Controller{
 				.listen();
 
 		accountsTable.setMaxWidth(Double.MAX_VALUE);
-		accountsTable.setRowsPerPage(10);
+		accountsTable.setRowsPerPage(15);
 		accountsTable.setItems(allUsers);
 
 		VBox box = new VBox(filterView,accountsTable);
