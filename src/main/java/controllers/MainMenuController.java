@@ -73,7 +73,7 @@ public class MainMenuController extends Controller {
         storeSearchCombo.getItems().add("Direct Chemist Outlet Westsprings");
         storeSearchCombo.getItems().add("Direct Chemist Outlet Cobblebank");
 
-        for(Node b:sidebar.getChildren()){
+        for(Node b:buttonPane.getChildren()){
             if(b.getAccessibleRole() == AccessibleRole.BUTTON){
                 Button a = (Button) b;
                 a.addEventHandler(MouseEvent.MOUSE_ENTERED,

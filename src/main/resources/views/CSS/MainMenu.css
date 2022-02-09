@@ -33,10 +33,11 @@
     -fx-border-color: transparent;
     -fx-border-radius: 0;
     -fx-background-color: #F0F0F0;
-    -fx-text-fill: #FFFFFF;
+    -fx-text-fill: #6e6b7b;
     -fx-font-family: "Montserrat";
     -fx-padding: 4;
     -fx-background-insets: 0;
+    -fx-font-size: 14px;
 }
 
 .mfx-combo-box .text-field {

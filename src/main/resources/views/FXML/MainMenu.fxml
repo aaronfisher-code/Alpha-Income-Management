@@ -36,10 +36,13 @@
                <children>
                   <VBox alignment="TOP_CENTER">
                      <children>
-                        <MFXFilterComboBox fx:id="storeSearchCombo" floatMode="DISABLED" graphicTextGap="5.0" minHeight="40.0" minWidth="255.0" style="-fx-background-color: #F0F0F0; -fx-border-color: #F0F0F0;">
+                        <MFXFilterComboBox fx:id="storeSearchCombo" floatMode="DISABLED" graphicTextGap="5.0" minHeight="40.0" minWidth="285.0" prefHeight="40.0" prefWidth="285.0" style="-fx-background-color: #F0F0F0; -fx-border-color: #F0F0F0;" text="Direct Chemist Outlet Cobblebank">
                            <cursor>
                               <Cursor fx:constant="HAND" />
-                           </cursor></MFXFilterComboBox>
+                           </cursor>
+                           <font>
+                              <Font size="14.0" />
+                           </font></MFXFilterComboBox>
                      </children>
                      <HBox.margin>
                         <Insets right="10.0" />

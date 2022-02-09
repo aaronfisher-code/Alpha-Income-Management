@@ -48,6 +48,7 @@ public class Main extends Application {
 		c.setConnection(con);
 		primaryStage.setTitle("Alpha Income Management");
 		bs = new BorderlessScene(primaryStage,StageStyle.UNDECORATED,root);
+		bs.removeDefaultCSS();
 		primaryStage.setScene(bs);
 		primaryStage.getIcons().add(icon);
 		primaryStage.show();
@@ -72,6 +73,7 @@ public class Main extends Application {
 		stg.show();
 		bs.maximizeStage();
 		bs.setResizable(true);
+		bs.removeDefaultCSS();
 		c.fill();
 
 	}
