@@ -1,5 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import java.net.URL?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.effect.DropShadow?>
 <?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.paint.Color?>
 
-<StackPane fx:id="backgroundPane" prefHeight="440.0" prefWidth="681.0" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EditAccountController" />
+<StackPane fx:id="backgroundPane" prefHeight="440.0" prefWidth="681.0" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EditAccountController">
+   <children>
+      <VBox fx:id="controlBox" alignment="TOP_CENTER" style="-fx-background-color: #FFFFFF; -fx-background-radius: 10;">
+         <StackPane.margin>
+            <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+         </StackPane.margin>
+         <effect>
+            <DropShadow height="12.1" offsetY="1.0" radius="5.55" width="12.1">
+               <color>
+                  <Color opacity="0.4099999964237213" />
+               </color>
+            </DropShadow>
+         </effect>
+      </VBox>
+   </children>
+   <stylesheets>
+      <URL value="@../CSS/application.css" />
+      <URL value="@../CSS/AccountEditPage.css" />
+   </stylesheets>
+</StackPane>

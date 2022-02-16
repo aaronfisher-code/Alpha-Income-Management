@@ -9,6 +9,10 @@ import io.github.palexdev.materialfx.controls.MFXTableView;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
 import io.github.palexdev.materialfx.filter.StringFilter;
 import io.github.palexdev.materialfx.utils.others.observables.When;
+import javafx.animation.Interpolator;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
@@ -16,9 +20,11 @@ import javafx.geometry.Pos;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.layout.*;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.FileChooser;
+import javafx.util.Duration;
 import models.EODDataPoint;
 import models.User;
 
@@ -47,6 +53,8 @@ public class EODDataEntryPageController extends Controller{
 	private FlowPane datePickerPane;
     @FXML
     private MFXTableView<EODDataPoint> eodDataTable;
+	@FXML
+	private VBox editDayPopover;
 
 	private MFXTableColumn<EODDataPoint> dateCol;
 	private MFXTableColumn<EODDataPoint> cashAmountCol;
@@ -54,7 +62,6 @@ public class EODDataEntryPageController extends Controller{
 	private MFXTableColumn<EODDataPoint> amexAmountCol;
 	private MFXTableColumn<EODDataPoint> googleSquareAmountCol;
 	private MFXTableColumn<EODDataPoint> chequeAmountCol;
-	private MFXTableColumn<EODDataPoint> clinicalInterventionsCol;
 	private MFXTableColumn<EODDataPoint> medschecksCol;
 	private MFXTableColumn<EODDataPoint> stockOnHandAmountCol;
 	private MFXTableColumn<EODDataPoint> scriptsOnFileCol;
@@ -90,20 +97,19 @@ public class EODDataEntryPageController extends Controller{
 		datePkr.setText(LocalDate.now().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)));
 		datePkr.getStylesheets().add("/views/CSS/RosterPage.css");
 
-		dateCol = new MFXTableColumn<>("Date",false, Comparator.comparing(EODDataPoint::getDate));
-		cashAmountCol = new MFXTableColumn<>("Cash",false, Comparator.comparing(EODDataPoint::getCashAmount));
-		eftposAmountCol = new MFXTableColumn<>("Eftpos",false, Comparator.comparing(EODDataPoint::getEftposAmount));
+		dateCol = new MFXTableColumn<>("DATE",false, Comparator.comparing(EODDataPoint::getDate));
+		cashAmountCol = new MFXTableColumn<>("CASH",false, Comparator.comparing(EODDataPoint::getCashAmount));
+		eftposAmountCol = new MFXTableColumn<>("EFTPOS",false, Comparator.comparing(EODDataPoint::getEftposAmount));
 		amexAmountCol = new MFXTableColumn<>("AMEX",false, Comparator.comparing(EODDataPoint::getAmexAmount));
-		googleSquareAmountCol = new MFXTableColumn<>("Google Square",false, Comparator.comparing(EODDataPoint::getGoogleSquareAmount));
-		chequeAmountCol = new MFXTableColumn<>("Cheque",false, Comparator.comparing(EODDataPoint::getChequeAmount));
-		clinicalInterventionsCol = new MFXTableColumn<>("Clinical Interventions",false, Comparator.comparing(EODDataPoint::getClinicalInterventions));
-		medschecksCol = new MFXTableColumn<>("Medschecks",false, Comparator.comparing(EODDataPoint::getMedschecks));
-		stockOnHandAmountCol = new MFXTableColumn<>("Stock on Hand",false, Comparator.comparing(EODDataPoint::getStockOnHandAmount));
-		scriptsOnFileCol = new MFXTableColumn<>("Scripts on File",false, Comparator.comparing(EODDataPoint::getScriptsOnFile));
-		smsPatientsCol = new MFXTableColumn<>("SMS Patients",false, Comparator.comparing(EODDataPoint::getSmsPatients));
-		tillBalanceCol = new MFXTableColumn<>("Till Balance",false, Comparator.comparing(EODDataPoint::getTillBalance));
-		runningTillBalanceCol = new MFXTableColumn<>("Running Till Balance",false, Comparator.comparing(EODDataPoint::getRunningTillBalance));
-		notesCol = new MFXTableColumn<>("Notes",false, Comparator.comparing(EODDataPoint::getNotes));
+		googleSquareAmountCol = new MFXTableColumn<>("GOOGLE SQUARE",false, Comparator.comparing(EODDataPoint::getGoogleSquareAmount));
+		chequeAmountCol = new MFXTableColumn<>("CHEQUE",false, Comparator.comparing(EODDataPoint::getChequeAmount));
+		medschecksCol = new MFXTableColumn<>("MEDSCHECKS",false, Comparator.comparing(EODDataPoint::getMedschecks));
+		stockOnHandAmountCol = new MFXTableColumn<>("STOCK ON HAND",false, Comparator.comparing(EODDataPoint::getStockOnHandAmount));
+		scriptsOnFileCol = new MFXTableColumn<>("SCRIPTS ON FILE",false, Comparator.comparing(EODDataPoint::getScriptsOnFile));
+		smsPatientsCol = new MFXTableColumn<>("SMS PATIENTS",false, Comparator.comparing(EODDataPoint::getSmsPatients));
+		tillBalanceCol = new MFXTableColumn<>("TILL BALANCE",false, Comparator.comparing(EODDataPoint::getTillBalance));
+		runningTillBalanceCol = new MFXTableColumn<>("RUNNING TILL BALANCE",false, Comparator.comparing(EODDataPoint::getRunningTillBalance));
+		notesCol = new MFXTableColumn<>("NOTES",false, Comparator.comparing(EODDataPoint::getNotes));
 
 		dateCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getDate));
 		cashAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getCashAmount));
@@ -111,7 +117,6 @@ public class EODDataEntryPageController extends Controller{
 		amexAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getAmexAmount));
 		googleSquareAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getGoogleSquareAmount));
 		chequeAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getChequeAmount));
-		clinicalInterventionsCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getClinicalInterventions));
 		medschecksCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getMedschecks));
 		stockOnHandAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getStockOnHandAmount));
 		scriptsOnFileCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getScriptsOnFile));
@@ -127,7 +132,6 @@ public class EODDataEntryPageController extends Controller{
 				amexAmountCol,
 				googleSquareAmountCol,
 				chequeAmountCol,
-				clinicalInterventionsCol,
 				medschecksCol,
 				stockOnHandAmountCol,
 				scriptsOnFileCol,
@@ -136,6 +140,8 @@ public class EODDataEntryPageController extends Controller{
 				runningTillBalanceCol,
 				notesCol
 		);
+
+		eodDataTable.autosizeColumnsOnInitialization();
 
 
 
@@ -158,6 +164,25 @@ public class EODDataEntryPageController extends Controller{
 
 	public void setDatePkr(LocalDate date) {
 		datePkr.setValue(date);
+	}
+
+	public void addNewPayment(){
+		editDayPopover.setEffect(new DropShadow());
+		changeSize(editDayPopover,0);
+	}
+
+	public void closePopover(){
+		changeSize(editDayPopover,375);
+		editDayPopover.setEffect(null);
+	}
+
+	public void changeSize(final VBox pane, double width) {
+		Duration cycleDuration = Duration.millis(200);
+		Timeline timeline = new Timeline(
+				new KeyFrame(cycleDuration,
+						new KeyValue(pane.translateXProperty(),width, Interpolator.EASE_BOTH))
+		);
+		timeline.play();
 	}
 	
 }

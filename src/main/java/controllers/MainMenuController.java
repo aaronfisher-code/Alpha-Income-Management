@@ -226,7 +226,7 @@ public class MainMenuController extends Controller {
     //Page Routing
     public void loadTargetGraphs(){changePage(targetGraphButton,"/views/FXML/TargetGraphsPage.fxml");}
     public void loadEODDataEntry(){changePage(eodDataEntryButton,"/views/FXML/EODDataEntryPage.fxml");}
-    public void loadAccountPayments(){changePage(accountPaymentsButton,"/views/FXML/EODDataEntryPage.fxml");}
+    public void loadAccountPayments(){changePage(accountPaymentsButton,"/views/FXML/AccountPaymentsPage.fxml");}
     public void loadRosterPage(){changePage(rosterButton,"/views/FXML/RosterPage.fxml");}
     public void loadAccountsPage(){changePage(accountsButton,"/views/FXML/AccountEdit.fxml");}
     public void loadInvoiceTracking(){changePage(invoiceTrackingButton,"/views/FXML/AccountEdit.fxml");}

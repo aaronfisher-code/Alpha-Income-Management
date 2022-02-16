@@ -10,4 +10,16 @@
 	
 }
 
+.mfx-table-view .columns-container{
+    -fx-background-color: #F3F2F7;
+    -fx-border-color: #F3F2F7;
+    -fx-highlight-fill: #F3F2F7;
+}
+
+.mfx-table-view .columns-container .mfx-table-column{
+    -fx-background-color: #F3F2F7;
+    -fx-border-color: #F3F2F7;
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-text-fill: #6E6B7B;
+}
 

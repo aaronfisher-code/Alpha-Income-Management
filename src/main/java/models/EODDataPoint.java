@@ -12,7 +12,6 @@ public class EODDataPoint {
 	private double amexAmount;
 	private double googleSquareAmount;
 	private double chequeAmount;
-	private int clinicalInterventions;
 	private int medschecks;
 	private int stockOnHandAmount;
 	private int scriptsOnFile;
@@ -36,8 +35,6 @@ public class EODDataPoint {
 	public void setGoogleSquareAmount(double googleSquareAmount) {this.googleSquareAmount = googleSquareAmount;}
 	public double getChequeAmount() {return chequeAmount;}
 	public void setChequeAmount(double chequeAmount) {this.chequeAmount = chequeAmount;}
-	public int getClinicalInterventions() {return clinicalInterventions;}
-	public void setClinicalInterventions(int clinicalInterventions) {this.clinicalInterventions = clinicalInterventions;}
 	public int getMedschecks() {return medschecks;}
 	public void setMedschecks(int medschecks) {this.medschecks = medschecks;}
 	public int getStockOnHandAmount() {return stockOnHandAmount;}

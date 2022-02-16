@@ -9,6 +9,12 @@
     -fx-text-fill: #6e6b7b;
 }
 
+.tableHeader {
+    -fx-font-family: "Montserrat Medium";
+    -fx-font-size: 18px;
+    -fx-text-fill: #6e6b7b;
+}
+
 .controlButton {
     -fx-font-family: "Montserrat SemiBold";
     -fx-font-size: 13px;
@@ -19,7 +25,7 @@
     -fx-font-size: 14px;
 }
 
-.tableHeader {
+.filter-view .title {
     -fx-font-family: "Montserrat Medium";
     -fx-font-size: 18px;
     -fx-text-fill: #6e6b7b;

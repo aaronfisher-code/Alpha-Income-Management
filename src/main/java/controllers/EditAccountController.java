@@ -5,6 +5,7 @@ import com.dlsc.gemsfx.FilterView;
 import com.dlsc.gemsfx.FilterView.FilterGroup;
 import io.github.palexdev.materialfx.controls.MFXPaginatedTableView;
 import io.github.palexdev.materialfx.controls.MFXTableColumn;
+import io.github.palexdev.materialfx.controls.MFXTableView;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
 import io.github.palexdev.materialfx.filter.StringFilter;
 import io.github.palexdev.materialfx.utils.others.observables.When;
@@ -28,7 +29,9 @@ public class EditAccountController extends Controller{
 
 	@FXML
 	private StackPane backgroundPane;
-	private MFXPaginatedTableView<User> accountsTable = new MFXPaginatedTableView<User>();
+	@FXML
+	private VBox controlBox;
+	private MFXTableView<User> accountsTable = new MFXTableView<User>();
 	private MFXTableColumn<User> usernameCol;
 	private MFXTableColumn<User> firstNameCol;
 	private MFXTableColumn<User> lastNameCol;
@@ -60,14 +63,13 @@ public class EditAccountController extends Controller{
 
 		FilterView<User> filterView = new FilterView<>();
 		filterView.setTitle("Current Users");
-		filterView.setSubtitle("Double click on a user for more actions");
 		filterView.setTextFilterProvider(text -> user -> user.getFirst_name().toLowerCase().contains(text) || user.getLast_name().toLowerCase().contains(text) || user.getRole().toLowerCase().contains(text));
 		allUsers = filterView.getFilteredItems();
 
-		usernameCol = new MFXTableColumn<>("Username",false, Comparator.comparing(User::getUsername));
-		firstNameCol = new MFXTableColumn<>("First Name",false, Comparator.comparing(User::getFirst_name));
-		lastNameCol = new MFXTableColumn<>("Last Name",false, Comparator.comparing(User::getLast_name));
-		roleCol = new MFXTableColumn<>("Role",false, Comparator.comparing(User::getRole));
+		usernameCol = new MFXTableColumn<>("USERNAME",false, Comparator.comparing(User::getUsername));
+		firstNameCol = new MFXTableColumn<>("FIRST NAME",false, Comparator.comparing(User::getFirst_name));
+		lastNameCol = new MFXTableColumn<>("LAST NAME",false, Comparator.comparing(User::getLast_name));
+		roleCol = new MFXTableColumn<>("ROLE",false, Comparator.comparing(User::getRole));
 		usernameCol.setRowCellFactory(user -> new MFXTableRowCell<>(User::getUsername));
 		firstNameCol.setRowCellFactory(user -> new MFXTableRowCell<>(User::getFirst_name));
 		lastNameCol.setRowCellFactory(user -> new MFXTableRowCell<>(User::getLast_name));
@@ -95,21 +97,13 @@ public class EditAccountController extends Controller{
 
 		accountsTable.setFooterVisible(true);
 		accountsTable.autosizeColumnsOnInitialization();
-
-		When.onChanged(accountsTable.currentPageProperty())
-				.then((oldValue,newValue) -> accountsTable.autosizeColumns())
-				.listen();
-
 		accountsTable.setMaxWidth(Double.MAX_VALUE);
-		accountsTable.setRowsPerPage(15);
-		accountsTable.setItems(allUsers);
+		accountsTable.setMaxHeight(Double.MAX_VALUE);
+		filterView.setPadding(new Insets(20,20,10,20));//top,right,bottom,left
 
-		VBox box = new VBox(filterView,accountsTable);
-		box.setPadding(new Insets(20));
-		box.setSpacing(10);
+		controlBox.getChildren().addAll(filterView,accountsTable);
 
 		VBox.setVgrow(accountsTable, Priority.ALWAYS);
-		backgroundPane.getChildren().add(box);
 		accountsTable.setItems(allUsers);
 
 
