@@ -225,7 +225,7 @@ public class RosterPageController extends Controller {
         if(friBox.getChildren().size()>maxCards){maxCards=friBox.getChildren().size();}
         if(satBox.getChildren().size()>maxCards){maxCards=satBox.getChildren().size();}
         if(sunBox.getChildren().size()>maxCards){maxCards=sunBox.getChildren().size();}
-        shiftCardGrid.setPrefHeight(90*(maxCards+1));
+        shiftCardGrid.setPrefHeight(100*(maxCards+1));
     }
 }
 

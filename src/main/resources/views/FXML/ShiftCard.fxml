@@ -70,7 +70,7 @@
                   <SVGPath content="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z&#10;M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z" fill="#5e5873" scaleX="1.2" scaleY="1.2" />
                   <FlowPane alignment="CENTER_LEFT" columnHalignment="CENTER" maxHeight="1.7976931348623157E308" prefHeight="32.0">
                      <children>
-                        <Label fx:id="endTime" alignment="CENTER_RIGHT" contentDisplay="RIGHT" graphicTextGap="0.0" styleClass="timeText" text="10:00" textAlignment="RIGHT" textFill="#5e5873">
+                        <Label fx:id="startTime" contentDisplay="RIGHT" graphicTextGap="0.0" styleClass="timeText" text="04:00" textFill="#5e5873">
                            <font>
                               <Font size="22.0" />
                            </font>
@@ -78,9 +78,9 @@
                               <Insets left="5.0" />
                            </FlowPane.margin>
                            <graphic>
-                              <Label fx:id="endAMPM" styleClass="ampmText" text="AM" textFill="#5e5873" textOverrun="CLIP">
+                              <Label fx:id="startAMPM" styleClass="ampmText" text="PM" textFill="#5e5873">
                                  <font>
-                                    <Font size="6.0" />
+                                    <Font size="9.0" />
                                  </font>
                                  <padding>
                                     <Insets bottom="10.0" />
@@ -96,7 +96,7 @@
                               <Insets left="5.0" />
                            </FlowPane.margin>
                         </Label>
-                        <Label fx:id="startTime" contentDisplay="RIGHT" graphicTextGap="0.0" styleClass="timeText" text="04:00" textFill="#5e5873">
+                        <Label fx:id="endTime" alignment="CENTER_RIGHT" contentDisplay="RIGHT" graphicTextGap="0.0" styleClass="timeText" text="10:00" textAlignment="RIGHT" textFill="#5e5873">
                            <font>
                               <Font size="22.0" />
                            </font>
@@ -104,9 +104,9 @@
                               <Insets left="5.0" />
                            </FlowPane.margin>
                            <graphic>
-                              <Label fx:id="startAMPM" styleClass="ampmText" text="PM" textFill="#5e5873">
+                              <Label fx:id="endAMPM" styleClass="ampmText" text="AM" textFill="#5e5873" textOverrun="CLIP">
                                  <font>
-                                    <Font size="9.0" />
+                                    <Font size="6.0" />
                                  </font>
                                  <padding>
                                     <Insets bottom="10.0" />
@@ -147,9 +147,9 @@
       <URL value="@../CSS/ShiftCard.css" />
    </stylesheets>
    <effect>
-      <DropShadow height="12.13" offsetY="2.0" radius="5.5575" width="12.1">
+      <DropShadow height="24.0" offsetY="4.0" radius="11.5" width="24.0">
          <color>
-            <Color opacity="0.4099999964237213" />
+            <Color opacity="0.10000000149011612" />
          </color>
       </DropShadow>
    </effect>

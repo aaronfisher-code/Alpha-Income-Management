@@ -13,9 +13,11 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.AccessibleRole;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.layout.*;
 import models.User;
 
 import java.io.IOException;
@@ -31,11 +33,16 @@ public class EditAccountController extends Controller{
 	private StackPane backgroundPane;
 	@FXML
 	private VBox controlBox;
+	@FXML
+	private BorderPane storesButton;
+	@FXML
+	private BorderPane usersButton;
 	private MFXTableView<User> accountsTable = new MFXTableView<User>();
 	private MFXTableColumn<User> usernameCol;
 	private MFXTableColumn<User> firstNameCol;
 	private MFXTableColumn<User> lastNameCol;
 	private MFXTableColumn<User> roleCol;
+	private FilterView<User> filterView = new FilterView<>();
 	
 	
     private Connection con = null;
@@ -61,7 +68,7 @@ public class EditAccountController extends Controller{
 	@Override
 	public void fill() {
 
-		FilterView<User> filterView = new FilterView<>();
+		filterView = new FilterView<>();
 		filterView.setTitle("Current Users");
 		filterView.setTextFilterProvider(text -> user -> user.getFirst_name().toLowerCase().contains(text) || user.getLast_name().toLowerCase().contains(text) || user.getRole().toLowerCase().contains(text));
 		allUsers = filterView.getFilteredItems();
@@ -107,6 +114,42 @@ public class EditAccountController extends Controller{
 		accountsTable.setItems(allUsers);
 
 
+	}
+
+	public void usersView(){
+		formatTabSelect(usersButton);
+		formatTabDeselect(storesButton);
+	}
+
+	public void storesView(){
+		formatTabSelect(storesButton);
+		formatTabDeselect(usersButton);
+	}
+
+	public void formatTabSelect(BorderPane b){
+		for (Node n:b.getChildren()) {
+			if(n.getAccessibleRole() == AccessibleRole.TEXT){
+				Label a = (Label) n;
+				a.setStyle("-fx-text-fill: #0F60FF");
+			}
+			if(n.getAccessibleRole() == AccessibleRole.PARENT){
+				Region a = (Region) n;
+				a.setStyle("-fx-background-color: #0F60FF");
+			}
+		}
+	}
+
+	public void formatTabDeselect(BorderPane b){
+		for (Node n:b.getChildren()) {
+			if(n.getAccessibleRole() == AccessibleRole.TEXT){
+				Label a = (Label) n;
+				a.setStyle("-fx-text-fill: #6e6b7b");
+			}
+			if(n.getAccessibleRole() == AccessibleRole.PARENT){
+				Region a = (Region) n;
+				a.setStyle("");
+			}
+		}
 	}
 
 //	// On register page

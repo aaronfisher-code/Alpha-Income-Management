@@ -124,9 +124,9 @@ public class ShiftCardController extends Controller{
 
 	public void hoverOff(){
 //		backgroundPane.setStyle("-fx-background-color: #FFFFFF; -fx-background-radius: 5;");
-		DropShadow d = new DropShadow(BlurType.THREE_PASS_BOX, Color.web("#000000",0.41),5.56,0.0,0.0,2.0);
-		d.setHeight(12.15);
-		d.setWidth(12.1);
+		DropShadow d = new DropShadow(BlurType.THREE_PASS_BOX, Color.web("#000000",0.1),10,0.0,0.0,4.0);
+		d.setHeight(24);
+		d.setWidth(24);
 		backgroundPane.setEffect(d);
 		slide(100L,0,backgroundPane);
 	}

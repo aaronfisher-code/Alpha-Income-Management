@@ -87,13 +87,6 @@
          <StackPane.margin>
             <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
          </StackPane.margin>
-         <effect>
-            <DropShadow height="12.15" offsetY="2.0" radius="5.5625" width="12.1">
-               <color>
-                  <Color opacity="0.4099999964237213" />
-               </color>
-            </DropShadow>
-         </effect>
          <center>
             <BorderPane prefHeight="200.0" prefWidth="200.0" style="-fx-background-radius: 10; -fx-background-color: #FFFFFF;" BorderPane.alignment="CENTER">
                <center>
@@ -115,6 +108,13 @@
                </top>
             </BorderPane>
          </center>
+         <effect>
+            <DropShadow height="24.0" offsetY="4.0" radius="11.5" width="24.0">
+               <color>
+                  <Color opacity="0.10000000149011612" />
+               </color>
+            </DropShadow>
+         </effect>
       </BorderPane>
       <JFXNodesList fx:id="addList" alignment="CENTER" nodeOrientation="LEFT_TO_RIGHT" spacing="10.0" StackPane.alignment="BOTTOM_RIGHT">
          <children>
@@ -204,7 +204,7 @@
                         <MFXTextField floatMode="BORDER" floatingText="Scripts on File Count" layoutX="20.0" layoutY="366.0" maxWidth="1.7976931348623157E308" />
                         <MFXTextField floatMode="BORDER" floatingText="SMS patients" layoutX="20.0" layoutY="414.0" maxWidth="1.7976931348623157E308" />
                         <TextArea prefHeight="100.0" promptText="Add any additional notes here..." VBox.vgrow="NEVER" />
-                        <MFXButton buttonType="RAISED" depthLevel="LEVEL3" maxWidth="1.7976931348623157E308" prefHeight="30.0" style="-fx-background-color: #0F60FF;" text="Save" textFill="WHITE">
+                        <MFXButton depthLevel="LEVEL3" maxWidth="1.7976931348623157E308" prefHeight="30.0" style="-fx-background-color: #0F60FF;" text="Save" textFill="WHITE">
                            <VBox.margin>
                               <Insets bottom="50.0" top="10.0" />
                            </VBox.margin></MFXButton>

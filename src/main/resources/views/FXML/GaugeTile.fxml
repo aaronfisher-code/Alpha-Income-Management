@@ -10,7 +10,7 @@
 <?import javafx.scene.paint.Color?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" styleClass="tile" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.GaugeTileController">
+<BorderPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" styleClass="tile" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.GaugeTileController">
    <center>
       <StackPane fx:id="gaugePane" prefHeight="150.0" prefWidth="200.0" BorderPane.alignment="CENTER" />
    </center>
@@ -44,9 +44,9 @@
       <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
    </padding>
    <effect>
-      <DropShadow blurType="GAUSSIAN" height="12.15" offsetY="2.0" radius="5.5625" width="12.1">
+      <DropShadow height="24.0" offsetY="4.0" radius="11.5" width="24.0">
          <color>
-            <Color opacity="0.4099999964237213" />
+            <Color opacity="0.10000000149011612" />
          </color>
       </DropShadow>
    </effect>

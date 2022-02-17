@@ -1,16 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import java.net.*?>
-<?import javafx.geometry.*?>
-<?import javafx.scene.*?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.effect.*?>
-<?import javafx.scene.layout.*?>
-<?import javafx.scene.paint.*?>
+<?import java.net.URL?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.Cursor?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.paint.Color?>
 
 <!--<?import io.github.palexdev.materialfx.controls.MFXDatePicker?>-->
 
-<StackPane maxWidth="1.7976931348623157E308" prefHeight="800.0" prefWidth="1200.0" style="-fx-background-color: #EDF0F7;" xmlns="http://javafx.com/javafx/11.0.2" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.TargetGraphsPageController">
+<StackPane maxWidth="1.7976931348623157E308" prefHeight="800.0" prefWidth="1200.0" style="-fx-background-color: #EDF0F7;" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.TargetGraphsPageController">
    <stylesheets>
       <URL value="@../CSS/application.css" />
       <URL value="@../CSS/TargetGraphPage.css" />
@@ -89,9 +95,9 @@
                   </BorderPane>
                </children>
                <effect>
-                  <DropShadow height="12.2" offsetY="2.0" radius="5.574999999999999" width="12.1">
+                  <DropShadow height="24.0" offsetY="4.0" radius="11.5" width="24.0">
                      <color>
-                        <Color opacity="0.4099999964237213" />
+                        <Color opacity="0.10000000149011612" />
                      </color>
                   </DropShadow>
                </effect>
