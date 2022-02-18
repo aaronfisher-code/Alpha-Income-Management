@@ -148,9 +148,9 @@ public class InvoiceEntryController extends Controller{
 
 	}
 
-	public void exportFiles(){
+	public void exportFiles(){}
 
-	}
+	public void importFiles(){}
 
 	public void weekForward() {
 		setDatePkr(datePkr.getValue().plusMonths(1));
