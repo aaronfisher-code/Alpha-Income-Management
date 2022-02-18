@@ -80,7 +80,7 @@
                   </FlowPane>
                </left>
                <BorderPane.margin>
-                  <Insets bottom="10.0" />
+                  <Insets bottom="20.0" />
                </BorderPane.margin>
             </BorderPane>
          </top>

@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.jfoenix.controls.JFXButton?>
+<?import com.jfoenix.controls.JFXNodesList?>
 <?import java.net.URL?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.Cursor?>
@@ -13,10 +15,12 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.paint.Color?>
+<?import javafx.scene.shape.SVGPath?>
+<?import javafx.scene.text.Font?>
 
 <StackPane fx:id="backgroundPane" prefHeight="440.0" prefWidth="681.0" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EditAccountController">
    <children>
-      <BorderPane prefHeight="200.0" prefWidth="200.0" style="-fx-background-color: #EDF0F7;">
+      <BorderPane style="-fx-background-color: TRANSPARENT;">
          <top>
             <GridPane prefHeight="50.0" style="-fx-background-color: #FFFFFF; -fx-background-radius: 5;" BorderPane.alignment="CENTER">
                <columnConstraints>
@@ -80,6 +84,24 @@
             </VBox>
          </center>
       </BorderPane>
+      <JFXNodesList fx:id="addList" alignment="CENTER" nodeOrientation="LEFT_TO_RIGHT" spacing="10.0" StackPane.alignment="BOTTOM_RIGHT">
+         <children>
+            <JFXButton alignment="CENTER" buttonType="RAISED" contentDisplay="CENTER" graphicTextGap="0.0" scaleShape="false" styleClass="animated-option-button" stylesheets="@../CSS/application.css" text=" ">
+               <font>
+                  <Font name="System Bold" size="8.0" />
+               </font>
+               <graphic>
+                  <SVGPath content="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" fill="WHITE" scaleX="3.0" scaleY="3.0" scaleZ="3.0" />
+               </graphic>
+            </JFXButton>
+         </children>
+         <cursor>
+            <Cursor fx:constant="HAND" />
+         </cursor>
+         <StackPane.margin>
+            <Insets bottom="50.0" right="50.0" />
+         </StackPane.margin>
+      </JFXNodesList>
    </children>
    <stylesheets>
       <URL value="@../CSS/application.css" />

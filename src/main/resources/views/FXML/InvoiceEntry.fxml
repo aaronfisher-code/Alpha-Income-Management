@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.jfoenix.controls.JFXButton?>
+<?import com.jfoenix.controls.JFXNodesList?>
+<?import java.net.URL?>
+<?import javafx.geometry.Insets?>
+<?import javafx.geometry.Rectangle2D?>
+<?import javafx.scene.Cursor?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.paint.Color?>
+<?import javafx.scene.shape.SVGPath?>
+<?import javafx.scene.text.Font?>
+
+<StackPane fx:id="backgroundPane" prefHeight="440.0" prefWidth="681.0" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.InvoiceEntryController">
+   <children>
+      <BorderPane prefHeight="200.0" prefWidth="200.0" style="-fx-background-color: TRANSPARENT;">
+         <center>
+            <VBox fx:id="controlBox" alignment="TOP_CENTER" style="-fx-background-color: #FFFFFF; -fx-background-radius: 10;" BorderPane.alignment="CENTER">
+               <BorderPane.margin>
+                  <Insets />
+               </BorderPane.margin>
+            </VBox>
+         </center>
+         <top>
+            <BorderPane style="-fx-background-color: #F3F2F7; -fx-background-radius: 10;" BorderPane.alignment="CENTER">
+               <padding>
+                  <Insets bottom="12.0" left="10.0" right="10.0" top="10.0" />
+               </padding>
+               <right>
+                  <Button fx:id="exportDataButton" graphicTextGap="10.0" mnemonicParsing="false" onAction="#exportFiles" prefHeight="35.0" prefWidth="227.0" style="-fx-background-color: #F3F2F7; -fx-border-color: #6e6b7b; -fx-border-radius: 5;" styleClass="controlButton" text="Export in Xero Format" textFill="#6e6b7b" BorderPane.alignment="CENTER">
+                     <cursor>
+                        <Cursor fx:constant="HAND" />
+                     </cursor>
+                     <graphic>
+                        <ImageView fitHeight="30.0" fitWidth="30.0" pickOnBounds="true" preserveRatio="true">
+                           <image>
+                              <Image url="@../../images/1200px-Xero_software_logo.svg.png" />
+                           </image>
+                           <viewport>
+                              <Rectangle2D />
+                           </viewport>
+                        </ImageView>
+                     </graphic>
+                  </Button>
+               </right>
+               <left>
+                  <FlowPane fx:id="datePickerPane" hgap="5.0" prefHeight="38.0" prefWidth="575.0" prefWrapLength="495.0" snapToPixel="false" vgap="5.0" BorderPane.alignment="CENTER">
+                     <children>
+                        <Label prefHeight="32.0" styleClass="headingText" text="NOW SHOWING THE MONTH OF:" textFill="#6e6b7b">
+                           <font>
+                              <Font size="17.0" />
+                           </font>
+                           <FlowPane.margin>
+                              <Insets right="10.0" />
+                           </FlowPane.margin>
+                        </Label>
+                        <Button alignment="TOP_CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#weekBackward" prefHeight="30.0" prefWidth="20.0" style="-fx-background-color: #F3F2F7; -fx-padding: 1;" text="&lt;" textFill="#b2bac9">
+                           <font>
+                              <Font size="19.0" />
+                           </font>
+                           <opaqueInsets>
+                              <Insets />
+                           </opaqueInsets>
+                           <cursor>
+                              <Cursor fx:constant="HAND" />
+                           </cursor>
+                        </Button>
+                        <Button alignment="TOP_CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#weekForward" prefHeight="30.0" prefWidth="20.0" style="-fx-background-color: #f3F2F7; -fx-padding: 1;" text="&gt;" textFill="#b2bac9">
+                           <font>
+                              <Font size="19.0" />
+                           </font>
+                           <opaqueInsets>
+                              <Insets />
+                           </opaqueInsets>
+                           <cursor>
+                              <Cursor fx:constant="HAND" />
+                           </cursor>
+                        </Button>
+                     </children>
+                     <padding>
+                        <Insets top="5.0" />
+                     </padding>
+                  </FlowPane>
+               </left>
+               <BorderPane.margin>
+                  <Insets bottom="20.0" />
+               </BorderPane.margin>
+            </BorderPane>
+         </top>
+         <effect>
+            <DropShadow height="24.0" offsetY="4.0" radius="11.5" width="24.0">
+               <color>
+                  <Color opacity="0.10000000149011612" />
+               </color>
+            </DropShadow>
+         </effect>
+         <StackPane.margin>
+            <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+         </StackPane.margin>
+      </BorderPane>
+      <JFXNodesList fx:id="addList" alignment="CENTER" nodeOrientation="LEFT_TO_RIGHT" spacing="10.0" StackPane.alignment="BOTTOM_RIGHT">
+         <children>
+            <JFXButton alignment="CENTER" buttonType="RAISED" contentDisplay="CENTER" graphicTextGap="0.0" scaleShape="false" styleClass="animated-option-button" stylesheets="@../CSS/application.css" text=" ">
+               <font>
+                  <Font name="System Bold" size="8.0" />
+               </font>
+               <graphic>
+                  <SVGPath content="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" fill="WHITE" scaleX="3.0" scaleY="3.0" scaleZ="3.0" />
+               </graphic>
+            </JFXButton>
+         </children>
+         <cursor>
+            <Cursor fx:constant="HAND" />
+         </cursor>
+         <StackPane.margin>
+            <Insets bottom="50.0" right="50.0" />
+         </StackPane.margin>
+      </JFXNodesList>
+   </children>
+   <stylesheets>
+      <URL value="@../CSS/application.css" />
+      <URL value="@../CSS/AccountEditPage.css" />
+   </stylesheets>
+</StackPane>
