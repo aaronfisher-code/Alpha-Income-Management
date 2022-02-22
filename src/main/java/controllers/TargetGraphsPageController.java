@@ -33,6 +33,7 @@ public class TargetGraphsPageController extends Controller{
     private Main main;
     private User selectedUser;
     private BootstrapPane outerPane = new BootstrapPane();
+	private BootstrapPane graphPane = new BootstrapPane();
 	private BootstrapPane gaugePane = new BootstrapPane();
 	
 	 @FXML
@@ -58,7 +59,7 @@ public class TargetGraphsPageController extends Controller{
 		BootstrapRow contentRow = new BootstrapRow();
 
 		//Setup line graphs
-		BootstrapPane graphPane = new BootstrapPane(graphScrollPane);
+		graphPane = new BootstrapPane(graphScrollPane);
 		graphPane.setVgap(20);
 		graphPane.setHgap(20);
 
@@ -119,6 +120,7 @@ public class TargetGraphsPageController extends Controller{
 
 		outerPane.addRow(contentRow);
 		graphScrollPane.setContent(outerPane);
+		graphPane.setPrefHeight(graphScrollPane.getHeight());
 
 	}
 
@@ -202,6 +204,10 @@ public class TargetGraphsPageController extends Controller{
 				a.setStyle("");
 			}
 		}
+	}
+
+	public void adjustHeight(){
+	 	graphPane.setPrefHeight(graphScrollPane.getHeight());
 	}
 
 

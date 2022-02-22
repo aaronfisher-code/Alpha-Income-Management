@@ -2,6 +2,7 @@ package controllers;
 
 import application.Main;
 import components.CurvedFittedAreaChart;
+import io.github.palexdev.materialfx.controls.MFXTableView;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.chart.LineChart;
@@ -11,6 +12,7 @@ import javafx.scene.effect.BlurType;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import models.User;
 
@@ -31,6 +33,8 @@ public class GraphTileController extends Controller{
 
     @FXML
 	private StackPane graphPane;
+    @FXML
+	private VBox legend;
 	
     @FXML
 	private void initialize() throws IOException {}
@@ -48,12 +52,10 @@ public class GraphTileController extends Controller{
 
 	@Override
 	public void fill() {
-	 	graphPane.getChildren().add(fillGraph("No of scripts", true));
+	 	graphPane.getChildren().add(fillGraph("No of scripts", false));
 	}
 
 	public StackPane fillGraph(String title, Boolean hideYAxis){
-
-
 
 		//defining a series
 		XYChart.Series<Number,Number> series = new XYChart.Series();
@@ -139,6 +141,16 @@ public class GraphTileController extends Controller{
 		chart.setVerticalGridLinesVisible(false);
 		chart.getXAxis().setVisible(false);
 		chart.getYAxis().setVisible(false);
+	}
+
+	public void setTableView(){
+    	graphPane.getChildren().remove(0);
+		MFXTableView dataTable = new MFXTableView();
+		dataTable.setMaxHeight(Double.MAX_VALUE);
+		dataTable.setMaxWidth(Double.MAX_VALUE);
+		dataTable.setFooterVisible(false);
+		legend.setVisible(false);
+		graphPane.getChildren().add(dataTable);
 	}
 
 	

@@ -54,12 +54,21 @@ public class GaugeTileController extends Controller{
 	public StackPane fillGauge(){
 
 		StackPane finalPane = new StackPane();
-		finalPane.getChildren().add(new Gauge(Gauge.SkinType.SLIM));
+		Gauge g = new Gauge(Gauge.SkinType.SLIM);
+		g.setMinValue(0);
+		g.setMaxValue(5);
+		g.setValue(4.38);
+		g.setAnimated(true);
+		g.setBarColor(Color.web("#0F60FF"));
+		g.setBarBackgroundColor(Color.web("#F3F2F7"));
+		g.setValueColor(Color.web("#6e6b7b"));
+		g.setAngleRange(90);
+		g.setStartAngle(40);
 
-		DropShadow d = new DropShadow(BlurType.THREE_PASS_BOX, Color.web("#000000",0.41),5.56,0.0,0.0,2.0);
-		d.setHeight(12.2);
-		d.setWidth(12.1);
-		//finalPane.setEffect(d);
+		finalPane.getChildren().add(g);
+
+
+
 		finalPane.setFocusTraversable(false);
 
 		return finalPane;
