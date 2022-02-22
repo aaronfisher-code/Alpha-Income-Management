@@ -14,12 +14,8 @@
     -fx-background-color:transparent;
 }
 
-.chart-series-area-fill{
-    -fx-fill: linear-gradient(to top,transparent, #0F60FF45);
-}
-
-.default-color0.chart-series-area-line {
-    -fx-stroke: #0F60FF;
+.default-color0.chart-series-line {
+    -fx-stroke: #FFBD29;
     -fx-stroke-width: 2px;
 }
 

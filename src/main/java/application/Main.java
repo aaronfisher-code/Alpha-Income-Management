@@ -53,7 +53,7 @@ public class Main extends Application {
 		primaryStage.getIcons().add(icon);
 		primaryStage.show();
 		bs.maximizeStage();
-		stg.setMinWidth(600);
+//		stg.setMinWidth(600);
 		bs.setResizable(true);
 		c.fill();
 	}
@@ -74,7 +74,7 @@ public class Main extends Application {
 		stg.show();
 		bs.maximizeStage();
 		bs.setResizable(true);
-		stg.setMinWidth(950);
+//		stg.setMinWidth(950);
 		bs.removeDefaultCSS();
 		c.fill();
 

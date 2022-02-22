@@ -231,7 +231,7 @@ public class MainMenuController extends Controller {
     public void loadAccountsPage(){changePage(accountsButton,"/views/FXML/AccountEdit.fxml");}
     public void loadInvoiceTracking(){changePage(invoiceTrackingButton,"/views/FXML/InvoiceEntry.fxml");}
     public void loadExpiryTracker(){changePage(expiryTrackerButton,"/views/FXML/AccountEdit.fxml");}
-    public void loadBASChecker(){changePage(basCheckerButton,"/views/FXML/AccountEdit.fxml");}
+    public void loadBASChecker(){changePage(basCheckerButton,"/views/FXML/BASCheckerPage.fxml");}
     public void loadMonthlySummary(){changePage(monthlySummaryButton,"/views/FXML/AccountEdit.fxml");}
     public void loadSettings(){changePage(settingsButton,"/views/FXML/AccountEdit.fxml");}
 

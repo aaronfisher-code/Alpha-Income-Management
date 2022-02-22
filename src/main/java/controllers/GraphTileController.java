@@ -94,37 +94,28 @@ public class GraphTileController extends Controller{
 
 		areaChart.setHorizontalGridLinesVisible(false);
 		areaChart.setVerticalGridLinesVisible(false);
-		areaChart.setPadding(new Insets(20,40,20,20));
 		areaChart.setAnimated(false);
 		areaChart.setCreateSymbols(false);
 		areaChart.setLegendVisible(false);
-		areaChart.setStyle("-fx-stroke: #0F60FF;");
+		areaChart.setStyle("-fx-stroke: #0F60FF;" + "-fx-stroke-width: 3px;");
 
 		target1Chart.setHorizontalGridLinesVisible(false);
 		target1Chart.setVerticalGridLinesVisible(false);
-		target1Chart.setPadding(new Insets(20,40,20,20));
 		target1Chart.setAnimated(false);
 		target1Chart.setCreateSymbols(false);
 		target1Chart.setLegendVisible(false);
+		target1Chart.setStyle("-fx-stroke: #FFBD29;" + "-fx-stroke-width: 2px;");
+		target1Chart.getStylesheets().add("views/CSS/Target1LineChart.css");
 
 		target2Chart.setHorizontalGridLinesVisible(false);
 		target2Chart.setVerticalGridLinesVisible(false);
-		target2Chart.setPadding(new Insets(20,40,20,20));
 		target2Chart.setAnimated(false);
 		target2Chart.setCreateSymbols(false);
 		target2Chart.setLegendVisible(false);
+		target2Chart.setStyle("-fx-stroke: #FF298D;" + "-fx-stroke-width: 2px;");
+		target2Chart.getStylesheets().add("views/CSS/Target2LineChart.css");
 
 		StackPane finalPane = layerCharts(target1Chart,target2Chart,areaChart);
-
-		DropShadow d = new DropShadow(BlurType.THREE_PASS_BOX, Color.web("#000000",0.41),5.56,0.0,0.0,2.0);
-		d.setHeight(12.2);
-		d.setWidth(12.1);
-
-
-
-
-
-		//finalPane.setEffect(d);
 		finalPane.setFocusTraversable(false);
 
 		return finalPane;

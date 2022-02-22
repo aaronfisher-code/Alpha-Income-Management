@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import io.github.palexdev.materialfx.controls.MFXScrollPane?>
 <?import java.net.URL?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.Cursor?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.effect.DropShadow?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
@@ -16,36 +16,13 @@
 
 <!--<?import io.github.palexdev.materialfx.controls.MFXDatePicker?>-->
 
-<StackPane maxWidth="1.7976931348623157E308" prefHeight="800.0" prefWidth="1200.0" style="-fx-background-color: #EDF0F7;" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.TargetGraphsPageController">
+<StackPane maxWidth="1.7976931348623157E308" prefHeight="800.0" prefWidth="1200.0" style="-fx-background-color: TRANSPARENT;" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.TargetGraphsPageController">
    <stylesheets>
       <URL value="@../CSS/application.css" />
       <URL value="@../CSS/TargetGraphPage.css" />
    </stylesheets>
    <children>
-      <BorderPane prefHeight="200.0" prefWidth="200.0" style="-fx-background-color: #EDF0F7;">
-         <center>
-            <ScrollPane fitToHeight="true" fitToWidth="true" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-background-color: #EDF0F7;" BorderPane.alignment="CENTER">
-               <content>
-                  <GridPane fx:id="graphGrid" alignment="CENTER" hgap="25.0" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="500.0" minWidth="650.0" style="-fx-background-color: #EDF0F7;" vgap="25.0">
-                     <columnConstraints>
-                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-                     </columnConstraints>
-                     <rowConstraints>
-                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                     </rowConstraints>
-                     <padding>
-                        <Insets bottom="5.0" left="20.0" right="20.0" top="5.0" />
-                     </padding>
-                  </GridPane>
-               </content>
-               <BorderPane.margin>
-                  <Insets bottom="20.0" />
-               </BorderPane.margin>
-            </ScrollPane>
-         </center>
+      <BorderPane fx:id="backgroundPane" prefHeight="200.0" prefWidth="200.0" style="-fx-background-color: TRANSPARENT;">
          <top>
             <GridPane prefHeight="50.0" style="-fx-background-color: #FFFFFF; -fx-background-radius: 5;" BorderPane.alignment="CENTER">
               <columnConstraints>
@@ -102,13 +79,20 @@
                   </DropShadow>
                </effect>
                <BorderPane.margin>
-                  <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                  <Insets bottom="20.0" />
                </BorderPane.margin>
             </GridPane>
          </top>
          <StackPane.margin>
-            <Insets />
+            <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
          </StackPane.margin>
+         <center>
+            <MFXScrollPane fx:id="graphScrollPane" fitToHeight="true" fitToWidth="true" hbarPolicy="NEVER" style="-fx-background-color: TRANSPARENT;" BorderPane.alignment="CENTER">
+               <BorderPane.margin>
+                  <Insets bottom="-20.0" left="-20.0" right="-20.0" top="-20.0" />
+               </BorderPane.margin>
+            </MFXScrollPane>
+         </center>
       </BorderPane>
    </children>
 </StackPane>

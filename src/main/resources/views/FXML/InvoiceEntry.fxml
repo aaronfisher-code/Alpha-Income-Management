@@ -87,7 +87,7 @@
                               </ImageView>
                            </graphic>
                         </Button>
-                        <Button fx:id="importDataButton" graphicTextGap="10.0" minHeight="42.5" minWidth="227.0" mnemonicParsing="false" onAction="#importFiles" prefHeight="42.5" prefWidth="227.0" style="-fx-background-color: #F3F2F7; -fx-border-color: #6e6b7b; -fx-border-radius: 5;" styleClass="controlButton" text="Import EOD files" textFill="#6e6b7b">
+                        <Button fx:id="importDataButton" graphicTextGap="10.0" minHeight="42.5" minWidth="227.0" mnemonicParsing="false" onAction="#importFiles" prefHeight="42.5" prefWidth="227.0" style="-fx-background-color: #F3F2F7; -fx-border-color: #6e6b7b; -fx-border-radius: 5;" styleClass="controlButton" text="Import Invoice Data" textFill="#6e6b7b">
                            <cursor>
                               <Cursor fx:constant="HAND" />
                            </cursor>

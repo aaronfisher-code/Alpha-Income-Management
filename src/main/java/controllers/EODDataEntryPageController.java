@@ -27,7 +27,12 @@ import javafx.stage.FileChooser;
 import javafx.util.Duration;
 import models.EODDataPoint;
 import models.User;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -147,11 +152,13 @@ public class EODDataEntryPageController extends Controller{
 
 	}
 
-	public void importFiles(){
+	public void importFiles() throws IOException {
 		FileChooser fileChooser = new FileChooser();
 		fileChooser.setTitle("Open Data entry File");
-		fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
-		fileChooser.showOpenDialog(main.getStg());
+		fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("XLS Files", "*.xls"));
+		File newfile = fileChooser.showOpenDialog(main.getStg());
+		FileInputStream file = new FileInputStream(newfile);
+		Workbook workbook = new XSSFWorkbook(file);
 	}
 
 	public void weekForward() {
