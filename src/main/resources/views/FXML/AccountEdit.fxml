@@ -2,14 +2,22 @@
 
 <?import com.jfoenix.controls.JFXButton?>
 <?import com.jfoenix.controls.JFXNodesList?>
+<?import io.github.palexdev.materialfx.controls.MFXButton?>
+<?import io.github.palexdev.materialfx.controls.MFXCheckListView?>
+<?import io.github.palexdev.materialfx.controls.MFXRectangleToggleNode?>
+<?import io.github.palexdev.materialfx.controls.MFXScrollPane?>
+<?import io.github.palexdev.materialfx.controls.MFXTextField?>
 <?import java.net.URL?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.Cursor?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ColorPicker?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.effect.DropShadow?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.RowConstraints?>
 <?import javafx.scene.layout.StackPane?>
@@ -18,7 +26,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane fx:id="backgroundPane" prefHeight="440.0" prefWidth="681.0" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EditAccountController">
+<StackPane fx:id="backgroundPane" prefHeight="900.0" prefWidth="998.0" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EditAccountController">
    <children>
       <BorderPane style="-fx-background-color: TRANSPARENT;">
          <top>
@@ -50,7 +58,7 @@
                         <Label text="STORES" textFill="#6e6b7b" BorderPane.alignment="CENTER" />
                      </center>
                      <bottom>
-                        <Region fx:id="mtdSelector" maxWidth="1.7976931348623157E308" prefHeight="5.0" BorderPane.alignment="CENTER" />
+                        <Region maxWidth="1.7976931348623157E308" prefHeight="5.0" BorderPane.alignment="CENTER" />
                      </bottom>
                      <cursor>
                         <Cursor fx:constant="HAND" />
@@ -86,7 +94,7 @@
       </BorderPane>
       <JFXNodesList fx:id="addList" alignment="CENTER" nodeOrientation="LEFT_TO_RIGHT" spacing="10.0" StackPane.alignment="BOTTOM_RIGHT">
          <children>
-            <JFXButton alignment="CENTER" buttonType="RAISED" contentDisplay="CENTER" graphicTextGap="0.0" scaleShape="false" styleClass="animated-option-button" stylesheets="@../CSS/application.css" text=" ">
+            <JFXButton fx:id="addButton" alignment="CENTER" buttonType="RAISED" contentDisplay="CENTER" graphicTextGap="0.0" onAction="#openUserPopover" scaleShape="false" styleClass="animated-option-button" stylesheets="@../CSS/application.css" text=" ">
                <font>
                   <Font name="System Bold" size="8.0" />
                </font>
@@ -102,6 +110,224 @@
             <Insets bottom="50.0" right="50.0" />
          </StackPane.margin>
       </JFXNodesList>
+      <Region fx:id="contentDarken" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" opacity="0.25" style="-fx-background-color: BLACK;" visible="false" />
+      <VBox fx:id="editStorePopover" alignment="TOP_RIGHT" maxWidth="375.0" minWidth="375.0" prefWidth="375.0" spacing="10.0" style="-fx-background-color: #FFFFFF;" translateX="375.0" StackPane.alignment="TOP_RIGHT">
+         <children>
+            <BorderPane style="-fx-background-color: #F8F8F8;">
+               <left>
+                  <Label fx:id="editStorePopoverTitle" maxWidth="1.7976931348623157E308" styleClass="popOverTitle" text="Add store" textFill="#6e6b7b" BorderPane.alignment="CENTER">
+                     <font>
+                        <Font size="17.0" />
+                     </font>
+                  </Label>
+               </left>
+               <VBox.margin>
+                  <Insets />
+               </VBox.margin>
+               <padding>
+                  <Insets bottom="10.0" left="10.0" top="10.0" />
+               </padding>
+               <right>
+                  <HBox alignment="CENTER_RIGHT" BorderPane.alignment="CENTER">
+                     <children>
+                        <Button fx:id="deleteStoreButton" maxHeight="46.4" maxWidth="46.4" minHeight="46.4" minWidth="46.4" mnemonicParsing="false" prefHeight="46.4" prefWidth="46.4" style="-fx-background-color: #F8F8F8;">
+                           <graphic>
+                              <SVGPath content="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z&#10;" fill="#6e6b7b" scaleX="1.25" scaleY="1.25" />
+                           </graphic>
+                           <HBox.margin>
+                              <Insets />
+                           </HBox.margin>
+                        </Button>
+                        <Button layoutX="10.0" layoutY="10.0" maxHeight="46.4" maxWidth="46.4" minHeight="46.4" minWidth="46.4" mnemonicParsing="false" onAction="#closeStorePopover" prefHeight="46.4" prefWidth="46.4" style="-fx-background-color: #F8F8F8;">
+                           <graphic>
+                              <SVGPath content="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z&#10;" fill="#6e6b7b" scaleX="1.5" scaleY="1.5" />
+                           </graphic>
+                        </Button>
+                     </children>
+                  </HBox>
+               </right>
+            </BorderPane>
+            <MFXScrollPane fitToHeight="true" fitToWidth="true" focusTraversable="false" hbarPolicy="NEVER" VBox.vgrow="ALWAYS">
+               <content>
+                  <VBox maxWidth="1.7976931348623157E308" spacing="10.0" style="-fx-background-color: #FFFFFF;">
+                     <children>
+                        <MFXTextField fx:id="storeNameField" borderGap="0.0" floatMode="ABOVE" floatingText="Store Name" maxWidth="1.7976931348623157E308" minHeight="36.0">
+                           <VBox.margin>
+                              <Insets top="20.0" />
+                           </VBox.margin>
+                        </MFXTextField>
+                        <MFXButton fx:id="saveStoreButton" depthLevel="LEVEL3" maxWidth="1.7976931348623157E308" onAction="#addStore" prefHeight="30.0" style="-fx-background-color: #0F60FF;" styleClass="popOverButton" text="Save" textFill="WHITE">
+                           <VBox.margin>
+                              <Insets bottom="50.0" top="20.0" />
+                           </VBox.margin>
+                        </MFXButton>
+                     </children>
+                     <padding>
+                        <Insets left="5.0" right="5.0" />
+                     </padding>
+                  </VBox>
+               </content>
+               <VBox.margin>
+                  <Insets left="5.0" right="5.0" />
+               </VBox.margin>
+            </MFXScrollPane>
+         </children>
+      </VBox>
+      <VBox fx:id="editUserPopover" alignment="TOP_RIGHT" maxWidth="375.0" minWidth="375.0" prefWidth="375.0" spacing="10.0" style="-fx-background-color: #FFFFFF;" translateX="375.0" StackPane.alignment="TOP_RIGHT">
+         <children>
+            <BorderPane style="-fx-background-color: #F8F8F8;">
+               <left>
+                  <Label fx:id="editUserPopoverTitle" maxWidth="1.7976931348623157E308" styleClass="popOverTitle" text="Add user" textFill="#6e6b7b" BorderPane.alignment="CENTER">
+                     <font>
+                        <Font size="17.0" />
+                     </font>
+                  </Label>
+               </left>
+               <VBox.margin>
+                  <Insets />
+               </VBox.margin>
+               <padding>
+                  <Insets bottom="10.0" left="10.0" top="10.0" />
+               </padding>
+               <right>
+                  <HBox alignment="CENTER_RIGHT" BorderPane.alignment="CENTER">
+                     <children>
+                        <Button fx:id="deleteUserButton" maxHeight="46.4" maxWidth="46.4" minHeight="46.4" minWidth="46.4" mnemonicParsing="false" prefHeight="46.4" prefWidth="46.4" style="-fx-background-color: #F8F8F8;">
+                           <graphic>
+                              <SVGPath content="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z&#10;" fill="#6e6b7b" scaleX="1.25" scaleY="1.25" />
+                           </graphic>
+                           <HBox.margin>
+                              <Insets />
+                           </HBox.margin>
+                        </Button>
+                        <Button layoutX="10.0" layoutY="10.0" maxHeight="46.4" maxWidth="46.4" minHeight="46.4" minWidth="46.4" mnemonicParsing="false" onAction="#closeUserPopover" prefHeight="46.4" prefWidth="46.4" style="-fx-background-color: #F8F8F8;">
+                           <graphic>
+                              <SVGPath content="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z&#10;" fill="#6e6b7b" scaleX="1.5" scaleY="1.5" />
+                           </graphic>
+                        </Button>
+                     </children>
+                  </HBox>
+               </right>
+            </BorderPane>
+            <MFXScrollPane fitToHeight="true" fitToWidth="true" focusTraversable="false" hbarPolicy="NEVER" VBox.vgrow="ALWAYS">
+               <content>
+                  <VBox maxWidth="1.7976931348623157E308" spacing="30.0" style="-fx-background-color: #FFFFFF;">
+                     <children>
+                        <BorderPane>
+                           <left>
+                              <Label fx:id="employeeIcon" alignment="CENTER" contentDisplay="CENTER" prefHeight="32.0" prefWidth="32.0" style="-fx-background-color: #f7bcc9;" styleClass="profileIcon" text="A" textAlignment="CENTER" textFill="#ff003c" BorderPane.alignment="CENTER">
+                                 <font>
+                                    <Font size="22.0" />
+                                 </font>
+                                 <BorderPane.margin>
+                                    <Insets left="5.0" right="8.0" />
+                                 </BorderPane.margin>
+                              </Label>
+                           </left>
+                           <center>
+                              <VBox BorderPane.alignment="CENTER_LEFT">
+                                 <children>
+                                    <Label fx:id="employeeName" contentDisplay="BOTTOM" graphicTextGap="0.0" styleClass="staffName" text="Aaron.F" textFill="#5e5873">
+                                       <font>
+                                          <Font name="System Bold" size="18.0" />
+                                       </font>
+                                       <VBox.margin>
+                                          <Insets bottom="-3.0" />
+                                       </VBox.margin>
+                                    </Label>
+                                    <Label fx:id="employeeRole" alignment="CENTER" styleClass="staffRole" text="Pharmacy Assistant" textFill="#6e6b7b" wrapText="true">
+                                       <font>
+                                          <Font size="15.0" />
+                                       </font>
+                                       <VBox.margin>
+                                          <Insets bottom="-2.0" />
+                                       </VBox.margin>
+                                    </Label>
+                                 </children>
+                                 <BorderPane.margin>
+                                    <Insets bottom="3.0" top="4.0" />
+                                 </BorderPane.margin>
+                                 <padding>
+                                    <Insets top="-4.0" />
+                                 </padding>
+                              </VBox>
+                           </center>
+                           <right>
+                              <MFXRectangleToggleNode fx:id="inactiveUserToggle" text="Mark as Inactive" BorderPane.alignment="CENTER" />
+                           </right>
+                        </BorderPane>
+                        <MFXTextField fx:id="firstNameField" borderGap="0.0" floatMode="ABOVE" floatingText="First Name" layoutX="15.0" layoutY="30.0" maxWidth="1.7976931348623157E308" minHeight="36.0" />
+                        <MFXTextField fx:id="lastNameField" borderGap="0.0" floatMode="ABOVE" floatingText="Last Name" layoutX="15.0" layoutY="229.0" maxWidth="1.7976931348623157E308" minHeight="36.0" />
+                        <MFXTextField fx:id="roleField" borderGap="0.0" floatMode="ABOVE" floatingText="Role" layoutX="15.0" layoutY="296.0" maxWidth="1.7976931348623157E308" minHeight="36.0" />
+                        <HBox alignment="TOP_CENTER" maxWidth="1.7976931348623157E308" spacing="30.0">
+                           <children>
+                              <VBox HBox.hgrow="ALWAYS">
+                                 <children>
+                                    <Label text="Profile text colour">
+                                       <VBox.margin>
+                                          <Insets />
+                                       </VBox.margin>
+                                    </Label>
+                                    <ColorPicker fx:id="profileTextPicker" maxWidth="1.7976931348623157E308" minHeight="36.0" promptText="Background Colour" style="-fx-background-color: WHITE; -fx-border-color: #D3D3D3; -fx-border-radius: 5;" />
+                                 </children>
+                              </VBox>
+                              <VBox HBox.hgrow="ALWAYS">
+                                 <children>
+                                    <Label text="Profile background colour">
+                                       <VBox.margin>
+                                          <Insets />
+                                       </VBox.margin>
+                                    </Label>
+                                    <ColorPicker fx:id="profileBackgroundPicker" maxWidth="1.7976931348623157E308" minHeight="36.0" promptText="Background Colour" style="-fx-background-color: WHITE; -fx-border-color: #D3D3D3; -fx-border-radius: 5;" />
+                                 </children>
+                              </VBox>
+                           </children>
+                           <VBox.margin>
+                              <Insets top="-15.0" />
+                           </VBox.margin>
+                        </HBox>
+                        <VBox>
+                           <children>
+                              <Label text="Select Stores" />
+                              <MFXCheckListView fx:id="storeSelector" depthLevel="LEVEL0" maxWidth="1.7976931348623157E308" prefHeight="130.0" prefWidth="353.0" style="-fx-border-color: #D3D3D3;" />
+                           </children>
+                           <VBox.margin>
+                              <Insets top="-15.0" />
+                           </VBox.margin>
+                        </VBox>
+                        <MFXButton fx:id="passwordResetButton" contentDisplay="RIGHT" depthLevel="LEVEL1" graphicTextGap="8.0" maxWidth="1.7976931348623157E308" minHeight="36.0" style="-fx-border-color: #D3D3D3; -fx-border-radius: 5;" text="Request Password Reset">
+                           <VBox.margin>
+                              <Insets top="-15.0" />
+                           </VBox.margin>
+                           <graphic>
+                              <SVGPath content="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z&#10;M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z&#10;" />
+                           </graphic>
+                        </MFXButton>
+                        <MFXButton fx:id="staffPermissionsButton" alignment="CENTER" contentDisplay="RIGHT" depthLevel="LEVEL1" graphicTextGap="8.0" maxWidth="1.7976931348623157E308" minHeight="36.0" nodeOrientation="LEFT_TO_RIGHT" style="-fx-border-color: #D3D3D3; -fx-border-radius: 5;" text="Modify Staff Permissions">
+                           <graphic>
+                              <SVGPath content="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z&#10;" scaleX="0.75" scaleY="0.75" />
+                           </graphic>
+                           <VBox.margin>
+                              <Insets top="-15.0" />
+                           </VBox.margin>
+                        </MFXButton>
+                        <MFXButton fx:id="saveUserButton" depthLevel="LEVEL3" maxWidth="1.7976931348623157E308" onAction="#addUser" prefHeight="30.0" style="-fx-background-color: #0F60FF;" styleClass="popOverButton" text="Save" textFill="WHITE">
+                           <VBox.margin>
+                              <Insets bottom="50.0" />
+                           </VBox.margin>
+                        </MFXButton>
+                     </children>
+                     <padding>
+                        <Insets left="5.0" right="5.0" />
+                     </padding>
+                  </VBox>
+               </content>
+               <VBox.margin>
+                  <Insets left="5.0" right="5.0" />
+               </VBox.margin>
+            </MFXScrollPane>
+         </children>
+      </VBox>
    </children>
    <stylesheets>
       <URL value="@../CSS/application.css" />

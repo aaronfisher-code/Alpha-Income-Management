@@ -10,6 +10,11 @@
 	
 }
 
+.mfx-table-row-cell{
+    -fx-font-family: "Montserrat";
+    -fx-font-size: 12px;
+}
+
 .mfx-table-view .columns-container{
     -fx-background-color: #F3F2F7;
     -fx-border-color: #F3F2F7;
@@ -22,4 +27,27 @@
     -fx-font-family: "Montserrat SemiBold";
     -fx-text-fill: #6E6B7B;
 }
+
+.popOverTitle{
+    -fx-font-family: "Montserrat Medium";
+    -fx-font-size: 16px;
+}
+
+.popOverButton{
+    -fx-font-family: "Montserrat Medium";
+    -fx-font-size: 16px;
+}
+
+.mfx-text-field .floating-text{
+    -fx-font-family: "Montserrat";
+}
+
+.mfx-text-field:focus-within {
+    -fx-border-color: #0F60FF;
+}
+.mfx-text-field:focus-within  .floating-text{
+    -fx-text-fill: #0F60FF;
+}
+
+
 

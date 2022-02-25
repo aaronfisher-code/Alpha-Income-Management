@@ -54,16 +54,16 @@
     <orderEntry type="library" name="Maven: org.controlsfx:controlsfx:11.1.1" level="project" />
     <orderEntry type="library" name="Maven: org.openjfx:javafx-base:17.0.2-ea+2" level="project" />
     <orderEntry type="library" name="Maven: org.openjfx:javafx-base:win:17.0.2-ea+2" level="project" />
-    <orderEntry type="library" name="Maven: io.github.palexdev:materialfx:11.13.0" level="project" />
-    <orderEntry type="library" scope="RUNTIME" name="Maven: org.openjfx:javafx-graphics:linux:17.0.1" level="project" />
-    <orderEntry type="library" name="Maven: org.openjfx:javafx-graphics:win:17.0.1" level="project" />
-    <orderEntry type="library" scope="RUNTIME" name="Maven: org.openjfx:javafx-swing:linux:17.0.1" level="project" />
-    <orderEntry type="library" scope="RUNTIME" name="Maven: org.openjfx:javafx-controls:linux:17.0.1" level="project" />
-    <orderEntry type="library" scope="RUNTIME" name="Maven: org.openjfx:javafx-web:linux:17.0.1" level="project" />
-    <orderEntry type="library" scope="RUNTIME" name="Maven: org.openjfx:javafx-media:linux:17.0.1" level="project" />
-    <orderEntry type="library" name="Maven: org.openjfx:javafx-media:win:17.0.1" level="project" />
-    <orderEntry type="library" scope="RUNTIME" name="Maven: org.openjfx:javafx-base:linux:17.0.1" level="project" />
-    <orderEntry type="library" scope="RUNTIME" name="Maven: org.openjfx:javafx-fxml:linux:17.0.1" level="project" />
+    <orderEntry type="library" name="Maven: io.github.palexdev:materialfx:11.13.2" level="project" />
+    <orderEntry type="library" scope="RUNTIME" name="Maven: org.openjfx:javafx-base:linux:17.0.2" level="project" />
+    <orderEntry type="library" scope="RUNTIME" name="Maven: org.openjfx:javafx-swing:linux:17.0.2" level="project" />
+    <orderEntry type="library" scope="RUNTIME" name="Maven: org.openjfx:javafx-web:linux:17.0.2" level="project" />
+    <orderEntry type="library" scope="RUNTIME" name="Maven: org.openjfx:javafx-media:linux:17.0.2" level="project" />
+    <orderEntry type="library" name="Maven: org.openjfx:javafx-media:win:17.0.2" level="project" />
+    <orderEntry type="library" scope="RUNTIME" name="Maven: org.openjfx:javafx-graphics:linux:17.0.2" level="project" />
+    <orderEntry type="library" name="Maven: org.openjfx:javafx-graphics:win:17.0.2" level="project" />
+    <orderEntry type="library" scope="RUNTIME" name="Maven: org.openjfx:javafx-fxml:linux:17.0.2" level="project" />
+    <orderEntry type="library" scope="RUNTIME" name="Maven: org.openjfx:javafx-controls:linux:17.0.2" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Maven: com.vanniktech:gradle-maven-publish-plugin:0.18.0" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Maven: org.jetbrains.kotlin:kotlin-stdlib:1.5.21" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Maven: org.jetbrains:annotations:13.0" level="project" />

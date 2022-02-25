@@ -31,14 +31,38 @@
     -fx-text-fill: #6e6b7b;
 }
 
+.filter-view .subtitle {
+    -fx-font-family: "Montserrat";
+    -fx-font-size: 14px;
+    -fx-text-fill: #6e6b7b;
+}
+
 .periodTabSelect {
     -fx-font-family: "Montserrat SemiBold";
     -fx-font-size: 12px;
 }
 
-/********************
-Date Picker
-********************/
+.staffName {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 15px;
+    -fx-font-smoothing-type: gray;
+}
+
+.staffRole {
+    -fx-font-family: "Montserrat Light";
+    -fx-font-size: 13px;
+    -fx-font-smoothing-type: gray;
+}
+
+.mfx-check-list-view .virtual-flow .mfx-check-list-cell .mfx-checkbox:selected{
+    -mfx-main: #0F60FF;
+}
+
+
+
+    /********************
+    Date Picker
+    ********************/
 .mfx-date-picker {
     -fx-padding: 3 5 3 5;
 }
@@ -174,6 +198,17 @@ Popup
     -fx-background-color: derive(#0F60FF, 130%);
     -fx-text-fill: #0F60FF;
     -mfx-color: #0F60FF;
+}
+
+.mfx-text-field .floating-text{
+    -fx-font-family: "Montserrat";
+}
+
+.mfx-text-field:focused {
+    -fx-border-color: #0F60FF;
+}
+.mfx-text-field:focused  .floating-text:focused{
+    -fx-text-fill: #0F60FF;
 }
 
 

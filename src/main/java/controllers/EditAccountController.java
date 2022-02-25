@@ -2,22 +2,27 @@ package controllers;
 
 import application.Main;
 import com.dlsc.gemsfx.FilterView;
-import com.dlsc.gemsfx.FilterView.FilterGroup;
-import io.github.palexdev.materialfx.controls.MFXPaginatedTableView;
-import io.github.palexdev.materialfx.controls.MFXTableColumn;
-import io.github.palexdev.materialfx.controls.MFXTableView;
+import com.jfoenix.controls.JFXButton;
+import com.jfoenix.controls.JFXNodesList;
+import io.github.palexdev.materialfx.controls.*;
+import io.github.palexdev.materialfx.controls.cell.MFXCheckListCell;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
 import io.github.palexdev.materialfx.filter.StringFilter;
-import io.github.palexdev.materialfx.utils.others.observables.When;
+import javafx.animation.Interpolator;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
+import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.util.Duration;
+import models.Store;
 import models.User;
 
 import java.io.IOException;
@@ -26,23 +31,62 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Comparator;
+import java.util.Map;
 
 public class EditAccountController extends Controller{
 
 	@FXML
 	private StackPane backgroundPane;
+
 	@FXML
-	private VBox controlBox;
+	private BorderPane usersButton,storesButton;
+
 	@FXML
-	private BorderPane storesButton;
+	private VBox controlBox,editStorePopover,editUserPopover;
+
 	@FXML
-	private BorderPane usersButton;
+	private JFXNodesList addList;
+
+	@FXML
+	private JFXButton addButton;
+
+	@FXML
+	private Region contentDarken;
+
+	@FXML
+	private Button deleteStoreButton,deleteUserButton;
+
+	@FXML
+	private MFXTextField storeNameField;
+
+	@FXML
+	private Label editStorePopoverTitle,editUserPopoverTitle,employeeIcon,employeeName,employeeRole;
+
+	@FXML
+	private MFXRectangleToggleNode inactiveUserToggle;
+
+	@FXML
+	private MFXTextField firstNameField,lastNameField,roleField;
+
+	@FXML
+	private ColorPicker profileTextPicker,profileBackgroundPicker;
+
+	@FXML
+	private MFXCheckListView<Store> storeSelector;
+
+	@FXML
+	private MFXButton saveStoreButton,passwordResetButton,staffPermissionsButton,saveUserButton;
+
 	private MFXTableView<User> accountsTable = new MFXTableView<User>();
 	private MFXTableColumn<User> usernameCol;
 	private MFXTableColumn<User> firstNameCol;
 	private MFXTableColumn<User> lastNameCol;
 	private MFXTableColumn<User> roleCol;
-	private FilterView<User> filterView = new FilterView<>();
+	private FilterView<User> userFilterView = new FilterView<>();
+
+	private MFXTableView<Store> storesTable = new MFXTableView<Store>();
+	private MFXTableColumn<Store> storeNameCol;
+	private FilterView<Store> storeFilterView = new FilterView<>();
 	
 	
     private Connection con = null;
@@ -52,6 +96,7 @@ public class EditAccountController extends Controller{
     private User selectedUser;
 
 	private ObservableList<User> allUsers = FXCollections.observableArrayList();
+	private ObservableList<Store> allStores = FXCollections.observableArrayList();
 	
 	 @FXML
 	private void initialize() throws IOException {}
@@ -67,13 +112,22 @@ public class EditAccountController extends Controller{
 
 	@Override
 	public void fill() {
+	 	usersView();
+	 	storeNameField.setId("custom-text-field");
+	 }
 
-		filterView = new FilterView<>();
-		filterView.setTitle("Current Users");
-		filterView.setTextFilterProvider(text -> user -> user.getFirst_name().toLowerCase().contains(text) || user.getLast_name().toLowerCase().contains(text) || user.getRole().toLowerCase().contains(text));
-		allUsers = filterView.getFilteredItems();
+	public void usersView(){
+		formatTabSelect(usersButton);
+		formatTabDeselect(storesButton);
+		addButton.setOnAction(e -> openUserPopover());
 
-		usernameCol = new MFXTableColumn<>("USERNAME",false, Comparator.comparing(User::getUsername));
+
+		userFilterView = new FilterView<>();
+		userFilterView.setTitle("Current Users");
+		userFilterView.setSubtitle("Double click a user to edit");
+		userFilterView.setTextFilterProvider(text -> user -> user.getFirst_name().toLowerCase().contains(text) || user.getLast_name().toLowerCase().contains(text) || user.getRole().toLowerCase().contains(text));
+		allUsers = userFilterView.getFilteredItems();
+		usernameCol = new MFXTableColumn<>("STAFF ID",false, Comparator.comparing(User::getUsername));
 		firstNameCol = new MFXTableColumn<>("FIRST NAME",false, Comparator.comparing(User::getFirst_name));
 		lastNameCol = new MFXTableColumn<>("LAST NAME",false, Comparator.comparing(User::getLast_name));
 		roleCol = new MFXTableColumn<>("ROLE",false, Comparator.comparing(User::getRole));
@@ -81,6 +135,7 @@ public class EditAccountController extends Controller{
 		firstNameCol.setRowCellFactory(user -> new MFXTableRowCell<>(User::getFirst_name));
 		lastNameCol.setRowCellFactory(user -> new MFXTableRowCell<>(User::getLast_name));
 		roleCol.setRowCellFactory(user -> new MFXTableRowCell<>(User::getRole));
+		accountsTable = new MFXTableView<User>();
 		accountsTable.getTableColumns().addAll(usernameCol,firstNameCol,lastNameCol,roleCol);
 		accountsTable.getFilters().addAll(
 				new StringFilter<>("Username",User::getUsername),
@@ -95,35 +150,308 @@ public class EditAccountController extends Controller{
 			preparedStatement = con.prepareStatement(sql);
 			resultSet = preparedStatement.executeQuery();
 			while (resultSet.next()) {
-				filterView.getItems().add(new User(resultSet));
+				userFilterView.getItems().add(new User(resultSet));
 			}
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
 		}
-
-
 		accountsTable.setFooterVisible(true);
 		accountsTable.autosizeColumnsOnInitialization();
 		accountsTable.setMaxWidth(Double.MAX_VALUE);
 		accountsTable.setMaxHeight(Double.MAX_VALUE);
-		filterView.setPadding(new Insets(20,20,10,20));//top,right,bottom,left
+		userFilterView.setPadding(new Insets(20,20,10,20));//top,right,bottom,left
 
-		controlBox.getChildren().addAll(filterView,accountsTable);
+		controlBox.getChildren().removeAll(controlBox.getChildren());
+		controlBox.getChildren().addAll(userFilterView,accountsTable);
 
 		VBox.setVgrow(accountsTable, Priority.ALWAYS);
+		accountsTable.virtualFlowInitializedProperty().addListener((observable, oldValue, newValue) -> {addUserDoubleClickfunction();});
+		userFilterView.filteredItemsProperty().addListener((observable, oldValue, newValue) -> {addUserDoubleClickfunction();});
+
 		accountsTable.setItems(allUsers);
-
-
 	}
 
-	public void usersView(){
-		formatTabSelect(usersButton);
-		formatTabDeselect(storesButton);
+	private void addUserDoubleClickfunction(){
+		for (Map.Entry<Integer, MFXTableRow<User>> entry:accountsTable.getCells().entrySet()) {
+			entry.getValue().setOnMouseClicked(event -> {
+				if(event.getClickCount()==2)openUserPopover(entry.getValue().getData());
+			});
+			for (MFXTableRowCell<User, ?> cell:entry.getValue().getCells()) {
+				cell.setOnMouseClicked(event -> {
+					if(event.getClickCount()==2){
+						MFXTableRow<User> parentRow = (MFXTableRow<User>) cell.getParent();
+						openUserPopover(parentRow.getData());
+					}
+				});
+			}
+		}
 	}
 
 	public void storesView(){
 		formatTabSelect(storesButton);
 		formatTabDeselect(usersButton);
+		addButton.setOnAction(e -> openStorePopover());
+
+		storeFilterView = new FilterView<>();
+		storeFilterView.setTitle("Current Stores");
+		storeFilterView.setSubtitle("Double click a store to edit");
+		storeFilterView.setTextFilterProvider(text -> store -> store.getStoreName().toLowerCase().contains(text));
+		allStores = storeFilterView.getFilteredItems();
+		storeNameCol = new MFXTableColumn<>("STORE NAME",false, Comparator.comparing(Store::getStoreName));
+		storeNameCol.setRowCellFactory(store -> new MFXTableRowCell<>(Store::getStoreName));
+		storesTable = new MFXTableView<Store>();
+		storesTable.getTableColumns().addAll(storeNameCol);
+		storesTable.getFilters().addAll(
+				new StringFilter<>("Store Name",Store::getStoreName)
+		);
+
+		String sql = null;
+		sql = "SELECT * FROM stores";
+		try {
+			preparedStatement = con.prepareStatement(sql);
+			resultSet = preparedStatement.executeQuery();
+			while (resultSet.next()) {
+				storeFilterView.getItems().add(new Store(resultSet));
+			}
+		} catch (SQLException throwables) {
+			throwables.printStackTrace();
+		}
+		storesTable.setFooterVisible(true);
+		storesTable.autosizeColumnsOnInitialization();
+		storesTable.setMaxWidth(Double.MAX_VALUE);
+		storesTable.setMaxHeight(Double.MAX_VALUE);
+		storeFilterView.setPadding(new Insets(20,20,10,20));//top,right,bottom,left
+
+		controlBox.getChildren().removeAll(controlBox.getChildren());
+		controlBox.getChildren().addAll(storeFilterView,storesTable);
+
+		VBox.setVgrow(storesTable, Priority.ALWAYS);
+		storesTable.virtualFlowInitializedProperty().addListener((observable, oldValue, newValue) -> {addStoreDoubleClickFunction();});
+		storeFilterView.filteredItemsProperty().addListener((observable, oldValue, newValue) -> {addStoreDoubleClickFunction();});
+		storesTable.setItems(allStores);
+
+
+	}
+
+	private void addStoreDoubleClickFunction(){
+		for (Map.Entry<Integer, MFXTableRow<Store>> entry:storesTable.getCells().entrySet()) {
+			entry.getValue().setOnMouseClicked(event -> {
+				if(event.getClickCount()==2)openStorePopover(entry.getValue().getData());
+			});
+			for (MFXTableRowCell<Store, ?> cell:entry.getValue().getCells()) {
+				cell.setOnMouseClicked(event -> {
+					if(event.getClickCount()==2){
+						MFXTableRow<Store> parentRow = (MFXTableRow<Store>) cell.getParent();
+						openStorePopover(parentRow.getData());
+					}
+				});
+			}
+		}
+	}
+
+	public void openUserPopover(){
+		editUserPopoverTitle.setText("Add new user");
+		deleteUserButton.setVisible(false);
+		inactiveUserToggle.setSelected(false);
+		firstNameField.clear();
+		lastNameField.clear();
+		roleField.clear();
+		profileTextPicker.setValue(Color.WHITE);
+		profileBackgroundPicker.setValue(Color.WHITE);
+		passwordResetButton.setVisible(false);
+		employeeName.setText("");
+		employeeRole.setText("");
+		employeeIcon.setStyle("-fx-background-color: #FFFFFF; -fx-text-fill: #FFFFFF;");
+
+		storeSelector.getSelectionModel().clearSelection();
+		//Refresh Store list for store selector
+		allStores = FXCollections.observableArrayList();
+		String sql = null;
+		sql = "SELECT * FROM stores";
+		try {
+			preparedStatement = con.prepareStatement(sql);
+			resultSet = preparedStatement.executeQuery();
+			while (resultSet.next()) {
+				allStores.add(new Store(resultSet));
+			}
+		} catch (SQLException throwables) {
+			throwables.printStackTrace();
+		}
+		storeSelector.setItems(allStores);
+
+		//Add live updates to person card preview
+		firstNameField.textProperty().addListener((observable, oldValue, newValue) -> {
+					employeeName.setText(newValue + "." + (lastNameField.getText().isEmpty()?"":lastNameField.getText(0,1)));
+					employeeIcon.setText(newValue.isEmpty()?"":newValue.substring(0,1));
+				}
+		);
+		lastNameField.textProperty().addListener((observable, oldValue, newValue) ->
+				employeeName.setText(firstNameField.getText() + "." + (newValue.isEmpty()?"":newValue.substring(0,1))));
+		roleField.textProperty().addListener((observable, oldValue, newValue) ->
+				employeeRole.setText(newValue));
+		profileBackgroundPicker.valueProperty().addListener((observable, oldValue, newValue) -> {
+					int r = (int)Math.round(newValue.getRed() * 255.0);
+					int g = (int)Math.round(newValue.getGreen() * 255.0);
+					int b = (int)Math.round(newValue.getBlue() * 255.0);
+					String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
+					r = (int)Math.round(profileTextPicker.getValue().getRed() * 255.0);
+					g = (int)Math.round(profileTextPicker.getValue().getGreen() * 255.0);
+					b = (int)Math.round(profileTextPicker.getValue().getBlue() * 255.0);
+					String profileText = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
+					employeeIcon.setStyle("-fx-background-color: " + profileBG + ";" + "-fx-text-fill: " + profileText + ";");
+				}
+		);
+		profileTextPicker.valueProperty().addListener((observable, oldValue, newValue) -> {
+					int r = (int)Math.round(newValue.getRed() * 255.0);
+					int g = (int)Math.round(newValue.getGreen() * 255.0);
+					int b = (int)Math.round(newValue.getBlue() * 255.0);
+					String profileText = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
+					r = (int)Math.round(profileBackgroundPicker.getValue().getRed() * 255.0);
+					g = (int)Math.round(profileBackgroundPicker.getValue().getGreen() * 255.0);
+					b = (int)Math.round(profileBackgroundPicker.getValue().getBlue() * 255.0);
+					String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
+					employeeIcon.setStyle("-fx-background-color: " + profileBG + ";" + "-fx-text-fill: " + profileText + ";");
+				}
+		);
+
+		contentDarken.setVisible(true);
+		contentDarken.setOnMouseClicked(event -> closeUserPopover());
+		saveUserButton.setOnAction(event -> addUser());
+		changeSize(editUserPopover,0);
+	}
+
+	public void openUserPopover(User user){
+		editUserPopoverTitle.setText("Edit user");
+//		storeNameField.setText(store.getStoreName());
+		contentDarken.setVisible(true);
+		contentDarken.setOnMouseClicked(event -> closeUserPopover());
+		saveUserButton.setOnAction(event -> editUser(user));
+		deleteUserButton.setOnAction(event -> deleteUser(user));
+		deleteUserButton.setVisible(true);
+		changeSize(editUserPopover,0);
+	}
+
+	public void openStorePopover(){
+		storeNameField.clear();
+		editStorePopoverTitle.setText("Add new store");
+		contentDarken.setVisible(true);
+		contentDarken.setOnMouseClicked(event -> closeStorePopover());
+		saveStoreButton.setOnAction(event -> addStore());
+		deleteStoreButton.setVisible(false);
+		changeSize(editStorePopover,0);
+	}
+
+	public void openStorePopover(Store store){
+		editStorePopoverTitle.setText("Edit store");
+	 	storeNameField.setText(store.getStoreName());
+		contentDarken.setVisible(true);
+		contentDarken.setOnMouseClicked(event -> closeStorePopover());
+		saveStoreButton.setOnAction(event -> editStore(store));
+		deleteStoreButton.setOnAction(event -> deleteStore(store));
+		deleteStoreButton.setVisible(true);
+		changeSize(editStorePopover,0);
+	}
+
+	public void closeStorePopover(){
+		changeSize(editStorePopover,375);
+		contentDarken.setVisible(false);
+	}
+
+	public void closeUserPopover(){
+		changeSize(editUserPopover,375);
+		contentDarken.setVisible(false);
+	}
+
+	public void addStore(){
+		String name = storeNameField.getText();
+		if(name.isEmpty() || name.isBlank()){
+
+		}else{
+			String sql = "INSERT INTO stores(storeName) VALUES(?)";
+			try {
+				preparedStatement = con.prepareStatement(sql);
+				preparedStatement.setString(1, name);
+				preparedStatement.executeUpdate();
+			} catch (SQLException ex) {
+				System.err.println(ex.getMessage());
+			}
+			Dialog<String> dialog = new Dialog<String>();
+			dialog.setTitle("Success");
+			ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
+			dialog.setContentText("Store was succesfully added to database");
+			dialog.getDialogPane().getButtonTypes().add(type);
+			dialog.showAndWait();
+			storesView();
+		}
+
+	}
+
+	public void addUser(){
+
+	}
+
+	public void editStore(Store store){
+		String name = storeNameField.getText();
+		if(name.isEmpty() || name.isBlank()){
+
+		}else{
+			String sql = "UPDATE stores SET storeName = ? WHERE storeID = ?";
+			try {
+				preparedStatement = con.prepareStatement(sql);
+				preparedStatement.setString(1, name);
+				preparedStatement.setInt(2, store.getStoreID());
+				preparedStatement.executeUpdate();
+			} catch (SQLException ex) {
+				System.err.println(ex.getMessage());
+			}
+			Dialog<String> dialog = new Dialog<>();
+			dialog.setTitle("Success");
+			ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
+			dialog.setContentText("Store was succesfully updated");
+			dialog.getDialogPane().getButtonTypes().add(type);
+			dialog.showAndWait();
+			closeStorePopover();
+			storesView();
+		}
+
+	}
+
+	public void editUser(User user){
+
+	}
+
+	public void deleteStore(Store store){
+	 	Alert alert = new Alert(Alert.AlertType.WARNING);
+		alert.setTitle("Confirm Deletion");
+		alert.setContentText("This action will permanently delete the store from all systems, are you sure?");
+		ButtonType okButton = new ButtonType("Yes", ButtonBar.ButtonData.YES);
+		ButtonType noButton = new ButtonType("No", ButtonBar.ButtonData.NO);
+		alert.getButtonTypes().setAll(okButton, noButton);
+		alert.showAndWait().ifPresent(type -> {
+			if (type == okButton) {
+				String sql = "DELETE from stores WHERE storeID = ?";
+				try {
+					preparedStatement = con.prepareStatement(sql);
+					preparedStatement.setInt(1, store.getStoreID());
+					preparedStatement.executeUpdate();
+				} catch (SQLException ex) {
+					System.err.println(ex.getMessage());
+				}
+				Dialog<String> dialog = new Dialog<>();
+				dialog.setTitle("Success");
+				type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
+				dialog.setContentText("Store was succesfully deleted");
+				dialog.getDialogPane().getButtonTypes().add(type);
+				dialog.showAndWait();
+				closeStorePopover();
+				storesView();
+			} else if (type == noButton) {
+			}
+		});
+	}
+
+	public void deleteUser(User user){
+
 	}
 
 	public void formatTabSelect(BorderPane b){
@@ -152,62 +480,15 @@ public class EditAccountController extends Controller{
 		}
 	}
 
-//	// On register page
-//	public void createAccount () throws IOException {
-//
-//		String usrname = username.getText();
-//		String pswrd = password.getText();
-//		String rpswrd = re_password.getText();
-//		String fname = firstName.getText();
-//		String lname = lastName.getText();
-//		String role = roleSelect.getText();
-//		Color c = bgColourPicker.getValue();
-//		int r = (int)Math.round(c.getRed() * 255.0);
-//		int g = (int)Math.round(c.getGreen() * 255.0);
-//		int b = (int)Math.round(c.getBlue() * 255.0);
-//		String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
-//		String profileText = textColourPicker.getValue().toString();
-//
-//
-//		if (fname.isEmpty() || lname.isEmpty() || usrname.isEmpty() || pswrd.isEmpty() || rpswrd.isEmpty() || role.isEmpty()) {
-//			signUpError.setText("Please enter all fields!");
-//		} else if (!rpswrd.toString().equals(pswrd.toString())) {
-//			signUpError.setText("Password not matching!");
-//		} else if (searchAccount(usrname)) {
-//			//signUpError.setText("Username already exists");
-//			Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-//			alert.setTitle("Username already exists");
-//			alert.setContentText("This user already exists, would you like to update their details?");
-//			ButtonType okButton = new ButtonType("Yes", ButtonBar.ButtonData.YES);
-//			ButtonType noButton = new ButtonType("No", ButtonBar.ButtonData.NO);
-//			alert.getButtonTypes().setAll(okButton, noButton);
-//			alert.showAndWait().ifPresent(type -> {
-//				if (type == okButton) {
-//					updateAccount();
-//				} else if (type == noButton) {
-//				}
-//			});
-//		} else {
-//			//query
-//			String sql = "INSERT INTO accounts(username,password,first_name,last_name,role,profileBG,profileText) VALUES(?,?,?,?,?,?,?)";
-//			try {
-//				preparedStatement = con.prepareStatement(sql);
-//				preparedStatement.setString(1, usrname);
-//				preparedStatement.setString(2, pswrd);
-//				preparedStatement.setString(3, fname);
-//				preparedStatement.setString(4, lname);
-//				preparedStatement.setString(5, role);
-//				preparedStatement.setString(6, profileBG);
-//				preparedStatement.setString(7, profileText);
-//				preparedStatement.executeUpdate();
-//				JOptionPane.showMessageDialog(null,"Account successfully created");
-//			} catch (SQLException ex) {
-//				System.err.println(ex.getMessage());
-//			}
-//		}
-//		fill();
-//
-//	}
+
+	public void changeSize(final VBox pane, double width) {
+		Duration cycleDuration = Duration.millis(200);
+		Timeline timeline = new Timeline(
+				new KeyFrame(cycleDuration,
+						new KeyValue(pane.translateXProperty(),width, Interpolator.EASE_BOTH))
+		);
+		timeline.play();
+	}
 
 	public boolean searchAccount(String userquery) {
 		String usrname = userquery;
@@ -231,113 +512,6 @@ public class EditAccountController extends Controller{
 			}
 		}
 	}
-
-//	public void updateAccount(){
-//		String usrname = username.getText();
-//		String pswrd = password.getText();
-//		String fname = firstName.getText();
-//		String lname = lastName.getText();
-//		String role = roleSelect.getText();
-//		Color c = bgColourPicker.getValue();
-//		int r = (int)Math.round(c.getRed() * 255.0);
-//		int g = (int)Math.round(c.getGreen() * 255.0);
-//		int b = (int)Math.round(c.getBlue() * 255.0);
-//		String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
-//		String profileText = textColourPicker.getValue().toString();
-//
-//		String sql = "UPDATE accounts SET password = ?, first_name = ?, last_name = ?, role = ?, profileBG = ?, profileText = ? WHERE username = ?";
-//		try {
-//			preparedStatement = con.prepareStatement(sql);
-//			preparedStatement.setString(1, pswrd);
-//			preparedStatement.setString(2, fname);
-//			preparedStatement.setString(3, lname);
-//			preparedStatement.setString(4, role);
-//			preparedStatement.setString(5, profileBG);
-//			preparedStatement.setString(6, profileText);
-//			preparedStatement.setString(7, usrname);
-//			preparedStatement.executeUpdate();
-//			JOptionPane.showMessageDialog(null,"Account successfully updated");
-//		} catch (SQLException ex) {
-//			System.err.println(ex.getMessage());
-//		}
-//	}
-
-//	public void deleteAccount(){
-//	 	if(searchAccount(username.getText())){
-//			Alert alert = new Alert(Alert.AlertType.WARNING);
-//			alert.setTitle("Change Account Status");
-//			alert.setContentText("Inactive employees will be hidden from view");
-//			ButtonType activeButton = new ButtonType("Mark as Active", ButtonBar.ButtonData.YES);
-//			ButtonType inactiveButton = new ButtonType("Mark as Inactive", ButtonBar.ButtonData.NO);
-//			ButtonType cancelButton = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
-//			alert.getButtonTypes().setAll(activeButton, inactiveButton, cancelButton);
-//			alert.showAndWait().ifPresent(type -> {
-//				if (type == activeButton) {
-//					String sql = "UPDATE accounts SET inactiveDate = ? WHERE username = ?";
-//					try {
-//						preparedStatement = con.prepareStatement(sql);
-//						preparedStatement.setString(1, null);
-//						preparedStatement.setString(2, username.getText());
-//						preparedStatement.executeUpdate();
-//						JOptionPane.showMessageDialog(null,"Account successfully updated");
-//					} catch (SQLException ex) {
-//						System.err.println(ex.getMessage());
-//					}
-//				} else if (type == inactiveButton) {
-//					String sql = "UPDATE accounts SET inactiveDate = ? WHERE username = ?";
-//					try {
-//						preparedStatement = con.prepareStatement(sql);
-//						preparedStatement.setString(1, String.valueOf(LocalDate.now()));
-//						preparedStatement.setString(2, username.getText());
-//						preparedStatement.executeUpdate();
-//						JOptionPane.showMessageDialog(null,"Account successfully updated");
-//					} catch (SQLException ex) {
-//						System.err.println(ex.getMessage());
-//					}
-//				}else{
-//				}
-//			});
-//		}
-//	 	fill();
-//	}
-
-
-//	public void fillInfo(User selectedUser){
-//		username.setText(selectedUser.getUsername());
-//		password.setText(selectedUser.getPassword());
-//		re_password.setText(selectedUser.getPassword());
-//		firstName.setText(selectedUser.getFirst_name());
-//		lastName.setText(selectedUser.getLast_name());
-//		roleSelect.setText(selectedUser.getRole());
-//		bgColourPicker.setValue(Color.web(selectedUser.getBgColour()));
-//		textColourPicker.setValue(Color.web(selectedUser.getTextColour()));
-//		if(selectedUser.getInactiveDate()!=null){
-//			signUpError.setText("INACTIVE EMPLOYEE");
-//		}else{
-//			signUpError.setText("");
-//		}
-//
-//		textChange();
-//		backgroundChange();
-//		labelChange();
-//	}
-
-//	public void mouseClick(){
-//	 	if(selectedUser==null || accountsTable.getSelectionModel().getSelectedItem() == null || selectedUser.getUsername() != accountsTable.getSelectionModel().getSelectedItem().getUsername()) {
-//			selectedUser = accountsTable.getSelectionModel().getSelectedItem();
-//		}else{
-//	 		fillInfo(selectedUser);
-//		}
-//
-//	}
-
-//	public void toggleInactive(){
-//	 	if(inactiveToggle.isSelected()){
-//	 		loadEmployees(true);
-//		}else{
-//	 		loadEmployees(false);
-//		}
-//	}
 
 	
 }

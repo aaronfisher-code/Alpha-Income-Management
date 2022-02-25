@@ -59,7 +59,7 @@ public class GraphTileController extends Controller{
 
 		//defining a series
 		XYChart.Series<Number,Number> series = new XYChart.Series();
-		for(int i=0;i<15;i++)
+		for(int i=0;i<23;i++)
 			series.getData().add(new XYChart.Data(i, ThreadLocalRandom.current().nextInt((50000/30)*(i), (50000/30)*(i+3) + 1)));
 
 		XYChart.Series<Number,Number> series1 = new XYChart.Series();

@@ -249,8 +249,8 @@ public class MainMenuController extends Controller {
         Controller ac = loader.getController();
         ac.setMain(main);
         ac.setConnection(con);
-        ac.fill();
         contentPane.setCenter(pageContent);
+        ac.fill();
 
     }
 }
