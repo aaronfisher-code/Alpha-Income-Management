@@ -27,8 +27,10 @@ import javafx.stage.FileChooser;
 import javafx.util.Duration;
 import models.EODDataPoint;
 import models.User;
+import org.apache.poi.ss.formula.functions.T;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import se.alipsa.ymp.YearMonthPicker;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -96,8 +98,12 @@ public class EODDataEntryPageController extends Controller{
 	public void fill() {
 
 		datePkr = new MFXDatePicker();
+		YearMonthPicker ymPick = new YearMonthPicker();
+		ymPick.setPrefWidth(Region.USE_COMPUTED_SIZE);
+		ymPick.setStyle("-fx-background-color: #FFFFFF; -fx-border-color: #D3D3D3;");
 //		datePkr.setOnAction(e -> updatePage());
-		datePickerPane.getChildren().add(1,datePkr);
+		datePickerPane.getChildren().add(1,ymPick);
+
 		datePkr.setValue(LocalDate.now());
 		datePkr.setText(LocalDate.now().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)));
 //		datePkr.getStylesheets().add("/views/CSS/RosterPage.css");

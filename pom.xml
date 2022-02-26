@@ -95,6 +95,11 @@
             <artifactId>poi-ooxml</artifactId>
             <version>5.2.0</version>
         </dependency>
+        <dependency>
+            <groupId>se.alipsa</groupId>
+            <artifactId>fx-yearmonth-picker</artifactId>
+            <version>1.0.2</version>
+        </dependency>
 
 
 

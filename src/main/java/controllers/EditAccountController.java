@@ -28,10 +28,8 @@ import models.Store;
 import models.User;
 
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.Map;
 
@@ -523,7 +521,50 @@ public class EditAccountController extends Controller{
 	}
 
 	public void editUser(User user){
+	 	Date inactiveDate = null;
+	 	if(inactiveUserToggle.isSelected() && user.getInactiveDate()!=null){
+	 		inactiveDate = Date.valueOf(user.getInactiveDate());
+		}else if(inactiveUserToggle.isSelected() && user.getInactiveDate()==null){
+	 		inactiveDate = Date.valueOf(LocalDate.now());
+		}
 
+		String fname = firstNameField.getText();
+		String lname = lastNameField.getText();
+		String role = roleField.getText();
+		int r = (int)Math.round(profileTextPicker.getValue().getRed() * 255.0);
+		int g = (int)Math.round(profileTextPicker.getValue().getGreen() * 255.0);
+		int b = (int)Math.round(profileTextPicker.getValue().getBlue() * 255.0);
+		String profileText = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
+		r = (int)Math.round(profileBackgroundPicker.getValue().getRed() * 255.0);
+		g = (int)Math.round(profileBackgroundPicker.getValue().getGreen() * 255.0);
+		b = (int)Math.round(profileBackgroundPicker.getValue().getBlue() * 255.0);
+		String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
+		if(fname.isEmpty() || fname.isBlank()){
+
+		}else{
+			String sql = "UPDATE accounts SET first_name = ?,last_name = ?,role = ?, profileBG = ?, profileText = ?,inactiveDate = ? WHERE username = ?";
+			try {
+				preparedStatement = con.prepareStatement(sql);
+				preparedStatement.setString(1, fname);
+				preparedStatement.setString(2, lname);
+				preparedStatement.setString(3, role);
+				preparedStatement.setString(4, profileBG);
+				preparedStatement.setString(5, profileText);
+				preparedStatement.setDate(6, inactiveDate);
+				preparedStatement.setString(7, user.getUsername());
+				preparedStatement.executeUpdate();
+			} catch (SQLException ex) {
+				System.err.println(ex.getMessage());
+			}
+			Dialog<String> dialog = new Dialog<>();
+			dialog.setTitle("Success");
+			ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
+			dialog.setContentText("User was succesfully updated");
+			dialog.getDialogPane().getButtonTypes().add(type);
+			dialog.showAndWait();
+			closeUserPopover();
+			usersView();
+		}
 	}
 
 	public void deleteStore(Store store){
@@ -557,7 +598,33 @@ public class EditAccountController extends Controller{
 	}
 
 	public void deleteUser(User user){
-
+		Alert alert = new Alert(Alert.AlertType.WARNING);
+		alert.setTitle("Confirm Deletion");
+		alert.setContentText("This action will permanently delete the user from all systems,it is preferred that the user be marked as Inactive instead of deletion, are you sure?");
+		ButtonType okButton = new ButtonType("Yes", ButtonBar.ButtonData.YES);
+		ButtonType noButton = new ButtonType("No", ButtonBar.ButtonData.NO);
+		alert.getButtonTypes().setAll(okButton, noButton);
+		alert.showAndWait().ifPresent(type -> {
+			if (type == okButton) {
+				String sql = "DELETE from accounts WHERE username = ?";
+				try {
+					preparedStatement = con.prepareStatement(sql);
+					preparedStatement.setString(1, user.getUsername());
+					preparedStatement.executeUpdate();
+				} catch (SQLException ex) {
+					System.err.println(ex.getMessage());
+				}
+				Dialog<String> dialog = new Dialog<>();
+				dialog.setTitle("Success");
+				type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
+				dialog.setContentText("User was succesfully deleted");
+				dialog.getDialogPane().getButtonTypes().add(type);
+				dialog.showAndWait();
+				closeUserPopover();
+				usersView();
+			} else if (type == noButton) {
+			}
+		});
 	}
 
 	public void formatTabSelect(BorderPane b){
