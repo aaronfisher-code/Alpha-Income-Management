@@ -49,5 +49,14 @@
     -fx-text-fill: #0F60FF;
 }
 
+.mfx-date-picker .date-picker-popup .content{
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.8), 10, 0, 0.0, 2.0);
+}
+
+.mfx-date-picker:focus-within .mfx-icon-wrapper .mfx-font-icon{
+    -mfx-color: #0F60FF;
+}
+
+
 
 
