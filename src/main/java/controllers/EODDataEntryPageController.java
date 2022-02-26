@@ -100,7 +100,7 @@ public class EODDataEntryPageController extends Controller{
 		datePickerPane.getChildren().add(1,datePkr);
 		datePkr.setValue(LocalDate.now());
 		datePkr.setText(LocalDate.now().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)));
-		datePkr.getStylesheets().add("/views/CSS/RosterPage.css");
+//		datePkr.getStylesheets().add("/views/CSS/RosterPage.css");
 
 		dateCol = new MFXTableColumn<>("DATE",false, Comparator.comparing(EODDataPoint::getDate));
 		cashAmountCol = new MFXTableColumn<>("CASH",false, Comparator.comparing(EODDataPoint::getCashAmount));
