@@ -21,6 +21,7 @@ import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
 import javafx.util.Duration;
 import models.Store;
 import models.User;
@@ -322,7 +323,71 @@ public class EditAccountController extends Controller{
 
 	public void openUserPopover(User user){
 		editUserPopoverTitle.setText("Edit user");
-//		storeNameField.setText(store.getStoreName());
+		deleteUserButton.setVisible(true);
+		inactiveUserToggle.setSelected(user.getInactiveDate()!=null);
+		firstNameField.setText(user.getFirst_name());
+		lastNameField.setText(user.getLast_name());
+		roleField.setText(user.getRole());
+		profileTextPicker.setValue(Color.valueOf(user.getTextColour()));
+		profileBackgroundPicker.setValue(Color.valueOf(user.getBgColour()));
+		passwordResetButton.setVisible(true);
+		employeeName.setText(user.getFirst_name() + "." + user.getLast_name().substring(0,1));
+		employeeRole.setText(user.getRole());
+		employeeIcon.setText(user.getFirst_name().substring(0,1));
+		employeeIcon.setStyle("-fx-background-color: " + user.getBgColour()+ "; -fx-text-fill: " + user.getTextColour() + ";");
+
+		storeSelector.getSelectionModel().clearSelection();
+		//Refresh Store list for store selector
+		allStores = FXCollections.observableArrayList();
+		String sql = null;
+		sql = "SELECT * FROM stores";
+		try {
+			preparedStatement = con.prepareStatement(sql);
+			resultSet = preparedStatement.executeQuery();
+			while (resultSet.next()) {
+				allStores.add(new Store(resultSet));
+			}
+		} catch (SQLException throwables) {
+			throwables.printStackTrace();
+		}
+		storeSelector.setItems(allStores);
+
+		//Add live updates to person card preview
+		firstNameField.textProperty().addListener((observable, oldValue, newValue) -> {
+					employeeName.setText(newValue + "." + (lastNameField.getText().isEmpty()?"":lastNameField.getText(0,1)));
+					employeeIcon.setText(newValue.isEmpty()?"":newValue.substring(0,1));
+				}
+		);
+		lastNameField.textProperty().addListener((observable, oldValue, newValue) ->
+				employeeName.setText(firstNameField.getText() + "." + (newValue.isEmpty()?"":newValue.substring(0,1))));
+		roleField.textProperty().addListener((observable, oldValue, newValue) ->
+				employeeRole.setText(newValue));
+		profileBackgroundPicker.valueProperty().addListener((observable, oldValue, newValue) -> {
+					int r = (int)Math.round(newValue.getRed() * 255.0);
+					int g = (int)Math.round(newValue.getGreen() * 255.0);
+					int b = (int)Math.round(newValue.getBlue() * 255.0);
+					String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
+					r = (int)Math.round(profileTextPicker.getValue().getRed() * 255.0);
+					g = (int)Math.round(profileTextPicker.getValue().getGreen() * 255.0);
+					b = (int)Math.round(profileTextPicker.getValue().getBlue() * 255.0);
+					String profileText = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
+					employeeIcon.setStyle("-fx-background-color: " + profileBG + ";" + "-fx-text-fill: " + profileText + ";");
+				}
+		);
+		profileTextPicker.valueProperty().addListener((observable, oldValue, newValue) -> {
+					int r = (int)Math.round(newValue.getRed() * 255.0);
+					int g = (int)Math.round(newValue.getGreen() * 255.0);
+					int b = (int)Math.round(newValue.getBlue() * 255.0);
+					String profileText = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
+					r = (int)Math.round(profileBackgroundPicker.getValue().getRed() * 255.0);
+					g = (int)Math.round(profileBackgroundPicker.getValue().getGreen() * 255.0);
+					b = (int)Math.round(profileBackgroundPicker.getValue().getBlue() * 255.0);
+					String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
+					employeeIcon.setStyle("-fx-background-color: " + profileBG + ";" + "-fx-text-fill: " + profileText + ";");
+				}
+		);
+
+
 		contentDarken.setVisible(true);
 		contentDarken.setOnMouseClicked(event -> closeUserPopover());
 		saveUserButton.setOnAction(event -> editUser(user));
