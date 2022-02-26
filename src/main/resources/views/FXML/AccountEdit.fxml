@@ -26,7 +26,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane fx:id="backgroundPane" prefHeight="900.0" prefWidth="998.0" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EditAccountController">
+<StackPane fx:id="backgroundPane" prefHeight="900.0" prefWidth="998.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EditAccountController">
    <children>
       <BorderPane style="-fx-background-color: TRANSPARENT;">
          <top>
@@ -211,7 +211,7 @@
             </BorderPane>
             <MFXScrollPane fitToHeight="true" fitToWidth="true" focusTraversable="false" hbarPolicy="NEVER" VBox.vgrow="ALWAYS">
                <content>
-                  <VBox maxWidth="1.7976931348623157E308" spacing="30.0" style="-fx-background-color: #FFFFFF;">
+                  <VBox fx:id="userEntryContainer" maxWidth="1.7976931348623157E308" spacing="30.0" style="-fx-background-color: #FFFFFF;">
                      <children>
                         <BorderPane>
                            <left>
@@ -256,6 +256,7 @@
                               <MFXRectangleToggleNode fx:id="inactiveUserToggle" text="Mark as Inactive" BorderPane.alignment="CENTER" />
                            </right>
                         </BorderPane>
+                        <MFXTextField fx:id="usernameField" borderGap="0.0" floatMode="ABOVE" floatingText="Username" layoutX="15.0" layoutY="79.0" maxWidth="1.7976931348623157E308" minHeight="36.0" />
                         <MFXTextField fx:id="firstNameField" borderGap="0.0" floatMode="ABOVE" floatingText="First Name" layoutX="15.0" layoutY="30.0" maxWidth="1.7976931348623157E308" minHeight="36.0" />
                         <MFXTextField fx:id="lastNameField" borderGap="0.0" floatMode="ABOVE" floatingText="Last Name" layoutX="15.0" layoutY="229.0" maxWidth="1.7976931348623157E308" minHeight="36.0" />
                         <MFXTextField fx:id="roleField" borderGap="0.0" floatMode="ABOVE" floatingText="Role" layoutX="15.0" layoutY="296.0" maxWidth="1.7976931348623157E308" minHeight="36.0" />
@@ -289,7 +290,7 @@
                         <VBox>
                            <children>
                               <Label text="Select Stores" />
-                              <MFXCheckListView fx:id="storeSelector" depthLevel="LEVEL0" maxWidth="1.7976931348623157E308" prefHeight="130.0" prefWidth="353.0" style="-fx-border-color: #D3D3D3;" />
+                              <MFXCheckListView fx:id="storeSelector" depthLevel="LEVEL0" maxWidth="1.7976931348623157E308" minHeight="135.0" prefHeight="135.0" prefWidth="353.0" style="-fx-border-color: #D3D3D3;" />
                            </children>
                            <VBox.margin>
                               <Insets top="-15.0" />

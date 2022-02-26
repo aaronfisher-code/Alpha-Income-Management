@@ -7,6 +7,7 @@ import com.jfoenix.controls.JFXNodesList;
 import io.github.palexdev.materialfx.controls.*;
 import io.github.palexdev.materialfx.controls.cell.MFXCheckListCell;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
+import io.github.palexdev.materialfx.enums.FloatMode;
 import io.github.palexdev.materialfx.filter.StringFilter;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
@@ -43,7 +44,7 @@ public class EditAccountController extends Controller{
 	private BorderPane usersButton,storesButton;
 
 	@FXML
-	private VBox controlBox,editStorePopover,editUserPopover;
+	private VBox controlBox,editStorePopover,editUserPopover,userEntryContainer;
 
 	@FXML
 	private JFXNodesList addList;
@@ -67,7 +68,7 @@ public class EditAccountController extends Controller{
 	private MFXRectangleToggleNode inactiveUserToggle;
 
 	@FXML
-	private MFXTextField firstNameField,lastNameField,roleField;
+	private MFXTextField usernameField,firstNameField,lastNameField,roleField;
 
 	@FXML
 	private ColorPicker profileTextPicker,profileBackgroundPicker;
@@ -112,10 +113,7 @@ public class EditAccountController extends Controller{
 	}
 
 	@Override
-	public void fill() {
-	 	usersView();
-	 	storeNameField.setId("custom-text-field");
-	 }
+	public void fill() {usersView();}
 
 	public void usersView(){
 		formatTabSelect(usersButton);
@@ -252,8 +250,11 @@ public class EditAccountController extends Controller{
 
 	public void openUserPopover(){
 		editUserPopoverTitle.setText("Add new user");
+		inactiveUserToggle.setVisible(false);
 		deleteUserButton.setVisible(false);
 		inactiveUserToggle.setSelected(false);
+		usernameField.setDisable(false);
+		usernameField.clear();
 		firstNameField.clear();
 		lastNameField.clear();
 		roleField.clear();
@@ -315,6 +316,7 @@ public class EditAccountController extends Controller{
 				}
 		);
 
+
 		contentDarken.setVisible(true);
 		contentDarken.setOnMouseClicked(event -> closeUserPopover());
 		saveUserButton.setOnAction(event -> addUser());
@@ -323,11 +325,14 @@ public class EditAccountController extends Controller{
 
 	public void openUserPopover(User user){
 		editUserPopoverTitle.setText("Edit user");
+		inactiveUserToggle.setVisible(true);
 		deleteUserButton.setVisible(true);
 		inactiveUserToggle.setSelected(user.getInactiveDate()!=null);
+		usernameField.setText(user.getUsername());
 		firstNameField.setText(user.getFirst_name());
 		lastNameField.setText(user.getLast_name());
 		roleField.setText(user.getRole());
+		usernameField.setDisable(true);
 		profileTextPicker.setValue(Color.valueOf(user.getTextColour()));
 		profileBackgroundPicker.setValue(Color.valueOf(user.getBgColour()));
 		passwordResetButton.setVisible(true);
@@ -452,7 +457,43 @@ public class EditAccountController extends Controller{
 	}
 
 	public void addUser(){
+		String username = usernameField.getText();
+		String fname = firstNameField.getText();
+		String lname = lastNameField.getText();
+		String role = roleField.getText();
+		int r = (int)Math.round(profileTextPicker.getValue().getRed() * 255.0);
+		int g = (int)Math.round(profileTextPicker.getValue().getGreen() * 255.0);
+		int b = (int)Math.round(profileTextPicker.getValue().getBlue() * 255.0);
+		String profileText = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
+		r = (int)Math.round(profileBackgroundPicker.getValue().getRed() * 255.0);
+		g = (int)Math.round(profileBackgroundPicker.getValue().getGreen() * 255.0);
+		b = (int)Math.round(profileBackgroundPicker.getValue().getBlue() * 255.0);
+		String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
 
+		if(fname.isEmpty() || fname.isBlank()){
+
+		}else{
+			String sql = "INSERT INTO accounts(username,first_name,last_name,role,profileBG,profileText) VALUES(?,?,?,?,?,?)";
+			try {
+				preparedStatement = con.prepareStatement(sql);
+				preparedStatement.setString(1, username);
+				preparedStatement.setString(2, fname);
+				preparedStatement.setString(3, lname);
+				preparedStatement.setString(4, role);
+				preparedStatement.setString(5, profileBG);
+				preparedStatement.setString(6, profileText);
+				preparedStatement.executeUpdate();
+			} catch (SQLException ex) {
+				System.err.println(ex.getMessage());
+			}
+			Dialog<String> dialog = new Dialog<String>();
+			dialog.setTitle("Success");
+			ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
+			dialog.setContentText("User was succesfully added to database");
+			dialog.getDialogPane().getButtonTypes().add(type);
+			dialog.showAndWait();
+			usersView();
+		}
 	}
 
 	public void editStore(Store store){
