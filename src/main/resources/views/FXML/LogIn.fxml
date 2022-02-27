@@ -16,7 +16,7 @@
 <?import javafx.scene.text.Font?>
 <?import javafx.scene.text.Text?>
 
-<StackPane fx:id="backgroundPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="800.0" prefWidth="1275.0" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.LogController">
+<StackPane fx:id="backgroundPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="800.0" prefWidth="1275.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.LogController">
    <children>
       <VBox id="loginbg" prefHeight="200.0" prefWidth="100.0" styleClass="loginbg" stylesheets="@../CSS/application.css" StackPane.alignment="TOP_RIGHT">
          <StackPane.margin>
@@ -33,7 +33,7 @@
                   <Insets bottom="15.0" />
                </VBox.margin>
             </Text>
-            <Text fill="#6e6b7b" strokeType="OUTSIDE" strokeWidth="0.0" styleClass="SubHeading" text="Enter your details below to sign in">
+            <Text fx:id="subtitle" fill="#6e6b7b" strokeType="OUTSIDE" strokeWidth="0.0" styleClass="SubHeading" text="Enter your details below to sign in">
                <font>
                   <Font size="14.0" />
                </font>
@@ -46,7 +46,7 @@
                   <Font size="11.0" />
                </font>
             </Label>
-            <TextField fx:id="username" prefWidth="527.0" promptText="Enter your username" style="-fx-background-color: #ffffff; -fx-border-color: #B2BAC9; -fx-border-radius: 5;" styleClass="userInput">
+            <TextField fx:id="username" promptText="Enter your username" style="-fx-background-color: #ffffff; -fx-border-color: #B2BAC9; -fx-border-radius: 5;" styleClass="userInput">
                <font>
                   <Font size="15.0" />
                </font>
@@ -62,13 +62,35 @@
                   <Font size="11.0" />
                </font>
             </Label>
-            <PasswordField fx:id="password" onAction="#userLogin" prefHeight="31.0" prefWidth="524.0" promptText="Enter your password" style="-fx-background-color: #ffffff; -fx-border-color: #B2BAC9; -fx-border-radius: 5;" styleClass="userInput">
+            <PasswordField fx:id="password" onAction="#userLogin" promptText="Enter your password" style="-fx-background-color: #ffffff; -fx-border-color: #B2BAC9; -fx-border-radius: 5;" styleClass="userInput">
                <font>
                   <Font size="15.0" />
                </font>
                <padding>
                   <Insets bottom="10.0" left="10.0" top="10.0" />
                </padding>
+               <VBox.margin>
+                  <Insets bottom="10.0" />
+               </VBox.margin>
+            </PasswordField>
+            <Label fx:id="confirmPasswordLabel" layoutX="85.0" layoutY="423.0" styleClass="userInputLabel" text="Confirm Password" textFill="#5e5873" visible="false">
+               <font>
+                  <Font size="11.0" />
+               </font>
+               <opaqueInsets>
+                  <Insets />
+               </opaqueInsets>
+            </Label>
+            <PasswordField fx:id="confirmPassword" layoutX="85.0" layoutY="449.0" onAction="#userLogin" promptText="Confirm your password" style="-fx-background-color: #ffffff; -fx-border-color: #B2BAC9; -fx-border-radius: 5;" styleClass="userInput" visible="false">
+               <font>
+                  <Font size="15.0" />
+               </font>
+               <padding>
+                  <Insets bottom="10.0" left="10.0" top="10.0" />
+               </padding>
+               <opaqueInsets>
+                  <Insets />
+               </opaqueInsets>
             </PasswordField>
             <Label fx:id="logInError" alignment="CENTER" contentDisplay="CENTER" maxWidth="1.7976931348623157E308" prefHeight="17.0" textFill="RED" textOverrun="CLIP">
                <VBox.margin>

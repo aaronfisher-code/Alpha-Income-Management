@@ -334,6 +334,8 @@ public class EditAccountController extends Controller{
 		profileTextPicker.setValue(Color.valueOf(user.getTextColour()));
 		profileBackgroundPicker.setValue(Color.valueOf(user.getBgColour()));
 		passwordResetButton.setVisible(true);
+		passwordResetButton.setDisable(false);
+		passwordResetButton.setOnAction(actionEvent -> resetPassword(user));
 		employeeName.setText(user.getFirst_name() + "." + user.getLast_name().substring(0,1));
 		employeeRole.setText(user.getRole());
 		employeeIcon.setText(user.getFirst_name().substring(0,1));
@@ -565,6 +567,20 @@ public class EditAccountController extends Controller{
 			closeUserPopover();
 			usersView();
 		}
+	}
+
+	public void resetPassword(User user){
+		String sql = "UPDATE accounts SET password = ? WHERE username = ?";
+		try {
+			preparedStatement = con.prepareStatement(sql);
+			preparedStatement.setString(1, null);
+			preparedStatement.setString(2, user.getUsername());
+			preparedStatement.executeUpdate();
+		} catch (SQLException ex) {
+			System.err.println(ex.getMessage());
+		}
+		passwordResetButton.setText("Password reset requested");
+		passwordResetButton.setDisable(true);
 	}
 
 	public void deleteStore(Store store){
