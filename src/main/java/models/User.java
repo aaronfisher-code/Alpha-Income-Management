@@ -3,6 +3,7 @@ package models;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.ArrayList;
 
 public class User {
 	private String username;
@@ -20,6 +21,8 @@ public class User {
     private String textColour;
 
 	private LocalDate inactiveDate;
+
+	private ArrayList<Employment> employments;
 
 	public User(ResultSet resultSet) {
 		try {
@@ -95,4 +98,8 @@ public class User {
 	public LocalDate getInactiveDate() { return inactiveDate; }
 
 	public void setInactiveDate(LocalDate inactiveDate) { this.inactiveDate = inactiveDate; }
+
+	public ArrayList<Employment> getEmployments() {return employments;}
+
+	public void setEmployments(ArrayList<Employment> employments) {this.employments = employments;}
 }

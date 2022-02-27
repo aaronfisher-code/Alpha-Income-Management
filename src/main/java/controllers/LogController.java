@@ -105,6 +105,8 @@ public class LogController extends Controller {
     }
 
     public void userLoginWithPassword(User user) {
+        //TODO new Password login doesnt re-verify user
+
         String status = "Success";
         if(!password.getText().equals(confirmPassword.getText())) {
             logInError.setText("Passwords dont match");
@@ -134,6 +136,7 @@ public class LogController extends Controller {
     }
 
     public void setNewPasswordView(User user){
+        //TODO no option to return to standard login after requesting new password
         confirmPasswordLabel.setVisible(true);
         confirmPassword.setVisible(true);
         login.setOnAction(actionEvent -> userLoginWithPassword(user));

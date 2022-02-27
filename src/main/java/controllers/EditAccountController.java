@@ -5,9 +5,7 @@ import com.dlsc.gemsfx.FilterView;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXNodesList;
 import io.github.palexdev.materialfx.controls.*;
-import io.github.palexdev.materialfx.controls.cell.MFXCheckListCell;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
-import io.github.palexdev.materialfx.enums.FloatMode;
 import io.github.palexdev.materialfx.filter.StringFilter;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
@@ -22,10 +20,10 @@ import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
 import javafx.util.Duration;
 import models.Store;
 import models.User;
+import models.Employment;
 
 import java.io.IOException;
 import java.sql.*;
@@ -344,18 +342,39 @@ public class EditAccountController extends Controller{
 		storeSelector.getSelectionModel().clearSelection();
 		//Refresh Store list for store selector
 		allStores = FXCollections.observableArrayList();
+		ObservableList<Employment> staffStores = FXCollections.observableArrayList();
 		String sql = null;
-		sql = "SELECT * FROM stores";
 		try {
+			sql = "SELECT * FROM stores";
 			preparedStatement = con.prepareStatement(sql);
 			resultSet = preparedStatement.executeQuery();
 			while (resultSet.next()) {
 				allStores.add(new Store(resultSet));
 			}
+			storeSelector.setItems(allStores);
+
+			sql = "SELECT * FROM employments WHERE username = ?";
+			preparedStatement = con.prepareStatement(sql);
+			preparedStatement.setString(1, user.getUsername());
+			resultSet = preparedStatement.executeQuery();
+			while (resultSet.next()) {
+				staffStores.add(new Employment(resultSet));
+			}
+
+			for(Store s:allStores){
+				for(Employment e:staffStores){
+					if(s.getStoreID()==e.getStoreID()){
+						storeSelector.getSelectionModel().selectItem(s);
+					}
+				}
+			}
+
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
 		}
-		storeSelector.setItems(allStores);
+
+
+
 
 		//Add live updates to person card preview
 		firstNameField.textProperty().addListener((observable, oldValue, newValue) -> {
@@ -483,17 +502,27 @@ public class EditAccountController extends Controller{
 				preparedStatement.setString(5, profileBG);
 				preparedStatement.setString(6, profileText);
 				preparedStatement.executeUpdate();
+				for(Store s:storeSelector.getSelectionModel().getSelection().values()){
+					sql = "INSERT INTO employments(username,storeID) VALUES(?,?)";
+					preparedStatement = con.prepareStatement(sql);
+					preparedStatement.setString(1, username);
+					preparedStatement.setInt(2, s.getStoreID());
+					preparedStatement.executeUpdate();
+				}
+				Dialog<String> dialog = new Dialog<String>();
+				dialog.setTitle("Success");
+				ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
+				dialog.setContentText("User was succesfully added to database");
+				dialog.getDialogPane().getButtonTypes().add(type);
+				dialog.showAndWait();
+				usersView();
 			} catch (SQLException ex) {
 				System.err.println(ex.getMessage());
 			}
-			Dialog<String> dialog = new Dialog<String>();
-			dialog.setTitle("Success");
-			ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-			dialog.setContentText("User was succesfully added to database");
-			dialog.getDialogPane().getButtonTypes().add(type);
-			dialog.showAndWait();
-			usersView();
+
 		}
+
+
 	}
 
 	public void editStore(Store store){
