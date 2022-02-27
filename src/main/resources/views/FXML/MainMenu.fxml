@@ -17,7 +17,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane prefHeight="800.0" prefWidth="1500.0" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.MainMenuController">
+<StackPane prefHeight="800.0" prefWidth="1500.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.MainMenuController">
    <children>
       <BorderPane fx:id="contentPane" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-background-color: #EDF0F7;" StackPane.alignment="CENTER_LEFT">
          <StackPane.margin>
@@ -36,7 +36,7 @@
                <children>
                   <VBox alignment="TOP_CENTER">
                      <children>
-                        <MFXFilterComboBox fx:id="storeSearchCombo" floatMode="DISABLED" graphicTextGap="5.0" minHeight="40.0" minWidth="285.0" prefHeight="40.0" prefWidth="285.0" style="-fx-background-color: #F0F0F0; -fx-border-color: #F0F0F0;" text="Direct Chemist Outlet Cobblebank">
+                        <MFXFilterComboBox fx:id="storeSearchCombo" floatMode="DISABLED" graphicTextGap="5.0" minHeight="40.0" minWidth="285.0" prefHeight="40.0" prefWidth="293.0" style="-fx-background-color: #F0F0F0; -fx-border-color: #F0F0F0;" text="Direct Chemist Outlet Cobblebank">
                            <cursor>
                               <Cursor fx:constant="HAND" />
                            </cursor>
