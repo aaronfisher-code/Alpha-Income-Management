@@ -10,6 +10,7 @@ import javafx.scene.image.Image;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import models.Store;
 import models.User;
 import utils.DBConnector;
 
@@ -21,7 +22,8 @@ public class Main extends Application {
 
 	
 	private static Stage stg;
-	public User currentUser;
+	private User currentUser;
+	private Store currentStore;
 	private Connection con;
 	public Controller c;
 	private static BorderlessScene bs;
@@ -80,7 +82,7 @@ public class Main extends Application {
 
 }
 	
-	public void changeUser(User newUser){
+	public void setCurrentUser(User newUser){
 		this.currentUser = newUser;
 	}
 
@@ -88,7 +90,6 @@ public class Main extends Application {
 	public Stage getStg(){
 		return stg;
 	}
-
 	public BorderlessScene getBs() {
 		return bs;
 	}
@@ -96,6 +97,12 @@ public class Main extends Application {
 	public void setBs(BorderlessScene newScene) {
 		bs=newScene;
 	}
+
+	public User getCurrentUser() {return currentUser;}
+
+	public Store getCurrentStore() {return currentStore;}
+
+	public void setCurrentStore(Store currentStore) {this.currentStore = currentStore;}
 
 	public static void main(String[] args) {
 		launch(args);

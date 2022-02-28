@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import io.github.palexdev.materialfx.controls.MFXButton?>
+<?import io.github.palexdev.materialfx.controls.MFXTextField?>
+<?import io.github.palexdev.materialfx.font.MFXFontIcon?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.paint.Color?>
+
+
+<StackPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" style="-fx-background-color: TRANSPARENT;" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <MFXTextField />
+      <MFXButton contentDisplay="GRAPHIC_ONLY" StackPane.alignment="CENTER_RIGHT">
+         <graphic>
+            <MFXFontIcon fx:id="calIcon" description="mfx-calendar-alt-semi-dark" onMouseClicked="#openMonthSelector" size="30.0">
+               <color>
+                  <Color red="0.4313725531101227" green="0.41960784792900085" blue="0.48235294222831726" />
+               </color>
+            </MFXFontIcon>
+         </graphic>
+      </MFXButton>
+   </children>
+</StackPane>

@@ -373,9 +373,6 @@ public class EditAccountController extends Controller{
 			throwables.printStackTrace();
 		}
 
-
-
-
 		//Add live updates to person card preview
 		firstNameField.textProperty().addListener((observable, oldValue, newValue) -> {
 					employeeName.setText(newValue + "." + (lastNameField.getText().isEmpty()?"":lastNameField.getText(0,1)));
@@ -490,7 +487,7 @@ public class EditAccountController extends Controller{
 		String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
 
 		if(fname.isEmpty() || fname.isBlank()){
-
+			//TODO properly implement field verification for user addition
 		}else{
 			String sql = "INSERT INTO accounts(username,first_name,last_name,role,profileBG,profileText) VALUES(?,?,?,?,?,?)";
 			try {
@@ -584,6 +581,18 @@ public class EditAccountController extends Controller{
 				preparedStatement.setDate(6, inactiveDate);
 				preparedStatement.setString(7, user.getUsername());
 				preparedStatement.executeUpdate();
+
+				sql = "DELETE from employments WHERE username = ?";
+				preparedStatement = con.prepareStatement(sql);
+				preparedStatement.setString(1, user.getUsername());
+				preparedStatement.executeUpdate();
+				for(Store s:storeSelector.getSelectionModel().getSelection().values()){
+					sql = "INSERT INTO employments(username,storeID) VALUES(?,?)";
+					preparedStatement = con.prepareStatement(sql);
+					preparedStatement.setString(1, user.getUsername());
+					preparedStatement.setInt(2, s.getStoreID());
+					preparedStatement.executeUpdate();
+				}
 			} catch (SQLException ex) {
 				System.err.println(ex.getMessage());
 			}
@@ -645,7 +654,10 @@ public class EditAccountController extends Controller{
 	public void deleteUser(User user){
 		Alert alert = new Alert(Alert.AlertType.WARNING);
 		alert.setTitle("Confirm Deletion");
-		alert.setContentText("This action will permanently delete the user from all systems,it is preferred that the user be marked as Inactive instead of deletion, are you sure?");
+		alert.setContentText("This action will permanently delete the user from all systems,\n" +
+							 "if the archived information for this user must be saved, its instead " +
+							 "preferred that you mark them as a now inactive user\n\n" +
+							 "Are you sure you still want to delete this user?");
 		ButtonType okButton = new ButtonType("Yes", ButtonBar.ButtonData.YES);
 		ButtonType noButton = new ButtonType("No", ButtonBar.ButtonData.NO);
 		alert.getButtonTypes().setAll(okButton, noButton);

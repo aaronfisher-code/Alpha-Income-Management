@@ -97,15 +97,15 @@ public class EODDataEntryPageController extends Controller{
 	@Override
 	public void fill() {
 
-		datePkr = new MFXDatePicker();
-		YearMonthPicker ymPick = new YearMonthPicker();
-		ymPick.setPrefWidth(Region.USE_COMPUTED_SIZE);
-		ymPick.setStyle("-fx-background-color: #FFFFFF; -fx-border-color: #D3D3D3;");
-//		datePkr.setOnAction(e -> updatePage());
-		datePickerPane.getChildren().add(1,ymPick);
+//		datePkr = new MFXDatePicker();
+//		YearMonthPicker ymPick = new YearMonthPicker();
+//		ymPick.setPrefWidth(Region.USE_COMPUTED_SIZE);
+//		ymPick.setStyle("-fx-background-color: #FFFFFF; -fx-border-color: #D3D3D3;");
+////		datePkr.setOnAction(e -> updatePage());
+//		datePickerPane.getChildren().add(1,ymPick);
 
-		datePkr.setValue(LocalDate.now());
-		datePkr.setText(LocalDate.now().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)));
+//		datePkr.setValue(LocalDate.now());
+//		datePkr.setText(LocalDate.now().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)));
 //		datePkr.getStylesheets().add("/views/CSS/RosterPage.css");
 
 		dateCol = new MFXTableColumn<>("DATE",false, Comparator.comparing(EODDataPoint::getDate));
@@ -173,6 +173,10 @@ public class EODDataEntryPageController extends Controller{
 
 	public void weekBackward() {
 		setDatePkr(datePkr.getValue().minusMonths(1));
+	}
+
+	public void openMonthSelector(){
+
 	}
 
 	public void setDatePkr(LocalDate date) {

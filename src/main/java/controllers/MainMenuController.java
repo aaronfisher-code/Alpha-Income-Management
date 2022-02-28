@@ -21,12 +21,16 @@ import javafx.scene.paint.Paint;
 import javafx.scene.shape.SVGPath;
 import javafx.stage.PopupWindow;
 import javafx.util.Duration;
+import models.Employment;
+import models.Shift;
+import models.Store;
 import org.controlsfx.control.PopOver;
 
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 
 
 public class MainMenuController extends Controller {
@@ -64,14 +68,23 @@ public class MainMenuController extends Controller {
     }
 
     public void fill() {
-        userNameLabel.setText(main.currentUser.getFirst_name() + " " + main.currentUser.getLast_name());
-        userLabel.setText(String.valueOf(main.currentUser.getFirst_name().charAt(0)));
-        userLabel.setStyle("-fx-background-color: " + main.currentUser.getBgColour() + ";");
-        userLabel.setTextFill(Paint.valueOf(main.currentUser.getTextColour()));
-        storeSearchCombo.getItems().add("Rainbow Health Pharmacy");
-        storeSearchCombo.getItems().add("Caresaver Discount Chemist");
-        storeSearchCombo.getItems().add("Direct Chemist Outlet Westsprings");
-        storeSearchCombo.getItems().add("Direct Chemist Outlet Cobblebank");
+        userNameLabel.setText(main.getCurrentUser().getFirst_name() + " " + main.getCurrentUser().getLast_name());
+        userLabel.setText(String.valueOf(main.getCurrentUser().getFirst_name().charAt(0)));
+        userLabel.setStyle("-fx-background-color: " + main.getCurrentUser().getBgColour() + ";");
+        userLabel.setTextFill(Paint.valueOf(main.getCurrentUser().getTextColour()));
+        String sql = "SELECT * FROM employments JOIN stores a on a.storeID = employments.storeID where username = ?";
+        try {
+            preparedStatement = con.prepareStatement(sql);
+            preparedStatement.setString(1, main.getCurrentUser().getUsername());
+            resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()) {
+                storeSearchCombo.getItems().add(new Store(resultSet));
+            }
+        } catch (SQLException ex) {
+            System.err.println(ex.getMessage());
+        }
+        storeSearchCombo.selectFirst();
+        main.setCurrentStore((Store) storeSearchCombo.getSelectedItem());
 
         for(Node b:buttonPane.getChildren()){
             if(b.getAccessibleRole() == AccessibleRole.BUTTON){

@@ -9,7 +9,7 @@ import javafx.scene.control.Button;
 import javafx.scene.layout.StackPane;
 import javafx.scene.text.Text;
 import models.User;
-import javafx.scene.control.Hyperlink;
+
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -17,7 +17,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import application.Main;
-import org.controlsfx.control.tableview2.filter.filtereditor.SouthFilter;
 
 
 public class LogController extends Controller {
@@ -95,7 +94,7 @@ public class LogController extends Controller {
         
         if (status.equals("Success")) {
             try {
-            	main.changeUser(new User(resultSet));
+            	main.setCurrentUser(new User(resultSet));
             	main.changeScene("/views/FXML/MainMenu.fxml");
             } catch (IOException ex) {
             	System.err.println("Failed login");
@@ -126,7 +125,7 @@ public class LogController extends Controller {
 
         if (status.equals("Success")) {
             try {
-                main.changeUser(user);
+                main.setCurrentUser(user);
                 main.changeScene("/views/FXML/MainMenu.fxml");
             } catch (IOException ex) {
                 System.err.println("Failed login");
