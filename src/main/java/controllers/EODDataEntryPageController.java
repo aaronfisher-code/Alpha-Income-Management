@@ -1,49 +1,39 @@
 package controllers;
 
 import application.Main;
-import com.dlsc.gemsfx.FilterView;
-import eu.hansolo.medusa.Gauge;
 import io.github.palexdev.materialfx.controls.MFXDatePicker;
 import io.github.palexdev.materialfx.controls.MFXTableColumn;
 import io.github.palexdev.materialfx.controls.MFXTableView;
+import io.github.palexdev.materialfx.controls.MFXTextField;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
-import io.github.palexdev.materialfx.filter.StringFilter;
-import io.github.palexdev.materialfx.utils.others.observables.When;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
-import javafx.scene.AccessibleRole;
-import javafx.scene.Node;
-import javafx.scene.control.Label;
 import javafx.scene.effect.DropShadow;
-import javafx.scene.layout.*;
-import javafx.scene.text.TextAlignment;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.util.Duration;
 import models.EODDataPoint;
 import models.User;
-import org.apache.poi.ss.formula.functions.T;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import se.alipsa.ymp.YearMonthPicker;
+import org.controlsfx.control.PopOver;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
+import java.time.format.TextStyle;
 import java.util.Comparator;
+import java.util.Locale;
 
 public class EODDataEntryPageController extends Controller{
 
@@ -53,8 +43,9 @@ public class EODDataEntryPageController extends Controller{
     private Main main;
     private MainMenuController parent;
     private User selectedUser;
+	private PopOver currentDatePopover;
 
-	private MFXDatePicker datePkr;
+	private LocalDate monthSelectorDate;
 
 	@FXML
 	private FlowPane datePickerPane;
@@ -62,6 +53,10 @@ public class EODDataEntryPageController extends Controller{
     private MFXTableView<EODDataPoint> eodDataTable;
 	@FXML
 	private VBox editDayPopover;
+	@FXML
+	private StackPane monthSelector;
+	@FXML
+	private MFXTextField monthSelectorField;
 
 	private MFXTableColumn<EODDataPoint> dateCol;
 	private MFXTableColumn<EODDataPoint> cashAmountCol;
@@ -96,18 +91,7 @@ public class EODDataEntryPageController extends Controller{
 
 	@Override
 	public void fill() {
-
-//		datePkr = new MFXDatePicker();
-//		YearMonthPicker ymPick = new YearMonthPicker();
-//		ymPick.setPrefWidth(Region.USE_COMPUTED_SIZE);
-//		ymPick.setStyle("-fx-background-color: #FFFFFF; -fx-border-color: #D3D3D3;");
-////		datePkr.setOnAction(e -> updatePage());
-//		datePickerPane.getChildren().add(1,ymPick);
-
-//		datePkr.setValue(LocalDate.now());
-//		datePkr.setText(LocalDate.now().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)));
-//		datePkr.getStylesheets().add("/views/CSS/RosterPage.css");
-
+		setMonthSelectorDate(LocalDate.now());
 		dateCol = new MFXTableColumn<>("DATE",false, Comparator.comparing(EODDataPoint::getDate));
 		cashAmountCol = new MFXTableColumn<>("CASH",false, Comparator.comparing(EODDataPoint::getCashAmount));
 		eftposAmountCol = new MFXTableColumn<>("EFTPOS",false, Comparator.comparing(EODDataPoint::getEftposAmount));
@@ -167,20 +151,58 @@ public class EODDataEntryPageController extends Controller{
 		Workbook workbook = new XSSFWorkbook(file);
 	}
 
-	public void weekForward() {
-		setDatePkr(datePkr.getValue().plusMonths(1));
+	public void monthForward() {
+		setMonthSelectorDate(monthSelectorDate.plusMonths(1));
 	}
 
-	public void weekBackward() {
-		setDatePkr(datePkr.getValue().minusMonths(1));
+	public void monthBackward() {
+		setMonthSelectorDate(monthSelectorDate.minusMonths(1));
 	}
 
 	public void openMonthSelector(){
+		if(currentDatePopover!=null&&currentDatePopover.isShowing()){
+			currentDatePopover.hide();
+		}else {
+			PopOver monthSelectorMenu = new PopOver();
+			FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/MonthYearSelectorContent.fxml"));
+			VBox monthSelectorMenuContent = null;
+			try {
+				monthSelectorMenuContent = loader.load();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			MonthYearSelectorContentController rdc = loader.getController();
+			rdc.setMain(main);
+			rdc.setConnection(con);
+			rdc.setParent(this);
+			rdc.fill();
 
+			monthSelectorMenu.setOpacity(1);
+			monthSelectorMenu.setContentNode(monthSelectorMenuContent);
+			monthSelectorMenu.setArrowSize(0);
+			monthSelectorMenu.setAnimated(true);
+			monthSelectorMenu.setArrowLocation(PopOver.ArrowLocation.TOP_CENTER);
+			monthSelectorMenu.setAutoHide(true);
+			monthSelectorMenu.setDetachable(false);
+			monthSelectorMenu.setHideOnEscape(true);
+			monthSelectorMenu.setCornerRadius(10);
+			monthSelectorMenu.setArrowIndent(0);
+			monthSelectorMenu.show(monthSelector);
+			currentDatePopover=monthSelectorMenu;
+			monthSelectorField.requestFocus();
+		}
 	}
 
-	public void setDatePkr(LocalDate date) {
-		datePkr.setValue(date);
+	public void setMonthSelectorDate(LocalDate newDate){
+	 	monthSelectorDate = newDate;
+	 	String fieldText = monthSelectorDate.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
+	 	fieldText += ", ";
+	 	fieldText += monthSelectorDate.getYear();
+	 	monthSelectorField.setText(fieldText);
+	}
+
+	public LocalDate getMonthSelectorDate(){
+	 	return monthSelectorDate;
 	}
 
 	public void addNewPayment(){

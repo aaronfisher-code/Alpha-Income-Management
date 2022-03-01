@@ -57,7 +57,7 @@ public class MainMenuController extends Controller {
     PreparedStatement preparedStatement = null;
     ResultSet resultSet = null;
     private Main main;
-    private PopOver currentUserPopover,currentStorePopover;
+    private PopOver currentUserPopover;
 
     public void setMain(Main main) {
         this.main = main;

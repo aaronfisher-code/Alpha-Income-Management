@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import io.github.palexdev.materialfx.controls.MFXButton?>
+<?import io.github.palexdev.materialfx.controls.MFXRectangleToggleNode?>
+<?import java.net.URL?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.SVGPath?>
+<?import javafx.scene.text.Text?>
+
+<VBox fx:id="buttonContainer" prefWidth="250.0" spacing="10.0" style="-fx-background-color: #FFFFFF;" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.MonthYearSelectorContentController">
+   <children>
+      <BorderPane maxWidth="1.7976931348623157E308" VBox.vgrow="ALWAYS">
+         <left>
+            <MFXButton fx:id="backwardButton" contentDisplay="GRAPHIC_ONLY" BorderPane.alignment="CENTER_LEFT">
+               <graphic>
+                  <SVGPath content="m3.86 8.753 5.482 4.796c.646.566 1.658.106 1.658-.753V3.204a1 1 0 0 0-1.659-.753l-5.48 4.796a1 1 0 0 0 0 1.506" />
+               </graphic>
+            </MFXButton>
+         </left>
+         <right>
+            <MFXButton fx:id="forwardButton" contentDisplay="GRAPHIC_ONLY" BorderPane.alignment="CENTER_RIGHT">
+               <graphic>
+                  <SVGPath content="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z" />
+               </graphic>
+            </MFXButton>
+         </right>
+         <center>
+            <Text fx:id="yearValue" strokeType="OUTSIDE" strokeWidth="0.0" text="2022" BorderPane.alignment="CENTER" />
+         </center>
+         <VBox.margin>
+            <Insets bottom="5.0" />
+         </VBox.margin>
+      </BorderPane>
+      <GridPane>
+        <columnConstraints>
+          <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+          <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+        </columnConstraints>
+        <rowConstraints>
+          <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+          <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+          <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        </rowConstraints>
+         <children>
+            <MFXRectangleToggleNode fx:id="janNode" style="-fx-background-radius: 5;" text="Jan">
+               <toggleGroup>
+                  <ToggleGroup fx:id="months" />
+               </toggleGroup>
+            </MFXRectangleToggleNode>
+            <MFXRectangleToggleNode fx:id="febNode" layoutX="10.0" layoutY="9.0" text="Feb" toggleGroup="$months" GridPane.columnIndex="1" />
+            <MFXRectangleToggleNode fx:id="marNode" layoutX="10.0" layoutY="9.0" text="Mar" toggleGroup="$months" GridPane.columnIndex="2" />
+            <MFXRectangleToggleNode fx:id="aprNode" layoutX="10.0" layoutY="9.0" text="Apr" toggleGroup="$months" GridPane.rowIndex="1" />
+            <MFXRectangleToggleNode fx:id="mayNode" layoutX="10.0" layoutY="9.0" text="May" toggleGroup="$months" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+            <MFXRectangleToggleNode fx:id="junNode" layoutX="10.0" layoutY="9.0" text="Jun" toggleGroup="$months" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+            <MFXRectangleToggleNode fx:id="julNode" layoutX="10.0" layoutY="9.0" text="Jul" toggleGroup="$months" GridPane.rowIndex="2" />
+            <MFXRectangleToggleNode fx:id="augNode" layoutX="10.0" layoutY="9.0" text="Aug" toggleGroup="$months" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+            <MFXRectangleToggleNode fx:id="sepNode" layoutX="10.0" layoutY="9.0" text="Sep" toggleGroup="$months" GridPane.columnIndex="2" GridPane.rowIndex="2" />
+            <MFXRectangleToggleNode fx:id="octNode" layoutX="10.0" layoutY="9.0" text="Oct" toggleGroup="$months" GridPane.rowIndex="3" />
+            <MFXRectangleToggleNode fx:id="novNode" layoutX="10.0" layoutY="9.0" text="Nov" toggleGroup="$months" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+            <MFXRectangleToggleNode fx:id="decNode" layoutX="10.0" layoutY="9.0" text="Dec" toggleGroup="$months" GridPane.columnIndex="2" GridPane.rowIndex="3" />
+         </children>
+      </GridPane>
+   </children>
+   <stylesheets>
+      <URL value="@../CSS/application.css" />
+      <URL value="@../CSS/UserContentMenu.css" />
+   </stylesheets>
+   <padding>
+      <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+   </padding>
+</VBox>
