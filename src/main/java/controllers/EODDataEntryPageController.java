@@ -99,19 +99,19 @@ public class EODDataEntryPageController extends Controller{
 		setMonthSelectorDate(LocalDate.now());
 		eodDataTable.autosizeColumnsOnInitialization();
 
-		dateCol = new MFXTableColumn<>("DATE",false, Comparator.comparing(EODDataPoint::getDate));
-		cashAmountCol = new MFXTableColumn<>("CASH",false, Comparator.comparing(EODDataPoint::getCashAmount));
-		eftposAmountCol = new MFXTableColumn<>("EFTPOS",false, Comparator.comparing(EODDataPoint::getEftposAmount));
-		amexAmountCol = new MFXTableColumn<>("AMEX",false, Comparator.comparing(EODDataPoint::getAmexAmount));
-		googleSquareAmountCol = new MFXTableColumn<>("GOOGLE SQUARE",false, Comparator.comparing(EODDataPoint::getGoogleSquareAmount));
-		chequeAmountCol = new MFXTableColumn<>("CHEQUE",false, Comparator.comparing(EODDataPoint::getChequeAmount));
-		medschecksCol = new MFXTableColumn<>("MEDSCHECKS",false, Comparator.comparing(EODDataPoint::getMedschecks));
-		stockOnHandAmountCol = new MFXTableColumn<>("STOCK ON HAND",false, Comparator.comparing(EODDataPoint::getStockOnHandAmount));
-		scriptsOnFileCol = new MFXTableColumn<>("SCRIPTS ON FILE",false, Comparator.comparing(EODDataPoint::getScriptsOnFile));
-		smsPatientsCol = new MFXTableColumn<>("SMS PATIENTS",false, Comparator.comparing(EODDataPoint::getSmsPatients));
-		tillBalanceCol = new MFXTableColumn<>("TILL BALANCE",false, Comparator.comparing(EODDataPoint::getTillBalance));
-		runningTillBalanceCol = new MFXTableColumn<>("RUNNING TILL BALANCE",false, Comparator.comparing(EODDataPoint::getRunningTillBalance));
-		notesCol = new MFXTableColumn<>("NOTES",false, Comparator.comparing(EODDataPoint::getNotes));
+		dateCol = new MFXTableColumn<>("DATE",true, Comparator.comparing(EODDataPoint::getDate));
+		cashAmountCol = new MFXTableColumn<>("CASH",true, Comparator.comparing(EODDataPoint::getCashAmount));
+		eftposAmountCol = new MFXTableColumn<>("EFTPOS",true, Comparator.comparing(EODDataPoint::getEftposAmount));
+		amexAmountCol = new MFXTableColumn<>("AMEX",true, Comparator.comparing(EODDataPoint::getAmexAmount));
+		googleSquareAmountCol = new MFXTableColumn<>("GOOGLE SQUARE",true, Comparator.comparing(EODDataPoint::getGoogleSquareAmount));
+		chequeAmountCol = new MFXTableColumn<>("CHEQUE",true, Comparator.comparing(EODDataPoint::getChequeAmount));
+		medschecksCol = new MFXTableColumn<>("MEDSCHECKS",true, Comparator.comparing(EODDataPoint::getMedschecks));
+		stockOnHandAmountCol = new MFXTableColumn<>("STOCK ON HAND",true, Comparator.comparing(EODDataPoint::getStockOnHandAmount));
+		scriptsOnFileCol = new MFXTableColumn<>("SCRIPTS ON FILE",true, Comparator.comparing(EODDataPoint::getScriptsOnFile));
+		smsPatientsCol = new MFXTableColumn<>("SMS PATIENTS",true, Comparator.comparing(EODDataPoint::getSmsPatients));
+		tillBalanceCol = new MFXTableColumn<>("TILL BALANCE",true, Comparator.comparing(EODDataPoint::getTillBalance));
+		runningTillBalanceCol = new MFXTableColumn<>("RUNNING TILL BALANCE",true, Comparator.comparing(EODDataPoint::getRunningTillBalance));
+		notesCol = new MFXTableColumn<>("NOTES",true, Comparator.comparing(EODDataPoint::getNotes));
 
 		dateCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getDateString));
 		cashAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getCashAmountString));
@@ -144,10 +144,25 @@ public class EODDataEntryPageController extends Controller{
 				notesCol
 		);
 		fillTable();
+		eodDataTable.autosizeColumnsOnInitialization();
+		eodDataTable.autosizeColumns();
+		eodDataTable.virtualFlowInitializedProperty().addListener((observable, oldValue, newValue) -> {addDoubleClickfunction();});
+	}
 
-
-
-
+	private void addDoubleClickfunction(){
+		for (Map.Entry<Integer, MFXTableRow<EODDataPoint>> entry:eodDataTable.getCells().entrySet()) {
+			entry.getValue().setOnMouseClicked(event -> {
+				if(event.getClickCount()==2)addNewPayment();
+			});
+			for (MFXTableRowCell<EODDataPoint, ?> cell:entry.getValue().getCells()) {
+				cell.setOnMouseClicked(event -> {
+					if(event.getClickCount()==2){
+						MFXTableRow<EODDataPoint> parentRow = (MFXTableRow<EODDataPoint>) cell.getParent();
+						addNewPayment();
+					}
+				});
+			}
+		}
 	}
 
 	public void importFiles() throws IOException {
