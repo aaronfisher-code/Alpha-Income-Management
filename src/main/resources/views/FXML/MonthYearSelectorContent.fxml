@@ -19,19 +19,19 @@
          <left>
             <MFXButton fx:id="backwardButton" contentDisplay="GRAPHIC_ONLY" BorderPane.alignment="CENTER_LEFT">
                <graphic>
-                  <SVGPath content="m3.86 8.753 5.482 4.796c.646.566 1.658.106 1.658-.753V3.204a1 1 0 0 0-1.659-.753l-5.48 4.796a1 1 0 0 0 0 1.506" />
+                  <SVGPath content="m3.86 8.753 5.482 4.796c.646.566 1.658.106 1.658-.753V3.204a1 1 0 0 0-1.659-.753l-5.48 4.796a1 1 0 0 0 0 1.506" fill="#6e6b7b" />
                </graphic>
             </MFXButton>
          </left>
          <right>
             <MFXButton fx:id="forwardButton" contentDisplay="GRAPHIC_ONLY" BorderPane.alignment="CENTER_RIGHT">
                <graphic>
-                  <SVGPath content="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z" />
+                  <SVGPath content="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z" fill="#6e6b7b" />
                </graphic>
             </MFXButton>
          </right>
          <center>
-            <Text fx:id="yearValue" strokeType="OUTSIDE" strokeWidth="0.0" text="2022" BorderPane.alignment="CENTER" />
+            <Text fx:id="yearValue" fill="#6e6b7b" strokeType="OUTSIDE" strokeWidth="0.0" text="2022" BorderPane.alignment="CENTER" />
          </center>
          <VBox.margin>
             <Insets bottom="5.0" />

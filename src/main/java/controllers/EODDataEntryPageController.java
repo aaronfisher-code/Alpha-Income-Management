@@ -1,17 +1,17 @@
 package controllers;
 
 import application.Main;
-import io.github.palexdev.materialfx.controls.MFXDatePicker;
-import io.github.palexdev.materialfx.controls.MFXTableColumn;
-import io.github.palexdev.materialfx.controls.MFXTableView;
-import io.github.palexdev.materialfx.controls.MFXTextField;
+import io.github.palexdev.materialfx.controls.*;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.control.skin.TableViewSkin;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.StackPane;
@@ -20,6 +20,7 @@ import javafx.stage.FileChooser;
 import javafx.util.Duration;
 import models.EODDataPoint;
 import models.User;
+import org.apache.poi.ss.formula.functions.T;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.controlsfx.control.PopOver;
@@ -31,9 +32,12 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.Comparator;
 import java.util.Locale;
+import java.util.Map;
 
 public class EODDataEntryPageController extends Controller{
 
@@ -46,6 +50,7 @@ public class EODDataEntryPageController extends Controller{
 	private PopOver currentDatePopover;
 
 	private LocalDate monthSelectorDate;
+	private ObservableList<EODDataPoint> eodDataPoints = FXCollections.observableArrayList();
 
 	@FXML
 	private FlowPane datePickerPane;
@@ -92,6 +97,8 @@ public class EODDataEntryPageController extends Controller{
 	@Override
 	public void fill() {
 		setMonthSelectorDate(LocalDate.now());
+		eodDataTable.autosizeColumnsOnInitialization();
+
 		dateCol = new MFXTableColumn<>("DATE",false, Comparator.comparing(EODDataPoint::getDate));
 		cashAmountCol = new MFXTableColumn<>("CASH",false, Comparator.comparing(EODDataPoint::getCashAmount));
 		eftposAmountCol = new MFXTableColumn<>("EFTPOS",false, Comparator.comparing(EODDataPoint::getEftposAmount));
@@ -106,19 +113,20 @@ public class EODDataEntryPageController extends Controller{
 		runningTillBalanceCol = new MFXTableColumn<>("RUNNING TILL BALANCE",false, Comparator.comparing(EODDataPoint::getRunningTillBalance));
 		notesCol = new MFXTableColumn<>("NOTES",false, Comparator.comparing(EODDataPoint::getNotes));
 
-		dateCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getDate));
-		cashAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getCashAmount));
-		eftposAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getEftposAmount));
-		amexAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getAmexAmount));
-		googleSquareAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getGoogleSquareAmount));
-		chequeAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getChequeAmount));
+		dateCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getDateString));
+		cashAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getCashAmountString));
+		eftposAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getEftposAmountString));
+		amexAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getAmexAmountString));
+		googleSquareAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getGoogleSquareAmountString));
+		chequeAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getChequeAmountString));
 		medschecksCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getMedschecks));
 		stockOnHandAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getStockOnHandAmount));
 		scriptsOnFileCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getScriptsOnFile));
 		smsPatientsCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getSmsPatients));
-		tillBalanceCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getTillBalance));
-		runningTillBalanceCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getRunningTillBalance));
+		tillBalanceCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getTillBalanceString));
+		runningTillBalanceCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getRunningTillBalanceString));
 		notesCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getNotes));
+
 
 		eodDataTable.getTableColumns().addAll(
 				dateCol,
@@ -135,8 +143,8 @@ public class EODDataEntryPageController extends Controller{
 				runningTillBalanceCol,
 				notesCol
 		);
+		fillTable();
 
-		eodDataTable.autosizeColumnsOnInitialization();
 
 
 
@@ -149,6 +157,7 @@ public class EODDataEntryPageController extends Controller{
 		File newfile = fileChooser.showOpenDialog(main.getStg());
 		FileInputStream file = new FileInputStream(newfile);
 		Workbook workbook = new XSSFWorkbook(file);
+		//TODO actually import eod files
 	}
 
 	public void monthForward() {
@@ -199,10 +208,34 @@ public class EODDataEntryPageController extends Controller{
 	 	fieldText += ", ";
 	 	fieldText += monthSelectorDate.getYear();
 	 	monthSelectorField.setText(fieldText);
+	 	fillTable();
 	}
 
 	public LocalDate getMonthSelectorDate(){
 	 	return monthSelectorDate;
+	}
+
+	public void fillTable(){
+	 	eodDataPoints = FXCollections.observableArrayList();
+		YearMonth yearMonthObject = YearMonth.of(monthSelectorDate.getYear(), monthSelectorDate.getMonth());
+		int daysInMonth = yearMonthObject.lengthOfMonth();
+		for(int i = 1; i<daysInMonth+1; i++){
+			eodDataPoints.add(new EODDataPoint(LocalDate.of(monthSelectorDate.getYear(),monthSelectorDate.getMonth(),i)));
+		}
+		eodDataTable.setItems(eodDataPoints);
+		for (Map.Entry<Integer, MFXTableRow<EODDataPoint>> entry:eodDataTable.getCells().entrySet()) {
+			entry.getValue().setOnMouseClicked(event -> {
+				if(event.getClickCount()==2)addNewPayment();
+			});
+			for (MFXTableRowCell<EODDataPoint, ?> cell:entry.getValue().getCells()) {
+				cell.setOnMouseClicked(event -> {
+					if(event.getClickCount()==2){
+						MFXTableRow<EODDataPoint> parentRow = (MFXTableRow<EODDataPoint>) cell.getParent();
+						addNewPayment();
+					}
+				});
+			}
+		}
 	}
 
 	public void addNewPayment(){

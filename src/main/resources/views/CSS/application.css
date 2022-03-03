@@ -10,9 +10,26 @@
 	
 }
 
+.mfx-table-view .virtual-flow .mfx-table-row{
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 1px;
+    -fx-border-style: hidden hidden solid hidden;
+}
+
 .mfx-table-row-cell{
     -fx-font-family: "Montserrat";
     -fx-font-size: 12px;
+    -fx-cell-size: 400px;
+    -mfx-cell-size: 400px;
+}
+
+.table-row-cell {
+    -fx-cell-size: 400px;
+}
+
+.mfx-table-view{
+    -fx-border-color: #FFFFFF;
+    -fx-padding: 0 0 0 0;
 }
 
 .mfx-table-view .columns-container{

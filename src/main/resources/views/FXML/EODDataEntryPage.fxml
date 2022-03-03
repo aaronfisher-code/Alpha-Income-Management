@@ -63,12 +63,15 @@
                                  </padding>
                                  <opaqueInsets>
                                     <Insets />
-                                 </opaqueInsets></MFXTextField>
+                                 </opaqueInsets>
+                                 <textFill>
+                                    <Color red="0.4313725531101227" green="0.41960784792900085" blue="0.48235294222831726" opacity="0.8700000047683716" />
+                                 </textFill></MFXTextField>
                               <MFXButton contentDisplay="GRAPHIC_ONLY" rippleAnimateShadow="true" style="-fx-background-radius: 25; -fx-border-radius: 25;" StackPane.alignment="CENTER_RIGHT">
                                  <graphic>
                                     <MFXFontIcon fx:id="calIcon" description="mfx-calendar-alt-semi-dark" onMouseClicked="#openMonthSelector" size="20.0">
                                        <color>
-                                          <Color />
+                                          <Color red="0.4313725531101227" green="0.41960784792900085" blue="0.48235294222831726" />
                                        </color>
                                     </MFXFontIcon>
                                  </graphic>
@@ -121,6 +124,9 @@
                      <content>
                         <MFXTableView fx:id="eodDataTable" footerVisible="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" />
                      </content>
+                     <BorderPane.margin>
+                        <Insets />
+                     </BorderPane.margin>
                   </MFXScrollPane>
                </center>
                <top>
