@@ -14,6 +14,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.control.skin.TableViewSkin;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
@@ -62,6 +63,8 @@ public class EODDataEntryPageController extends Controller{
 	private StackPane monthSelector;
 	@FXML
 	private MFXTextField monthSelectorField;
+	@FXML
+	private Region contentDarken;
 
 	private MFXTableColumn<EODDataPoint> dateCol;
 	private MFXTableColumn<EODDataPoint> cashAmountCol;
@@ -254,13 +257,14 @@ public class EODDataEntryPageController extends Controller{
 	}
 
 	public void addNewPayment(){
-		editDayPopover.setEffect(new DropShadow());
+		contentDarken.setVisible(true);
 		changeSize(editDayPopover,0);
+
 	}
 
 	public void closePopover(){
 		changeSize(editDayPopover,375);
-		editDayPopover.setEffect(null);
+		contentDarken.setVisible(false);
 	}
 
 	public void changeSize(final VBox pane, double width) {

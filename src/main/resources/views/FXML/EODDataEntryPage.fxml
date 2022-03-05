@@ -17,13 +17,14 @@
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.paint.Color?>
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane prefHeight="1000.0" prefWidth="1289.0" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EODDataEntryPageController">
+<StackPane prefHeight="1000.0" prefWidth="1289.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EODDataEntryPageController">
    <children>
       <BorderPane prefHeight="200.0" prefWidth="200.0" style="-fx-border-radius: 10; -fx-background-radius: 10; -fx-background-color: TRANSPARENT;">
          <top>
@@ -167,6 +168,7 @@
             <Insets bottom="50.0" right="50.0" />
          </StackPane.margin>
       </JFXNodesList>
+      <Region fx:id="contentDarken" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" onMouseClicked="#closePopover" opacity="0.25" style="-fx-background-color: BLACK;" visible="false" />
       <VBox fx:id="editDayPopover" alignment="TOP_RIGHT" maxWidth="375.0" minWidth="375.0" prefWidth="375.0" spacing="10.0" style="-fx-background-color: #FFFFFF;" translateX="375.0" StackPane.alignment="TOP_RIGHT">
          <children>
             <BorderPane style="-fx-background-color: #F8F8F8;">

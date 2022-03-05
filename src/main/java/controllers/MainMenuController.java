@@ -10,19 +10,18 @@ import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.ContentDisplay;
+import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.effect.BlurType;
 import javafx.scene.effect.DropShadow;
-import javafx.scene.effect.GaussianBlur;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.SVGPath;
-import javafx.stage.PopupWindow;
 import javafx.util.Duration;
-import models.Employment;
-import models.Shift;
 import models.Store;
 import org.controlsfx.control.PopOver;
 
@@ -52,6 +51,8 @@ public class MainMenuController extends Controller {
     private MFXFilterComboBox storeSearchCombo;
     @FXML
     private MFXScrollPane sidebarScroll;
+    @FXML
+    private Region contentDarken;
 
     private Connection con = null;
     PreparedStatement preparedStatement = null;
@@ -113,7 +114,7 @@ public class MainMenuController extends Controller {
 
     public void extendMenu(){
         changeSize(sidebar,260);
-        contentPane.setEffect(new GaussianBlur(5));
+        contentDarken.setVisible(true);
         logoLabel.setContentDisplay(ContentDisplay.LEFT);
         sidebarScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         for(Node n:buttonPane.getChildren()) {
@@ -131,7 +132,7 @@ public class MainMenuController extends Controller {
 
     public void retractMenu(){
         changeSize(sidebar,80);
-        contentPane.setEffect(null);
+        contentDarken.setVisible(false);
         logoLabel.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
         sidebarScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         for(Node n:buttonPane.getChildren()) {
