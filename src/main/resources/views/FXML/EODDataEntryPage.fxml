@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import com.jfoenix.controls.JFXButton?>
-<?import com.jfoenix.controls.JFXNodesList?>
 <?import io.github.palexdev.materialfx.controls.MFXButton?>
 <?import io.github.palexdev.materialfx.controls.MFXScrollPane?>
 <?import io.github.palexdev.materialfx.controls.MFXTableView?>
@@ -24,7 +22,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane prefHeight="1000.0" prefWidth="1289.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EODDataEntryPageController">
+<StackPane prefHeight="1000.0" prefWidth="1289.0" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EODDataEntryPageController">
    <children>
       <BorderPane prefHeight="200.0" prefWidth="200.0" style="-fx-border-radius: 10; -fx-background-radius: 10; -fx-background-color: TRANSPARENT;">
          <top>
@@ -131,14 +129,23 @@
                   </MFXScrollPane>
                </center>
                <top>
-                  <Label styleClass="tableHeader" text="End of Day Values:" BorderPane.alignment="CENTER_LEFT">
-                     <font>
-                        <Font size="20.0" />
-                     </font>
+                  <VBox BorderPane.alignment="CENTER">
+                     <children>
+                        <Label styleClass="tableHeader" text="End of Day Values:">
+                           <font>
+                              <Font size="20.0" />
+                           </font>
+                        </Label>
+                        <Label layoutX="10.0" layoutY="10.0" styleClass="tableSubHeader" text="Double click on a row to edit">
+                           <font>
+                              <Font size="13.0" />
+                           </font>
+                        </Label>
+                     </children>
                      <BorderPane.margin>
-                        <Insets bottom="10.0" left="20.0" top="10.0" />
+                        <Insets bottom="7.0" left="20.0" top="13.0" />
                      </BorderPane.margin>
-                  </Label>
+                  </VBox>
                </top>
             </BorderPane>
          </center>
@@ -150,24 +157,6 @@
             </DropShadow>
          </effect>
       </BorderPane>
-      <JFXNodesList fx:id="addList" alignment="CENTER" nodeOrientation="LEFT_TO_RIGHT" spacing="10.0" StackPane.alignment="BOTTOM_RIGHT">
-         <children>
-            <JFXButton fx:id="addPaymentPopup" alignment="CENTER" buttonType="RAISED" contentDisplay="CENTER" graphicTextGap="0.0" onAction="#addNewPayment" scaleShape="false" styleClass="animated-option-button" stylesheets="@../CSS/application.css" text=" ">
-               <font>
-                  <Font name="System Bold" size="8.0" />
-               </font>
-               <graphic>
-                  <SVGPath content="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" fill="WHITE" scaleX="3.0" scaleY="3.0" scaleZ="3.0" />
-               </graphic>
-            </JFXButton>
-         </children>
-         <cursor>
-            <Cursor fx:constant="HAND" />
-         </cursor>
-         <StackPane.margin>
-            <Insets bottom="50.0" right="50.0" />
-         </StackPane.margin>
-      </JFXNodesList>
       <Region fx:id="contentDarken" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" onMouseClicked="#closePopover" opacity="0.25" style="-fx-background-color: BLACK;" visible="false" />
       <VBox fx:id="editDayPopover" alignment="TOP_RIGHT" maxWidth="375.0" minWidth="375.0" prefWidth="375.0" spacing="10.0" style="-fx-background-color: #FFFFFF;" translateX="375.0" StackPane.alignment="TOP_RIGHT">
          <children>
@@ -180,10 +169,13 @@
                   </Label>
                </left>
                <right>
-                  <Button maxHeight="46.4" maxWidth="46.4" minHeight="46.4" minWidth="46.4" mnemonicParsing="false" onAction="#closePopover" prefHeight="46.4" prefWidth="46.4" style="-fx-background-color: #F8F8F8;" text="X" BorderPane.alignment="CENTER_RIGHT">
+                  <Button contentDisplay="GRAPHIC_ONLY" maxHeight="46.4" maxWidth="46.4" minHeight="46.4" minWidth="46.4" mnemonicParsing="false" onAction="#closePopover" prefHeight="46.4" prefWidth="46.4" style="-fx-background-color: #F8F8F8;" BorderPane.alignment="CENTER_RIGHT">
                      <BorderPane.margin>
                         <Insets bottom="-10.0" top="-10.0" />
                      </BorderPane.margin>
+                     <graphic>
+                        <SVGPath content="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z&#10;" fill="#6e6b7b" scaleX="1.5" scaleY="1.5" />
+                     </graphic>
                   </Button>
                </right>
                <VBox.margin>

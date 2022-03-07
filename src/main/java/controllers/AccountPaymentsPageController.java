@@ -18,6 +18,7 @@ import javafx.scene.effect.BlurType;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.effect.GaussianBlur;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
@@ -55,6 +56,8 @@ public class AccountPaymentsPageController extends Controller{
 	private MFXTableView<AccountPaymentContactDataPoint> accountTotalsTable;
     @FXML
 	private VBox addPaymentPopover;
+    @FXML
+	private Region contentDarken;
 
 
 	private MFXTableColumn<AccountPayment> contactCol;
@@ -156,13 +159,13 @@ public class AccountPaymentsPageController extends Controller{
 	}
 
 	public void addNewPayment(){
-		addPaymentPopover.setEffect(new DropShadow());
+		contentDarken.setVisible(true);
 		changeSize(addPaymentPopover,0);
 	}
 
 	public void closePopover(){
 		changeSize(addPaymentPopover,375);
-		addPaymentPopover.setEffect(null);
+		contentDarken.setVisible(false);
 	}
 
 	public void changeSize(final VBox pane, double width) {

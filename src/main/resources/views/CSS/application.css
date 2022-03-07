@@ -10,6 +10,18 @@
 	
 }
 
+.tableHeader {
+    -fx-font-family: "Montserrat Medium";
+    -fx-font-size: 18px;
+    -fx-text-fill: #6e6b7b;
+}
+
+.tableSubHeader {
+    -fx-font-family: "Montserrat";
+    -fx-font-size: 13px;
+    -fx-text-fill: #6e6b7b;
+}
+
 .mfx-table-view .virtual-flow .mfx-table-row{
     -fx-border-color: #E0E0E0;
     -fx-border-width: 1px;
@@ -89,6 +101,10 @@
 .mfx-date-picker .date-picker-popup .months-combo .virtual-flow .mfx-combo-box-cell:selected .label,
 .mfx-date-picker .date-picker-popup .years-combo .virtual-flow .mfx-combo-box-cell:selected .label {
     -fx-text-fill: #0F60FF;
+}
+
+.mfx-checkbox:selected{
+    -mfx-main: #0F60FF;
 }
 
 

@@ -3,6 +3,7 @@ package controllers;
 import application.Main;
 import io.github.palexdev.materialfx.controls.*;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
+import io.github.palexdev.materialfx.skins.MFXTableRowCellSkin;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -80,8 +81,6 @@ public class EODDataEntryPageController extends Controller{
 	private MFXTableColumn<EODDataPoint> runningTillBalanceCol;
 	private MFXTableColumn<EODDataPoint> notesCol;
 
-    @FXML
-	private VBox dataEntryRowPane;
 	
 	 @FXML
 	private void initialize() throws IOException {}
@@ -102,6 +101,7 @@ public class EODDataEntryPageController extends Controller{
 		setMonthSelectorDate(LocalDate.now());
 		eodDataTable.autosizeColumnsOnInitialization();
 
+
 		dateCol = new MFXTableColumn<>("DATE",true, Comparator.comparing(EODDataPoint::getDate));
 		cashAmountCol = new MFXTableColumn<>("CASH",true, Comparator.comparing(EODDataPoint::getCashAmount));
 		eftposAmountCol = new MFXTableColumn<>("EFTPOS",true, Comparator.comparing(EODDataPoint::getEftposAmount));
@@ -115,6 +115,8 @@ public class EODDataEntryPageController extends Controller{
 		tillBalanceCol = new MFXTableColumn<>("TILL BALANCE",true, Comparator.comparing(EODDataPoint::getTillBalance));
 		runningTillBalanceCol = new MFXTableColumn<>("RUNNING TILL BALANCE",true, Comparator.comparing(EODDataPoint::getRunningTillBalance));
 		notesCol = new MFXTableColumn<>("NOTES",true, Comparator.comparing(EODDataPoint::getNotes));
+		dateCol.setMinWidth(400);
+
 
 		dateCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getDateString));
 		cashAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getCashAmountString));
@@ -150,6 +152,10 @@ public class EODDataEntryPageController extends Controller{
 		eodDataTable.autosizeColumnsOnInitialization();
 		eodDataTable.autosizeColumns();
 		eodDataTable.virtualFlowInitializedProperty().addListener((observable, oldValue, newValue) -> {addDoubleClickfunction();});
+	}
+
+	private void cellFactoryAdjuster(MFXTableColumn col, MFXTableRowCell cell){
+	 	col.setRowCellFactory(eodDataPoint -> {cell.setMinHeight(400);return cell;});
 	}
 
 	private void addDoubleClickfunction(){
@@ -254,6 +260,7 @@ public class EODDataEntryPageController extends Controller{
 				});
 			}
 		}
+		eodDataTable.autosizeColumns();
 	}
 
 	public void addNewPayment(){

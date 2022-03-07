@@ -3,9 +3,16 @@ package controllers;
 
 import application.Main;
 //import com.jfoenix.controls.JFXDatePicker;
+import com.dlsc.gemsfx.TimePicker;
 import com.jfoenix.controls.JFXNodesList;
 //import io.github.palexdev.materialfx.controls.MFXDatePicker;
 import io.github.palexdev.materialfx.controls.MFXDatePicker;
+import io.github.palexdev.materialfx.font.FontResources;
+import io.github.palexdev.materialfx.font.MFXFontIcon;
+import javafx.animation.Interpolator;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -14,8 +21,10 @@ import javafx.scene.Scene;
 import javafx.scene.control.DatePicker;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import models.Shift;
 
 import java.io.IOException;
@@ -36,7 +45,7 @@ public class RosterPageController extends Controller {
 
     private MFXDatePicker datePkr;
     @FXML
-    private VBox monBox, tueBox, wedBox, thuBox, friBox, satBox, sunBox;
+    private VBox monBox, tueBox, wedBox, thuBox, friBox, satBox, sunBox, editShiftPopover;
     @FXML
     private GridPane weekdayBox;
     @FXML
@@ -45,6 +54,8 @@ public class RosterPageController extends Controller {
     private GridPane shiftCardGrid;
     @FXML
     private FlowPane datePickerPane;
+    @FXML
+    private Region contentDarken;
 
 
     private Connection con = null;
@@ -151,24 +162,6 @@ public class RosterPageController extends Controller {
         adjustGridSize();
     }
 
-    public void addNewShift() throws IOException {
-        Stage shiftEditStage = new Stage();
-        EditShiftController c;
-        shiftEditStage.setResizable(false);
-        shiftEditStage.initModality(Modality.APPLICATION_MODAL);
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/ShiftEdit.fxml"));
-        Parent root = loader.load();
-        c = loader.getController();
-        c.setMain(main);
-        c.setConnection(con);
-        c.fill();
-        c.newShiftFormat(true);
-        c.setParent(this);
-        shiftEditStage.setTitle("Add a new Shift");
-        shiftEditStage.setScene(new Scene(root));
-        shiftEditStage.showAndWait();
-    }
-
     public void weekForward() {
         setDatePkr(datePkr.getValue().plusWeeks(1));
     }
@@ -180,6 +173,26 @@ public class RosterPageController extends Controller {
     public void setDatePkr(LocalDate date) {
         datePkr.setValue(date);
         updatePage();
+    }
+
+    public void addNewShift(){
+        contentDarken.setVisible(true);
+        changeSize(editShiftPopover,0);
+
+    }
+
+    public void closePopover(){
+        changeSize(editShiftPopover,375);
+        contentDarken.setVisible(false);
+    }
+
+    public void changeSize(final VBox pane, double width) {
+        Duration cycleDuration = Duration.millis(200);
+        Timeline timeline = new Timeline(
+                new KeyFrame(cycleDuration,
+                        new KeyValue(pane.translateXProperty(),width, Interpolator.EASE_BOTH))
+        );
+        timeline.play();
     }
 
     public void addNewLeave() throws IOException {

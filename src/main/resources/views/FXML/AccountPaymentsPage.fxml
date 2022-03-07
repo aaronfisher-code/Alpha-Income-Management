@@ -21,6 +21,7 @@
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.paint.Color?>
@@ -168,6 +169,7 @@
             <Insets bottom="50.0" right="50.0" />
          </StackPane.margin>
       </JFXNodesList>
+      <Region fx:id="contentDarken" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" onMouseClicked="#closePopover" opacity="0.25" style="-fx-background-color: BLACK;" visible="false" />
       <VBox fx:id="addPaymentPopover" maxWidth="0.0" minWidth="375.0" prefWidth="375.0" spacing="10.0" style="-fx-background-color: #FFFFFF;" translateX="375.0" StackPane.alignment="TOP_RIGHT">
          <children>
             <BorderPane style="-fx-background-color: #F8F8F8;">
@@ -192,7 +194,7 @@
                   <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
                </padding>
             </BorderPane>
-            <MFXFilterComboBox allowEdit="true" floatingText="Contact Name" maxWidth="1.7976931348623157E308" />
+            <MFXFilterComboBox allowEdit="true" floatMode="BORDER" floatingText="Contact Name" maxWidth="1.7976931348623157E308" minHeight="37.6" />
             <MFXTextField floatMode="BORDER" floatingText="Invoice Number" layoutX="20.0" layoutY="347.0" maxWidth="1.7976931348623157E308" />
             <MFXDatePicker floatMode="BORDER" floatingText="Invoice Date" maxWidth="1.7976931348623157E308" />
             <MFXDatePicker floatMode="BORDER" floatingText="Due Date" layoutX="20.0" layoutY="395.0" maxWidth="1.7976931348623157E308" />
