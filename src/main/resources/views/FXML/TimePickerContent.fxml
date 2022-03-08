@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import io.github.palexdev.materialfx.controls.MFXRectangleToggleNode?>
+<?import io.github.palexdev.materialfx.controls.MFXTextField?>
+<?import java.net.URL?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox fx:id="buttonContainer" maxWidth="165.0" style="-fx-background-color: #FFFFFF;" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.TimePickerContentController">
+   <stylesheets>
+      <URL value="@../CSS/application.css" />
+      <URL value="@../CSS/UserContentMenu.css" />
+   </stylesheets>
+   <children>
+      <HBox alignment="CENTER_LEFT" maxHeight="60.0" maxWidth="165.0" spacing="5.0" style="-fx-background-radius: 10;" VBox.vgrow="ALWAYS">
+         <children>
+            <VBox maxHeight="1.7976931348623157E308" maxWidth="50.0" prefWidth="50.0" HBox.hgrow="ALWAYS">
+               <children>
+                  <MFXTextField alignment="CENTER" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefColumnCount="2" VBox.vgrow="ALWAYS">
+                     <font>
+                        <Font size="25.0" />
+                     </font>
+                  </MFXTextField>
+               </children>
+            </VBox>
+            <Label text=":">
+               <font>
+                  <Font size="31.0" />
+               </font>
+            </Label>
+            <VBox>
+               <children>
+                  <MFXTextField alignment="CENTER" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="50.0" prefColumnCount="2" prefWidth="50.0" VBox.vgrow="ALWAYS">
+                     <font>
+                        <Font size="25.0" />
+                     </font>
+                  </MFXTextField>
+               </children>
+            </VBox>
+            <VBox maxHeight="1.7976931348623157E308" maxWidth="40.0" style="-fx-border-color: #D3D3D3; -fx-border-radius: 5;" HBox.hgrow="SOMETIMES">
+               <children>
+                  <MFXRectangleToggleNode contentDisplay="TEXT_ONLY" maxHeight="1.7976931348623157E308" style="-fx-border-radius: 5; -fx-border-color: TRANSPARENT;" text="AM" VBox.vgrow="ALWAYS">
+                     <toggleGroup>
+                        <ToggleGroup fx:id="ampm" />
+                     </toggleGroup>
+                     <VBox.margin>
+                        <Insets />
+                     </VBox.margin>
+                     <font>
+                        <Font size="10.0" />
+                     </font>
+                  </MFXRectangleToggleNode>
+                  <MFXRectangleToggleNode contentDisplay="TEXT_ONLY" maxHeight="1.7976931348623157E308" style="-fx-border-radius: 5; -fx-border-color: TRANSPARENT;" text="PM" toggleGroup="$ampm" VBox.vgrow="ALWAYS">
+                     <font>
+                        <Font size="10.0" />
+                     </font>
+                  </MFXRectangleToggleNode>
+               </children>
+            </VBox>
+         </children>
+         <padding>
+            <Insets bottom="10.0" left="5.0" right="5.0" top="10.0" />
+         </padding>
+      </HBox>
+   </children>
+</VBox>

@@ -3,29 +3,26 @@ package controllers;
 
 import application.Main;
 //import com.jfoenix.controls.JFXDatePicker;
-import com.dlsc.gemsfx.TimePicker;
 import com.jfoenix.controls.JFXNodesList;
 //import io.github.palexdev.materialfx.controls.MFXDatePicker;
 import io.github.palexdev.materialfx.controls.MFXDatePicker;
-import io.github.palexdev.materialfx.font.FontResources;
-import io.github.palexdev.materialfx.font.MFXFontIcon;
+import io.github.palexdev.materialfx.controls.MFXTextField;
+import io.github.palexdev.materialfx.controls.MFXTreeItem;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
-import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.DatePicker;
-import javafx.scene.input.MouseEvent;
+import javafx.scene.control.Button;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import models.Shift;
+import org.controlsfx.control.PopOver;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -36,7 +33,6 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
-import java.util.concurrent.Flow;
 
 import static java.time.temporal.ChronoUnit.DAYS;
 
@@ -56,12 +52,18 @@ public class RosterPageController extends Controller {
     private FlowPane datePickerPane;
     @FXML
     private Region contentDarken;
-
+    @FXML
+    private StackPane startTimePicker;
+    @FXML
+    private MFXTextField startTimeField,endTimeField;
+    @FXML
+    private Button openStartTimePicker,openEndTimePicker;
 
     private Connection con = null;
     PreparedStatement preparedStatement = null;
     ResultSet resultSet = null;
     private Main main;
+    private PopOver currentTimePopover;
 
     public void setMain(Main main) {
         this.main = main;
@@ -79,6 +81,9 @@ public class RosterPageController extends Controller {
         datePkr.setText(LocalDate.now().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)));
         datePkr.getStyleClass().add("custDatePicker");
         datePkr.getStylesheets().add("/views/CSS/RosterPage.css");
+
+        openStartTimePicker.setOnAction(actionEvent -> openTimePicker(startTimeField));
+        openEndTimePicker.setOnAction(actionEvent -> openTimePicker(endTimeField));
         addList.setRotate(180);
         updatePage();
     }
@@ -193,6 +198,40 @@ public class RosterPageController extends Controller {
                         new KeyValue(pane.translateXProperty(),width, Interpolator.EASE_BOTH))
         );
         timeline.play();
+    }
+
+    public void openTimePicker(MFXTextField parent){
+        if(currentTimePopover !=null&& currentTimePopover.isShowing()){
+            currentTimePopover.hide();
+        }else {
+            PopOver timePickerMenu = new PopOver();
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/TimePickerContent.fxml"));
+            VBox timePickerContent = null;
+            try {
+                timePickerContent = loader.load();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            TimePickerContentController rdc = loader.getController();
+            rdc.setMain(main);
+            rdc.setConnection(con);
+            rdc.setParent(this);
+            rdc.fill();
+
+            timePickerMenu.setOpacity(1);
+            timePickerMenu.setContentNode(timePickerContent);
+            timePickerMenu.setArrowSize(0);
+            timePickerMenu.setAnimated(true);
+            timePickerMenu.setArrowLocation(PopOver.ArrowLocation.TOP_CENTER);
+            timePickerMenu.setAutoHide(true);
+            timePickerMenu.setDetachable(false);
+            timePickerMenu.setHideOnEscape(true);
+            timePickerMenu.setCornerRadius(10);
+            timePickerMenu.setArrowIndent(0);
+            timePickerMenu.show(parent);
+            currentTimePopover =timePickerMenu;
+            parent.requestFocus();
+        }
     }
 
     public void addNewLeave() throws IOException {

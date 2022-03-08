@@ -26,7 +26,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane maxWidth="1.7976931348623157E308" prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.RosterPageController">
+<StackPane maxWidth="1.7976931348623157E308" prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.RosterPageController">
    <children>
       <BorderPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-background-color: TRANSPARENT;">
          <top>
@@ -227,9 +227,9 @@
             <MFXDatePicker borderGap="0.0" floatMode="ABOVE" floatingText="Shift Date" maxWidth="1.7976931348623157E308" minHeight="36.0" />
             <HBox alignment="CENTER" spacing="30.0">
                <children>
-                  <StackPane fx:id="monthSelector" maxHeight="-Infinity" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" style="-fx-background-color: TRANSPARENT;" HBox.hgrow="ALWAYS">
+                  <StackPane fx:id="startTimePicker" maxHeight="-Infinity" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" style="-fx-background-color: TRANSPARENT;" HBox.hgrow="ALWAYS">
                      <children>
-                        <MFXTextField fx:id="monthSelectorField" allowEdit="false" borderGap="0.0" editable="false" floatMode="ABOVE" floatingText="Start Time" maxWidth="1.7976931348623157E308" minHeight="36.0" selectable="false" text="4:00 PM">
+                        <MFXTextField fx:id="startTimeField" allowEdit="false" borderGap="0.0" editable="false" floatMode="ABOVE" floatingText="Start Time" maxWidth="1.7976931348623157E308" minHeight="36.0" selectable="false" text="4:00 PM">
                            <StackPane.margin>
                               <Insets />
                            </StackPane.margin>
@@ -243,7 +243,7 @@
                               <Color red="0.4313725531101227" green="0.41960784792900085" blue="0.48235294222831726" opacity="0.8700000047683716" />
                            </textFill>
                         </MFXTextField>
-                        <MFXButton contentDisplay="GRAPHIC_ONLY" rippleAnimateShadow="true" style="-fx-background-radius: 25; -fx-border-radius: 25;" StackPane.alignment="CENTER_RIGHT">
+                        <MFXButton fx:id="openStartTimePicker" contentDisplay="GRAPHIC_ONLY" rippleAnimateShadow="true" style="-fx-background-radius: 25; -fx-border-radius: 25;" StackPane.alignment="CENTER_RIGHT">
                            <StackPane.margin>
                               <Insets bottom="5.0" right="3.0" top="5.0" />
                            </StackPane.margin>
@@ -253,9 +253,9 @@
                         </MFXButton>
                      </children>
                   </StackPane>
-                  <StackPane fx:id="monthSelector1" layoutX="11.0" layoutY="10.0" maxHeight="-Infinity" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" style="-fx-background-color: TRANSPARENT;" HBox.hgrow="ALWAYS">
+                  <StackPane fx:id="endTimePicker" layoutX="11.0" layoutY="10.0" maxHeight="-Infinity" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" style="-fx-background-color: TRANSPARENT;" HBox.hgrow="ALWAYS">
                      <children>
-                        <MFXTextField fx:id="monthSelectorField1" allowEdit="false" borderGap="0.0" editable="false" floatMode="ABOVE" floatingText="End Time" maxWidth="1.7976931348623157E308" minHeight="36.0" selectable="false" text="7:00 PM">
+                        <MFXTextField fx:id="endTimeField" allowEdit="false" borderGap="0.0" editable="false" floatMode="ABOVE" floatingText="End Time" maxWidth="1.7976931348623157E308" minHeight="36.0" selectable="false" text="7:00 PM">
                            <StackPane.margin>
                               <Insets />
                            </StackPane.margin>
@@ -269,7 +269,7 @@
                               <Color red="0.4313725531101227" green="0.41960784792900085" blue="0.48235294222831726" opacity="0.8700000047683716" />
                            </textFill>
                         </MFXTextField>
-                        <MFXButton contentDisplay="GRAPHIC_ONLY" rippleAnimateShadow="true" style="-fx-background-radius: 25; -fx-border-radius: 25;" StackPane.alignment="CENTER_RIGHT">
+                        <MFXButton fx:id="openEndTimePicker" contentDisplay="GRAPHIC_ONLY" rippleAnimateShadow="true" style="-fx-background-radius: 25; -fx-border-radius: 25;" StackPane.alignment="CENTER_RIGHT">
                            <StackPane.margin>
                               <Insets bottom="5.0" right="3.0" top="5.0" />
                            </StackPane.margin>
