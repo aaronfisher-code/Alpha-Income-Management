@@ -21,6 +21,8 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.util.Duration;
 import models.EODDataPoint;
+import models.Employment;
+import models.Store;
 import models.User;
 import org.apache.poi.ss.formula.functions.T;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -33,6 +35,7 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
@@ -243,7 +246,26 @@ public class EODDataEntryPageController extends Controller{
 	 	eodDataPoints = FXCollections.observableArrayList();
 		YearMonth yearMonthObject = YearMonth.of(monthSelectorDate.getYear(), monthSelectorDate.getMonth());
 		int daysInMonth = yearMonthObject.lengthOfMonth();
+
+		ObservableList<EODDataPoint> currentEODDataPoints = FXCollections.observableArrayList();
+		String sql = null;
+		try {
+			sql = "SELECT * FROM eodDataPoints where storeID = ? AND MONTH(date) = ? AND YEAR(date) = ?";
+			preparedStatement = con.prepareStatement(sql);
+			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
+			preparedStatement.setInt(2, yearMonthObject.getMonthValue());
+			preparedStatement.setInt(3, yearMonthObject.getYear());
+			resultSet = preparedStatement.executeQuery();
+			while (resultSet.next()) {
+				currentEODDataPoints.add(new EODDataPoint(resultSet));
+			}
+		} catch (SQLException throwables) {
+			throwables.printStackTrace();
+		}
+
+
 		for(int i = 1; i<daysInMonth+1; i++){
+
 			eodDataPoints.add(new EODDataPoint(LocalDate.of(monthSelectorDate.getYear(),monthSelectorDate.getMonth(),i)));
 		}
 		eodDataTable.setItems(eodDataPoints);
