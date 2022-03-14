@@ -28,7 +28,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane prefHeight="674.0" prefWidth="1289.0" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.AccountPaymentsPageController">
+<StackPane prefHeight="674.0" prefWidth="1289.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.AccountPaymentsPageController">
    <children>
       <BorderPane prefHeight="200.0" prefWidth="200.0">
          <top>
@@ -170,7 +170,7 @@
          </StackPane.margin>
       </JFXNodesList>
       <Region fx:id="contentDarken" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" onMouseClicked="#closePopover" opacity="0.25" style="-fx-background-color: BLACK;" visible="false" />
-      <VBox fx:id="addPaymentPopover" maxWidth="0.0" minWidth="375.0" prefWidth="375.0" spacing="10.0" style="-fx-background-color: #FFFFFF;" translateX="375.0" StackPane.alignment="TOP_RIGHT">
+      <VBox fx:id="addPaymentPopover" maxWidth="0.0" minWidth="375.0" prefWidth="375.0" spacing="30.0" style="-fx-background-color: #FFFFFF;" translateX="375.0" StackPane.alignment="TOP_RIGHT">
          <children>
             <BorderPane style="-fx-background-color: #F8F8F8;">
                <left>
@@ -194,15 +194,15 @@
                   <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
                </padding>
             </BorderPane>
-            <MFXFilterComboBox allowEdit="true" floatMode="BORDER" floatingText="Contact Name" maxWidth="1.7976931348623157E308" minHeight="37.6" />
-            <MFXTextField floatMode="BORDER" floatingText="Invoice Number" layoutX="20.0" layoutY="347.0" maxWidth="1.7976931348623157E308" />
-            <MFXDatePicker floatMode="BORDER" floatingText="Invoice Date" maxWidth="1.7976931348623157E308" />
-            <MFXDatePicker floatMode="BORDER" floatingText="Due Date" layoutX="20.0" layoutY="395.0" maxWidth="1.7976931348623157E308" />
-            <MFXTextField floatMode="BORDER" floatingText="Description" layoutX="20.0" layoutY="322.0" maxWidth="1.7976931348623157E308" />
-            <MFXTextField floatMode="BORDER" floatingText="Unit Amount ($)" layoutX="20.0" layoutY="298.0" maxWidth="1.7976931348623157E308" />
+            <MFXFilterComboBox allowEdit="true" borderGap="0.0" floatMode="ABOVE" floatingText="Contact Name" maxWidth="1.7976931348623157E308" minHeight="38.4" style="-mfx-gap: 5;" />
+            <MFXTextField borderGap="0.0" floatMode="ABOVE" floatingText="Invoice Number" layoutX="20.0" layoutY="347.0" maxWidth="1.7976931348623157E308" minHeight="38.4" />
+            <MFXDatePicker borderGap="0.0" floatMode="ABOVE" floatingText="Invoice Date" maxWidth="1.7976931348623157E308" minHeight="38.4" />
+            <MFXDatePicker borderGap="0.0" floatMode="ABOVE" floatingText="Due Date" layoutX="20.0" layoutY="395.0" maxWidth="1.7976931348623157E308" minHeight="38.4" />
+            <MFXTextField borderGap="0.0" floatMode="ABOVE" floatingText="Description" layoutX="20.0" layoutY="322.0" maxWidth="1.7976931348623157E308" minHeight="38.4" />
+            <MFXTextField borderGap="0.0" floatMode="ABOVE" floatingText="Unit Amount ($)" layoutX="20.0" layoutY="298.0" maxWidth="1.7976931348623157E308" minHeight="38.4" />
             <MFXCheckbox text="Account Adjusted?" textExpand="true" VBox.vgrow="ALWAYS">
                <VBox.margin>
-                  <Insets top="10.0" />
+                  <Insets />
                </VBox.margin>
             </MFXCheckbox>
             <MFXButton buttonType="RAISED" depthLevel="LEVEL3" maxWidth="1.7976931348623157E308" prefHeight="30.0" style="-fx-background-color: #0F60FF;" text="Save" textFill="WHITE">

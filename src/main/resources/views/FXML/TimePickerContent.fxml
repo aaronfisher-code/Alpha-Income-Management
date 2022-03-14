@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import io.github.palexdev.materialfx.controls.MFXRectangleToggleNode?>
 <?import io.github.palexdev.materialfx.controls.MFXTextField?>
 <?import java.net.URL?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
@@ -41,24 +41,14 @@
                   </MFXTextField>
                </children>
             </VBox>
-            <VBox maxHeight="1.7976931348623157E308" maxWidth="40.0" style="-fx-border-color: #D3D3D3; -fx-border-radius: 5;" HBox.hgrow="SOMETIMES">
+            <VBox maxHeight="1.7976931348623157E308" style="-fx-border-radius: 5; -fx-border-color: #D3D3D3; -fx-background-radius: 5;" HBox.hgrow="SOMETIMES">
                <children>
-                  <MFXRectangleToggleNode contentDisplay="TEXT_ONLY" maxHeight="1.7976931348623157E308" style="-fx-border-radius: 5; -fx-border-color: TRANSPARENT;" text="AM" VBox.vgrow="ALWAYS">
+                  <ToggleButton minWidth="40.0" mnemonicParsing="false" selected="true" text="AM">
                      <toggleGroup>
                         <ToggleGroup fx:id="ampm" />
                      </toggleGroup>
-                     <VBox.margin>
-                        <Insets />
-                     </VBox.margin>
-                     <font>
-                        <Font size="10.0" />
-                     </font>
-                  </MFXRectangleToggleNode>
-                  <MFXRectangleToggleNode contentDisplay="TEXT_ONLY" maxHeight="1.7976931348623157E308" style="-fx-border-radius: 5; -fx-border-color: TRANSPARENT;" text="PM" toggleGroup="$ampm" VBox.vgrow="ALWAYS">
-                     <font>
-                        <Font size="10.0" />
-                     </font>
-                  </MFXRectangleToggleNode>
+                  </ToggleButton>
+                  <ToggleButton layoutX="11.0" layoutY="11.0" minWidth="40.0" mnemonicParsing="false" text="PM" toggleGroup="$ampm" />
                </children>
             </VBox>
          </children>

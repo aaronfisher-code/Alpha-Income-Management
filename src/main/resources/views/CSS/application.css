@@ -85,6 +85,12 @@
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.8), 10, 0, 0.0, 2.0);
 }
 
+.mfx-filter-pane{
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.8), 10, 0, 0.0, 2.0);
+    -fx-background-color: #0F60FF;
+    -mfx-color: #0F60FF;
+}
+
 .mfx-date-picker:focus-within .mfx-icon-wrapper .mfx-font-icon{
     -mfx-color: #0F60FF;
 }
@@ -105,6 +111,15 @@
 
 .mfx-checkbox:selected{
     -mfx-main: #0F60FF;
+}
+
+.toggle-button{
+    -fx-background-color: TRANSPARENT;
+}
+
+.toggle-button:selected{
+    -fx-background-color: #0F60FF;
+    -fx-text-fill: WHITE;
 }
 
 

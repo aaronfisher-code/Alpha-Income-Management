@@ -63,7 +63,7 @@ public class EODDataEntryPageController extends Controller{
 	@FXML
 	private StackPane monthSelector;
 	@FXML
-	private MFXTextField monthSelectorField;
+	private MFXTextField monthSelectorField,cashField;
 	@FXML
 	private Region contentDarken;
 

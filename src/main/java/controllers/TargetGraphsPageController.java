@@ -38,6 +38,12 @@ public class TargetGraphsPageController extends Controller{
 	
 	 @FXML
 	private void initialize() throws IOException {
+		 graphScrollPane.heightProperty().addListener((observable, oldValue, newValue) -> {
+			 System.out.println("Listener fired");
+			 graphPane.setPrefHeight((Double) newValue);
+			 System.out.println("Scroll height: " + graphScrollPane.getHeight());
+			 System.out.println("graphpane height: " + graphPane.getHeight());
+		 });
 	 }
 
 	@Override
@@ -121,6 +127,15 @@ public class TargetGraphsPageController extends Controller{
 		outerPane.addRow(contentRow);
 		graphScrollPane.setContent(outerPane);
 		graphPane.setPrefHeight(graphScrollPane.getHeight());
+
+		System.out.println("fill1");
+		System.out.println("Scroll height: " + graphScrollPane.getHeight());
+		System.out.println("graphpane height: " + graphPane.getHeight());
+		adjustHeight();
+		System.out.println("fill2");
+		System.out.println("Scroll height: " + graphScrollPane.getHeight());
+		System.out.println("graphpane height: " + graphPane.getHeight());
+
 
 	}
 
@@ -208,6 +223,9 @@ public class TargetGraphsPageController extends Controller{
 
 	public void adjustHeight(){
 	 	graphPane.setPrefHeight(graphScrollPane.getHeight());
+		System.out.println("adjustHeight1");
+		System.out.println("Scroll height: " + graphScrollPane.getHeight());
+		System.out.println("graphpane height: " + graphPane.getHeight());
 	}
 
 

@@ -19,7 +19,6 @@ import java.sql.Connection;
 
 
 public class Main extends Application {
-
 	
 	private static Stage stg;
 	private User currentUser;
