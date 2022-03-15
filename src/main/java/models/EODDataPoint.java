@@ -8,14 +8,16 @@ import java.time.format.DateTimeFormatter;
 
 public class EODDataPoint {
 
+	private boolean existsInDB;
 	private LocalDate date;
+	private int storeID;
 	private double cashAmount;
 	private double eftposAmount;
 	private double amexAmount;
 	private double googleSquareAmount;
 	private double chequeAmount;
 	private int medschecks;
-	private int stockOnHandAmount;
+	private double stockOnHandAmount;
 	private int scriptsOnFile;
 	private int smsPatients;
 	private double tillBalance;
@@ -23,6 +25,23 @@ public class EODDataPoint {
 	private String notes;
 
 	public EODDataPoint(ResultSet resultSet) {
+		try {
+			this.date = resultSet.getDate("date").toLocalDate();
+			this.storeID = resultSet.getInt("storeID");
+			this.cashAmount = resultSet.getDouble("cash");
+			this.eftposAmount = resultSet.getDouble("eftpos");
+			this.amexAmount = resultSet.getDouble("amex");
+			this.googleSquareAmount = resultSet.getDouble("googleSquare");
+			this.chequeAmount = resultSet.getDouble("cheque");
+			this.medschecks = resultSet.getInt("medschecks");
+			this.scriptsOnFile = resultSet.getInt("scriptsOnFile");
+			this.stockOnHandAmount = resultSet.getDouble("stockOnHand");
+			this.smsPatients = resultSet.getInt("smsPatients");
+			if(resultSet.getString("notes")!=null)
+				this.notes = resultSet.getString("notes");
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public EODDataPoint(LocalDate previousDay) {
@@ -53,8 +72,8 @@ public class EODDataPoint {
 	public void setChequeAmount(double chequeAmount) {this.chequeAmount = chequeAmount;}
 	public int getMedschecks() {return medschecks;}
 	public void setMedschecks(int medschecks) {this.medschecks = medschecks;}
-	public int getStockOnHandAmount() {return stockOnHandAmount;}
-	public void setStockOnHandAmount(int stockOnHandAmount) {this.stockOnHandAmount = stockOnHandAmount;}
+	public double getStockOnHandAmount() {return stockOnHandAmount;}
+	public void setStockOnHandAmount(double stockOnHandAmount) {this.stockOnHandAmount = stockOnHandAmount;}
 	public int getScriptsOnFile() {return scriptsOnFile;}
 	public void setScriptsOnFile(int scriptsOnFile) {this.scriptsOnFile = scriptsOnFile;}
 	public int getSmsPatients() {return smsPatients;}
@@ -67,5 +86,6 @@ public class EODDataPoint {
 	public void setRunningTillBalance(double runningTillBalance) {this.runningTillBalance = runningTillBalance;}
 	public String getNotes() {return notes;}
 	public void setNotes(String notes) {this.notes = notes;}
+	public Boolean isInDB(){return existsInDB;}
 
 }

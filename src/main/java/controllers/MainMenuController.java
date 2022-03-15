@@ -84,8 +84,9 @@ public class MainMenuController extends Controller {
         } catch (SQLException ex) {
             System.err.println(ex.getMessage());
         }
+        storeSearchCombo.setOnAction(actionEvent -> main.setCurrentStore((Store) storeSearchCombo.getSelectedItem()));
         storeSearchCombo.selectFirst();
-        main.setCurrentStore((Store) storeSearchCombo.getSelectedItem());
+
 
         for(Node b:buttonPane.getChildren()){
             if(b.getAccessibleRole() == AccessibleRole.BUTTON){
