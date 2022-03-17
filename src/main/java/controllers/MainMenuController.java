@@ -59,6 +59,7 @@ public class MainMenuController extends Controller {
     ResultSet resultSet = null;
     private Main main;
     private PopOver currentUserPopover;
+    private Controller currentPageController;
 
     public void setMain(Main main) {
         this.main = main;
@@ -84,7 +85,10 @@ public class MainMenuController extends Controller {
         } catch (SQLException ex) {
             System.err.println(ex.getMessage());
         }
-        storeSearchCombo.setOnAction(actionEvent -> main.setCurrentStore((Store) storeSearchCombo.getSelectedItem()));
+        storeSearchCombo.setOnAction(actionEvent -> {
+            main.setCurrentStore((Store) storeSearchCombo.getSelectedItem());
+
+        });
         storeSearchCombo.selectFirst();
 
 
@@ -253,6 +257,10 @@ public class MainMenuController extends Controller {
 
 
     public void changePage(Button b, String fxml){
+        storeSearchCombo.setOnAction(event -> {
+            main.setCurrentStore((Store) storeSearchCombo.getSelectedItem());
+            changePage(b,fxml);
+        });
         formatSelected(b);
         FXMLLoader loader = new FXMLLoader(getClass().getResource(fxml));
         StackPane pageContent = null;
@@ -261,12 +269,11 @@ public class MainMenuController extends Controller {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        Controller ac = loader.getController();
-        ac.setMain(main);
-        ac.setConnection(con);
+        currentPageController = loader.getController();
+        currentPageController.setMain(main);
+        currentPageController.setConnection(con);
         contentPane.setCenter(pageContent);
-        ac.fill();
-
+        currentPageController.fill();
     }
 }
 

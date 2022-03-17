@@ -25,6 +25,15 @@
     -fx-text-fill: #6e6b7b;
 }
 
+.toggle-button{
+    -fx-background-color: TRANSPARENT;
+}
+
+/*.toggle-button:selected{*/
+/*    -fx-background-color: #0F60FF;*/
+/*    -fx-text-fill: WHITE;*/
+/*}*/
+
 
 
 

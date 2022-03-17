@@ -8,7 +8,7 @@ import java.time.format.DateTimeFormatter;
 
 public class EODDataPoint {
 
-	private boolean existsInDB;
+	private boolean existsInDB = false;
 	private LocalDate date;
 	private int storeID;
 	private double cashAmount;
@@ -22,7 +22,7 @@ public class EODDataPoint {
 	private int smsPatients;
 	private double tillBalance;
 	private double runningTillBalance;
-	private String notes;
+	private String notes = "";
 
 	public EODDataPoint(ResultSet resultSet) {
 		try {
@@ -39,6 +39,7 @@ public class EODDataPoint {
 			this.smsPatients = resultSet.getInt("smsPatients");
 			if(resultSet.getString("notes")!=null)
 				this.notes = resultSet.getString("notes");
+			existsInDB = true;
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}

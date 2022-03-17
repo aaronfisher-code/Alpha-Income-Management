@@ -291,7 +291,7 @@
                            </VBox.margin></TextArea>
                         <MFXButton fx:id="saveButton" depthLevel="LEVEL3" maxWidth="1.7976931348623157E308" prefHeight="40.0" style="-fx-background-color: #0F60FF;" text="Save" textFill="WHITE">
                            <VBox.margin>
-                              <Insets bottom="30.0" />
+                              <Insets bottom="15.0" />
                            </VBox.margin></MFXButton>
                      </children>
                      <padding>
@@ -300,7 +300,7 @@
                   </VBox>
                </content>
                <VBox.margin>
-                  <Insets left="5.0" right="5.0" />
+                  <Insets left="5.0" right="5.0" top="-10.0" />
                </VBox.margin>
             </MFXScrollPane>
          </children>
