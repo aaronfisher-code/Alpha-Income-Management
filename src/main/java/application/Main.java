@@ -16,6 +16,7 @@ import utils.DBConnector;
 
 import java.io.IOException;
 import java.sql.Connection;
+import java.time.LocalDate;
 
 
 public class Main extends Application {
@@ -27,6 +28,7 @@ public class Main extends Application {
 	public Controller c;
 	private static BorderlessScene bs;
 	private Image icon = new Image(getClass().getResourceAsStream("/images/alpha logo.png"));
+	private LocalDate currentDate;
 
 	@Override
 	public void start(Stage primaryStage) throws Exception{
@@ -102,6 +104,10 @@ public class Main extends Application {
 	public Store getCurrentStore() {return currentStore;}
 
 	public void setCurrentStore(Store currentStore) {this.currentStore = currentStore;}
+
+	public LocalDate getCurrentDate() {return currentDate;}
+
+	public void setCurrentDate(LocalDate currentDate) {this.currentDate = currentDate;}
 
 	public static void main(String[] args) {
 		launch(args);

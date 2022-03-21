@@ -9,6 +9,7 @@
 <?import io.github.palexdev.materialfx.controls.MFXScrollPane?>
 <?import io.github.palexdev.materialfx.controls.MFXTableView?>
 <?import io.github.palexdev.materialfx.controls.MFXTextField?>
+<?import io.github.palexdev.materialfx.font.MFXFontIcon?>
 <?import java.net.URL?>
 <?import javafx.geometry.Insets?>
 <?import javafx.geometry.Rectangle2D?>
@@ -64,7 +65,37 @@
                               <Insets right="10.0" />
                            </FlowPane.margin>
                         </Label>
-                        <Button alignment="TOP_CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#weekBackward" prefHeight="30.0" prefWidth="20.0" style="-fx-background-color: #F3F2F7; -fx-padding: 1;" text="&lt;" textFill="#b2bac9">
+                        <StackPane fx:id="monthSelector" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" style="-fx-background-color: TRANSPARENT;">
+                           <children>
+                              <MFXTextField fx:id="monthSelectorField" allowEdit="false" borderGap="0.0" editable="false" floatMode="DISABLED" prefWidth="200.0" selectable="false" text="Feb 28, 2022">
+                                 <StackPane.margin>
+                                    <Insets />
+                                 </StackPane.margin>
+                                 <padding>
+                                    <Insets bottom="10.0" left="5.0" top="10.0" />
+                                 </padding>
+                                 <opaqueInsets>
+                                    <Insets />
+                                 </opaqueInsets>
+                                 <textFill>
+                                    <Color red="0.4313725531101227" green="0.41960784792900085" blue="0.48235294222831726" opacity="0.8700000047683716" />
+                                 </textFill>
+                              </MFXTextField>
+                              <MFXButton contentDisplay="GRAPHIC_ONLY" rippleAnimateShadow="true" style="-fx-background-radius: 25; -fx-border-radius: 25;" StackPane.alignment="CENTER_RIGHT">
+                                 <graphic>
+                                    <MFXFontIcon fx:id="calIcon" description="mfx-calendar-alt-semi-dark" onMouseClicked="#openMonthSelector" size="20.0">
+                                       <color>
+                                          <Color red="0.4313725531101227" green="0.41960784792900085" blue="0.48235294222831726" />
+                                       </color>
+                                    </MFXFontIcon>
+                                 </graphic>
+                                 <StackPane.margin>
+                                    <Insets bottom="5.0" right="3.0" top="5.0" />
+                                 </StackPane.margin>
+                              </MFXButton>
+                           </children>
+                        </StackPane>
+                        <Button alignment="TOP_CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#monthBackward" prefHeight="30.0" prefWidth="20.0" style="-fx-background-color: #F3F2F7; -fx-padding: 1;" text="&lt;" textFill="#b2bac9">
                            <font>
                               <Font size="19.0" />
                            </font>
@@ -75,7 +106,7 @@
                               <Cursor fx:constant="HAND" />
                            </cursor>
                         </Button>
-                        <Button alignment="TOP_CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#weekForward" prefHeight="30.0" prefWidth="20.0" style="-fx-background-color: #f3F2F7; -fx-padding: 1;" text="&gt;" textFill="#b2bac9">
+                        <Button alignment="TOP_CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#monthForward" prefHeight="30.0" prefWidth="20.0" style="-fx-background-color: #f3F2F7; -fx-padding: 1;" text="&gt;" textFill="#b2bac9">
                            <font>
                               <Font size="19.0" />
                            </font>

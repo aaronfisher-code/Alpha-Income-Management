@@ -38,7 +38,7 @@ import java.util.Comparator;
 import java.util.Locale;
 import java.util.Map;
 
-public class EODDataEntryPageController extends Controller{
+public class EODDataEntryPageController extends DateSelectController{
 
     private Connection con = null;
     PreparedStatement preparedStatement = null;
@@ -47,8 +47,6 @@ public class EODDataEntryPageController extends Controller{
     private MainMenuController parent;
     private User selectedUser;
 	private PopOver currentDatePopover;
-
-	private LocalDate monthSelectorDate;
 	private ObservableList<EODDataPoint> eodDataPoints = FXCollections.observableArrayList();
 
 	@FXML
@@ -105,6 +103,12 @@ public class EODDataEntryPageController extends Controller{
 
 	@Override
 	public void fill() {
+	 	cashField.setLeadingIcon(new Label("$"));
+		eftposField.setLeadingIcon(new Label("$"));
+		amexField.setLeadingIcon(new Label("$"));
+		googleSquareField.setLeadingIcon(new Label("$"));
+		chequeField.setLeadingIcon(new Label("$"));
+		sohField.setLeadingIcon(new Label("$"));
 		eodDataTable.autosizeColumnsOnInitialization();
 
 		dateCol = new MFXTableColumn<>("DATE",true, Comparator.comparing(EODDataPoint::getDate));
@@ -151,14 +155,10 @@ public class EODDataEntryPageController extends Controller{
 				runningTillBalanceCol,
 				notesCol
 		);
-		setMonthSelectorDate(LocalDate.now());
+		setDate(LocalDate.now());
 		eodDataTable.autosizeColumnsOnInitialization();
 		eodDataTable.autosizeColumns();
 		eodDataTable.virtualFlowInitializedProperty().addListener((observable, oldValue, newValue) -> {addDoubleClickfunction();});
-	}
-
-	private void cellFactoryAdjuster(MFXTableColumn col, MFXTableRowCell cell){
-	 	col.setRowCellFactory(eodDataPoint -> {cell.setMinHeight(400);return cell;});
 	}
 
 	private void addDoubleClickfunction(){
@@ -188,11 +188,11 @@ public class EODDataEntryPageController extends Controller{
 	}
 
 	public void monthForward() {
-		setMonthSelectorDate(monthSelectorDate.plusMonths(1));
+		setDate(main.getCurrentDate().plusMonths(1));
 	}
 
 	public void monthBackward() {
-		setMonthSelectorDate(monthSelectorDate.minusMonths(1));
+		setDate(main.getCurrentDate().minusMonths(1));
 	}
 
 	public void openMonthSelector(){
@@ -229,24 +229,10 @@ public class EODDataEntryPageController extends Controller{
 		}
 	}
 
-	public void setMonthSelectorDate(LocalDate newDate){
-	 	monthSelectorDate = newDate;
-	 	String fieldText = monthSelectorDate.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
-	 	fieldText += ", ";
-	 	fieldText += monthSelectorDate.getYear();
-	 	monthSelectorField.setText(fieldText);
-	 	fillTable();
-	}
-
-	public LocalDate getMonthSelectorDate(){
-	 	return monthSelectorDate;
-	}
-
 	public void fillTable(){
 	 	eodDataPoints = FXCollections.observableArrayList();
-		YearMonth yearMonthObject = YearMonth.of(monthSelectorDate.getYear(), monthSelectorDate.getMonth());
+		YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
 		int daysInMonth = yearMonthObject.lengthOfMonth();
-
 		ObservableList<EODDataPoint> currentEODDataPoints = FXCollections.observableArrayList();
 		String sql = null;
 		try {
@@ -273,7 +259,7 @@ public class EODDataEntryPageController extends Controller{
 				}
 			}
 			if(!dateAlreadyCreated)
-				eodDataPoints.add(new EODDataPoint(LocalDate.of(monthSelectorDate.getYear(),monthSelectorDate.getMonth(),i)));
+				eodDataPoints.add(new EODDataPoint(LocalDate.of(main.getCurrentDate().getYear(),main.getCurrentDate().getMonth(),i)));
 		}
 		eodDataTable.setItems(eodDataPoints);
 		for (Map.Entry<Integer, MFXTableRow<EODDataPoint>> entry:eodDataTable.getCells().entrySet()) {
@@ -375,5 +361,14 @@ public class EODDataEntryPageController extends Controller{
 		);
 		timeline.play();
 	}
-	
+
+	@Override
+	public void setDate(LocalDate date) {
+		main.setCurrentDate(date);
+		String fieldText = main.getCurrentDate().getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
+		fieldText += ", ";
+		fieldText += main.getCurrentDate().getYear();
+		monthSelectorField.setText(fieldText);
+		fillTable();
+	}
 }

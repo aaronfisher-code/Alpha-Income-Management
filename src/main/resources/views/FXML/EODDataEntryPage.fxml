@@ -249,11 +249,11 @@
                               <Insets top="-20.0" />
                            </VBox.margin>
                         </Label>
-                        <MFXTextField fx:id="cashField" borderGap="0.0" floatMode="ABOVE" floatingText="Cash" maxWidth="1.7976931348623157E308" />
-                        <MFXTextField fx:id="eftposField" borderGap="0.0" floatMode="ABOVE" floatingText="EFTPOS" layoutX="20.0" layoutY="347.0" maxWidth="1.7976931348623157E308" />
-                        <MFXTextField fx:id="amexField" borderGap="0.0" floatMode="ABOVE" floatingText="AMEX" layoutX="20.0" layoutY="126.0" maxWidth="1.7976931348623157E308" />
-                        <MFXTextField fx:id="googleSquareField" borderGap="0.0" floatMode="ABOVE" floatingText="Google Square" layoutX="20.0" layoutY="78.0" maxWidth="1.7976931348623157E308" />
-                        <MFXTextField fx:id="chequeField" borderGap="0.0" floatMode="ABOVE" floatingText="Cheque" layoutX="20.0" layoutY="126.0" maxWidth="1.7976931348623157E308" />
+                        <MFXTextField fx:id="cashField" borderGap="0.0" floatMode="ABOVE" floatingText="Cash" graphicTextGap="5.0" maxWidth="1.7976931348623157E308" measureUnitGap="0.0" />
+                        <MFXTextField fx:id="eftposField" borderGap="0.0" floatMode="ABOVE" floatingText="EFTPOS" graphicTextGap="5.0" layoutX="20.0" layoutY="347.0" maxWidth="1.7976931348623157E308" />
+                        <MFXTextField fx:id="amexField" borderGap="0.0" floatMode="ABOVE" floatingText="AMEX" graphicTextGap="5.0" layoutX="20.0" layoutY="126.0" maxWidth="1.7976931348623157E308" />
+                        <MFXTextField fx:id="googleSquareField" borderGap="0.0" floatMode="ABOVE" floatingText="Google Square" graphicTextGap="5.0" layoutX="20.0" layoutY="78.0" maxWidth="1.7976931348623157E308" />
+                        <MFXTextField fx:id="chequeField" borderGap="0.0" floatMode="ABOVE" floatingText="Cheque" graphicTextGap="5.0" layoutX="20.0" layoutY="126.0" maxWidth="1.7976931348623157E308" />
                         <HBox alignment="CENTER" spacing="50.0">
                            <children>
                               <Label contentDisplay="BOTTOM" text="Till Balance" HBox.hgrow="ALWAYS">
@@ -280,6 +280,9 @@
                            <font>
                               <Font size="16.0" />
                            </font>
+                           <VBox.margin>
+                              <Insets top="-15.0" />
+                           </VBox.margin>
                         </Label>
                         <MFXTextField fx:id="medschecksField" borderGap="0.0" floatMode="ABOVE" floatingText="Medschecks" layoutX="20.0" layoutY="174.0" maxWidth="1.7976931348623157E308" />
                         <MFXTextField fx:id="sohField" borderGap="0.0" floatMode="ABOVE" floatingText="Stock on hand" layoutX="20.0" layoutY="318.0" maxWidth="1.7976931348623157E308" />

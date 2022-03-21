@@ -4,12 +4,14 @@ import application.Main;
 import io.github.palexdev.materialfx.controls.MFXDatePicker;
 import io.github.palexdev.materialfx.controls.MFXTableColumn;
 import io.github.palexdev.materialfx.controls.MFXTableView;
+import io.github.palexdev.materialfx.controls.MFXTextField;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContentDisplay;
@@ -19,6 +21,7 @@ import javafx.scene.effect.DropShadow;
 import javafx.scene.effect.GaussianBlur;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
@@ -27,6 +30,7 @@ import models.AccountPayment;
 import models.AccountPayment;
 import models.AccountPaymentContactDataPoint;
 import models.User;
+import org.controlsfx.control.PopOver;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -35,9 +39,11 @@ import java.sql.ResultSet;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.time.format.TextStyle;
 import java.util.Comparator;
+import java.util.Locale;
 
-public class AccountPaymentsPageController extends Controller{
+public class AccountPaymentsPageController extends DateSelectController{
 
     private Connection con = null;
     PreparedStatement preparedStatement = null;
@@ -45,11 +51,15 @@ public class AccountPaymentsPageController extends Controller{
     private Main main;
     private MainMenuController parent;
     private User selectedUser;
-
 	private MFXDatePicker datePkr;
+	private PopOver currentDatePopover;
 
 	@FXML
 	private FlowPane datePickerPane;
+	@FXML
+	private StackPane monthSelector;
+	@FXML
+	private MFXTextField monthSelectorField;
     @FXML
     private MFXTableView<AccountPayment> accountPaymentTable;
 	@FXML
@@ -58,7 +68,8 @@ public class AccountPaymentsPageController extends Controller{
 	private VBox addPaymentPopover;
     @FXML
 	private Region contentDarken;
-
+	@FXML
+	private VBox dataEntryRowPane;
 
 	private MFXTableColumn<AccountPayment> contactCol;
 	private MFXTableColumn<AccountPayment> invNumberCol;
@@ -67,12 +78,8 @@ public class AccountPaymentsPageController extends Controller{
 	private MFXTableColumn<AccountPayment> descriptionCol;
 	private MFXTableColumn<AccountPayment> unitAmountCol;
 	private MFXTableColumn<AccountPayment> accountAdjustedCol;
-
 	private MFXTableColumn<AccountPaymentContactDataPoint> contactNameCol;
 	private MFXTableColumn<AccountPaymentContactDataPoint> totalCol;
-
-    @FXML
-	private VBox dataEntryRowPane;
 	
 	 @FXML
 	private void initialize() throws IOException {}
@@ -90,14 +97,6 @@ public class AccountPaymentsPageController extends Controller{
 
 	@Override
 	public void fill() {
-
-		datePkr = new MFXDatePicker();
-//		datePkr.setOnAction(e -> updatePage());
-		datePickerPane.getChildren().add(1,datePkr);
-		datePkr.setValue(LocalDate.now());
-		datePkr.setText(LocalDate.now().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)));
-		datePkr.getStylesheets().add("/views/CSS/RosterPage.css");
-
 		//Init Payments Table
 		contactCol = new MFXTableColumn<>("CONTACT",false, Comparator.comparing(AccountPayment::getContactName));
 		invNumberCol = new MFXTableColumn<>("INVOICE NUMBER",false, Comparator.comparing(AccountPayment::getInvoiceNumber));
@@ -133,10 +132,8 @@ public class AccountPaymentsPageController extends Controller{
 				contactNameCol,
 				totalCol
 		);
+		setDate(LocalDate.now());
 		accountTotalsTable.autosizeColumnsOnInitialization();
-
-
-
 	}
 
 	public void importFiles(){
@@ -144,18 +141,6 @@ public class AccountPaymentsPageController extends Controller{
 		fileChooser.setTitle("Open Data entry File");
 		fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
 		fileChooser.showOpenDialog(main.getStg());
-	}
-
-	public void weekForward() {
-		setDatePkr(datePkr.getValue().plusMonths(1));
-	}
-
-	public void weekBackward() {
-		setDatePkr(datePkr.getValue().minusMonths(1));
-	}
-
-	public void setDatePkr(LocalDate date) {
-		datePkr.setValue(date);
 	}
 
 	public void addNewPayment(){
@@ -176,5 +161,57 @@ public class AccountPaymentsPageController extends Controller{
 		);
 		timeline.play();
 	}
-	
+
+	public void monthForward() {
+		setDate(main.getCurrentDate().plusMonths(1));
+	}
+
+	public void monthBackward() {
+		setDate(main.getCurrentDate().minusMonths(1));
+	}
+
+	public void openMonthSelector(){
+		if(currentDatePopover!=null&&currentDatePopover.isShowing()){
+			currentDatePopover.hide();
+		}else {
+			PopOver monthSelectorMenu = new PopOver();
+			FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/MonthYearSelectorContent.fxml"));
+			VBox monthSelectorMenuContent = null;
+			try {
+				monthSelectorMenuContent = loader.load();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			MonthYearSelectorContentController rdc = loader.getController();
+			rdc.setMain(main);
+			rdc.setConnection(con);
+			rdc.setParent(this);
+			rdc.fill();
+
+			monthSelectorMenu.setOpacity(1);
+			monthSelectorMenu.setContentNode(monthSelectorMenuContent);
+			monthSelectorMenu.setArrowSize(0);
+			monthSelectorMenu.setAnimated(true);
+			monthSelectorMenu.setArrowLocation(PopOver.ArrowLocation.TOP_CENTER);
+			monthSelectorMenu.setAutoHide(true);
+			monthSelectorMenu.setDetachable(false);
+			monthSelectorMenu.setHideOnEscape(true);
+			monthSelectorMenu.setCornerRadius(10);
+			monthSelectorMenu.setArrowIndent(0);
+			monthSelectorMenu.show(monthSelector);
+			currentDatePopover=monthSelectorMenu;
+			monthSelectorField.requestFocus();
+		}
+	}
+
+
+	@Override
+	public void setDate(LocalDate date) {
+		main.setCurrentDate(date);
+		String fieldText = main.getCurrentDate().getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
+		fieldText += ", ";
+		fieldText += main.getCurrentDate().getYear();
+		monthSelectorField.setText(fieldText);
+//		fillTable();
+	}
 }
