@@ -113,6 +113,10 @@
     -mfx-main: #0F60FF;
 }
 
+.mfx-filter-combo-box .combo-popup{
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.8), 10, 0, 0.0, 2.0);
+}
+
 
 
 
