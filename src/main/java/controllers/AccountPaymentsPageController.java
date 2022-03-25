@@ -1,11 +1,12 @@
 package controllers;
 
 import application.Main;
-import components.ActionableFilterComboBoxSkin;
-import components.layouts.ActionableFilterComboBox;
+import com.dlsc.gemsfx.DialogPane;
+import components.ActionableFilterComboBox;
 import io.github.palexdev.materialfx.controls.*;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
 import io.github.palexdev.materialfx.enums.FloatMode;
+import io.github.palexdev.materialfx.skins.MFXPopupSkin;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -14,11 +15,15 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.control.Control;
+import javafx.scene.Node;
+import javafx.scene.control.Label;
+import javafx.scene.control.PopupControl;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.FileChooser;
 import javafx.util.Duration;
 import models.AccountPayment;
@@ -34,7 +39,8 @@ import java.time.LocalDate;
 import java.time.format.TextStyle;
 import java.util.Comparator;
 import java.util.Locale;
-import java.util.concurrent.atomic.AtomicReference;
+
+import static com.dlsc.gemsfx.DialogPane.Type.INFORMATION;
 
 public class AccountPaymentsPageController extends DateSelectController{
 
@@ -61,6 +67,8 @@ public class AccountPaymentsPageController extends DateSelectController{
 	private VBox addPaymentPopover;
     @FXML
 	private Region contentDarken;
+	@FXML
+	private DialogPane dialogPane;
 	@FXML
 	private VBox dataEntryRowPane;
 	@FXML
@@ -106,7 +114,12 @@ public class AccountPaymentsPageController extends DateSelectController{
 		contacts.add("Test item 1");
 		contacts.add("Test item 2");
 		contacts.add("Test item 3");
-		ActionableFilterComboBox afx = new ActionableFilterComboBox(new MFXButton("Add new Contact"));
+		MFXButton addContactButton = new MFXButton("Add new Contact");
+		addContactButton.setOnAction(actionEvent -> {
+			dialogPane.showNode(INFORMATION, "Generic Node Dialog", createGenericNode());
+		});
+		ActionableFilterComboBox afx = new ActionableFilterComboBox(addContactButton);
+
 		afx.setFloatMode(FloatMode.ABOVE);
 		afx.setFloatingText("Contact name");
 		afx.setFloatingTextGap(5);
@@ -154,6 +167,18 @@ public class AccountPaymentsPageController extends DateSelectController{
 		);
 		setDate(LocalDate.now());
 		accountTotalsTable.autosizeColumnsOnInitialization();
+	}
+
+	private Node createGenericNode() {
+		Rectangle rect = new Rectangle();
+		rect.setFill(Color.RED);
+		rect.setWidth(300);
+		rect.setHeight(300);
+
+		Label label = new Label("300 x 300");
+		label.setStyle("-fx-text-fill: white;");
+
+		return new StackPane(rect, label);
 	}
 
 	public void importFiles(){

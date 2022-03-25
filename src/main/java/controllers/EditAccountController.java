@@ -12,6 +12,7 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -162,7 +163,6 @@ public class EditAccountController extends Controller{
 		VBox.setVgrow(accountsTable, Priority.ALWAYS);
 		accountsTable.virtualFlowInitializedProperty().addListener((observable, oldValue, newValue) -> {addUserDoubleClickfunction();});
 		userFilterView.filteredItemsProperty().addListener((observable, oldValue, newValue) -> {addUserDoubleClickfunction();});
-
 		accountsTable.setItems(allUsers);
 	}
 
@@ -224,7 +224,6 @@ public class EditAccountController extends Controller{
 		storesTable.virtualFlowInitializedProperty().addListener((observable, oldValue, newValue) -> {addStoreDoubleClickFunction();});
 		storeFilterView.filteredItemsProperty().addListener((observable, oldValue, newValue) -> {addStoreDoubleClickFunction();});
 		storesTable.setItems(allStores);
-
 
 	}
 

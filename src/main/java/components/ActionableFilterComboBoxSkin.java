@@ -5,6 +5,7 @@ import io.github.palexdev.materialfx.controls.cell.MFXFilterComboBoxCell;
 import io.github.palexdev.materialfx.skins.MFXFilterComboBoxSkin;
 import io.github.palexdev.materialfx.i18n.I18N;
 import io.github.palexdev.virtualizedfx.flow.simple.SimpleVirtualFlow;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
@@ -68,6 +69,11 @@ public class ActionableFilterComboBoxSkin<T> extends MFXFilterComboBoxSkin<T> {
         actionButton.setMaxWidth(Double.MAX_VALUE);
         actionButton.setTextAlignment(TextAlignment.LEFT);
         actionButton.setAlignment(Pos.BASELINE_LEFT);
+        EventHandler oldEvent = actionButton.getOnAction();
+        actionButton.setOnAction(actionEvent -> {
+            oldEvent.handle(actionEvent);
+            this.popup.hide();
+        });
 
         VBox container = new VBox(10, searchField, virtualFlow,divider, actionButton);
         VBox.setMargin(divider,new Insets(0,-6,-6,-6));

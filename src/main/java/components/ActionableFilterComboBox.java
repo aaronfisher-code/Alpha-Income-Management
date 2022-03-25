@@ -1,4 +1,4 @@
-package components.layouts;
+package components;
 
 import components.ActionableFilterComboBoxSkin;
 import io.github.palexdev.materialfx.controls.MFXButton;
