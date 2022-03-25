@@ -40,7 +40,7 @@ import java.time.format.TextStyle;
 import java.util.Comparator;
 import java.util.Locale;
 
-import static com.dlsc.gemsfx.DialogPane.Type.INFORMATION;
+import static com.dlsc.gemsfx.DialogPane.Type.*;
 
 public class AccountPaymentsPageController extends DateSelectController{
 
@@ -116,7 +116,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 		contacts.add("Test item 3");
 		MFXButton addContactButton = new MFXButton("Add new Contact");
 		addContactButton.setOnAction(actionEvent -> {
-			dialogPane.showNode(INFORMATION, "Generic Node Dialog", createGenericNode());
+			dialogPane.showNode(BLANK, "", createGenericNode());
 		});
 		ActionableFilterComboBox afx = new ActionableFilterComboBox(addContactButton);
 
@@ -170,15 +170,14 @@ public class AccountPaymentsPageController extends DateSelectController{
 	}
 
 	private Node createGenericNode() {
-		Rectangle rect = new Rectangle();
-		rect.setFill(Color.RED);
-		rect.setWidth(300);
-		rect.setHeight(300);
-
-		Label label = new Label("300 x 300");
-		label.setStyle("-fx-text-fill: white;");
-
-		return new StackPane(rect, label);
+		FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/AddNewContactDialog.fxml"));
+		StackPane newContactDialog = null;
+		try {
+			newContactDialog = loader.load();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return newContactDialog;
 	}
 
 	public void importFiles(){
