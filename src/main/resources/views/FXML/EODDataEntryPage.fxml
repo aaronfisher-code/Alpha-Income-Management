@@ -25,7 +25,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane prefHeight="1000.0" prefWidth="1289.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EODDataEntryPageController">
+<StackPane prefHeight="1187.0" prefWidth="1289.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EODDataEntryPageController">
    <children>
       <BorderPane prefHeight="200.0" prefWidth="200.0" style="-fx-border-radius: 10; -fx-background-radius: 10; -fx-background-color: TRANSPARENT;">
          <top>
@@ -195,7 +195,7 @@
                   <Insets bottom="10.0" left="10.0" top="10.0" />
                </padding>
             </BorderPane>
-            <MFXScrollPane fitToHeight="true" fitToWidth="true" focusTraversable="false" hbarPolicy="NEVER" VBox.vgrow="ALWAYS">
+            <MFXScrollPane fx:id="popOverScroll" fitToHeight="true" fitToWidth="true" focusTraversable="false" hbarPolicy="NEVER" pannable="true" VBox.vgrow="ALWAYS">
                <content>
                   <VBox fx:id="editDayPopover1" maxWidth="1.7976931348623157E308" spacing="30.0" style="-fx-background-color: #FFFFFF;">
                      <children>
@@ -210,9 +210,9 @@
                               <Insets />
                            </VBox.margin>
                         </Button>
-                        <VBox prefHeight="200.0" prefWidth="100.0">
+                        <VBox VBox.vgrow="NEVER">
                            <children>
-                              <BorderPane prefHeight="200.0" prefWidth="200.0">
+                              <BorderPane VBox.vgrow="NEVER">
                                  <left>
                                     <Label text="Till Report" BorderPane.alignment="CENTER" />
                                  </left>
@@ -224,7 +224,7 @@
                                     </Label>
                                  </right>
                               </BorderPane>
-                              <BorderPane layoutX="10.0" layoutY="10.0" prefHeight="200.0" prefWidth="200.0">
+                              <BorderPane layoutX="10.0" layoutY="10.0" VBox.vgrow="NEVER">
                                  <left>
                                     <Label text="Daily script totals report" BorderPane.alignment="CENTER" />
                                  </left>
@@ -250,10 +250,35 @@
                            </VBox.margin>
                         </Label>
                         <MFXTextField fx:id="cashField" borderGap="0.0" floatMode="ABOVE" floatingText="Cash" graphicTextGap="5.0" maxWidth="1.7976931348623157E308" measureUnitGap="0.0" />
+                        <Label fx:id="cashValidationLabel" text="Field must be a valid dollar amount" textFill="RED" visible="false">
+                           <VBox.margin>
+                              <Insets top="-30.0" />
+                           </VBox.margin>
+                        </Label>
                         <MFXTextField fx:id="eftposField" borderGap="0.0" floatMode="ABOVE" floatingText="EFTPOS" graphicTextGap="5.0" layoutX="20.0" layoutY="347.0" maxWidth="1.7976931348623157E308" />
+                        <Label fx:id="eftposValidationLabel" layoutX="15.0" layoutY="184.0" text="Field must be a valid dollar amount" textFill="RED" visible="false">
+                           <VBox.margin>
+                              <Insets top="-30.0" />
+                           </VBox.margin>
+                        </Label>
                         <MFXTextField fx:id="amexField" borderGap="0.0" floatMode="ABOVE" floatingText="AMEX" graphicTextGap="5.0" layoutX="20.0" layoutY="126.0" maxWidth="1.7976931348623157E308" />
+                        <Label fx:id="amexValidationLabel" layoutX="15.0" layoutY="264.0" text="Field must be a valid dollar amount" textFill="RED" visible="false">
+                           <VBox.margin>
+                              <Insets top="-30.0" />
+                           </VBox.margin>
+                        </Label>
                         <MFXTextField fx:id="googleSquareField" borderGap="0.0" floatMode="ABOVE" floatingText="Google Square" graphicTextGap="5.0" layoutX="20.0" layoutY="78.0" maxWidth="1.7976931348623157E308" />
+                        <Label fx:id="googleSquareValidationLabel" layoutX="15.0" layoutY="343.0" text="Field must be a valid dollar amount" textFill="RED" visible="false">
+                           <VBox.margin>
+                              <Insets top="-30.0" />
+                           </VBox.margin>
+                        </Label>
                         <MFXTextField fx:id="chequeField" borderGap="0.0" floatMode="ABOVE" floatingText="Cheque" graphicTextGap="5.0" layoutX="20.0" layoutY="126.0" maxWidth="1.7976931348623157E308" />
+                        <Label fx:id="chequeValidationLabel" layoutX="15.0" layoutY="422.0" text="Field must be a valid dollar amount" textFill="RED" visible="false">
+                           <VBox.margin>
+                              <Insets top="-30.0" />
+                           </VBox.margin>
+                        </Label>
                         <HBox alignment="CENTER" spacing="50.0">
                            <children>
                               <Label contentDisplay="BOTTOM" text="Till Balance" HBox.hgrow="ALWAYS">
@@ -275,6 +300,9 @@
                                  </graphic>
                               </Label>
                            </children>
+                           <VBox.margin>
+                              <Insets top="-20.0" />
+                           </VBox.margin>
                         </HBox>
                         <Label layoutX="20.0" layoutY="10.0" text="Store Tracking">
                            <font>
@@ -285,9 +313,29 @@
                            </VBox.margin>
                         </Label>
                         <MFXTextField fx:id="medschecksField" borderGap="0.0" floatMode="ABOVE" floatingText="Medschecks" layoutX="20.0" layoutY="174.0" maxWidth="1.7976931348623157E308" />
+                        <Label fx:id="medschecksValidationLabel" layoutX="15.0" layoutY="184.0" text="Field must be a valid dollar amount" textFill="RED" visible="false">
+                           <VBox.margin>
+                              <Insets top="-30.0" />
+                           </VBox.margin>
+                        </Label>
                         <MFXTextField fx:id="sohField" borderGap="0.0" floatMode="ABOVE" floatingText="Stock on hand" layoutX="20.0" layoutY="318.0" maxWidth="1.7976931348623157E308" />
+                        <Label fx:id="sohValidationLabel" layoutX="15.0" layoutY="683.0" text="Field must be a valid dollar amount" textFill="RED" visible="false">
+                           <VBox.margin>
+                              <Insets top="-30.0" />
+                           </VBox.margin>
+                        </Label>
                         <MFXTextField fx:id="sofField" borderGap="0.0" floatMode="ABOVE" floatingText="Scripts on File Count" layoutX="20.0" layoutY="366.0" maxWidth="1.7976931348623157E308" />
+                        <Label fx:id="sofValidationLabel" layoutX="15.0" layoutY="792.0" text="Field must be a valid dollar amount" textFill="RED" visible="false">
+                           <VBox.margin>
+                              <Insets top="-30.0" />
+                           </VBox.margin>
+                        </Label>
                         <MFXTextField fx:id="smsPatientsField" borderGap="0.0" floatMode="ABOVE" floatingText="SMS patients" layoutX="20.0" layoutY="414.0" maxWidth="1.7976931348623157E308" />
+                        <Label fx:id="smsPatientsValidationLabel" layoutX="15.0" layoutY="900.0" text="Field must be a valid dollar amount" textFill="RED" visible="false">
+                           <VBox.margin>
+                              <Insets top="-30.0" />
+                           </VBox.margin>
+                        </Label>
                         <TextArea fx:id="notesField" minHeight="100.0" prefHeight="100.0" promptText="Add any additional notes here..." wrapText="true" VBox.vgrow="NEVER">
                            <VBox.margin>
                               <Insets top="-15.0" />

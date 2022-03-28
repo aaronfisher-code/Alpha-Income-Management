@@ -3,12 +3,16 @@ package controllers;
 import application.Main;
 import io.github.palexdev.materialfx.controls.*;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
+import io.github.palexdev.materialfx.validation.Constraint;
+import io.github.palexdev.materialfx.validation.Severity;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.beans.binding.Bindings;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.css.PseudoClass;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.*;
@@ -22,9 +26,11 @@ import models.EODDataPoint;
 import models.Store;
 import models.User;
 import org.apache.commons.compress.compressors.lz77support.LZ77Compressor;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.controlsfx.control.PopOver;
+import utils.WorkbookProcessor;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -35,8 +41,12 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
+
+import static io.github.palexdev.materialfx.utils.StringUtils.containsAny;
 
 public class EODDataEntryPageController extends DateSelectController{
 
@@ -68,9 +78,15 @@ public class EODDataEntryPageController extends DateSelectController{
 	@FXML
 	private MFXTextField medschecksField,sohField,sofField,smsPatientsField;
 	@FXML
+	private Label cashValidationLabel,eftposValidationLabel,amexValidationLabel,googleSquareValidationLabel,chequeValidationLabel;
+	@FXML
+	private Label medschecksValidationLabel,sohValidationLabel,sofValidationLabel,smsPatientsValidationLabel;
+	@FXML
 	private TextArea notesField;
 	@FXML
 	private MFXButton saveButton;
+	@FXML
+	private MFXScrollPane popOverScroll;
 
 	private MFXTableColumn<EODDataPoint> dateCol;
 	private MFXTableColumn<EODDataPoint> cashAmountCol;
@@ -85,6 +101,9 @@ public class EODDataEntryPageController extends DateSelectController{
 	private MFXTableColumn<EODDataPoint> tillBalanceCol;
 	private MFXTableColumn<EODDataPoint> runningTillBalanceCol;
 	private MFXTableColumn<EODDataPoint> notesCol;
+
+	private static final String[] digits = "0 1 2 3 4 5 6 7 8 9".split(" ");
+	private static final PseudoClass INVALID_PSEUDO_CLASS = PseudoClass.getPseudoClass("invalid");
 
 	
 	 @FXML
@@ -103,12 +122,27 @@ public class EODDataEntryPageController extends DateSelectController{
 
 	@Override
 	public void fill() {
-	 	cashField.setLeadingIcon(new Label("$"));
-		eftposField.setLeadingIcon(new Label("$"));
-		amexField.setLeadingIcon(new Label("$"));
-		googleSquareField.setLeadingIcon(new Label("$"));
-		chequeField.setLeadingIcon(new Label("$"));
-		sohField.setLeadingIcon(new Label("$"));
+	 	//Fix slow scroll on popover scroll pane
+		final double SPEED = 0.002;
+		popOverScroll.getContent().setOnScroll(scrollEvent -> {
+			double deltaY = scrollEvent.getDeltaY() * SPEED;
+			popOverScroll.setVvalue(popOverScroll.getVvalue() - deltaY);
+		});
+
+		final String cashRegex = "[0-9]+\\.?[0-9]?[0-9]?";
+		final String cashError = "Please enter a valid dollar amount";
+		final String intRegex = "[0-9]*";
+		final String intError = "Please enter a valid number";
+		setupRegexValidation(cashField,cashValidationLabel,cashRegex,cashError,"$");
+		setupRegexValidation(eftposField,eftposValidationLabel,cashRegex,cashError,"$");
+		setupRegexValidation(amexField,amexValidationLabel,cashRegex,cashError,"$");
+		setupRegexValidation(googleSquareField,googleSquareValidationLabel,cashRegex,cashError,"$");
+		setupRegexValidation(chequeField,chequeValidationLabel,cashRegex,cashError,"$");
+		setupRegexValidation(medschecksField,medschecksValidationLabel,intRegex,intError,null);
+		setupRegexValidation(sohField,sohValidationLabel,cashRegex,cashError,"$");
+		setupRegexValidation(sofField,sofValidationLabel,intRegex,intError,null);
+		setupRegexValidation(smsPatientsField,smsPatientsValidationLabel,intRegex,intError,null);
+
 		eodDataTable.autosizeColumnsOnInitialization();
 
 		dateCol = new MFXTableColumn<>("DATE",true, Comparator.comparing(EODDataPoint::getDate));
@@ -161,6 +195,37 @@ public class EODDataEntryPageController extends DateSelectController{
 		eodDataTable.virtualFlowInitializedProperty().addListener((observable, oldValue, newValue) -> {addDoubleClickfunction();});
 	}
 
+	private void setupRegexValidation(MFXTextField field, Label validationLabel,String regex,String errorMessage,String measureUnit) {
+		Constraint digitConstraint = Constraint.Builder.build()
+				.setSeverity(Severity.ERROR)
+				.setMessage(errorMessage)
+				.setCondition(Bindings.createBooleanBinding(
+						() -> Pattern.matches(regex, field.getText()),
+						field.textProperty()
+				))
+				.get();
+		if (measureUnit != null)
+			field.setLeadingIcon(new Label(measureUnit));
+			field.getValidator().constraint(digitConstraint);
+			field.getValidator().validProperty().addListener((observable, oldValue, newValue) -> {
+				if (newValue) {
+					validationLabel.setVisible(false);
+					field.pseudoClassStateChanged(INVALID_PSEUDO_CLASS, false);
+				}
+			});
+
+			field.delegateFocusedProperty().addListener((observable, oldValue, newValue) -> {
+				if (oldValue && !newValue) {
+					List<Constraint> constraints = field.validate();
+					if (!constraints.isEmpty()) {
+						field.pseudoClassStateChanged(INVALID_PSEUDO_CLASS, true);
+						validationLabel.setText(constraints.get(0).getMessage());
+						validationLabel.setVisible(true);
+					}
+				}
+			});
+		}
+
 	private void addDoubleClickfunction(){
 		for (Map.Entry<Integer, MFXTableRow<EODDataPoint>> entry:eodDataTable.getCells().entrySet()) {
 			entry.getValue().setOnMouseClicked(event -> {
@@ -182,9 +247,11 @@ public class EODDataEntryPageController extends DateSelectController{
 		fileChooser.setTitle("Open Data entry File");
 		fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("XLS Files", "*.xls"));
 		File newfile = fileChooser.showOpenDialog(main.getStg());
-		FileInputStream file = new FileInputStream(newfile);
-		Workbook workbook = new XSSFWorkbook(file);
-		//TODO actually import eod files
+		if(newfile!=null){
+			FileInputStream file = new FileInputStream(newfile);
+			HSSFWorkbook workbook = new HSSFWorkbook(file);
+			WorkbookProcessor wbp = new WorkbookProcessor(workbook);
+		}
 	}
 
 	public void monthForward() {
