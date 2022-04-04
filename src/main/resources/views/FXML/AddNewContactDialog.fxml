@@ -9,19 +9,19 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.paint.Color?>
 
-<StackPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
+<StackPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.AddNewContactDialogController">
    <children>
       <VBox alignment="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" spacing="25.0" StackPane.alignment="CENTER">
          <children>
-            <MFXTextField borderGap="0.0" floatMode="ABOVE" floatingText="Add new Contact" maxWidth="1.7976931348623157E308" VBox.vgrow="ALWAYS">
+            <MFXTextField fx:id="newContactField" borderGap="0.0" floatMode="ABOVE" floatingText="Add new Contact" maxWidth="1.7976931348623157E308" VBox.vgrow="ALWAYS">
                <textFill>
                   <Color />
                </textFill>
             </MFXTextField>
             <HBox alignment="CENTER" spacing="30.0">
                <children>
-                  <MFXButton minWidth="115.0" style="-fx-background-color: #0F60FF;" text="Add new Contact" textFill="WHITE" HBox.hgrow="ALWAYS" />
-                  <MFXButton minWidth="115.0" style="-fx-border-color: #6e6b7b; -fx-border-radius: 5;" text="Cancel" textFill="#6e6b7b" HBox.hgrow="ALWAYS" />
+                  <MFXButton minWidth="115.0" onAction="#addContact" style="-fx-background-color: #0F60FF;" text="Add new Contact" textFill="WHITE" HBox.hgrow="ALWAYS" />
+                  <MFXButton minWidth="115.0" onAction="#closeDialog" style="-fx-border-color: #6e6b7b; -fx-border-radius: 5;" text="Cancel" textFill="#6e6b7b" HBox.hgrow="ALWAYS" />
                </children>
             </HBox>
          </children>

@@ -2,6 +2,7 @@ package controllers;
 
 import application.Main;
 import com.dlsc.gemsfx.DialogPane;
+import com.dlsc.gemsfx.DialogPane.Dialog;
 import components.ActionableFilterComboBox;
 import io.github.palexdev.materialfx.controls.*;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
@@ -83,6 +84,8 @@ public class AccountPaymentsPageController extends DateSelectController{
 	private MFXTableColumn<AccountPayment> accountAdjustedCol;
 	private MFXTableColumn<AccountPaymentContactDataPoint> contactNameCol;
 	private MFXTableColumn<AccountPaymentContactDataPoint> totalCol;
+
+	private Dialog<Object> dialog;
 	
 	 @FXML
 	private void initialize() throws IOException {}
@@ -114,9 +117,12 @@ public class AccountPaymentsPageController extends DateSelectController{
 		contacts.add("Test item 1");
 		contacts.add("Test item 2");
 		contacts.add("Test item 3");
+
 		MFXButton addContactButton = new MFXButton("Add new Contact");
 		addContactButton.setOnAction(actionEvent -> {
-			dialogPane.showNode(BLANK, "", createGenericNode());
+			dialog = new Dialog(dialogPane, BLANK);
+			dialog.setContent(createGenericNode());
+			dialogPane.showDialog(dialog);
 		});
 		ActionableFilterComboBox afx = new ActionableFilterComboBox(addContactButton);
 
@@ -177,6 +183,9 @@ public class AccountPaymentsPageController extends DateSelectController{
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		AddNewContactDialogController dialogController = loader.getController();
+		dialogController.setParent(dialog);
+		dialogController.setConnection(this.con);
 		return newContactDialog;
 	}
 
