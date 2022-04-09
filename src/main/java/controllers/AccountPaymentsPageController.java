@@ -7,7 +7,6 @@ import components.ActionableFilterComboBox;
 import io.github.palexdev.materialfx.controls.*;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
 import io.github.palexdev.materialfx.enums.FloatMode;
-import io.github.palexdev.materialfx.skins.MFXPopupSkin;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -17,18 +16,15 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
-import javafx.scene.control.Label;
-import javafx.scene.control.PopupControl;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
 import javafx.stage.FileChooser;
 import javafx.util.Duration;
 import models.AccountPayment;
 import models.AccountPaymentContactDataPoint;
+import models.EODDataPoint;
 import models.User;
 import org.controlsfx.control.PopOver;
 
@@ -36,6 +32,7 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.TextStyle;
 import java.util.Comparator;
@@ -84,7 +81,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 	private MFXTableColumn<AccountPayment> accountAdjustedCol;
 	private MFXTableColumn<AccountPaymentContactDataPoint> contactNameCol;
 	private MFXTableColumn<AccountPaymentContactDataPoint> totalCol;
-
+	private ActionableFilterComboBox afx;
 	private Dialog<Object> dialog;
 	
 	 @FXML
@@ -104,36 +101,23 @@ public class AccountPaymentsPageController extends DateSelectController{
 	@Override
 	public void fill() {
 
-		ObservableList<String> contacts = FXCollections.observableArrayList();
-		contacts.add("Test item 1");
-		contacts.add("Test item 2");
-		contacts.add("Test item 3");
-		contacts.add("Test item 1");
-		contacts.add("Test item 2");
-		contacts.add("Test item 3");
-		contacts.add("Test item 1");
-		contacts.add("Test item 2");
-		contacts.add("Test item 3");
-		contacts.add("Test item 1");
-		contacts.add("Test item 2");
-		contacts.add("Test item 3");
-
 		MFXButton addContactButton = new MFXButton("Add new Contact");
 		addContactButton.setOnAction(actionEvent -> {
 			dialog = new Dialog(dialogPane, BLANK);
-			dialog.setContent(createGenericNode());
+			dialog.setPadding(false);
+			dialog.setContent(createAddNewContactDialog());
 			dialogPane.showDialog(dialog);
 		});
-		ActionableFilterComboBox afx = new ActionableFilterComboBox(addContactButton);
+		afx = new ActionableFilterComboBox(addContactButton);
 
 		afx.setFloatMode(FloatMode.ABOVE);
 		afx.setFloatingText("Contact name");
 		afx.setFloatingTextGap(5);
 		afx.setBorderGap(0);
-		afx.setItems(contacts);
 		afx.setStyle("-mfx-gap: 5");
 		afx.setMaxWidth(Double.MAX_VALUE);
 		afx.setMinHeight(38.4);
+		fillContactList();
 		addPaymentPopover.getChildren().add(1,afx);
 
 		//Init Payments Table
@@ -175,7 +159,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 		accountTotalsTable.autosizeColumnsOnInitialization();
 	}
 
-	private Node createGenericNode() {
+	private Node createAddNewContactDialog() {
 		FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/AddNewContactDialog.fxml"));
 		StackPane newContactDialog = null;
 		try {
@@ -184,9 +168,27 @@ public class AccountPaymentsPageController extends DateSelectController{
 			e.printStackTrace();
 		}
 		AddNewContactDialogController dialogController = loader.getController();
-		dialogController.setParent(dialog);
+		dialogController.setParent(this);
 		dialogController.setConnection(this.con);
+		dialogController.setMain(this.main);
 		return newContactDialog;
+	}
+
+	public void fillContactList(){
+		ObservableList<String> contacts = FXCollections.observableArrayList();
+		String sql = null;
+		try {
+			sql = "SELECT * FROM accountPaymentContacts where storeID = ?";
+			preparedStatement = con.prepareStatement(sql);
+			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
+			resultSet = preparedStatement.executeQuery();
+			while (resultSet.next()) {
+				contacts.add(new AccountPaymentContactDataPoint(resultSet).getContactName());
+			}
+		} catch (SQLException throwables) {
+			throwables.printStackTrace();
+		}
+		afx.setItems(contacts);
 	}
 
 	public void importFiles(){
@@ -256,7 +258,9 @@ public class AccountPaymentsPageController extends DateSelectController{
 			monthSelectorField.requestFocus();
 		}
 	}
-
+	public Dialog<Object> getDialog() {
+		return dialog;
+	}
 
 	@Override
 	public void setDate(LocalDate date) {

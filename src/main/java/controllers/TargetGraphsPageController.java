@@ -14,6 +14,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.*;
 import models.User;
+import org.apache.logging.log4j.core.util.JsonUtils;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -39,7 +40,11 @@ public class TargetGraphsPageController extends Controller{
 	 @FXML
 	private void initialize() throws IOException {
 		 graphScrollPane.heightProperty().addListener((observable, oldValue, newValue) -> {
+			 System.out.println("WOW! IT CHANGED! FROM:" + oldValue + " to " + newValue);
 			 graphPane.setPrefHeight((Double) newValue);
+		 });
+		 graphPane.prefHeightProperty().addListener((observable, oldValue, newValue) -> {
+			 System.out.println("WOW! THE OUTER PANE CHANGED! FROM:" + oldValue + " to " + newValue);
 		 });
 	 }
 
@@ -123,7 +128,13 @@ public class TargetGraphsPageController extends Controller{
 
 		outerPane.addRow(contentRow);
 		graphScrollPane.setContent(outerPane);
+		System.out.println("havent adjusted height yet");
+		System.out.println("Scroll pane height: " + graphScrollPane.getHeight());
+		System.out.println("Outer Graph pane height: " + graphPane.getHeight());
 		graphPane.setPrefHeight(graphScrollPane.getHeight());
+		System.out.println("adjusted height");
+		System.out.println("Scroll pane height: " + graphScrollPane.getHeight());
+		System.out.println("Outer Graph pane height: " + graphPane.getHeight());
 
 		adjustHeight();
 
@@ -213,7 +224,13 @@ public class TargetGraphsPageController extends Controller{
 	}
 
 	public void adjustHeight(){
+		System.out.println("adjust height called");
+		System.out.println("Scroll pane height: " + graphScrollPane.getHeight());
+		System.out.println("Outer Graph pane height: " + graphPane.getHeight());
 	 	graphPane.setPrefHeight(graphScrollPane.getHeight());
+		System.out.println("adjust height finished");
+		System.out.println("Scroll pane height: " + graphScrollPane.getHeight());
+		System.out.println("Outer Graph pane height: " + graphPane.getHeight());
 	}
 
 

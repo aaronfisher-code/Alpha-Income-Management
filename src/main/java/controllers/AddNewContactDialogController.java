@@ -18,7 +18,7 @@ public class AddNewContactDialogController extends DateSelectController{
     PreparedStatement preparedStatement = null;
     ResultSet resultSet = null;
     private Main main;
-	private Dialog parent;
+	private AccountPaymentsPageController parent;
 
 	@FXML
 	private MFXTextField newContactField;
@@ -35,7 +35,7 @@ public class AddNewContactDialogController extends DateSelectController{
 		this.con = c;
 	}
 
-	public void setParent(Dialog d) {this.parent = d;}
+	public void setParent(AccountPaymentsPageController d) {this.parent = d;}
 
 	@Override
 	public void fill() {}
@@ -45,19 +45,21 @@ public class AddNewContactDialogController extends DateSelectController{
 
 	public void addContact(){
 	 	String contactName = newContactField.getText();
-		String sql = "INSERT INTO accountPaymentContacts(contactName) VALUES(?)";
+		String sql = "INSERT INTO accountPaymentContacts(contactName,storeID) VALUES(?,?)";
 		try {
 			preparedStatement = con.prepareStatement(sql);
 			preparedStatement.setString(1, contactName);
+			preparedStatement.setInt(2,main.getCurrentStore().getStoreID());
 			preparedStatement.executeUpdate();
 		} catch (SQLException ex) {
 			System.err.println(ex.getMessage());
 		}
-		parent.cancel();
+		parent.getDialog().cancel();
+		parent.fillContactList();
 	}
 
 	public void closeDialog(){
-		parent.cancel();
+		parent.getDialog().cancel();
 	}
 
 
