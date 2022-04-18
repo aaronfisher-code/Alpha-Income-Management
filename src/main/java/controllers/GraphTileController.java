@@ -2,7 +2,10 @@ package controllers;
 
 import application.Main;
 import components.CurvedFittedAreaChart;
+import io.github.palexdev.materialfx.controls.MFXTableColumn;
 import io.github.palexdev.materialfx.controls.MFXTableView;
+import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
+import io.github.palexdev.materialfx.filter.StringFilter;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.chart.LineChart;
@@ -14,12 +17,15 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import models.Store;
 import models.User;
 
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Comparator;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class GraphTileController extends Controller{
@@ -53,6 +59,7 @@ public class GraphTileController extends Controller{
 	@Override
 	public void fill() {
     	graphPane.getChildren().add(fillGraph("No of scripts", false));
+    	setTableView();
 	}
 
 	public StackPane fillGraph(String title, Boolean hideYAxis){
@@ -130,7 +137,6 @@ public class GraphTileController extends Controller{
 
 		StackPane stackpane = new StackPane();
 		stackpane.getChildren().addAll(charts);
-
 		return stackpane;
 	}
 
@@ -144,8 +150,37 @@ public class GraphTileController extends Controller{
 	}
 
 	public void setTableView(){
-    	graphPane.getChildren().remove(0);
-		MFXTableView dataTable = new MFXTableView();
+//    	graphPane.getChildren().remove(0);
+//		MFXTableView dataTable = new MFXTableView();
+//		dataTable.setMaxHeight(Double.MAX_VALUE);
+//		dataTable.setMaxWidth(Double.MAX_VALUE);
+//		dataTable.setFooterVisible(false);
+//		legend.setVisible(false);
+//		graphPane.getChildren().add(dataTable);
+//		dataTable.virtualFlowInitializedProperty().addListener((observable, oldValue, newValue) -> {
+//			System.out.println("test print");
+//		});
+		graphPane.getChildren().remove(0);
+		MFXTableView dataTable = new MFXTableView<Store>();
+		MFXTableColumn storeNameCol;
+		storeNameCol = new MFXTableColumn<>("STORE NAME",false, Comparator.comparing(Store::getStoreName));
+		storeNameCol.setRowCellFactory(store -> new MFXTableRowCell<>(Store::getStoreName));
+		dataTable.getTableColumns().addAll(storeNameCol);
+		dataTable.getFilters().addAll(
+				new StringFilter<>("Store Name",Store::getStoreName)
+		);
+
+		String sql = null;
+		sql = "SELECT * FROM stores";
+		try {
+			preparedStatement = con.prepareStatement(sql);
+			resultSet = preparedStatement.executeQuery();
+			while (resultSet.next()) {
+				dataTable.getItems().add(new Store(resultSet));
+			}
+		} catch (SQLException throwables) {
+			throwables.printStackTrace();
+		}
 		dataTable.setMaxHeight(Double.MAX_VALUE);
 		dataTable.setMaxWidth(Double.MAX_VALUE);
 		dataTable.setFooterVisible(false);
