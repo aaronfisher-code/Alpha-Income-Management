@@ -5,6 +5,8 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 
 public class AccountPaymentContactDataPoint {
+
+
 	private int contactID;
 	private String contactName;
 	private int storeID;
@@ -20,6 +22,10 @@ public class AccountPaymentContactDataPoint {
 		}
 	}
 
+	public int getContactID() {return contactID;}
+
+	public void setContactID(int contactID) {this.contactID = contactID;}
+
 	public String getContactName() {return contactName;}
 
 	public void setContactName(String contactName) {this.contactName = contactName;}
@@ -28,4 +34,8 @@ public class AccountPaymentContactDataPoint {
 
 	public void setTotalValue(double totalValue) {this.totalValue = totalValue;}
 
+	@Override
+	public String toString() {
+		return contactName;
+	}
 }

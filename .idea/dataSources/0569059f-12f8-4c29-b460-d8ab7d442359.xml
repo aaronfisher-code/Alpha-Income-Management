@@ -4663,70 +4663,71 @@ sys|schema||mysql.sys|localhost|TRIGGER|G</Grants>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <index id="1029" parent="364" name="contactName_UNIQUE">
-      <ColNames>contactName</ColNames>
-      <Type>btree</Type>
-      <Unique>1</Unique>
-    </index>
-    <index id="1030" parent="364" name="storeID_idx">
+    <index id="1029" parent="364" name="storeID_idx">
       <ColNames>storeID</ColNames>
       <Type>btree</Type>
     </index>
-    <key id="1031" parent="364" name="PRIMARY">
+    <key id="1030" parent="364" name="PRIMARY">
       <ColNames>idaccountPaymentContacts</ColNames>
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
     </key>
-    <key id="1032" parent="364" name="idaccountPaymentContacts_UNIQUE">
+    <key id="1031" parent="364" name="idaccountPaymentContacts_UNIQUE">
       <ColNames>idaccountPaymentContacts</ColNames>
       <UnderlyingIndexName>idaccountPaymentContacts_UNIQUE</UnderlyingIndexName>
     </key>
-    <key id="1033" parent="364" name="contactName_UNIQUE">
-      <ColNames>contactName</ColNames>
-      <UnderlyingIndexName>contactName_UNIQUE</UnderlyingIndexName>
-    </key>
-    <column id="1034" parent="365" name="idaccountPayments">
+    <column id="1032" parent="365" name="idaccountPayments">
       <DataType>int(11)|0s</DataType>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <SequenceIdentity>null</SequenceIdentity>
     </column>
-    <column id="1035" parent="365" name="contactID">
+    <column id="1033" parent="365" name="contactID">
       <DataType>varchar(45)|0s</DataType>
       <NotNull>1</NotNull>
       <Position>2</Position>
     </column>
-    <column id="1036" parent="365" name="storeID">
+    <column id="1034" parent="365" name="storeID">
       <DataType>int(11)|0s</DataType>
       <NotNull>1</NotNull>
       <Position>3</Position>
     </column>
-    <column id="1037" parent="365" name="invoiceDate">
-      <DataType>date|0s</DataType>
+    <column id="1035" parent="365" name="invoiceNo">
+      <DataType>varchar(45)|0s</DataType>
       <NotNull>1</NotNull>
       <Position>4</Position>
     </column>
-    <column id="1038" parent="365" name="dueDate">
+    <column id="1036" parent="365" name="invoiceDate">
       <DataType>date|0s</DataType>
       <NotNull>1</NotNull>
       <Position>5</Position>
     </column>
-    <column id="1039" parent="365" name="description">
-      <DataType>varchar(255)|0s</DataType>
+    <column id="1037" parent="365" name="dueDate">
+      <DataType>date|0s</DataType>
       <NotNull>1</NotNull>
       <Position>6</Position>
     </column>
-    <column id="1040" parent="365" name="unitAmount">
-      <DataType>decimal(15,2 digit)|0s</DataType>
+    <column id="1038" parent="365" name="description">
+      <DataType>varchar(255)|0s</DataType>
       <NotNull>1</NotNull>
       <Position>7</Position>
     </column>
-    <column id="1041" parent="365" name="accountAdjusted">
-      <DataType>tinyint(4)|0s</DataType>
+    <column id="1039" parent="365" name="unitAmount">
+      <DataType>decimal(15,2 digit)|0s</DataType>
+      <NotNull>1</NotNull>
       <Position>8</Position>
     </column>
-    <index id="1042" parent="365" name="idaccountPayments_UNIQUE">
+    <column id="1040" parent="365" name="accountAdjusted">
+      <DataType>tinyint(4)|0s</DataType>
+      <Position>9</Position>
+    </column>
+    <index id="1041" parent="365" name="idaccountPayments_UNIQUE">
       <ColNames>idaccountPayments</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="1042" parent="365" name="invoiceNo_UNIQUE">
+      <ColNames>invoiceNo</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
@@ -4739,299 +4740,303 @@ sys|schema||mysql.sys|localhost|TRIGGER|G</Grants>
       <ColNames>idaccountPayments</ColNames>
       <UnderlyingIndexName>idaccountPayments_UNIQUE</UnderlyingIndexName>
     </key>
-    <column id="1045" parent="366" name="username">
+    <key id="1045" parent="365" name="invoiceNo_UNIQUE">
+      <ColNames>invoiceNo</ColNames>
+      <UnderlyingIndexName>invoiceNo_UNIQUE</UnderlyingIndexName>
+    </key>
+    <column id="1046" parent="366" name="username">
       <DataType>varchar(25)|0s</DataType>
       <NotNull>1</NotNull>
       <Position>1</Position>
     </column>
-    <column id="1046" parent="366" name="password">
+    <column id="1047" parent="366" name="password">
       <DataType>varchar(25)|0s</DataType>
       <Position>2</Position>
     </column>
-    <column id="1047" parent="366" name="first_name">
+    <column id="1048" parent="366" name="first_name">
       <DataType>varchar(8)|0s</DataType>
       <Position>3</Position>
     </column>
-    <column id="1048" parent="366" name="last_name">
+    <column id="1049" parent="366" name="last_name">
       <DataType>varchar(11)|0s</DataType>
       <Position>4</Position>
     </column>
-    <column id="1049" parent="366" name="role">
+    <column id="1050" parent="366" name="role">
       <DataType>varchar(18)|0s</DataType>
       <Position>5</Position>
     </column>
-    <column id="1050" parent="366" name="profileBG">
+    <column id="1051" parent="366" name="profileBG">
       <DataType>varchar(8)|0s</DataType>
       <Position>6</Position>
     </column>
-    <column id="1051" parent="366" name="profileText">
+    <column id="1052" parent="366" name="profileText">
       <DataType>varchar(10)|0s</DataType>
       <Position>7</Position>
     </column>
-    <column id="1052" parent="366" name="inactiveDate">
+    <column id="1053" parent="366" name="inactiveDate">
       <DataType>date|0s</DataType>
       <Position>8</Position>
     </column>
-    <index id="1053" parent="366" name="username_UNIQUE">
+    <index id="1054" parent="366" name="username_UNIQUE">
       <ColNames>username</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <key id="1054" parent="366" name="PRIMARY">
+    <key id="1055" parent="366" name="PRIMARY">
       <ColNames>username</ColNames>
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
     </key>
-    <key id="1055" parent="366" name="username_UNIQUE">
+    <key id="1056" parent="366" name="username_UNIQUE">
       <ColNames>username</ColNames>
       <UnderlyingIndexName>username_UNIQUE</UnderlyingIndexName>
     </key>
-    <column id="1056" parent="367" name="employmentsID">
+    <column id="1057" parent="367" name="employmentsID">
       <DataType>int(11)|0s</DataType>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <SequenceIdentity>null</SequenceIdentity>
     </column>
-    <column id="1057" parent="367" name="username">
+    <column id="1058" parent="367" name="username">
       <DataType>varchar(25)|0s</DataType>
       <NotNull>1</NotNull>
       <Position>2</Position>
     </column>
-    <column id="1058" parent="367" name="storeID">
+    <column id="1059" parent="367" name="storeID">
       <DataType>int(11)|0s</DataType>
       <NotNull>1</NotNull>
       <Position>3</Position>
     </column>
-    <foreign-key id="1059" parent="367" name="username_fk">
+    <foreign-key id="1060" parent="367" name="username_fk">
       <ColNames>username</ColNames>
       <OnDelete>cascade</OnDelete>
       <RefColNames>username</RefColNames>
       <RefTableName>accounts</RefTableName>
     </foreign-key>
-    <foreign-key id="1060" parent="367" name="storeID_fk">
+    <foreign-key id="1061" parent="367" name="storeID_fk">
       <ColNames>storeID</ColNames>
       <OnDelete>cascade</OnDelete>
       <RefColNames>storeID</RefColNames>
       <RefTableName>stores</RefTableName>
     </foreign-key>
-    <index id="1061" parent="367" name="employmentsID_UNIQUE">
+    <index id="1062" parent="367" name="employmentsID_UNIQUE">
       <ColNames>employmentsID</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <index id="1062" parent="367" name="username_idx">
+    <index id="1063" parent="367" name="username_idx">
       <ColNames>username</ColNames>
       <Type>btree</Type>
     </index>
-    <index id="1063" parent="367" name="storeID_fk_idx">
+    <index id="1064" parent="367" name="storeID_fk_idx">
       <ColNames>storeID</ColNames>
       <Type>btree</Type>
     </index>
-    <key id="1064" parent="367" name="PRIMARY">
+    <key id="1065" parent="367" name="PRIMARY">
       <ColNames>employmentsID</ColNames>
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
     </key>
-    <key id="1065" parent="367" name="employmentsID_UNIQUE">
+    <key id="1066" parent="367" name="employmentsID_UNIQUE">
       <ColNames>employmentsID</ColNames>
       <UnderlyingIndexName>employmentsID_UNIQUE</UnderlyingIndexName>
     </key>
-    <column id="1066" parent="368" name="date">
+    <column id="1067" parent="368" name="date">
       <DataType>date|0s</DataType>
       <NotNull>1</NotNull>
       <Position>1</Position>
     </column>
-    <column id="1067" parent="368" name="storeID">
+    <column id="1068" parent="368" name="storeID">
       <DataType>int(11)|0s</DataType>
       <NotNull>1</NotNull>
       <Position>2</Position>
     </column>
-    <column id="1068" parent="368" name="cash">
+    <column id="1069" parent="368" name="cash">
       <DataType>decimal(15,2 digit)|0s</DataType>
       <Position>3</Position>
     </column>
-    <column id="1069" parent="368" name="eftpos">
+    <column id="1070" parent="368" name="eftpos">
       <DataType>decimal(15,2 digit)|0s</DataType>
       <Position>4</Position>
     </column>
-    <column id="1070" parent="368" name="amex">
+    <column id="1071" parent="368" name="amex">
       <DataType>decimal(15,2 digit)|0s</DataType>
       <Position>5</Position>
     </column>
-    <column id="1071" parent="368" name="googleSquare">
+    <column id="1072" parent="368" name="googleSquare">
       <DataType>decimal(15,2 digit)|0s</DataType>
       <Position>6</Position>
     </column>
-    <column id="1072" parent="368" name="cheque">
+    <column id="1073" parent="368" name="cheque">
       <DataType>decimal(15,2 digit)|0s</DataType>
       <Position>7</Position>
     </column>
-    <column id="1073" parent="368" name="medschecks">
+    <column id="1074" parent="368" name="medschecks">
       <DataType>int(11)|0s</DataType>
       <Position>8</Position>
     </column>
-    <column id="1074" parent="368" name="scriptsOnFile">
+    <column id="1075" parent="368" name="scriptsOnFile">
       <DataType>int(11)|0s</DataType>
       <Position>9</Position>
     </column>
-    <column id="1075" parent="368" name="stockOnHand">
+    <column id="1076" parent="368" name="stockOnHand">
       <DataType>decimal(15,2 digit)|0s</DataType>
       <Position>10</Position>
     </column>
-    <column id="1076" parent="368" name="smsPatients">
+    <column id="1077" parent="368" name="smsPatients">
       <DataType>int(11)|0s</DataType>
       <Position>11</Position>
     </column>
-    <column id="1077" parent="368" name="notes">
+    <column id="1078" parent="368" name="notes">
       <DataType>varchar(255)|0s</DataType>
       <Position>12</Position>
     </column>
-    <key id="1078" parent="368" name="PRIMARY">
+    <key id="1079" parent="368" name="PRIMARY">
       <ColNames>date
 storeID</ColNames>
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
     </key>
-    <column id="1079" parent="369" name="leaveID">
+    <column id="1080" parent="369" name="leaveID">
       <DataType>tinyint(4)|0s</DataType>
       <Position>1</Position>
     </column>
-    <column id="1080" parent="369" name="leaveStartDate">
+    <column id="1081" parent="369" name="leaveStartDate">
       <DataType>varchar(10)|0s</DataType>
       <Position>2</Position>
     </column>
-    <column id="1081" parent="369" name="leaveEndDate">
+    <column id="1082" parent="369" name="leaveEndDate">
       <DataType>varchar(10)|0s</DataType>
       <Position>3</Position>
     </column>
-    <column id="1082" parent="369" name="username">
+    <column id="1083" parent="369" name="username">
       <DataType>tinyint(4)|0s</DataType>
       <Position>4</Position>
     </column>
-    <column id="1083" parent="370" name="shift_id">
+    <column id="1084" parent="370" name="shift_id">
       <DataType>smallint(6)|0s</DataType>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <SequenceIdentity>null</SequenceIdentity>
     </column>
-    <column id="1084" parent="370" name="username">
+    <column id="1085" parent="370" name="username">
       <DataType>varchar(25)|0s</DataType>
       <NotNull>1</NotNull>
       <Position>2</Position>
     </column>
-    <column id="1085" parent="370" name="shiftStartTime">
+    <column id="1086" parent="370" name="shiftStartTime">
       <DataType>varchar(5)|0s</DataType>
       <Position>3</Position>
     </column>
-    <column id="1086" parent="370" name="shiftEndTime">
+    <column id="1087" parent="370" name="shiftEndTime">
       <DataType>varchar(5)|0s</DataType>
       <Position>4</Position>
     </column>
-    <column id="1087" parent="370" name="shiftStartDate">
+    <column id="1088" parent="370" name="shiftStartDate">
       <DataType>varchar(10)|0s</DataType>
       <Position>5</Position>
     </column>
-    <column id="1088" parent="370" name="shiftEndDate">
+    <column id="1089" parent="370" name="shiftEndDate">
       <DataType>varchar(10)|0s</DataType>
       <Position>6</Position>
     </column>
-    <column id="1089" parent="370" name="thirtyMinBreaks">
+    <column id="1090" parent="370" name="thirtyMinBreaks">
       <DataType>tinyint(4)|0s</DataType>
       <Position>7</Position>
     </column>
-    <column id="1090" parent="370" name="tenMinBreaks">
+    <column id="1091" parent="370" name="tenMinBreaks">
       <DataType>tinyint(4)|0s</DataType>
       <Position>8</Position>
     </column>
-    <column id="1091" parent="370" name="repeating">
+    <column id="1092" parent="370" name="repeating">
       <DataType>tinyint(4)|0s</DataType>
       <Position>9</Position>
     </column>
-    <column id="1092" parent="370" name="daysPerRepeat">
+    <column id="1093" parent="370" name="daysPerRepeat">
       <DataType>tinyint(4)|0s</DataType>
       <Position>10</Position>
     </column>
-    <column id="1093" parent="370" name="shiftType">
+    <column id="1094" parent="370" name="shiftType">
       <DataType>varchar(45)|0s</DataType>
       <Position>11</Position>
     </column>
-    <foreign-key id="1094" parent="370" name="username">
+    <foreign-key id="1095" parent="370" name="username">
       <ColNames>username</ColNames>
       <RefColNames>username</RefColNames>
       <RefTableName>accounts</RefTableName>
     </foreign-key>
-    <index id="1095" parent="370" name="shift_id_UNIQUE">
+    <index id="1096" parent="370" name="shift_id_UNIQUE">
       <ColNames>shift_id</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <index id="1096" parent="370" name="username_idx">
+    <index id="1097" parent="370" name="username_idx">
       <ColNames>username</ColNames>
       <Type>btree</Type>
     </index>
-    <key id="1097" parent="370" name="PRIMARY">
+    <key id="1098" parent="370" name="PRIMARY">
       <ColNames>shift_id</ColNames>
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
     </key>
-    <key id="1098" parent="370" name="shift_id_UNIQUE">
+    <key id="1099" parent="370" name="shift_id_UNIQUE">
       <ColNames>shift_id</ColNames>
       <UnderlyingIndexName>shift_id_UNIQUE</UnderlyingIndexName>
     </key>
-    <column id="1099" parent="371" name="eventID">
+    <column id="1100" parent="371" name="eventID">
       <DataType>tinyint(4)|0s</DataType>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <SequenceIdentity>null</SequenceIdentity>
     </column>
-    <column id="1100" parent="371" name="eventDate">
+    <column id="1101" parent="371" name="eventDate">
       <DataType>varchar(10)|0s</DataType>
       <Position>2</Position>
     </column>
-    <column id="1101" parent="371" name="storeStatus">
+    <column id="1102" parent="371" name="storeStatus">
       <DataType>varchar(14)|0s</DataType>
       <Position>3</Position>
     </column>
-    <column id="1102" parent="371" name="note">
+    <column id="1103" parent="371" name="note">
       <DataType>varchar(15)|0s</DataType>
       <Position>4</Position>
     </column>
-    <index id="1103" parent="371" name="eventID_UNIQUE">
+    <index id="1104" parent="371" name="eventID_UNIQUE">
       <ColNames>eventID</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <key id="1104" parent="371" name="PRIMARY">
+    <key id="1105" parent="371" name="PRIMARY">
       <ColNames>eventID</ColNames>
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
     </key>
-    <key id="1105" parent="371" name="eventID_UNIQUE">
+    <key id="1106" parent="371" name="eventID_UNIQUE">
       <ColNames>eventID</ColNames>
       <UnderlyingIndexName>eventID_UNIQUE</UnderlyingIndexName>
     </key>
-    <column id="1106" parent="372" name="storeID">
+    <column id="1107" parent="372" name="storeID">
       <DataType>int(11)|0s</DataType>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <SequenceIdentity>null</SequenceIdentity>
     </column>
-    <column id="1107" parent="372" name="storeName">
+    <column id="1108" parent="372" name="storeName">
       <DataType>varchar(45)|0s</DataType>
       <NotNull>1</NotNull>
       <Position>2</Position>
     </column>
-    <index id="1108" parent="372" name="storeID_UNIQUE">
+    <index id="1109" parent="372" name="storeID_UNIQUE">
       <ColNames>storeID</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <key id="1109" parent="372" name="PRIMARY">
+    <key id="1110" parent="372" name="PRIMARY">
       <ColNames>storeID</ColNames>
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
     </key>
-    <key id="1110" parent="372" name="storeID_UNIQUE">
+    <key id="1111" parent="372" name="storeID_UNIQUE">
       <ColNames>storeID</ColNames>
       <UnderlyingIndexName>storeID_UNIQUE</UnderlyingIndexName>
     </key>

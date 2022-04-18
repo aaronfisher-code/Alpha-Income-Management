@@ -16,6 +16,8 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -29,10 +31,7 @@ import models.User;
 import org.controlsfx.control.PopOver;
 
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.time.LocalDate;
 import java.time.format.TextStyle;
 import java.util.Comparator;
@@ -71,6 +70,12 @@ public class AccountPaymentsPageController extends DateSelectController{
 	private VBox dataEntryRowPane;
 	@FXML
 	private MFXFilterComboBox contactNameField;
+	@FXML
+	private MFXDatePicker invoiceDateField,dueDateField;
+	@FXML
+	private MFXTextField invoiceNoField,descriptionField,amountField;
+	@FXML
+	private MFXCheckbox accountAdjustedBox;
 
 	private MFXTableColumn<AccountPayment> contactCol;
 	private MFXTableColumn<AccountPayment> invNumberCol;
@@ -100,6 +105,8 @@ public class AccountPaymentsPageController extends DateSelectController{
 
 	@Override
 	public void fill() {
+		accountTotalsTable.autosizeColumnsOnInitialization();
+
 
 		MFXButton addContactButton = new MFXButton("Add new Contact");
 		addContactButton.setOnAction(actionEvent -> {
@@ -117,7 +124,6 @@ public class AccountPaymentsPageController extends DateSelectController{
 		afx.setStyle("-mfx-gap: 5");
 		afx.setMaxWidth(Double.MAX_VALUE);
 		afx.setMinHeight(38.4);
-		fillContactList();
 		addPaymentPopover.getChildren().add(1,afx);
 
 		//Init Payments Table
@@ -155,8 +161,10 @@ public class AccountPaymentsPageController extends DateSelectController{
 				contactNameCol,
 				totalCol
 		);
+		fillTable();
+		fillContactList();
 		setDate(LocalDate.now());
-		accountTotalsTable.autosizeColumnsOnInitialization();
+
 	}
 
 	private Node createAddNewContactDialog() {
@@ -175,7 +183,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 	}
 
 	public void fillContactList(){
-		ObservableList<String> contacts = FXCollections.observableArrayList();
+		ObservableList<AccountPaymentContactDataPoint> contacts = FXCollections.observableArrayList();
 		String sql = null;
 		try {
 			sql = "SELECT * FROM accountPaymentContacts where storeID = ?";
@@ -183,12 +191,31 @@ public class AccountPaymentsPageController extends DateSelectController{
 			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
 			resultSet = preparedStatement.executeQuery();
 			while (resultSet.next()) {
-				contacts.add(new AccountPaymentContactDataPoint(resultSet).getContactName());
+				contacts.add(new AccountPaymentContactDataPoint(resultSet));
 			}
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
 		}
 		afx.setItems(contacts);
+	}
+
+	public void fillTable(){
+		ObservableList<AccountPayment> payments = FXCollections.observableArrayList();
+		String sql = null;
+		try {
+			sql = "SELECT * FROM accountPayments JOIN accountPaymentContacts a on a.idaccountPaymentContacts = accountPayments.contactID WHERE accountPayments.storeID = ?";
+			preparedStatement = con.prepareStatement(sql);
+			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
+			resultSet = preparedStatement.executeQuery();
+			while (resultSet.next()) {
+				payments.add(new AccountPayment(resultSet));
+				System.out.println("New payment seen");
+			}
+		} catch (SQLException throwables) {
+			throwables.printStackTrace();
+		}
+		accountPaymentTable.setItems(payments);
+
 	}
 
 	public void importFiles(){
@@ -270,5 +297,40 @@ public class AccountPaymentsPageController extends DateSelectController{
 		fieldText += main.getCurrentDate().getYear();
 		monthSelectorField.setText(fieldText);
 //		fillTable();
+	}
+
+	public void addPayment(){
+		AccountPaymentContactDataPoint contact = (AccountPaymentContactDataPoint) afx.getSelectedItem();
+		String contactName = contact.getContactName();
+		String invoiceNo = invoiceNoField.getText();
+		LocalDate invoiceDate = invoiceDateField.getValue();
+		LocalDate dueDate = dueDateField.getValue();
+		String description = descriptionField.getText();
+		Double unitAmount = Double.valueOf(amountField.getText());
+
+		if(contactName.isEmpty() || contactName.isBlank()){
+			//TODO: proper verification here
+		}else{
+			String sql = "INSERT INTO accountPayments(contactID,storeID,invoiceNo,invoiceDate,dueDate,description,unitAmount,accountAdjusted) VALUES(?,?,?,?,?,?,?,?)";
+			try {
+				preparedStatement = con.prepareStatement(sql);
+				preparedStatement.setInt(1, contact.getContactID());
+				preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
+				preparedStatement.setString(3, invoiceNo);
+				preparedStatement.setDate(4, Date.valueOf(invoiceDate));
+				preparedStatement.setDate(5, Date.valueOf(dueDate));
+				preparedStatement.setString(6, description);
+				preparedStatement.setDouble(7, unitAmount);
+				preparedStatement.setBoolean(8, accountAdjustedBox.isSelected());
+
+				preparedStatement.executeUpdate();
+			} catch (SQLException ex) {
+				System.err.println(ex.getMessage());
+			}
+			closePopover();
+			fillTable();
+			dialogPane.showInformation("Success","Payment was succesfully added");
+		}
+
 	}
 }

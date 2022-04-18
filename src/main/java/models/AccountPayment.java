@@ -1,6 +1,7 @@
 package models;
 
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDate;
 
 public class AccountPayment {
@@ -16,6 +17,18 @@ public class AccountPayment {
 	private boolean accountAdjusted;
 
 	public AccountPayment(ResultSet resultSet) {
+		try {
+			this.contactName = resultSet.getString("contactName");
+			this.invoiceNumber = resultSet.getString("invoiceNo");
+			this.invDate = resultSet.getDate("invoiceDate").toLocalDate();
+			this.dueDate = resultSet.getDate("dueDate").toLocalDate();
+			this.description = resultSet.getString("description");
+			this.unitAmount = resultSet.getDouble("unitAmount");
+			this.accountAdjusted = resultSet.getBoolean("accountAdjusted");
+			System.out.println(this);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public int getAccountPaymentID() {return accountPaymentID;}
