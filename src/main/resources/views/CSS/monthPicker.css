@@ -1,23 +1,13 @@
 .mfx-rectangle-toggle-node{
     -fx-background-color: TRANSPARENT;
-    -fx-text-fill: WHITE;
+    -fx-text-fill: #6e6b7b;
+    -fx-font-family: "Montserrat";
 }
 
 .mfx-rectangle-toggle-node:selected{
     -fx-background-color: #D3D3D3;
     -fx-text-fill: WHITE;
-}
-
-.mfx-rectangle-toggle-node .mfx-text-field{
-    -fx-text-fill: WHITE;
-}
-
-.mfx-rectangle-toggle-node:selected .mfx-text-field{
-    -fx-text-fill: WHITE;
-}
-
-.mfx-text-field{
-    -fx-text-fill: WHITE;
+    -fx-font-family: "Montserrat SemiBold";
 }
 
 

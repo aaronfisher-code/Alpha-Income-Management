@@ -161,10 +161,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 				contactNameCol,
 				totalCol
 		);
-		fillTable();
-		fillContactList();
 		setDate(LocalDate.now());
-
 	}
 
 	private Node createAddNewContactDialog() {
@@ -209,7 +206,6 @@ public class AccountPaymentsPageController extends DateSelectController{
 			resultSet = preparedStatement.executeQuery();
 			while (resultSet.next()) {
 				payments.add(new AccountPayment(resultSet));
-				System.out.println("New payment seen");
 			}
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
@@ -296,7 +292,8 @@ public class AccountPaymentsPageController extends DateSelectController{
 		fieldText += ", ";
 		fieldText += main.getCurrentDate().getYear();
 		monthSelectorField.setText(fieldText);
-//		fillTable();
+		fillTable();
+		fillContactList();
 	}
 
 	public void addPayment(){

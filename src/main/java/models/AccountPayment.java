@@ -25,7 +25,6 @@ public class AccountPayment {
 			this.description = resultSet.getString("description");
 			this.unitAmount = resultSet.getDouble("unitAmount");
 			this.accountAdjusted = resultSet.getBoolean("accountAdjusted");
-			System.out.println(this);
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}

@@ -47,7 +47,6 @@ Popup
 .mfx-date-picker .date-picker-popup .content {
     -fx-background-color: white;
     -fx-background-radius: 10;
-    -fx-border-color: #0F60FF;
     -fx-border-radius: 10;
     -fx-padding: 15;
     -fx-min-height: 300;
