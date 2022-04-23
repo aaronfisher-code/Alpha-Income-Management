@@ -184,7 +184,7 @@
       </BorderPane>
       <JFXNodesList fx:id="addList" alignment="CENTER" nodeOrientation="LEFT_TO_RIGHT" spacing="10.0" StackPane.alignment="BOTTOM_RIGHT">
          <children>
-            <JFXButton fx:id="addPaymentPopup" alignment="CENTER" buttonType="RAISED" contentDisplay="CENTER" graphicTextGap="0.0" onAction="#addNewPayment" scaleShape="false" styleClass="animated-option-button" stylesheets="@../CSS/application.css" text=" ">
+            <JFXButton fx:id="addPaymentPopup" alignment="CENTER" buttonType="RAISED" contentDisplay="CENTER" graphicTextGap="0.0" onAction="#openPopover" scaleShape="false" styleClass="animated-option-button" stylesheets="@../CSS/application.css" text=" ">
                <font>
                   <Font name="System Bold" size="8.0" />
                </font>

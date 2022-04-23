@@ -16,8 +16,6 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
-import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonType;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -36,6 +34,7 @@ import java.time.LocalDate;
 import java.time.format.TextStyle;
 import java.util.Comparator;
 import java.util.Locale;
+import java.util.Map;
 
 import static com.dlsc.gemsfx.DialogPane.Type.*;
 
@@ -151,6 +150,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 				accountAdjustedCol
 		);
 		accountPaymentTable.autosizeColumnsOnInitialization();
+		accountPaymentTable.virtualFlowInitializedProperty().addListener((observable, oldValue, newValue) -> {addDoubleClickfunction();});
 
 		//Init Totals Table
 		contactNameCol = new MFXTableColumn<>("CONTACT",false, Comparator.comparing(AccountPaymentContactDataPoint::getContactName));
@@ -162,6 +162,22 @@ public class AccountPaymentsPageController extends DateSelectController{
 				totalCol
 		);
 		setDate(LocalDate.now());
+	}
+
+	private void addDoubleClickfunction(){
+		for (Map.Entry<Integer, MFXTableRow<AccountPayment>> entry:accountPaymentTable.getCells().entrySet()) {
+			entry.getValue().setOnMouseClicked(event -> {
+				if(event.getClickCount()==2) openPopover(entry.getValue().getData());
+			});
+			for (MFXTableRowCell<AccountPayment, ?> cell:entry.getValue().getCells()) {
+				cell.setOnMouseClicked(event -> {
+					if(event.getClickCount()==2){
+						MFXTableRow<AccountPayment> parentRow = (MFXTableRow<AccountPayment>) cell.getParent();
+						openPopover(parentRow.getData());
+					}
+				});
+			}
+		}
 	}
 
 	private Node createAddNewContactDialog() {
@@ -211,6 +227,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 			throwables.printStackTrace();
 		}
 		accountPaymentTable.setItems(payments);
+		addDoubleClickfunction();
 
 	}
 
@@ -221,7 +238,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 		fileChooser.showOpenDialog(main.getStg());
 	}
 
-	public void addNewPayment(){
+	public void openPopover(){
 		contentDarken.setVisible(true);
 		changeSize(addPaymentPopover,0);
 	}
@@ -229,6 +246,11 @@ public class AccountPaymentsPageController extends DateSelectController{
 	public void closePopover(){
 		changeSize(addPaymentPopover,375);
 		contentDarken.setVisible(false);
+	}
+
+	public void openPopover(AccountPayment ap){
+		contentDarken.setVisible(true);
+		changeSize(addPaymentPopover,0);
 	}
 
 	public void changeSize(final VBox pane, double width) {
