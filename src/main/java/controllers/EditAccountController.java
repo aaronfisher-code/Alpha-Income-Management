@@ -450,7 +450,7 @@ public class EditAccountController extends Controller{
 	public void addStore(){
 		String name = storeNameField.getText();
 		if(name.isEmpty() || name.isBlank()){
-
+			//TODO name field verification
 		}else{
 			String sql = "INSERT INTO stores(storeName) VALUES(?)";
 			try {

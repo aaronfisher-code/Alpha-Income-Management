@@ -16,16 +16,15 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.util.Duration;
-import models.AccountPayment;
-import models.AccountPaymentContactDataPoint;
-import models.EODDataPoint;
-import models.User;
+import models.*;
 import org.controlsfx.control.PopOver;
 
 import java.io.IOException;
@@ -251,6 +250,13 @@ public class AccountPaymentsPageController extends DateSelectController{
 	public void openPopover(AccountPayment ap){
 		contentDarken.setVisible(true);
 		changeSize(addPaymentPopover,0);
+		afx.setValue();
+		invoiceNoField.setText(ap.getInvoiceNumber());
+		invoiceDateField.setValue(ap.getInvDate());
+		dueDateField.setValue(ap.getDueDate());
+		descriptionField.setText(ap.getDescription());
+		amountField.setText(String.valueOf(ap.getUnitAmount()));
+		accountAdjustedBox.setSelected(ap.isAccountAdjusted());
 	}
 
 	public void changeSize(final VBox pane, double width) {
@@ -331,6 +337,41 @@ public class AccountPaymentsPageController extends DateSelectController{
 			//TODO: proper verification here
 		}else{
 			String sql = "INSERT INTO accountPayments(contactID,storeID,invoiceNo,invoiceDate,dueDate,description,unitAmount,accountAdjusted) VALUES(?,?,?,?,?,?,?,?)";
+			try {
+				preparedStatement = con.prepareStatement(sql);
+				preparedStatement.setInt(1, contact.getContactID());
+				preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
+				preparedStatement.setString(3, invoiceNo);
+				preparedStatement.setDate(4, Date.valueOf(invoiceDate));
+				preparedStatement.setDate(5, Date.valueOf(dueDate));
+				preparedStatement.setString(6, description);
+				preparedStatement.setDouble(7, unitAmount);
+				preparedStatement.setBoolean(8, accountAdjustedBox.isSelected());
+
+				preparedStatement.executeUpdate();
+			} catch (SQLException ex) {
+				System.err.println(ex.getMessage());
+			}
+			closePopover();
+			fillTable();
+			dialogPane.showInformation("Success","Payment was succesfully added");
+		}
+
+	}
+
+	public void editPayment(AccountPayment accountPayment){
+		AccountPaymentContactDataPoint contact = (AccountPaymentContactDataPoint) afx.getSelectedItem();
+		String contactName = contact.getContactName();
+		String invoiceNo = invoiceNoField.getText();
+		LocalDate invoiceDate = invoiceDateField.getValue();
+		LocalDate dueDate = dueDateField.getValue();
+		String description = descriptionField.getText();
+		Double unitAmount = Double.valueOf(amountField.getText());
+
+		if(contactName.isEmpty() || contactName.isBlank()){
+			//TODO: proper verification here
+		}else{
+			String sql = "UPDATE accountPayments SET contactID = ?,storeID = ?,invoiceNo = ?, invoiceDate = ?, dueDate = ?,description = ?,unitAmount = ?,accountAdjusted = ? WHERE idaccountPayments = ?";
 			try {
 				preparedStatement = con.prepareStatement(sql);
 				preparedStatement.setInt(1, contact.getContactID());
