@@ -5,7 +5,7 @@
 }
 
 .mfx-rectangle-toggle-node:selected{
-    -fx-background-color: #D3D3D3;
+    -fx-background-color: #0F60FF;
     -fx-text-fill: WHITE;
     -fx-font-family: "Montserrat SemiBold";
 }

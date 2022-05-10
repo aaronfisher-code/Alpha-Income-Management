@@ -18,6 +18,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -30,6 +31,7 @@ import org.controlsfx.control.PopOver;
 import java.io.IOException;
 import java.sql.*;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.format.TextStyle;
 import java.util.Comparator;
 import java.util.Locale;
@@ -74,6 +76,10 @@ public class AccountPaymentsPageController extends DateSelectController{
 	private MFXTextField invoiceNoField,descriptionField,amountField;
 	@FXML
 	private MFXCheckbox accountAdjustedBox;
+	@FXML
+	private MFXButton saveButton;
+	@FXML
+	private Label paymentPopoverTitle;
 
 	private MFXTableColumn<AccountPayment> contactCol;
 	private MFXTableColumn<AccountPayment> invNumberCol;
@@ -212,21 +218,27 @@ public class AccountPaymentsPageController extends DateSelectController{
 	}
 
 	public void fillTable(){
-		ObservableList<AccountPayment> payments = FXCollections.observableArrayList();
+
+		YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
+		int daysInMonth = yearMonthObject.lengthOfMonth();
+		ObservableList<AccountPayment> currentAccountPaymentDataPoints = FXCollections.observableArrayList();
 		String sql = null;
 		try {
-			sql = "SELECT * FROM accountPayments JOIN accountPaymentContacts a on a.idaccountPaymentContacts = accountPayments.contactID WHERE accountPayments.storeID = ?";
+			sql = "SELECT * FROM accountPayments JOIN accountPaymentContacts a on a.idaccountPaymentContacts = accountPayments.contactID WHERE accountPayments.storeID = ? AND MONTH(invoiceDate) = ? AND YEAR(invoiceDate) = ?";
 			preparedStatement = con.prepareStatement(sql);
 			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
+			preparedStatement.setInt(2, yearMonthObject.getMonthValue());
+			preparedStatement.setInt(3, yearMonthObject.getYear());
 			resultSet = preparedStatement.executeQuery();
 			while (resultSet.next()) {
-				payments.add(new AccountPayment(resultSet));
+				currentAccountPaymentDataPoints.add(new AccountPayment(resultSet));
 			}
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
 		}
-		accountPaymentTable.setItems(payments);
+		accountPaymentTable.setItems(currentAccountPaymentDataPoints);
 		addDoubleClickfunction();
+		accountPaymentTable.autosizeColumns();
 
 	}
 
@@ -238,8 +250,11 @@ public class AccountPaymentsPageController extends DateSelectController{
 	}
 
 	public void openPopover(){
+		saveButton.setOnAction(actionEvent -> addPayment());
+		paymentPopoverTitle.setText("Add new account payment");
 		contentDarken.setVisible(true);
 		changeSize(addPaymentPopover,0);
+
 	}
 
 	public void closePopover(){
@@ -248,15 +263,34 @@ public class AccountPaymentsPageController extends DateSelectController{
 	}
 
 	public void openPopover(AccountPayment ap){
+		saveButton.setOnAction(actionEvent -> editPayment(ap));
+		paymentPopoverTitle.setText("Edit account payment");
 		contentDarken.setVisible(true);
 		changeSize(addPaymentPopover,0);
-		afx.setValue();
+		afx.setValue(getContactfromName(ap.getContactName()));
 		invoiceNoField.setText(ap.getInvoiceNumber());
 		invoiceDateField.setValue(ap.getInvDate());
 		dueDateField.setValue(ap.getDueDate());
 		descriptionField.setText(ap.getDescription());
 		amountField.setText(String.valueOf(ap.getUnitAmount()));
 		accountAdjustedBox.setSelected(ap.isAccountAdjusted());
+	}
+
+	public AccountPaymentContactDataPoint getContactfromName(String name){
+		String sql = null;
+		try {
+			sql = "SELECT * FROM accountPaymentContacts  WHERE contactName = ? AND storeID = ?";
+			preparedStatement = con.prepareStatement(sql);
+			preparedStatement.setString(1,name);
+			preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
+			resultSet = preparedStatement.executeQuery();
+			while (resultSet.next()) {
+				return new AccountPaymentContactDataPoint(resultSet);
+			}
+		} catch (SQLException throwables) {
+			throwables.printStackTrace();
+		}
+		return null;
 	}
 
 	public void changeSize(final VBox pane, double width) {
@@ -382,14 +416,14 @@ public class AccountPaymentsPageController extends DateSelectController{
 				preparedStatement.setString(6, description);
 				preparedStatement.setDouble(7, unitAmount);
 				preparedStatement.setBoolean(8, accountAdjustedBox.isSelected());
-
+				preparedStatement.setInt(9, accountPayment.getAccountPaymentID());
 				preparedStatement.executeUpdate();
 			} catch (SQLException ex) {
 				System.err.println(ex.getMessage());
 			}
 			closePopover();
 			fillTable();
-			dialogPane.showInformation("Success","Payment was succesfully added");
+			dialogPane.showInformation("Success","Payment was succesfully edited");
 		}
 
 	}

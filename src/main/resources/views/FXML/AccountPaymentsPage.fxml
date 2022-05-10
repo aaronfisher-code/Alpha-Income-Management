@@ -205,7 +205,7 @@
          <children>
             <BorderPane style="-fx-background-color: #F8F8F8;">
                <left>
-                  <Label maxWidth="1.7976931348623157E308" text="Add a new payment" BorderPane.alignment="CENTER">
+                  <Label fx:id="paymentPopoverTitle" maxWidth="1.7976931348623157E308" text="Add a new payment" BorderPane.alignment="CENTER">
                      <font>
                         <Font size="17.0" />
                      </font>
@@ -235,7 +235,7 @@
                   <Insets />
                </VBox.margin>
             </MFXCheckbox>
-            <MFXButton buttonType="RAISED" depthLevel="LEVEL3" maxWidth="1.7976931348623157E308" onAction="#addPayment" prefHeight="30.0" style="-fx-background-color: #0F60FF;" text="Save" textFill="WHITE">
+            <MFXButton fx:id="saveButton" buttonType="RAISED" depthLevel="LEVEL3" maxWidth="1.7976931348623157E308" prefHeight="30.0" style="-fx-background-color: #0F60FF;" text="Save" textFill="WHITE">
                <VBox.margin>
                   <Insets top="20.0" />
                </VBox.margin>

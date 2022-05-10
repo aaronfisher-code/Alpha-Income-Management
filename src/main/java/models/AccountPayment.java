@@ -18,6 +18,7 @@ public class AccountPayment {
 
 	public AccountPayment(ResultSet resultSet) {
 		try {
+			this.accountPaymentID = resultSet.getInt("idaccountPayments");
 			this.contactName = resultSet.getString("contactName");
 			this.invoiceNumber = resultSet.getString("invoiceNo");
 			this.invDate = resultSet.getDate("invoiceDate").toLocalDate();
