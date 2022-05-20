@@ -26,21 +26,12 @@ import javafx.scene.text.TextAlignment;
 public class ActionableFilterComboBoxSkin<T> extends MFXFilterComboBoxSkin<T> {
 
 
-    private MFXButton b;
-    public ActionableFilterComboBoxSkin(MFXFilterComboBox comboBox, BoundTextField boundField, MFXButton actionButton) {
+    public ActionableFilterComboBoxSkin(MFXFilterComboBox comboBox, BoundTextField boundField, MFXButton actionButton, MFXButton secondaryButton) {
         super(comboBox, boundField);
-        this.popup.setContent(createPopupContent(actionButton));
+        this.popup.setContent(createPopupContent(actionButton,secondaryButton));
     }
 
-    public MFXButton getB() {
-        return b;
-    }
-
-    public void setB(MFXButton b) {
-        this.b = b;
-    }
-
-    protected Node createPopupContent(MFXButton actionButton) {
+    protected Node createPopupContent(MFXButton actionButton, MFXButton secondaryButton) {
         MFXFilterComboBox<T> comboBox = getComboBox();
         TransformableList<T> filterList = comboBox.getFilterList();
 
@@ -74,10 +65,19 @@ public class ActionableFilterComboBoxSkin<T> extends MFXFilterComboBoxSkin<T> {
             oldEvent.handle(actionEvent);
             this.popup.hide();
         });
+        secondaryButton.setMaxWidth(Double.MAX_VALUE);
+        secondaryButton.setTextAlignment(TextAlignment.LEFT);
+        secondaryButton.setAlignment(Pos.BASELINE_LEFT);
+        EventHandler oldSecondaryEvent = secondaryButton.getOnAction();
+        secondaryButton.setOnAction(actionEvent -> {
+            oldSecondaryEvent.handle(actionEvent);
+            this.popup.hide();
+        });
 
-        VBox container = new VBox(10, searchField, virtualFlow,divider, actionButton);
+        VBox container = new VBox(10, searchField, virtualFlow,divider, actionButton, secondaryButton);
         VBox.setMargin(divider,new Insets(0,-6,-6,-6));
         VBox.setMargin(actionButton,new Insets(0,-6,0,-6));
+        VBox.setMargin(secondaryButton,new Insets(-10,-6,0,-6));
         container.getStyleClass().add("search-container");
         container.setEffect(new DropShadow(BlurType.THREE_PASS_BOX, Color.web("#000000",0.8),10,0.0,0.0,2.0));
         container.setAlignment(Pos.TOP_CENTER);

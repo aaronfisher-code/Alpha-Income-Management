@@ -2,12 +2,14 @@ package models;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.NumberFormat;
 import java.time.LocalDate;
 
 public class AccountPayment {
 
 	private int accountPaymentID;
 	private String contactName;
+	private int contactID;
 	private String invoiceNumber;
 	private LocalDate invDate;
 	private LocalDate dueDate;
@@ -20,6 +22,7 @@ public class AccountPayment {
 		try {
 			this.accountPaymentID = resultSet.getInt("idaccountPayments");
 			this.contactName = resultSet.getString("contactName");
+			this.contactID = resultSet.getInt("contactID");
 			this.invoiceNumber = resultSet.getString("invoiceNo");
 			this.invDate = resultSet.getDate("invoiceDate").toLocalDate();
 			this.dueDate = resultSet.getDate("dueDate").toLocalDate();
@@ -35,6 +38,8 @@ public class AccountPayment {
 	public void setAccountPaymentID(int accountPaymentID) {this.accountPaymentID = accountPaymentID;}
 	public String getContactName() {return contactName;}
 	public void setContactName(String contactName) {this.contactName = contactName;}
+	public int getContactID() {return contactID;}
+	public void setContactID(int contactID) {this.contactID = contactID;}
 	public String getInvoiceNumber() {return invoiceNumber;}
 	public void setInvoiceNumber(String invoiceNumber) {this.invoiceNumber = invoiceNumber;}
 	public LocalDate getInvDate() {return invDate;}
@@ -50,4 +55,5 @@ public class AccountPayment {
 	public boolean isAccountAdjusted() {return accountAdjusted;}
 	public void setAccountAdjusted(boolean accountAdjusted) {this.accountAdjusted = accountAdjusted;}
 
+	public String getUnitAmountString(){return NumberFormat.getCurrencyInstance().format(unitAmount);}
 }

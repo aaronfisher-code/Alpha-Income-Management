@@ -2,6 +2,7 @@ package models;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.NumberFormat;
 import java.time.LocalDate;
 
 public class AccountPaymentContactDataPoint {
@@ -33,6 +34,8 @@ public class AccountPaymentContactDataPoint {
 	public double getTotalValue() {return totalValue;}
 
 	public void setTotalValue(double totalValue) {this.totalValue = totalValue;}
+
+	public String getTotalValueString(){return NumberFormat.getCurrencyInstance().format(totalValue);}
 
 	@Override
 	public String toString() {
