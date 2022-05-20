@@ -16,9 +16,7 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
-import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.Label;
+import javafx.scene.control.*;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -28,7 +26,10 @@ import javafx.util.Duration;
 import models.*;
 import org.controlsfx.control.PopOver;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -78,6 +79,8 @@ public class AccountPaymentsPageController extends DateSelectController{
 	private MFXCheckbox accountAdjustedBox;
 	@FXML
 	private MFXButton saveButton;
+	@FXML
+	private Button deleteButton;
 	@FXML
 	private Label paymentPopoverTitle;
 
@@ -268,16 +271,51 @@ public class AccountPaymentsPageController extends DateSelectController{
 
 	}
 
-	public void importFiles(){
+	public void exportToXero() throws FileNotFoundException {
 		FileChooser fileChooser = new FileChooser();
 		fileChooser.setTitle("Open Data entry File");
 		fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
-		fileChooser.showOpenDialog(main.getStg());
+		File file = fileChooser.showSaveDialog(main.getStg());
+		if (file != null) {
+			try (PrintWriter pw = new PrintWriter(file)) {
+				pw.println("Contact,,,,,,,,,,Invoice number,Invoice date ,Due Date,,Description,Quantity,Unit amount,,");
+
+				YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
+				int daysInMonth = yearMonthObject.lengthOfMonth();
+
+				ObservableList<AccountPayment> currentAccountPaymentDataPoints = FXCollections.observableArrayList();
+				String sql = null;
+				try {
+					sql = "SELECT * FROM accountPayments JOIN accountPaymentContacts a on a.idaccountPaymentContacts = accountPayments.contactID WHERE accountPayments.storeID = ? AND MONTH(invoiceDate) = ? AND YEAR(invoiceDate) = ?";
+					preparedStatement = con.prepareStatement(sql);
+					preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
+					preparedStatement.setInt(2, yearMonthObject.getMonthValue());
+					preparedStatement.setInt(3, yearMonthObject.getYear());
+					resultSet = preparedStatement.executeQuery();
+					while (resultSet.next()) {
+						currentAccountPaymentDataPoints.add(new AccountPayment(resultSet));
+					}
+				} catch (SQLException throwables) {
+					throwables.printStackTrace();
+				}
+
+				for(AccountPayment a: currentAccountPaymentDataPoints){
+					pw.print(a.getContactName()+",,,,,,,,,,");
+					pw.print(a.getInvoiceNumber()+",");
+					pw.print(a.getInvDate()+",");
+					pw.print(a.getDueDate()+",,");
+					pw.print(a.getDescription()+",1,");
+					pw.println("$"+a.getUnitAmount()+",,");
+				}
+				dialogPane.showInformation("Success", "Information exported succesfully");
+			}
+		}
 	}
 
 	public void openPopover(){
 		saveButton.setOnAction(actionEvent -> addPayment());
 		paymentPopoverTitle.setText("Add new account payment");
+		deleteButton.setVisible(false);
 		contentDarken.setVisible(true);
 		changeSize(addPaymentPopover,0);
 		afx.clear();
@@ -298,6 +336,8 @@ public class AccountPaymentsPageController extends DateSelectController{
 	public void openPopover(AccountPayment ap){
 		saveButton.setOnAction(actionEvent -> editPayment(ap));
 		paymentPopoverTitle.setText("Edit account payment");
+		deleteButton.setVisible(true);
+		deleteButton.setOnAction(actionEvent -> deletePayment(ap));
 		contentDarken.setVisible(true);
 		changeSize(addPaymentPopover,0);
 		afx.setValue(getContactfromName(ap.getContactName()));
@@ -457,6 +497,27 @@ public class AccountPaymentsPageController extends DateSelectController{
 			fillTable();
 			dialogPane.showInformation("Success","Payment was succesfully edited");
 		}
+
+	}
+
+	public void deletePayment(AccountPayment accountPayment){
+		 dialogPane.showWarning("Confirm Delete",
+				 "This action will permanently delete this Account payment from all systems,\n" +
+				 "Are you sure you still want to delete this Account payment?").thenAccept(buttonType -> {
+			 if (buttonType.equals(ButtonType.OK)) {
+				 String sql = "DELETE from accountPayments WHERE idaccountPayments = ?";
+				 try {
+					 preparedStatement = con.prepareStatement(sql);
+					 preparedStatement.setInt(1, accountPayment.getAccountPaymentID());
+					 preparedStatement.executeUpdate();
+				 } catch (SQLException ex) {
+					 System.err.println(ex.getMessage());
+				 }
+				 closePopover();
+				 fillTable();
+				 dialogPane.showInformation("Success","Payment was succesfully deleted");
+			 }
+		 });
 
 	}
 }
