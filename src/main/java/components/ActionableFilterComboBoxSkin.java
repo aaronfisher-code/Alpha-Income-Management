@@ -2,6 +2,7 @@ package components;
 
 import io.github.palexdev.materialfx.controls.*;
 import io.github.palexdev.materialfx.controls.cell.MFXFilterComboBoxCell;
+import io.github.palexdev.materialfx.enums.FloatMode;
 import io.github.palexdev.materialfx.skins.MFXFilterComboBoxSkin;
 import io.github.palexdev.materialfx.i18n.I18N;
 import io.github.palexdev.virtualizedfx.flow.simple.SimpleVirtualFlow;
@@ -39,6 +40,7 @@ public class ActionableFilterComboBoxSkin<T> extends MFXFilterComboBoxSkin<T> {
         searchField.getStyleClass().add("search-field");
         searchField.textProperty().bindBidirectional(comboBox.searchTextProperty());
         searchField.setMaxWidth(Double.MAX_VALUE);
+        searchField.setFloatMode(FloatMode.DISABLED);
 
         SimpleVirtualFlow<T, Cell<T>> virtualFlow = new SimpleVirtualFlow<>(
                 filterList,
