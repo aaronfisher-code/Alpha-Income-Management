@@ -76,72 +76,84 @@ public class MonthYearSelectorContentController extends Controller {
         });
 
         janNode.setOnAction(event -> {
+            if(!janNode.isSelected()){janNode.setSelected(true);}
             LocalDate currentDate = main.getCurrentDate();
             int day = currentDate.getDayOfMonth();
             int year = currentDate.getYear();
             parent.setDate(LocalDate.of(year,1,day));
         });
         febNode.setOnAction(event -> {
+            if(!febNode.isSelected()){febNode.setSelected(true);}
             LocalDate currentDate = main.getCurrentDate();
             int day = currentDate.getDayOfMonth();
             int year = currentDate.getYear();
             parent.setDate(LocalDate.of(year,2,day));
         });
         marNode.setOnAction(event -> {
+            if(!marNode.isSelected()){marNode.setSelected(true);}
             LocalDate currentDate = main.getCurrentDate();
             int day = currentDate.getDayOfMonth();
             int year = currentDate.getYear();
             parent.setDate(LocalDate.of(year,3,day));
         });
         aprNode.setOnAction(event -> {
+            if(!aprNode.isSelected()){aprNode.setSelected(true);}
             LocalDate currentDate = main.getCurrentDate();
             int day = currentDate.getDayOfMonth();
             int year = currentDate.getYear();
             parent.setDate(LocalDate.of(year,4,day));
         });
         mayNode.setOnAction(event -> {
+            if(!mayNode.isSelected()){mayNode.setSelected(true);}
             LocalDate currentDate = main.getCurrentDate();
             int day = currentDate.getDayOfMonth();
             int year = currentDate.getYear();
             parent.setDate(LocalDate.of(year,5,day));
         });
         junNode.setOnAction(event -> {
+            if(!junNode.isSelected()){junNode.setSelected(true);}
             LocalDate currentDate = main.getCurrentDate();
             int day = currentDate.getDayOfMonth();
             int year = currentDate.getYear();
             parent.setDate(LocalDate.of(year,6,day));
         });
         julNode.setOnAction(event -> {
+            if(!julNode.isSelected()){julNode.setSelected(true);}
             LocalDate currentDate = main.getCurrentDate();
             int day = currentDate.getDayOfMonth();
             int year = currentDate.getYear();
             parent.setDate(LocalDate.of(year,7,day));
         });
         augNode.setOnAction(event -> {
+            if(!augNode.isSelected()){augNode.setSelected(true);}
             LocalDate currentDate = main.getCurrentDate();
             int day = currentDate.getDayOfMonth();
             int year = currentDate.getYear();
             parent.setDate(LocalDate.of(year,8,day));
         });
         sepNode.setOnAction(event -> {
+            if(!sepNode.isSelected()){sepNode.setSelected(true);}
             LocalDate currentDate = main.getCurrentDate();
             int day = currentDate.getDayOfMonth();
             int year = currentDate.getYear();
             parent.setDate(LocalDate.of(year,9,day));
         });
         octNode.setOnAction(event -> {
+            if(!octNode.isSelected()){octNode.setSelected(true);}
             LocalDate currentDate = main.getCurrentDate();
             int day = currentDate.getDayOfMonth();
             int year = currentDate.getYear();
             parent.setDate(LocalDate.of(year,10,day));
         });
         novNode.setOnAction(event -> {
+            if(!novNode.isSelected()){novNode.setSelected(true);}
             LocalDate currentDate = main.getCurrentDate();
             int day = currentDate.getDayOfMonth();
             int year = currentDate.getYear();
             parent.setDate(LocalDate.of(year,11,day));
         });
         decNode.setOnAction(event -> {
+            if(!decNode.isSelected()){decNode.setSelected(true);}
             LocalDate currentDate = main.getCurrentDate();
             int day = currentDate.getDayOfMonth();
             int year = currentDate.getYear();
