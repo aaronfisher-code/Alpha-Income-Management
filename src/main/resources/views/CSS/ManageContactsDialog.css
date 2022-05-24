@@ -1,0 +1,16 @@
+.table-row-cell {
+    -fx-cell-size: 30px;
+}
+
+.table-column {
+    -fx-alignment: CENTER-LEFT;
+}
+
+.mfx-button {
+    -fx-background-color: #F9496C;
+}
+
+
+
+
+

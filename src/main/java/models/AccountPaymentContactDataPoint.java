@@ -1,5 +1,8 @@
 package models;
 
+import io.github.palexdev.materialfx.controls.MFXButton;
+import javafx.scene.control.Button;
+
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.NumberFormat;
@@ -12,6 +15,7 @@ public class AccountPaymentContactDataPoint {
 	private String contactName;
 	private int storeID;
 	private double totalValue;
+	private MFXButton deleteButton;
 
 	public AccountPaymentContactDataPoint(ResultSet resultSet) {
 		try {
@@ -21,6 +25,17 @@ public class AccountPaymentContactDataPoint {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+	}
+
+	public AccountPaymentContactDataPoint(ResultSet resultSet, MFXButton b) {
+			try {
+				this.contactID = resultSet.getInt("idaccountPaymentContacts");
+				this.contactName = resultSet.getString("contactName");
+				this.storeID = resultSet.getInt("storeID");
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+			this.deleteButton = b;
 	}
 
 	public int getContactID() {return contactID;}
@@ -36,6 +51,10 @@ public class AccountPaymentContactDataPoint {
 	public void setTotalValue(double totalValue) {this.totalValue = totalValue;}
 
 	public String getTotalValueString(){return NumberFormat.getCurrencyInstance().format(totalValue);}
+
+	public MFXButton getDeleteButton() {return deleteButton;}
+
+	public void setDeleteButton(MFXButton deleteButton) {this.deleteButton = deleteButton;}
 
 	@Override
 	public String toString() {

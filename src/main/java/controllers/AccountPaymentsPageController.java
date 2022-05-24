@@ -126,7 +126,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 		manageContactsButton.setOnAction(actionEvent -> {
 			dialog = new Dialog(dialogPane, BLANK);
 			dialog.setPadding(false);
-			dialog.setContent(createAddNewContactDialog());
+			dialog.setContent(createManageContactsDialog());
 			dialogPane.showDialog(dialog);
 		});
 		afx = new ActionableFilterComboBox(addContactButton,manageContactsButton);
@@ -208,6 +208,22 @@ public class AccountPaymentsPageController extends DateSelectController{
 		dialogController.setConnection(this.con);
 		dialogController.setMain(this.main);
 		return newContactDialog;
+	}
+
+	private Node createManageContactsDialog() {
+		FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/ManageContactsDialog.fxml"));
+		StackPane manageContactsDialog = null;
+		try {
+			manageContactsDialog = loader.load();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		ManageContactsDialogController dialogController = loader.getController();
+		dialogController.setParent(this);
+		dialogController.setConnection(this.con);
+		dialogController.setMain(this.main);
+		dialogController.fill();
+		return manageContactsDialog;
 	}
 
 	public void fillContactList(){

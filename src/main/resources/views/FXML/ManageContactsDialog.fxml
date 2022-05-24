@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.net.URL?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<StackPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.ManageContactsDialogController">
+   <children>
+      <VBox spacing="10.0">
+         <children>
+            <Label text="Double-click to edit a contact" />
+            <HBox>
+               <children>
+                  <TableView fx:id="contactsTable">
+                    <columns>
+                        <TableColumn fx:id="nameCol" maxWidth="1.7976931348623157E308" minWidth="248.0" prefWidth="-1.0" resizable="false" text="Contact Name" />
+                        <TableColumn fx:id="deleteCol" editable="false" maxWidth="1.7976931348623157E308" minWidth="30.0" prefWidth="-1.0" sortable="false" text="🗑" />
+                    </columns>
+                  </TableView>
+               </children>
+            </HBox>
+         </children>
+         <padding>
+            <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+         </padding>
+      </VBox>
+   </children>
+   <stylesheets>
+      <URL value="@../CSS/application.css" />
+      <URL value="@../CSS/ManageContactsDialog.css" />
+   </stylesheets>
+</StackPane>
