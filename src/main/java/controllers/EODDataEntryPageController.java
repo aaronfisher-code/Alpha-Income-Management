@@ -381,43 +381,39 @@ public class EODDataEntryPageController extends DateSelectController{
 		int smsPatientsValue = Integer.parseInt(smsPatientsField.getText());
 		String notesValue = notesField.getText();
 
-		if(false){
-			//TODO properly implement field verification for EOD addition
+		String sql;
+		if(e.isInDB()){
+			sql = "UPDATE eodDataPoints SET cash=?,eftpos=?,amex=?,googleSquare=?,cheque=?,medschecks=?,scriptsOnFile=?,stockOnHand=?,smsPatients=?,notes=? WHERE date = ? AND storeID = ?";
 		}else{
-			String sql;
-			if(e.isInDB()){
-				sql = "UPDATE eodDataPoints SET cash=?,eftpos=?,amex=?,googleSquare=?,cheque=?,medschecks=?,scriptsOnFile=?,stockOnHand=?,smsPatients=?,notes=? WHERE date = ? AND storeID = ?";
-			}else{
-				sql = "INSERT INTO eodDataPoints(cash, eftpos, amex, googleSquare, cheque, medschecks, scriptsOnFile, stockOnHand, smsPatients, notes, date, storeID) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)";
-			}
-
-			try {
-				preparedStatement = con.prepareStatement(sql);
-				preparedStatement.setDouble(1, cashValue);
-				preparedStatement.setDouble(2, eftposValue);
-				preparedStatement.setDouble(3, amexValue);
-				preparedStatement.setDouble(4, googleSquareValue);
-				preparedStatement.setDouble(5, chequeValue);
-				preparedStatement.setInt(6, medschecksValue);
-				preparedStatement.setInt(7, sofValue);
-				preparedStatement.setDouble(8, sohValue);
-				preparedStatement.setInt(9, smsPatientsValue);
-				preparedStatement.setString(10, notesValue);
-				preparedStatement.setDate(11, Date.valueOf(e.getDate()));
-				preparedStatement.setInt(12, main.getCurrentStore().getStoreID());
-				preparedStatement.executeUpdate();
-				Dialog<String> dialog = new Dialog<String>();
-				dialog.setTitle("Success");
-				ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-				dialog.setContentText("EOD data was succesfully added to database");
-				dialog.getDialogPane().getButtonTypes().add(type);
-				dialog.showAndWait();
-				fillTable();
-			} catch (SQLException ex) {
-				System.err.println(ex.getMessage());
-			}
-
+			sql = "INSERT INTO eodDataPoints(cash, eftpos, amex, googleSquare, cheque, medschecks, scriptsOnFile, stockOnHand, smsPatients, notes, date, storeID) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)";
 		}
+
+		try {
+			preparedStatement = con.prepareStatement(sql);
+			preparedStatement.setDouble(1, cashValue);
+			preparedStatement.setDouble(2, eftposValue);
+			preparedStatement.setDouble(3, amexValue);
+			preparedStatement.setDouble(4, googleSquareValue);
+			preparedStatement.setDouble(5, chequeValue);
+			preparedStatement.setInt(6, medschecksValue);
+			preparedStatement.setInt(7, sofValue);
+			preparedStatement.setDouble(8, sohValue);
+			preparedStatement.setInt(9, smsPatientsValue);
+			preparedStatement.setString(10, notesValue);
+			preparedStatement.setDate(11, Date.valueOf(e.getDate()));
+			preparedStatement.setInt(12, main.getCurrentStore().getStoreID());
+			preparedStatement.executeUpdate();
+			Dialog<String> dialog = new Dialog<String>();
+			dialog.setTitle("Success");
+			ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
+			dialog.setContentText("EOD data was succesfully added to database");
+			dialog.getDialogPane().getButtonTypes().add(type);
+			dialog.showAndWait();
+			fillTable();
+		} catch (SQLException ex) {
+			System.err.println(ex.getMessage());
+		}
+
 	}
 
 	public void changeSize(final VBox pane, double width) {
