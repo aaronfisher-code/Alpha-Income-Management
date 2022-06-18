@@ -6,12 +6,15 @@ import application.Main;
 import com.jfoenix.controls.JFXNodesList;
 //import io.github.palexdev.materialfx.controls.MFXDatePicker;
 import io.github.palexdev.materialfx.controls.MFXDatePicker;
+import io.github.palexdev.materialfx.controls.MFXFilterComboBox;
 import io.github.palexdev.materialfx.controls.MFXTextField;
 import io.github.palexdev.materialfx.controls.MFXTreeItem;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -21,7 +24,9 @@ import javafx.scene.layout.*;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import models.AccountPayment;
 import models.Shift;
+import models.User;
 import org.controlsfx.control.PopOver;
 
 import java.io.IOException;
@@ -58,6 +63,8 @@ public class RosterPageController extends Controller {
     private MFXTextField startTimeField,endTimeField;
     @FXML
     private Button openStartTimePicker,openEndTimePicker;
+    @FXML
+    private MFXFilterComboBox employeeSelect;
 
     private Connection con = null;
     PreparedStatement preparedStatement = null;
@@ -81,6 +88,23 @@ public class RosterPageController extends Controller {
         datePkr.setText(LocalDate.now().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)));
         datePkr.getStyleClass().add("custDatePicker");
         datePkr.getStylesheets().add("/views/CSS/RosterPage.css");
+        ObservableList<User> currentUsers = FXCollections.observableArrayList();
+        String sql = "SELECT * FROM accounts JOIN employments e on accounts.username = e.username WHERE storeID = ? AND inactiveDate IS NULL ";
+        try {
+            preparedStatement = con.prepareStatement(sql);
+            preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
+            resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()) {
+                currentUsers.add(new User(resultSet));
+            }
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
+
+        for(User u:currentUsers){
+            employeeSelect.getItems().add(u.getFirst_name() + " " + u.getLast_name());
+        }
+
 
         openStartTimePicker.setOnAction(actionEvent -> openTimePicker(startTimeField));
         openEndTimePicker.setOnAction(actionEvent -> openTimePicker(endTimeField));
