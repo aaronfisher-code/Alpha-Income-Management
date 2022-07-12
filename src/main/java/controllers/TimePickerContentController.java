@@ -1,13 +1,19 @@
 package controllers;
 
 import application.Main;
+import javafx.scene.control.ToggleButton;
 import models.Shift;
+import javafx.fxml.FXML;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
 public class TimePickerContentController extends Controller {
+
+    @FXML
+    private ToggleButton amSelect,pmSelect;
+
 
     private Connection con = null;
     PreparedStatement preparedStatement = null;
@@ -30,7 +36,8 @@ public class TimePickerContentController extends Controller {
 
     @Override
     public void fill() {
-
+        amSelect.setOnAction(event -> {if(!amSelect.isSelected()){amSelect.setSelected(true);}});
+        pmSelect.setOnAction(event -> {if(!pmSelect.isSelected()){pmSelect.setSelected(true);}});
     }
 
 

@@ -39,12 +39,12 @@
             </VBox>
             <VBox maxHeight="1.7976931348623157E308" style="-fx-border-radius: 5; -fx-border-color: #D3D3D3; -fx-background-radius: 5;" HBox.hgrow="SOMETIMES">
                <children>
-                  <ToggleButton minWidth="40.0" mnemonicParsing="false" selected="true" text="AM">
+                  <ToggleButton fx:id="amSelect" minWidth="40.0" mnemonicParsing="false" selected="true" text="AM">
                      <toggleGroup>
                         <ToggleGroup fx:id="ampm" />
                      </toggleGroup>
                   </ToggleButton>
-                  <ToggleButton layoutX="11.0" layoutY="11.0" minWidth="40.0" mnemonicParsing="false" text="PM" toggleGroup="$ampm" />
+                  <ToggleButton fx:id="pmSelect" layoutX="11.0" layoutY="11.0" minWidth="40.0" mnemonicParsing="false" text="PM" toggleGroup="$ampm" />
                </children>
             </VBox>
          </children>
