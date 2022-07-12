@@ -35,6 +35,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
@@ -71,6 +72,7 @@ public class RosterPageController extends Controller {
     ResultSet resultSet = null;
     private Main main;
     private PopOver currentTimePopover;
+    private LocalTime startTime,endTime;
 
     public void setMain(Main main) {
         this.main = main;
@@ -105,9 +107,8 @@ public class RosterPageController extends Controller {
             employeeSelect.getItems().add(u.getFirst_name() + " " + u.getLast_name());
         }
 
-
-        openStartTimePicker.setOnAction(actionEvent -> openTimePicker(startTimeField));
-        openEndTimePicker.setOnAction(actionEvent -> openTimePicker(endTimeField));
+        openStartTimePicker.setOnAction(actionEvent -> openTimePicker(startTimeField,LocalTime.MIDNIGHT));
+        openEndTimePicker.setOnAction(actionEvent -> openTimePicker(endTimeField,LocalTime.MIDNIGHT));
         addList.setRotate(180);
         updatePage();
     }
@@ -224,7 +225,7 @@ public class RosterPageController extends Controller {
         timeline.play();
     }
 
-    public void openTimePicker(MFXTextField parent){
+    public void openTimePicker(MFXTextField parent, LocalTime time){
         if(currentTimePopover !=null&& currentTimePopover.isShowing()){
             currentTimePopover.hide();
         }else {
@@ -241,6 +242,7 @@ public class RosterPageController extends Controller {
             rdc.setConnection(con);
             rdc.setParent(this);
             rdc.fill();
+            rdc.setCurrentTime(time);
 
             timePickerMenu.setOpacity(1);
             timePickerMenu.setContentNode(timePickerContent);
@@ -254,6 +256,10 @@ public class RosterPageController extends Controller {
             timePickerMenu.setArrowIndent(0);
             timePickerMenu.show(parent);
             currentTimePopover =timePickerMenu;
+            timePickerMenu.setOnHidden(event -> {
+                rdc.updateTime();
+                parent.setText(rdc.getTimeString());
+            });
             parent.requestFocus();
         }
     }

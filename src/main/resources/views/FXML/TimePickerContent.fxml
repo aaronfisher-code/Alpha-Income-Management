@@ -16,7 +16,7 @@
          <children>
             <VBox maxHeight="1.7976931348623157E308" maxWidth="50.0" prefWidth="50.0" HBox.hgrow="ALWAYS">
                <children>
-                  <MFXTextField alignment="CENTER" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefColumnCount="2" VBox.vgrow="ALWAYS">
+                  <MFXTextField fx:id="hourField" alignment="CENTER" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefColumnCount="2" VBox.vgrow="ALWAYS">
                      <font>
                         <Font size="25.0" />
                      </font>
@@ -30,7 +30,7 @@
             </Label>
             <VBox>
                <children>
-                  <MFXTextField alignment="CENTER" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="50.0" prefColumnCount="2" prefWidth="50.0" VBox.vgrow="ALWAYS">
+                  <MFXTextField fx:id="minuteField" alignment="CENTER" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="50.0" prefColumnCount="2" prefWidth="50.0" VBox.vgrow="ALWAYS">
                      <font>
                         <Font size="25.0" />
                      </font>
