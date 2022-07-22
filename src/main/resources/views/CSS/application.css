@@ -91,6 +91,10 @@
     -mfx-color: #0F60FF;
 }
 
+.mfx-toggle-button{
+    -mfx-color: #0F60FF;
+}
+
 .mfx-date-picker:focus-within .mfx-icon-wrapper .mfx-font-icon{
     -mfx-color: #0F60FF;
 }

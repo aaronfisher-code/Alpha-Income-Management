@@ -3,10 +3,12 @@
 <?import com.jfoenix.controls.JFXButton?>
 <?import com.jfoenix.controls.JFXNodesList?>
 <?import io.github.palexdev.materialfx.controls.MFXButton?>
+<?import io.github.palexdev.materialfx.controls.MFXComboBox?>
 <?import io.github.palexdev.materialfx.controls.MFXDatePicker?>
 <?import io.github.palexdev.materialfx.controls.MFXFilterComboBox?>
 <?import io.github.palexdev.materialfx.controls.MFXScrollPane?>
 <?import io.github.palexdev.materialfx.controls.MFXTextField?>
+<?import io.github.palexdev.materialfx.controls.MFXToggleButton?>
 <?import java.net.URL?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.Cursor?>
@@ -26,7 +28,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane maxWidth="1.7976931348623157E308" prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.RosterPageController">
+<StackPane maxWidth="1.7976931348623157E308" prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.RosterPageController">
    <children>
       <BorderPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-background-color: TRANSPARENT;">
          <top>
@@ -290,6 +292,21 @@
                <children>
                   <MFXTextField borderGap="0.0" floatMode="ABOVE" floatingText="30min Breaks (Unpaid)" maxWidth="1.7976931348623157E308" minHeight="36.0" minWidth="163.2" HBox.hgrow="ALWAYS" />
                   <MFXTextField borderGap="0.0" floatMode="ABOVE" floatingText="10min Breaks (Paid)" layoutX="10.0" layoutY="10.0" maxWidth="1.7976931348623157E308" minHeight="36.0" minWidth="163.2" HBox.hgrow="ALWAYS" />
+               </children>
+            </HBox>
+            <MFXToggleButton fx:id="repeatingShiftToggle" text="Repeating Shift">
+               <VBox.margin>
+                  <Insets bottom="-25.0" />
+               </VBox.margin></MFXToggleButton>
+            <Label fx:id="repeatLabel" disable="true" text="Repeat every...">
+               <VBox.margin>
+                  <Insets bottom="-25.0" />
+               </VBox.margin>
+            </Label>
+            <HBox spacing="20.0">
+               <children>
+                  <MFXTextField fx:id="repeatValue" disable="true" floatMode="DISABLED" minHeight="36.0" minWidth="60.0" prefWidth="60.0" />
+                  <MFXComboBox fx:id="repeatUnit" disable="true" floatMode="DISABLED" maxWidth="1.7976931348623157E308" minHeight="36.0" HBox.hgrow="ALWAYS" />
                </children>
             </HBox>
             <MFXButton buttonType="RAISED" depthLevel="LEVEL3" maxWidth="1.7976931348623157E308" prefHeight="30.0" style="-fx-background-color: #0F60FF;" text="Save" textFill="WHITE">

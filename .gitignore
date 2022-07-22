@@ -1,5 +1,5 @@
 # Project exclude paths
 /target/
 .idea/runConfigurations.xml
-.idea/dataSources/0569059f-12f8-4c29-b460-d8ab7d442359.xml
+.idea/dataSources/
 .idea/dataSources.local.xml

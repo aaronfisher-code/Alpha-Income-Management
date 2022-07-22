@@ -5,10 +5,7 @@ import application.Main;
 //import com.jfoenix.controls.JFXDatePicker;
 import com.jfoenix.controls.JFXNodesList;
 //import io.github.palexdev.materialfx.controls.MFXDatePicker;
-import io.github.palexdev.materialfx.controls.MFXDatePicker;
-import io.github.palexdev.materialfx.controls.MFXFilterComboBox;
-import io.github.palexdev.materialfx.controls.MFXTextField;
-import io.github.palexdev.materialfx.controls.MFXTreeItem;
+import io.github.palexdev.materialfx.controls.*;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -20,7 +17,9 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -61,11 +60,18 @@ public class RosterPageController extends Controller {
     @FXML
     private StackPane startTimePicker;
     @FXML
-    private MFXTextField startTimeField,endTimeField;
+    private MFXTextField startTimeField,endTimeField,repeatValue;
     @FXML
     private Button openStartTimePicker,openEndTimePicker;
     @FXML
     private MFXFilterComboBox employeeSelect;
+    @FXML
+    private MFXToggleButton repeatingShiftToggle;
+    @FXML
+    private Label repeatLabel;
+    @FXML
+    private MFXComboBox repeatUnit;
+
 
     private Connection con = null;
     PreparedStatement preparedStatement = null;
@@ -109,6 +115,20 @@ public class RosterPageController extends Controller {
 
         openStartTimePicker.setOnAction(actionEvent -> openTimePicker(startTimeField,LocalTime.MIDNIGHT));
         openEndTimePicker.setOnAction(actionEvent -> openTimePicker(endTimeField,LocalTime.MIDNIGHT));
+        repeatUnit.getItems().add("Days");
+        repeatUnit.getItems().add("Weeks");
+        repeatingShiftToggle.setMainColor(Color.web("#0F60FF"));
+        repeatingShiftToggle.setOnAction(event -> {
+            if(repeatingShiftToggle.isSelected()){
+                repeatLabel.setDisable(false);
+                repeatValue.setDisable(false);
+                repeatUnit.setDisable(false);
+            }else{
+                repeatLabel.setDisable(true);
+                repeatValue.setDisable(true);
+                repeatUnit.setDisable(true);
+            }
+        });
         addList.setRotate(180);
         updatePage();
     }

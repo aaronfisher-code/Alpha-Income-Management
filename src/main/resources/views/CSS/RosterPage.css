@@ -32,6 +32,22 @@
     -mfx-color:#0F60FF;
 }
 
+.mfx-combo-box{
+    -fx-background-color: WHITE;
+    -fx-border-color: #D3D3D3;
+    -fx-border-radius: 5;
+    -fx-font-size: 12px;
+    -mfx-gap: 5.0;
+}
+
+.mfx-combo-box:disabled{
+    -fx-border-color: #E7E7E7;
+}
+
+.mfx-combo-box:focus-within{
+    -mfx-color:#0F60FF;
+}
+
 
 
 
