@@ -1,34 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import com.jfoenix.controls.JFXButton?>
-<?import com.jfoenix.controls.JFXNodesList?>
-<?import io.github.palexdev.materialfx.controls.MFXButton?>
-<?import io.github.palexdev.materialfx.controls.MFXComboBox?>
-<?import io.github.palexdev.materialfx.controls.MFXDatePicker?>
-<?import io.github.palexdev.materialfx.controls.MFXFilterComboBox?>
-<?import io.github.palexdev.materialfx.controls.MFXScrollPane?>
-<?import io.github.palexdev.materialfx.controls.MFXTextField?>
-<?import io.github.palexdev.materialfx.controls.MFXToggleButton?>
-<?import java.net.URL?>
-<?import javafx.geometry.Insets?>
-<?import javafx.scene.Cursor?>
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.effect.DropShadow?>
-<?import javafx.scene.layout.BorderPane?>
-<?import javafx.scene.layout.ColumnConstraints?>
-<?import javafx.scene.layout.FlowPane?>
-<?import javafx.scene.layout.GridPane?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.Region?>
-<?import javafx.scene.layout.RowConstraints?>
-<?import javafx.scene.layout.StackPane?>
-<?import javafx.scene.layout.VBox?>
-<?import javafx.scene.paint.Color?>
-<?import javafx.scene.shape.SVGPath?>
-<?import javafx.scene.text.Font?>
+<?import com.jfoenix.controls.*?>
+<?import io.github.palexdev.materialfx.controls.*?>
+<?import java.net.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.effect.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.paint.*?>
+<?import javafx.scene.shape.*?>
+<?import javafx.scene.text.*?>
 
-<StackPane maxWidth="1.7976931348623157E308" prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.RosterPageController">
+<StackPane maxWidth="1.7976931348623157E308" prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/11.0.2" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.RosterPageController">
    <children>
       <BorderPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-background-color: TRANSPARENT;">
          <top>
@@ -231,7 +215,7 @@
                <children>
                   <StackPane fx:id="startTimePicker" maxHeight="-Infinity" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" style="-fx-background-color: TRANSPARENT;" HBox.hgrow="ALWAYS">
                      <children>
-                        <MFXTextField fx:id="startTimeField" allowEdit="false" borderGap="0.0" editable="false" floatMode="ABOVE" floatingText="Start Time" maxWidth="1.7976931348623157E308" minHeight="36.0" selectable="false" text="4:00 PM">
+                        <MFXTextField fx:id="startTimeField" allowEdit="false" borderGap="0.0" editable="false" floatMode="ABOVE" floatingText="Start Time" maxWidth="1.7976931348623157E308" minHeight="36.0" selectable="false">
                            <StackPane.margin>
                               <Insets />
                            </StackPane.margin>
@@ -257,7 +241,7 @@
                   </StackPane>
                   <StackPane fx:id="endTimePicker" layoutX="11.0" layoutY="10.0" maxHeight="-Infinity" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" style="-fx-background-color: TRANSPARENT;" HBox.hgrow="ALWAYS">
                      <children>
-                        <MFXTextField fx:id="endTimeField" allowEdit="false" borderGap="0.0" editable="false" floatMode="ABOVE" floatingText="End Time" maxWidth="1.7976931348623157E308" minHeight="36.0" selectable="false" text="7:00 PM">
+                        <MFXTextField fx:id="endTimeField" allowEdit="false" borderGap="0.0" editable="false" floatMode="ABOVE" floatingText="End Time" maxWidth="1.7976931348623157E308" minHeight="36.0" selectable="false">
                            <StackPane.margin>
                               <Insets />
                            </StackPane.margin>

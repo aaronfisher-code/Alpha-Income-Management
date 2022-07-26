@@ -116,8 +116,19 @@ public class RosterPageController extends Controller {
             employeeSelect.getItems().add(u);
         }
 
-        openStartTimePicker.setOnAction(actionEvent -> openTimePicker(startTimeField,LocalTime.MIDNIGHT));
-        openEndTimePicker.setOnAction(actionEvent -> openTimePicker(endTimeField,LocalTime.MIDNIGHT));
+
+
+
+        openStartTimePicker.setOnAction(actionEvent -> {
+            if(!startTimeField.getText().isEmpty()){startTime = LocalTime.parse(startTimeField.getText(), DateTimeFormatter.ofPattern("h:m a"));}
+            else {startTime = LocalTime.MIDNIGHT;}
+            openTimePicker(startTimeField,startTime);
+        });
+        openEndTimePicker.setOnAction(actionEvent -> {
+            if(!endTimeField.getText().isEmpty()) {endTime = LocalTime.parse(endTimeField.getText(), DateTimeFormatter.ofPattern("h:m a"));}
+            else{endTime = LocalTime.MIDNIGHT;}
+            openTimePicker(endTimeField,endTime);
+        });
         repeatUnit.getItems().add("Days");
         repeatUnit.getItems().add("Weeks");
         repeatingShiftToggle.setMainColor(Color.web("#0F60FF"));

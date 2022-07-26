@@ -124,6 +124,18 @@ Date Picker
     -fx-border-color: #0F60FF;
 }
 
+.mfx-combo-box-cell:hover{
+    -fx-background-color: derive(#0F60FF, 130%);
+    -fx-text-fill: #0F60FF;
+    -mfx-color: #0F60FF;
+}
+
+.mfx-combo-box-cell:selected{
+    -fx-background-color: derive(#0F60FF, 80%);
+    -fx-text-fill: #0F60FF;
+    -mfx-color: #0F60FF;
+}
+
 /********************
 Popup
 ********************/
@@ -161,7 +173,7 @@ Popup
 /*}*/
 
 .mfx-date-picker .date-picker-popup .mfx-date-cell:current {
-    -fx-background-color: #f8f7fa;
+    -fx-background-color: #F3F2F7;
     -fx-border-width: 2;
     -fx-text-fill: #0F60FF;
 }
@@ -175,6 +187,7 @@ Popup
 .mfx-date-picker .date-picker-popup .months-combo,
 .mfx-date-picker .date-picker-popup .years-combo {
     -fx-border-color: transparent;
+    -fx-background-color: #F3F2F7;
     -fx-border-radius: 0;
     -fx-text-fill: -mfx-text-he;
     -fx-padding: 4;
