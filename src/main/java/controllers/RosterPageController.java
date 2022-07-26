@@ -28,16 +28,15 @@ import models.Shift;
 import models.User;
 import org.controlsfx.control.PopOver;
 
+import javax.swing.*;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
+import java.util.Locale;
 
 import static java.time.temporal.ChronoUnit.DAYS;
 
@@ -45,6 +44,8 @@ import static java.time.temporal.ChronoUnit.DAYS;
 public class RosterPageController extends Controller {
 
     private MFXDatePicker datePkr;
+    @FXML
+    private MFXDatePicker startDate;
     @FXML
     private VBox monBox, tueBox, wedBox, thuBox, friBox, satBox, sunBox, editShiftPopover;
     @FXML
@@ -60,7 +61,7 @@ public class RosterPageController extends Controller {
     @FXML
     private StackPane startTimePicker;
     @FXML
-    private MFXTextField startTimeField,endTimeField,repeatValue;
+    private MFXTextField startTimeField,endTimeField,repeatValue,thirtyMinBreaks,tenMinBreaks;
     @FXML
     private Button openStartTimePicker,openEndTimePicker;
     @FXML
@@ -71,6 +72,8 @@ public class RosterPageController extends Controller {
     private Label repeatLabel;
     @FXML
     private MFXComboBox repeatUnit;
+    @FXML
+    private MFXButton saveButton;
 
 
     private Connection con = null;
@@ -110,7 +113,7 @@ public class RosterPageController extends Controller {
         }
 
         for(User u:currentUsers){
-            employeeSelect.getItems().add(u.getFirst_name() + " " + u.getLast_name());
+            employeeSelect.getItems().add(u);
         }
 
         openStartTimePicker.setOnAction(actionEvent -> openTimePicker(startTimeField,LocalTime.MIDNIGHT));
@@ -180,6 +183,7 @@ public class RosterPageController extends Controller {
                 sc.setParent(this);
                 sc.fill();
                 sc.checkForLeaveFormat();
+                shiftCard.setOnMouseClicked(event -> openPopover(s));
                 shiftContainer.getChildren().add(shiftCard);
             }
         }
@@ -225,10 +229,40 @@ public class RosterPageController extends Controller {
         updatePage();
     }
 
-    public void addNewShift(){
+    public void openPopover(){
         contentDarken.setVisible(true);
         changeSize(editShiftPopover,0);
+        saveButton.setOnAction(actionEvent -> addShift());
+    }
 
+    public void openPopover(Shift s){
+        contentDarken.setVisible(true);
+        changeSize(editShiftPopover,0);
+        String sql = "SELECT * FROM accounts WHERE username = ?";
+        try {
+            preparedStatement = con.prepareStatement(sql);
+            preparedStatement.setString(1, s.getUsername());
+            resultSet = preparedStatement.executeQuery();
+            if(resultSet.next())
+                employeeSelect.setValue(new User(resultSet));
+        } catch (SQLException ex) {
+            System.err.println(ex.getMessage());
+        }
+        startDate.setValue(s.getShiftStartDate());
+        startTimeField.setText(s.getShiftStartTime().format(DateTimeFormatter.ofPattern("h:mm a", Locale.US)));
+        endTimeField.setText(s.getShiftEndTime().format(DateTimeFormatter.ofPattern("h:mm a", Locale.US)));
+        thirtyMinBreaks.setText(String.valueOf(s.getThirtyMinBreaks()));
+        tenMinBreaks.setText(String.valueOf(s.getTenMinBreaks()));
+        if(s.isRepeating()){
+            repeatingShiftToggle.setSelected(true);
+            repeatValue.setDisable(false);
+            repeatUnit.setDisable(false);
+            repeatLabel.setDisable(false);
+            repeatValue.setText(String.valueOf(s.getDaysPerRepeat()));
+            repeatUnit.setValue("Days");
+        }
+
+        saveButton.setOnAction(actionEvent -> editShift(s));
     }
 
     public void closePopover(){
@@ -282,6 +316,45 @@ public class RosterPageController extends Controller {
             });
             parent.requestFocus();
         }
+    }
+
+    public void addShift(){
+        String usrname = ((User) employeeSelect.getValue()).getUsername();
+        LocalDate sDate = startDate.getValue();
+        LocalTime sTime = LocalTime.parse(startTimeField.getText(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
+        LocalTime eTime = LocalTime.parse(endTimeField.getText(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
+        int repeat = (repeatingShiftToggle.isSelected()) ? 1 : 0;
+        int thirtyMin = 0;
+        int tenMin = 0;
+        int daysPerRepeat = 1;
+        if (!thirtyMinBreaks.getText().equals("")) {thirtyMin = Integer.parseInt(thirtyMinBreaks.getText());}
+        if (!tenMinBreaks.getText().equals("")) {tenMin = Integer.parseInt(tenMinBreaks.getText());}
+        if(repeatingShiftToggle.isSelected()){
+            int multiplier = ((repeatUnit.getValue().toString().equals("Weeks")) ? 7 : 1);
+            daysPerRepeat = Integer.parseInt(repeatValue.getText()) * multiplier;
+        }
+
+        String sql = "INSERT INTO shifts(username,shiftStartTime,shiftEndTime,shiftStartDate,thirtyMinBreaks,tenMinBreaks,repeating,daysPerRepeat) VALUES(?,?,?,?,?,?,?,?)";
+        try {
+            preparedStatement = con.prepareStatement(sql);
+            preparedStatement.setString(1, usrname);
+            preparedStatement.setTime(2, Time.valueOf(sTime));
+            preparedStatement.setTime(3, Time.valueOf(eTime));
+            preparedStatement.setDate(4, Date.valueOf(sDate));
+            preparedStatement.setInt(5, thirtyMin);
+            preparedStatement.setInt(6, tenMin);
+            preparedStatement.setBoolean(7, repeatingShiftToggle.isSelected());
+            preparedStatement.setInt(8, daysPerRepeat);
+            preparedStatement.executeUpdate();
+            updatePage();
+            JOptionPane.showMessageDialog(null, "Shift successfully created");
+        } catch (SQLException ex) {
+            System.err.println(ex.getMessage());
+        }
+    }
+
+    public void editShift(Shift s){
+
     }
 
     public void addNewLeave() throws IOException {

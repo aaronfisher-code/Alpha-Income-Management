@@ -4738,7 +4738,8 @@ storeID</ColNames>
       <Unique>1</Unique>
     </index>
     <index id="1044" parent="365" name="invoiceNo_UNIQUE">
-      <ColNames>invoiceNo</ColNames>
+      <ColNames>invoiceNo
+storeID</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
@@ -4752,7 +4753,8 @@ storeID</ColNames>
       <UnderlyingIndexName>idaccountPayments_UNIQUE</UnderlyingIndexName>
     </key>
     <key id="1047" parent="365" name="invoiceNo_UNIQUE">
-      <ColNames>invoiceNo</ColNames>
+      <ColNames>invoiceNo
+storeID</ColNames>
       <UnderlyingIndexName>invoiceNo_UNIQUE</UnderlyingIndexName>
     </key>
     <column id="1048" parent="366" name="username">
@@ -4936,19 +4938,19 @@ storeID</ColNames>
       <Position>2</Position>
     </column>
     <column id="1088" parent="370" name="shiftStartTime">
-      <DataType>varchar(5)|0s</DataType>
+      <DataType>time|0s</DataType>
       <Position>3</Position>
     </column>
     <column id="1089" parent="370" name="shiftEndTime">
-      <DataType>varchar(5)|0s</DataType>
+      <DataType>time|0s</DataType>
       <Position>4</Position>
     </column>
     <column id="1090" parent="370" name="shiftStartDate">
-      <DataType>varchar(10)|0s</DataType>
+      <DataType>date|0s</DataType>
       <Position>5</Position>
     </column>
     <column id="1091" parent="370" name="shiftEndDate">
-      <DataType>varchar(10)|0s</DataType>
+      <DataType>date|0s</DataType>
       <Position>6</Position>
     </column>
     <column id="1092" parent="370" name="thirtyMinBreaks">

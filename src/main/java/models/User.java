@@ -102,4 +102,8 @@ public class User {
 	public ArrayList<Employment> getEmployments() {return employments;}
 
 	public void setEmployments(ArrayList<Employment> employments) {this.employments = employments;}
+
+	public String toString(){
+		return getFirst_name()+" "+getLast_name();
+	}
 }
