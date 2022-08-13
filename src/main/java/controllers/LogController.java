@@ -100,6 +100,8 @@ public class LogController extends Controller {
             	System.err.println("Failed login");
                 System.err.println(ex.getMessage());
             }
+        }else{
+            logInError.setText("Login error, please ensure your username and password are correct");
         }
     }
 
