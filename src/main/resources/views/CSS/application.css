@@ -257,6 +257,11 @@ Popup
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.8), 10, 0, 0.0, 2.0);
 }
 
+.mfx-radio-button{
+    -mfx-main: #0F60FF;
+    -fx-font-family: "Montserrat";
+}
+
 
 
 

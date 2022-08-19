@@ -12,7 +12,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 
-public class AddNewContactDialogController extends DateSelectController{
+public class AddNewContactDialogController{
 
     private Connection con = null;
     PreparedStatement preparedStatement = null;
@@ -26,7 +26,6 @@ public class AddNewContactDialogController extends DateSelectController{
 	@FXML
 	private void initialize() throws IOException {}
 
-	@Override
 	public void setMain(Main main) {
 		this.main = main;
 	}
@@ -36,12 +35,6 @@ public class AddNewContactDialogController extends DateSelectController{
 	}
 
 	public void setParent(AccountPaymentsPageController d) {this.parent = d;}
-
-	@Override
-	public void fill() {}
-
-	@Override
-	public void setDate(LocalDate date) {}
 
 	public void addContact(){
 	 	String contactName = newContactField.getText();

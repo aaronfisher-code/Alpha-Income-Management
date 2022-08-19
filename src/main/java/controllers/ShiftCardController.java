@@ -81,6 +81,8 @@ public class ShiftCardController extends Controller{
 		this.shiftCardDate = d;
 	}
 
+	public LocalDate getDate(){return this.shiftCardDate;}
+
 	public void setParent(RosterPageController parent){
 		this.parent = parent;
 	}

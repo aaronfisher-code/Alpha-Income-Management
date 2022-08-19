@@ -3,6 +3,7 @@ package controllers;
 
 import application.Main;
 //import com.jfoenix.controls.JFXDatePicker;
+import com.dlsc.gemsfx.DialogPane;
 import com.jfoenix.controls.JFXNodesList;
 //import io.github.palexdev.materialfx.controls.MFXDatePicker;
 import io.github.palexdev.materialfx.controls.*;
@@ -14,6 +15,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -38,6 +40,7 @@ import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.Locale;
 
+import static com.dlsc.gemsfx.DialogPane.Type.BLANK;
 import static java.time.temporal.ChronoUnit.DAYS;
 
 
@@ -74,6 +77,8 @@ public class RosterPageController extends Controller {
     private MFXComboBox repeatUnit;
     @FXML
     private MFXButton saveButton;
+    @FXML
+    private DialogPane dialogPane;
 
 
     private Connection con = null;
@@ -82,6 +87,7 @@ public class RosterPageController extends Controller {
     private Main main;
     private PopOver currentTimePopover;
     private LocalTime startTime,endTime;
+    private DialogPane.Dialog<Object> dialog;
 
     public void setMain(Main main) {
         this.main = main;
@@ -89,6 +95,10 @@ public class RosterPageController extends Controller {
 
     public void setConnection(Connection c) {
         this.con = c;
+    }
+
+    public DialogPane.Dialog<Object> getDialog() {
+        return dialog;
     }
 
     public void fill() {
@@ -194,7 +204,7 @@ public class RosterPageController extends Controller {
                 sc.setParent(this);
                 sc.fill();
                 sc.checkForLeaveFormat();
-                shiftCard.setOnMouseClicked(event -> openPopover(s));
+                shiftCard.setOnMouseClicked(event -> openPopover(s,sc.getDate()));
                 shiftContainer.getChildren().add(shiftCard);
             }
         }
@@ -243,10 +253,22 @@ public class RosterPageController extends Controller {
     public void openPopover(){
         contentDarken.setVisible(true);
         changeSize(editShiftPopover,0);
+        employeeSelect.setValue(null);
+        startDate.setValue(null);
+        startTimeField.setText("");
+        endTimeField.setText("");
+        thirtyMinBreaks.setText("");
+        tenMinBreaks.setText("");
+        repeatingShiftToggle.setSelected(false);
+        repeatValue.setDisable(true);
+        repeatUnit.setDisable(true);
+        repeatLabel.setDisable(true);
+        repeatValue.setText("");
+        repeatUnit.setValue(null);
         saveButton.setOnAction(actionEvent -> addShift());
     }
 
-    public void openPopover(Shift s){
+    public void openPopover(Shift s,LocalDate shiftCardDate){
         contentDarken.setVisible(true);
         changeSize(editShiftPopover,0);
         String sql = "SELECT * FROM accounts WHERE username = ?";
@@ -273,7 +295,16 @@ public class RosterPageController extends Controller {
             repeatUnit.setValue("Days");
         }
 
-        saveButton.setOnAction(actionEvent -> editShift(s));
+        saveButton.setOnAction(actionEvent -> {
+            if(s.isRepeating()){
+                dialog = new DialogPane.Dialog(dialogPane, BLANK);
+                dialog.setPadding(false);
+                dialog.setContent(createAddNewContactDialog(s,shiftCardDate));
+                dialogPane.showDialog(dialog);
+            }else{
+                editShift(s);
+            }
+        });
     }
 
     public void closePopover(){
@@ -358,14 +389,29 @@ public class RosterPageController extends Controller {
             preparedStatement.setInt(8, daysPerRepeat);
             preparedStatement.executeUpdate();
             updatePage();
-            JOptionPane.showMessageDialog(null, "Shift successfully created");
+            dialogPane.showInformation("Success", "Shift created succesfully");
         } catch (SQLException ex) {
             System.err.println(ex.getMessage());
         }
     }
 
     public void editShift(Shift s){
+        dialogPane.showInformation("Success", "Shift succesfully edited");
+    }
 
+    private Node createAddNewContactDialog(Shift s,LocalDate shiftCardDate) {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/CalendarEditDialog.fxml"));
+        StackPane calendarEditDialog = null;
+        try {
+            calendarEditDialog = loader.load();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        CalendarEditDialogController dialogController = loader.getController();
+        dialogController.fill(s,shiftCardDate);
+        dialogController.setParent(this);
+        dialogController.setConnection(this.con);
+        return calendarEditDialog;
     }
 
     public void addNewLeave() throws IOException {
