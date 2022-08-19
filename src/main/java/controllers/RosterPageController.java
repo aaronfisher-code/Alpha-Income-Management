@@ -387,8 +387,10 @@ public class RosterPageController extends Controller {
             preparedStatement.setBoolean(7, repeatingShiftToggle.isSelected());
             preparedStatement.setInt(8, daysPerRepeat);
             preparedStatement.executeUpdate();
-            updatePage();
-            dialogPane.showInformation("Success", "Shift created succesfully");
+            if(manualStartDate!=null) {
+                updatePage();
+                dialogPane.showInformation("Success", "Shift created succesfully");
+            }
         } catch (SQLException ex) {
             System.err.println(ex.getMessage());
         }
@@ -437,12 +439,14 @@ public class RosterPageController extends Controller {
             preparedStatement.setDate(1, Date.valueOf(shiftCardDate.minusDays(1)));
             preparedStatement.setInt(2,s.getShiftID());
             preparedStatement.executeUpdate();
+            //start new shift with new data
+            addShift(shiftCardDate);
+            updatePage();
+            dialogPane.showInformation("Success", "Shift edited succesfully");
         } catch (SQLException ex) {
             System.err.println(ex.getMessage());
         }
-        //start new shift with new data
-        System.out.println("date is: " + shiftCardDate);
-        addShift(shiftCardDate);
+
     }
 
     public void createShiftModification(Shift s,LocalDate shiftCardDate){
