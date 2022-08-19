@@ -265,7 +265,7 @@ public class RosterPageController extends Controller {
         repeatLabel.setDisable(true);
         repeatValue.setText("");
         repeatUnit.setValue(null);
-        saveButton.setOnAction(actionEvent -> addShift());
+        saveButton.setOnAction(actionEvent -> addShift(null));
     }
 
     public void openPopover(Shift s,LocalDate shiftCardDate){
@@ -360,12 +360,11 @@ public class RosterPageController extends Controller {
         }
     }
 
-    public void addShift(){
+    public void addShift(LocalDate manualStartDate){
         String usrname = ((User) employeeSelect.getValue()).getUsername();
-        LocalDate sDate = startDate.getValue();
+        LocalDate sDate = manualStartDate==null?startDate.getValue():manualStartDate;
         LocalTime sTime = LocalTime.parse(startTimeField.getText(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
         LocalTime eTime = LocalTime.parse(endTimeField.getText(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
-        int repeat = (repeatingShiftToggle.isSelected()) ? 1 : 0;
         int thirtyMin = 0;
         int tenMin = 0;
         int daysPerRepeat = 1;
@@ -396,7 +395,58 @@ public class RosterPageController extends Controller {
     }
 
     public void editShift(Shift s){
-        dialogPane.showInformation("Success", "Shift succesfully edited");
+        String usrname = ((User) employeeSelect.getValue()).getUsername();
+        LocalDate sDate = startDate.getValue();
+        LocalTime sTime = LocalTime.parse(startTimeField.getText(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
+        LocalTime eTime = LocalTime.parse(endTimeField.getText(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
+        int thirtyMin = 0;
+        int tenMin = 0;
+        int daysPerRepeat = 1;
+        if (!thirtyMinBreaks.getText().equals("")) {thirtyMin = Integer.parseInt(thirtyMinBreaks.getText());}
+        if (!tenMinBreaks.getText().equals("")) {tenMin = Integer.parseInt(tenMinBreaks.getText());}
+        if(repeatingShiftToggle.isSelected()){
+            int multiplier = ((repeatUnit.getValue().toString().equals("Weeks")) ? 7 : 1);
+            daysPerRepeat = Integer.parseInt(repeatValue.getText()) * multiplier;
+        }
+
+        String sql = "UPDATE shifts SET username=?,shiftStartTime=?,shiftEndTime=?,shiftStartDate=?,thirtyMinBreaks=?,tenMinBreaks=?,repeating=?,daysPerRepeat=? WHERE shift_id=?";
+        try {
+            preparedStatement = con.prepareStatement(sql);
+            preparedStatement.setString(1, usrname);
+            preparedStatement.setTime(2, Time.valueOf(sTime));
+            preparedStatement.setTime(3, Time.valueOf(eTime));
+            preparedStatement.setDate(4, Date.valueOf(sDate));
+            preparedStatement.setInt(5, thirtyMin);
+            preparedStatement.setInt(6, tenMin);
+            preparedStatement.setBoolean(7, repeatingShiftToggle.isSelected());
+            preparedStatement.setInt(8, daysPerRepeat);
+            preparedStatement.setInt(9, s.getShiftID());
+            preparedStatement.executeUpdate();
+            updatePage();
+            dialogPane.showInformation("Success", "Shift edited succesfully");
+        } catch (SQLException ex) {
+            System.err.println(ex.getMessage());
+        }
+    }
+
+    public void editFutureShifts(Shift s,LocalDate shiftCardDate){
+        //end original shift
+        String sql = "UPDATE shifts SET shiftEndDate=? WHERE shift_id=?";
+        try {
+            preparedStatement = con.prepareStatement(sql);
+            preparedStatement.setDate(1, Date.valueOf(shiftCardDate.minusDays(1)));
+            preparedStatement.setInt(2,s.getShiftID());
+            preparedStatement.executeUpdate();
+        } catch (SQLException ex) {
+            System.err.println(ex.getMessage());
+        }
+        //start new shift with new data
+        System.out.println("date is: " + shiftCardDate);
+        addShift(shiftCardDate);
+    }
+
+    public void createShiftModification(Shift s,LocalDate shiftCardDate){
+
     }
 
     private Node createAddNewContactDialog(Shift s,LocalDate shiftCardDate) {

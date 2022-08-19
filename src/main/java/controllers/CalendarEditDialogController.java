@@ -20,6 +20,8 @@ public class CalendarEditDialogController{
     ResultSet resultSet = null;
     private Main main;
 	private RosterPageController parent;
+	private Shift shift;
+	private LocalDate shiftCardDate;
 
 	@FXML
 	private MFXRadioButton currentButton,followingButton,allButton;
@@ -34,10 +36,21 @@ public class CalendarEditDialogController{
 	public void setParent(RosterPageController d) {this.parent = d;}
 
 	public void fill(Shift s,LocalDate shiftCardDate) {
-
+		if(s.getShiftStartDate().isEqual(shiftCardDate)||(s.getShiftEndDate()!=null&&s.getShiftEndDate().isEqual(shiftCardDate)))
+			followingButton.setVisible(false);
+		this.shift = s;
+		this.shiftCardDate = shiftCardDate;
 	}
 
 	public void editShift(){
+		if(allButton.isSelected()){
+			parent.editShift(this.shift);
+		}else if(followingButton.isSelected()){
+			parent.editFutureShifts(this.shift,this.shiftCardDate);
+		}else{
+			parent.createShiftModification(this.shift,this.shiftCardDate);
+		}
+		closeDialog();
 	}
 
 	public void closeDialog(){
