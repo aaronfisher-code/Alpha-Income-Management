@@ -29,7 +29,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane maxWidth="1.7976931348623157E308" prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.RosterPageController">
+<StackPane maxWidth="1.7976931348623157E308" prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.RosterPageController">
    <children>
       <BorderPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-background-color: TRANSPARENT;">
          <top>
@@ -203,28 +203,34 @@
          <children>
             <BorderPane style="-fx-background-color: #F8F8F8;">
                <left>
-                  <Label maxWidth="1.7976931348623157E308" text="Add a new shift" BorderPane.alignment="CENTER">
+                  <Label fx:id="popoverLabel" maxWidth="1.7976931348623157E308" text="Add a new shift" BorderPane.alignment="CENTER">
                      <font>
                         <Font size="17.0" />
                      </font>
                   </Label>
                </left>
-               <right>
-                  <Button contentDisplay="GRAPHIC_ONLY" maxHeight="46.4" maxWidth="46.4" minHeight="46.4" minWidth="46.4" mnemonicParsing="false" onAction="#closePopover" prefHeight="46.4" prefWidth="46.4" style="-fx-background-color: #F8F8F8;" BorderPane.alignment="CENTER_RIGHT">
-                     <BorderPane.margin>
-                        <Insets bottom="-10.0" right="-10.0" top="-10.0" />
-                     </BorderPane.margin>
-                     <graphic>
-                        <SVGPath content="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z&#10;" fill="#6e6b7b" scaleX="1.5" scaleY="1.5" />
-                     </graphic>
-                  </Button>
-               </right>
                <VBox.margin>
                   <Insets bottom="10.0" left="-10.0" right="-10.0" />
                </VBox.margin>
                <padding>
                   <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
                </padding>
+               <right>
+                  <HBox BorderPane.alignment="CENTER">
+                     <children>
+                        <Button fx:id="deleteButton" maxHeight="46.4" maxWidth="46.4" minHeight="46.4" minWidth="46.4" mnemonicParsing="false" prefHeight="46.4" prefWidth="46.4" style="-fx-background-color: #F8F8F8;">
+                           <graphic>
+                              <SVGPath content="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z&#10;" fill="#6e6b7b" scaleX="1.25" scaleY="1.25" />
+                           </graphic>
+                        </Button>
+                        <Button contentDisplay="GRAPHIC_ONLY" maxHeight="46.4" maxWidth="46.4" minHeight="46.4" minWidth="46.4" mnemonicParsing="false" onAction="#closePopover" prefHeight="46.4" prefWidth="46.4" style="-fx-background-color: #F8F8F8;">
+                           <graphic>
+                              <SVGPath content="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z&#10;" fill="#6e6b7b" scaleX="1.5" scaleY="1.5" />
+                           </graphic>
+                        </Button>
+                     </children>
+                  </HBox>
+               </right>
             </BorderPane>
             <MFXFilterComboBox fx:id="employeeSelect" allowEdit="true" borderGap="0.0" floatMode="ABOVE" floatingText="Employee Name" floatingTextGap="10.0" maxWidth="1.7976931348623157E308" minHeight="36.0" />
             <MFXDatePicker fx:id="startDate" borderGap="0.0" floatMode="ABOVE" floatingText="Shift Date" maxWidth="1.7976931348623157E308" minHeight="36.0" />

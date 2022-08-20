@@ -48,6 +48,8 @@ public class RosterPageController extends Controller {
 
     private MFXDatePicker datePkr;
     @FXML
+    private Label popoverLabel;
+    @FXML
     private MFXDatePicker startDate;
     @FXML
     private VBox monBox, tueBox, wedBox, thuBox, friBox, satBox, sunBox, editShiftPopover;
@@ -66,7 +68,7 @@ public class RosterPageController extends Controller {
     @FXML
     private MFXTextField startTimeField,endTimeField,repeatValue,thirtyMinBreaks,tenMinBreaks;
     @FXML
-    private Button openStartTimePicker,openEndTimePicker;
+    private Button openStartTimePicker,openEndTimePicker,deleteButton;
     @FXML
     private MFXFilterComboBox employeeSelect;
     @FXML
@@ -251,6 +253,8 @@ public class RosterPageController extends Controller {
     }
 
     public void openPopover(){
+        popoverLabel.setText("Add a new Shift");
+        deleteButton.setVisible(false);
         contentDarken.setVisible(true);
         changeSize(editShiftPopover,0);
         employeeSelect.setValue(null);
@@ -269,6 +273,8 @@ public class RosterPageController extends Controller {
     }
 
     public void openPopover(Shift s,LocalDate shiftCardDate){
+        popoverLabel.setText("Edit shift");
+        deleteButton.setVisible(true);
         contentDarken.setVisible(true);
         changeSize(editShiftPopover,0);
         String sql = "SELECT * FROM accounts WHERE username = ?";
