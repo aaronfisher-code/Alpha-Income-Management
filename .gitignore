@@ -4,3 +4,9 @@
 .idea/dataSources/
 .idea/dataSources.local.xml
 .idea
+*.len
+*.dat_i
+*.s
+*.at
+*.values
+*.dat
