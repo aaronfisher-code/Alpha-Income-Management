@@ -128,8 +128,6 @@ public class RosterPageController extends Controller {
             employeeSelect.getItems().add(u);
         }
 
-
-
         //TODO fix dateTime parsing from strings on till computer
         openStartTimePicker.setOnAction(actionEvent -> {
             if(!startTimeField.getText().isEmpty()){startTime = LocalTime.parse(startTimeField.getText(), DateTimeFormatter.ofPattern("h:m a"));}
@@ -160,16 +158,16 @@ public class RosterPageController extends Controller {
     }
 
     public void updateDay(LocalDate date, VBox shiftContainer, int dayOfWeek, ArrayList<Shift> allShifts) {
+        //empty the contents of the current day VBox
         shiftContainer.getChildren().removeAll(shiftContainer.getChildren());
-
         long weekDay = date.getDayOfWeek().getValue();
 
+        //Create Day Header card
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/RosterDayCard.fxml"));
         VBox rosterDayCard = null;
         try {
             rosterDayCard = loader.load();
         } catch (IOException e) {
-
             e.printStackTrace();
         }
         RosterDayCardController rdc = loader.getController();
@@ -179,12 +177,11 @@ public class RosterPageController extends Controller {
         rdc.setParent(this);
         rdc.fill();
         if (rdc.getDate() == date) {
+            //add blue selection formatting if date is current
             rdc.select();
         }
         HBox.setHgrow(rosterDayCard, Priority.ALWAYS);
         weekdayBox.add(rosterDayCard,dayOfWeek-1,0);
-
-
 
         for (Shift s : allShifts) {
             boolean repeatShiftDay = (s.isRepeating() && DAYS.between(s.getShiftStartDate(), date.minusDays(weekDay - dayOfWeek)) % s.getDaysPerRepeat() == 0 && DAYS.between(s.getShiftStartDate(), date.minusDays(weekDay - dayOfWeek)) >= 0);
@@ -214,9 +211,26 @@ public class RosterPageController extends Controller {
 
     public void updatePage() {
         ArrayList<Shift> allShifts = new ArrayList<>();
-        String sql = "SELECT * FROM shifts JOIN accounts a on a.username = shifts.username ORDER BY shiftStartTime, a.first_name";
+
+        //Set date in case the value is still null
+        if (datePkr.getValue() == null)
+            datePkr.setValue(LocalDate.now());
+
+        //Get Week start and End dates for search range
+        long weekDay = datePkr.getValue().getDayOfWeek().getValue();
+        LocalDate weekStart = datePkr.getValue().minusDays(weekDay-1);
+        LocalDate weekEnd = datePkr.getValue().plusDays(7-weekDay);
+
+        String sql = "SELECT * FROM shifts JOIN accounts a on a.username = shifts.username " +
+                    "WHERE (shifts.repeating=TRUE AND (isNull(shiftEndDate) OR shiftEndDate>?) AND shiftStartDate<?)"+
+                    "OR (shifts.repeating=false AND shiftStartDate>? AND shiftStartDate<?)"+
+                    "ORDER BY shiftStartTime, a.first_name";
         try {
             preparedStatement = con.prepareStatement(sql);
+            preparedStatement.setDate(1, Date.valueOf(weekStart));
+            preparedStatement.setDate(2, Date.valueOf(weekEnd));
+            preparedStatement.setDate(3, Date.valueOf(weekStart));
+            preparedStatement.setDate(4, Date.valueOf(weekEnd));
             resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
                 allShifts.add(new Shift(resultSet));
@@ -224,8 +238,6 @@ public class RosterPageController extends Controller {
         } catch (SQLException ex) {
             System.err.println(ex.getMessage());
         }
-        if (datePkr.getValue() == null)
-            datePkr.setValue(LocalDate.now());
 
         weekdayBox.getChildren().removeAll(weekdayBox.getChildren());
         updateDay(datePkr.getValue(), monBox, 1, allShifts);
@@ -269,7 +281,7 @@ public class RosterPageController extends Controller {
         repeatLabel.setDisable(true);
         repeatValue.setText("");
         repeatUnit.setValue(null);
-        saveButton.setOnAction(actionEvent -> addShift(null));
+        saveButton.setOnAction(actionEvent -> addShift(null,null));
     }
 
     public void openPopover(Shift s,LocalDate shiftCardDate){
@@ -366,7 +378,7 @@ public class RosterPageController extends Controller {
         }
     }
 
-    public void addShift(LocalDate manualStartDate){
+    public void addShift(Shift previousShift, LocalDate manualStartDate){
         String usrname = ((User) employeeSelect.getValue()).getUsername();
         LocalDate sDate = manualStartDate==null?startDate.getValue():manualStartDate;
         LocalTime sTime = LocalTime.parse(startTimeField.getText(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
@@ -380,10 +392,16 @@ public class RosterPageController extends Controller {
             int multiplier = ((repeatUnit.getValue().toString().equals("Weeks")) ? 7 : 1);
             daysPerRepeat = Integer.parseInt(repeatValue.getText()) * multiplier;
         }
-
-        String sql = "INSERT INTO shifts(username,shiftStartTime,shiftEndTime,shiftStartDate,thirtyMinBreaks,tenMinBreaks,repeating,daysPerRepeat) VALUES(?,?,?,?,?,?,?,?)";
         try {
-            preparedStatement = con.prepareStatement(sql);
+            String sql = "";
+            if(previousShift!=null){
+                sql = "INSERT INTO shiftModifications(username,shiftStartTime,shiftEndTime,shiftStartDate,thirtyMinBreaks,tenMinBreaks,repeating,daysPerRepeat,shift_id) VALUES(?,?,?,?,?,?,?,?,?)";
+                preparedStatement = con.prepareStatement(sql);
+                preparedStatement.setInt(9, previousShift.getShiftID());
+            }else{
+                sql = "INSERT INTO shifts(username,shiftStartTime,shiftEndTime,shiftStartDate,thirtyMinBreaks,tenMinBreaks,repeating,daysPerRepeat) VALUES(?,?,?,?,?,?,?,?)";
+                preparedStatement = con.prepareStatement(sql);
+            }
             preparedStatement.setString(1, usrname);
             preparedStatement.setTime(2, Time.valueOf(sTime));
             preparedStatement.setTime(3, Time.valueOf(eTime));
@@ -393,9 +411,12 @@ public class RosterPageController extends Controller {
             preparedStatement.setBoolean(7, repeatingShiftToggle.isSelected());
             preparedStatement.setInt(8, daysPerRepeat);
             preparedStatement.executeUpdate();
-            if(manualStartDate!=null) {
-                updatePage();
+            updatePage();
+            if(manualStartDate==null) {
                 dialogPane.showInformation("Success", "Shift created succesfully");
+            }else if(previousShift!=null){
+                updatePage();
+                dialogPane.showInformation("Success", "Shift edited succesfully");
             }
         } catch (SQLException ex) {
             System.err.println(ex.getMessage());
@@ -446,17 +467,12 @@ public class RosterPageController extends Controller {
             preparedStatement.setInt(2,s.getShiftID());
             preparedStatement.executeUpdate();
             //start new shift with new data
-            addShift(shiftCardDate);
+            addShift(null,shiftCardDate);
             updatePage();
             dialogPane.showInformation("Success", "Shift edited succesfully");
         } catch (SQLException ex) {
             System.err.println(ex.getMessage());
         }
-
-    }
-
-    public void createShiftModification(Shift s,LocalDate shiftCardDate){
-
     }
 
     private Node createAddNewContactDialog(Shift s,LocalDate shiftCardDate) {
