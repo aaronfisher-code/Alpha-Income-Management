@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dataSource name="Google Cloud SQL db">
-  <database-model serializer="dbm" dbms="MYSQL" family-id="MYSQL" format-version="4.32">
+  <database-model serializer="dbm" dbms="MYSQL" family-id="MYSQL" format-version="4.43">
     <root id="1">
       <DefaultCasing>exact</DefaultCasing>
       <DefaultEngine>InnoDB</DefaultEngine>
@@ -4621,10 +4621,10 @@ sys|schema||mysql.sys|localhost|TRIGGER|G</Grants>
       <Position>6</Position>
     </column>
     <column id="1024" parent="364" name="idaccountPaymentContacts">
+      <AutoIncrement>1</AutoIncrement>
       <DataType>int(11)|0s</DataType>
       <NotNull>1</NotNull>
       <Position>1</Position>
-      <SequenceIdentity>null</SequenceIdentity>
     </column>
     <column id="1025" parent="364" name="contactName">
       <DataType>varchar(45)|0s</DataType>
@@ -4657,24 +4657,21 @@ storeID</ColNames>
       <Type>btree</Type>
     </index>
     <key id="1031" parent="364" name="PRIMARY">
-      <ColNames>idaccountPaymentContacts</ColNames>
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
+      <UnderlyingIndexColNames>idaccountPaymentContacts</UnderlyingIndexColNames>
     </key>
     <key id="1032" parent="364" name="idaccountPaymentContacts_UNIQUE">
-      <ColNames>idaccountPaymentContacts</ColNames>
       <UnderlyingIndexName>idaccountPaymentContacts_UNIQUE</UnderlyingIndexName>
     </key>
     <key id="1033" parent="364" name="uniqueName">
-      <ColNames>contactName
-storeID</ColNames>
       <UnderlyingIndexName>uniqueName</UnderlyingIndexName>
     </key>
     <column id="1034" parent="365" name="idaccountPayments">
+      <AutoIncrement>1</AutoIncrement>
       <DataType>int(11)|0s</DataType>
       <NotNull>1</NotNull>
       <Position>1</Position>
-      <SequenceIdentity>null</SequenceIdentity>
     </column>
     <column id="1035" parent="365" name="contactID">
       <DataType>varchar(45)|0s</DataType>
@@ -4727,17 +4724,14 @@ storeID</ColNames>
       <Unique>1</Unique>
     </index>
     <key id="1045" parent="365" name="PRIMARY">
-      <ColNames>idaccountPayments</ColNames>
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
+      <UnderlyingIndexColNames>idaccountPayments</UnderlyingIndexColNames>
     </key>
     <key id="1046" parent="365" name="idaccountPayments_UNIQUE">
-      <ColNames>idaccountPayments</ColNames>
       <UnderlyingIndexName>idaccountPayments_UNIQUE</UnderlyingIndexName>
     </key>
     <key id="1047" parent="365" name="invoiceNo_UNIQUE">
-      <ColNames>invoiceNo
-storeID</ColNames>
       <UnderlyingIndexName>invoiceNo_UNIQUE</UnderlyingIndexName>
     </key>
     <column id="1048" parent="366" name="username">
@@ -4779,19 +4773,18 @@ storeID</ColNames>
       <Unique>1</Unique>
     </index>
     <key id="1057" parent="366" name="PRIMARY">
-      <ColNames>username</ColNames>
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
+      <UnderlyingIndexColNames>username</UnderlyingIndexColNames>
     </key>
     <key id="1058" parent="366" name="username_UNIQUE">
-      <ColNames>username</ColNames>
       <UnderlyingIndexName>username_UNIQUE</UnderlyingIndexName>
     </key>
     <column id="1059" parent="367" name="employmentsID">
+      <AutoIncrement>1</AutoIncrement>
       <DataType>int(11)|0s</DataType>
       <NotNull>1</NotNull>
       <Position>1</Position>
-      <SequenceIdentity>null</SequenceIdentity>
     </column>
     <column id="1060" parent="367" name="username">
       <DataType>varchar(25)|0s</DataType>
@@ -4829,12 +4822,11 @@ storeID</ColNames>
       <Type>btree</Type>
     </index>
     <key id="1067" parent="367" name="PRIMARY">
-      <ColNames>employmentsID</ColNames>
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
+      <UnderlyingIndexColNames>employmentsID</UnderlyingIndexColNames>
     </key>
     <key id="1068" parent="367" name="employmentsID_UNIQUE">
-      <ColNames>employmentsID</ColNames>
       <UnderlyingIndexName>employmentsID_UNIQUE</UnderlyingIndexName>
     </key>
     <column id="1069" parent="368" name="date">
@@ -4888,10 +4880,10 @@ storeID</ColNames>
       <Position>12</Position>
     </column>
     <key id="1081" parent="368" name="PRIMARY">
-      <ColNames>date
-storeID</ColNames>
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
+      <UnderlyingIndexColNames>date
+storeID</UnderlyingIndexColNames>
     </key>
     <column id="1082" parent="369" name="leaveID">
       <DataType>tinyint(4)|0s</DataType>
@@ -4910,10 +4902,10 @@ storeID</ColNames>
       <Position>4</Position>
     </column>
     <column id="1086" parent="370" name="shift_id">
+      <AutoIncrement>1</AutoIncrement>
       <DataType>smallint(6)|0s</DataType>
       <NotNull>1</NotNull>
       <Position>1</Position>
-      <SequenceIdentity>null</SequenceIdentity>
     </column>
     <column id="1087" parent="370" name="username">
       <DataType>varchar(25)|0s</DataType>
@@ -4971,19 +4963,18 @@ storeID</ColNames>
       <Type>btree</Type>
     </index>
     <key id="1100" parent="370" name="PRIMARY">
-      <ColNames>shift_id</ColNames>
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
+      <UnderlyingIndexColNames>shift_id</UnderlyingIndexColNames>
     </key>
     <key id="1101" parent="370" name="shift_id_UNIQUE">
-      <ColNames>shift_id</ColNames>
       <UnderlyingIndexName>shift_id_UNIQUE</UnderlyingIndexName>
     </key>
     <column id="1102" parent="371" name="eventID">
+      <AutoIncrement>1</AutoIncrement>
       <DataType>tinyint(4)|0s</DataType>
       <NotNull>1</NotNull>
       <Position>1</Position>
-      <SequenceIdentity>null</SequenceIdentity>
     </column>
     <column id="1103" parent="371" name="eventDate">
       <DataType>varchar(10)|0s</DataType>
@@ -5003,19 +4994,18 @@ storeID</ColNames>
       <Unique>1</Unique>
     </index>
     <key id="1107" parent="371" name="PRIMARY">
-      <ColNames>eventID</ColNames>
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
+      <UnderlyingIndexColNames>eventID</UnderlyingIndexColNames>
     </key>
     <key id="1108" parent="371" name="eventID_UNIQUE">
-      <ColNames>eventID</ColNames>
       <UnderlyingIndexName>eventID_UNIQUE</UnderlyingIndexName>
     </key>
     <column id="1109" parent="372" name="storeID">
+      <AutoIncrement>1</AutoIncrement>
       <DataType>int(11)|0s</DataType>
       <NotNull>1</NotNull>
       <Position>1</Position>
-      <SequenceIdentity>null</SequenceIdentity>
     </column>
     <column id="1110" parent="372" name="storeName">
       <DataType>varchar(45)|0s</DataType>
@@ -5028,12 +5018,11 @@ storeID</ColNames>
       <Unique>1</Unique>
     </index>
     <key id="1112" parent="372" name="PRIMARY">
-      <ColNames>storeID</ColNames>
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
+      <UnderlyingIndexColNames>storeID</UnderlyingIndexColNames>
     </key>
     <key id="1113" parent="372" name="storeID_UNIQUE">
-      <ColNames>storeID</ColNames>
       <UnderlyingIndexName>storeID_UNIQUE</UnderlyingIndexName>
     </key>
   </database-model>

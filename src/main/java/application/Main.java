@@ -7,6 +7,7 @@ import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.image.Image;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -50,8 +51,9 @@ public class Main extends Application {
 		con = DBConnector.conDB();
 		c.setConnection(con);
 		primaryStage.setTitle("Alpha Income Management");
-		bs = new BorderlessScene(primaryStage,StageStyle.UNDECORATED,root);
+		bs = new BorderlessScene(primaryStage,StageStyle.TRANSPARENT,root);
 		bs.removeDefaultCSS();
+		bs.setFill(Color.TRANSPARENT);
 		primaryStage.setScene(bs);
 		primaryStage.getIcons().add(icon);
 		primaryStage.show();

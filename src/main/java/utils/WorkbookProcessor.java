@@ -5,6 +5,8 @@ import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -18,19 +20,31 @@ public class WorkbookProcessor {
         ArrayList<CellDataPoint> dataPoints = new ArrayList<>();
         //evaluating cell type
         String category = "";
+        System.out.println(sheet.getRow(1).getCell(2).getStringCellValue());
+        String[] splitDate= sheet.getRow(3).getCell(4).getStringCellValue().split("\\s+");
+        String format = "dd/MM/yyyy HH:mm";
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
+        LocalDateTime periodStart = LocalDateTime.parse(splitDate[0]+" "+splitDate[1],formatter);
+        LocalDateTime periodEnd = LocalDateTime.parse(splitDate[3]+" "+splitDate[4],formatter);
+        System.out.println("Period Start: " + periodStart);
+        System.out.println("Period End: " + periodEnd);
         for(Row row: sheet)     //iteration over row using for each loop
         {
+            if(row.getRowNum()<7){
+                continue;
+            }
            CellDataPoint cdp = new CellDataPoint();
            boolean dataCheck = false;
             if(row.getCell(1)!=null){
                 category = row.getCell(1).getStringCellValue();
+                cdp.setCategory(category);
             }else{
                 category = "";
+                cdp.setCategory(category);
             }
 
             if(row.getCell(3)!=null){
                 cdp.setSubCategory(row.getCell(3).getStringCellValue());
-                cdp.setCategory(category);
             }
 
             if(row.getCell(9)!=null){
@@ -38,14 +52,11 @@ public class WorkbookProcessor {
                 dataCheck = true;
             }
 
-            if(row.getCell(14)!=null){
-                cdp.setAmount(row.getCell(14).getNumericCellValue());
+            if(row.getCell(16)!=null){
+                cdp.setAmount(row.getCell(16).getNumericCellValue());
                 dataCheck = true;
             }
-            if((cdp.getCategory()==null && cdp.getSubCategory()==null) ||
-                (cdp.getCategory().equals("") && cdp.getSubCategory().equals(""))){
-                dataCheck= false;
-            }
+
             if(dataCheck)
                 dataPoints.add(cdp);
         }

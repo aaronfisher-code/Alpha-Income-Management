@@ -130,12 +130,12 @@ public class RosterPageController extends Controller {
 
         //TODO fix dateTime parsing from strings on till computer
         openStartTimePicker.setOnAction(actionEvent -> {
-            if(!startTimeField.getText().isEmpty()){startTime = LocalTime.parse(startTimeField.getText(), DateTimeFormatter.ofPattern("h:m a"));}
+            if(!startTimeField.getText().isEmpty()){startTime = LocalTime.parse(startTimeField.getText(), DateTimeFormatter.ofPattern("h:mm a"));}
             else {startTime = LocalTime.MIDNIGHT;}
             openTimePicker(startTimeField,startTime);
         });
         openEndTimePicker.setOnAction(actionEvent -> {
-            if(!endTimeField.getText().isEmpty()) {endTime = LocalTime.parse(endTimeField.getText(), DateTimeFormatter.ofPattern("h:m a"));}
+            if(!endTimeField.getText().isEmpty()) {endTime = LocalTime.parse(endTimeField.getText(), DateTimeFormatter.ofPattern("h:mm a"));}
             else{endTime = LocalTime.MIDNIGHT;}
             openTimePicker(endTimeField,endTime);
         });
