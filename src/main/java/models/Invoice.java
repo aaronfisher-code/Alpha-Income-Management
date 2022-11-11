@@ -22,6 +22,21 @@ public class Invoice {
 	public Invoice(ResultSet resultSet) {
 	}
 
+	public Invoice(String supplierName, String invoiceNo, LocalDate invoiceDate, LocalDate dueDate, String description, int quantity, double unitAmount, double importedInvoiceAmount, double variance, double credits, double totalAfterCredits, String notes) {
+		this.supplierName = supplierName;
+		this.invoiceNo = invoiceNo;
+		this.invoiceDate = invoiceDate;
+		this.dueDate = dueDate;
+		this.description = description;
+		this.quantity = quantity;
+		this.unitAmount = unitAmount;
+		this.importedInvoiceAmount = importedInvoiceAmount;
+		this.variance = variance;
+		this.credits = credits;
+		this.totalAfterCredits = totalAfterCredits;
+		this.notes = notes;
+	}
+
 	public String getSupplierName() {return supplierName;}
 
 	public void setSupplierName(String supplierName) {this.supplierName = supplierName;}

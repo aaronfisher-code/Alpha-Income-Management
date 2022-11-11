@@ -262,6 +262,30 @@ Popup
     -fx-font-family: "Montserrat";
 }
 
+.table-view .column-header * {
+    -fx-background-color: #F3F2F7;
+    -fx-font-family: "Montserrat Semibold";
+    -fx-text-fill: #6E6B7B;
+    -fx-border-color: TRANSPARENT;
+}
+
+.table-view .column-header,
+.table-view .column-header .filler,
+.table-view .column-header-background .filler {
+    -fx-background-color: #F3F2F7;
+    -fx-size: 40;
+    -fx-border-color: TRANSPARENT;
+}
+
+.table-row-cell {
+    -fx-cell-size: 400px;
+}
+
+.table-view{
+    -fx-font-family: "Montserrat";
+    -fx-border-color: #F3F2F7;
+}
+
 
 
 

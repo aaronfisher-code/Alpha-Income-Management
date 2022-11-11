@@ -3,30 +3,31 @@ package controllers;
 import application.Main;
 import com.dlsc.gemsfx.FilterView;
 import io.github.palexdev.materialfx.controls.MFXDatePicker;
-import io.github.palexdev.materialfx.controls.MFXTableColumn;
-import io.github.palexdev.materialfx.controls.MFXTableView;
-import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
-import io.github.palexdev.materialfx.filter.StringFilter;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
-import javafx.scene.AccessibleRole;
-import javafx.scene.Node;
-import javafx.scene.control.Label;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 import models.Invoice;
-import models.Invoice;
+import utils.GUIUtils;
 
+import java.awt.*;
+import java.awt.font.FontRenderContext;
+import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
-import java.util.Comparator;
 
 public class InvoiceEntryController extends Controller{
 
@@ -41,17 +42,17 @@ public class InvoiceEntryController extends Controller{
 	private BorderPane storesButton;
 	@FXML
 	private BorderPane invoicesButton;
-	private MFXTableView<Invoice> invoicesTable = new MFXTableView<Invoice>();
-	private MFXTableColumn<Invoice> supplierNameCol;
-	private MFXTableColumn<Invoice> invoiceNoCol;
-	private MFXTableColumn<Invoice> invoiceDateCol;
-	private MFXTableColumn<Invoice> dueDateCol;
-	private MFXTableColumn<Invoice> unitAmountCol;
-	private MFXTableColumn<Invoice> importedInvoiceAmountCol;
-	private MFXTableColumn<Invoice> varianceCol;
-	private MFXTableColumn<Invoice> creditsCol;
-	private MFXTableColumn<Invoice> totalAfterCreditCol;
-	private MFXTableColumn<Invoice> notesCol;
+	private TableView<Invoice> invoicesTable = new TableView<>();
+	private TableColumn<Invoice,String> supplierNameCol;
+	private TableColumn<Invoice,String> invoiceNoCol;
+	private TableColumn<Invoice,LocalDate> invoiceDateCol;
+	private TableColumn<Invoice,LocalDate> dueDateCol;
+	private TableColumn<Invoice,Double> unitAmountCol;
+	private TableColumn<Invoice,Double> importedInvoiceAmountCol;
+	private TableColumn<Invoice,Double> varianceCol;
+	private TableColumn<Invoice,Double> creditsCol;
+	private TableColumn<Invoice,Double> totalAfterCreditCol;
+	private TableColumn<Invoice,String> notesCol;
 	private FilterView<Invoice> filterView = new FilterView<>();
 	
 	
@@ -90,30 +91,30 @@ public class InvoiceEntryController extends Controller{
 		filterView.setTextFilterProvider(text -> invoice -> invoice.getInvoiceNo().toLowerCase().contains(text) || invoice.getSupplierName().toLowerCase().contains(text));
 		allInvoices = filterView.getFilteredItems();
 
-		supplierNameCol = new MFXTableColumn<>("SUPPLIER",false, Comparator.comparing(Invoice::getSupplierName));
-		invoiceNoCol = new MFXTableColumn<>("INVOICE NUMBER",false, Comparator.comparing(Invoice::getInvoiceNo));
-		invoiceDateCol = new MFXTableColumn<>("INVOICE DATE",false, Comparator.comparing(Invoice::getInvoiceDate));
-		dueDateCol = new MFXTableColumn<>("DUE DATE",false, Comparator.comparing(Invoice::getDueDate));
-		unitAmountCol = new MFXTableColumn<>("UNIT AMOUNT",false, Comparator.comparing(Invoice::getUnitAmount));
-		importedInvoiceAmountCol = new MFXTableColumn<>("IMPORTED AMOUNT",false, Comparator.comparing(Invoice::getImportedInvoiceAmount));
-		varianceCol = new MFXTableColumn<>("VARIANCE",false, Comparator.comparing(Invoice::getVariance));
-		creditsCol = new MFXTableColumn<>("CREDITS",false, Comparator.comparing(Invoice::getCredits));
-		totalAfterCreditCol = new MFXTableColumn<>("TOTAL AFTER CREDIT",false, Comparator.comparing(Invoice::getTotalAfterCredits));
-		notesCol = new MFXTableColumn<>("NOTES",false, Comparator.comparing(Invoice::getNotes));
+		supplierNameCol = new TableColumn<>("SUPPLIER");
+		invoiceNoCol = new TableColumn<>("INVOICE NUMBER");
+		invoiceDateCol = new TableColumn<>("INVOICE DATE");
+		dueDateCol = new TableColumn<>("DUE DATE");
+		unitAmountCol = new TableColumn<>("UNIT AMOUNT");
+		importedInvoiceAmountCol = new TableColumn<>("IMPORTED INVOICE AMOUNT");
+		varianceCol = new TableColumn<>("VARIANCE");
+		creditsCol = new TableColumn<>("CREDITS");
+		totalAfterCreditCol = new TableColumn<>("TOTAL AFTER CREDIT");
+		notesCol = new TableColumn<>("NOTES");
 
 
-		supplierNameCol.setRowCellFactory(invoice -> new MFXTableRowCell<>(Invoice::getSupplierName));
-		invoiceNoCol.setRowCellFactory(invoice -> new MFXTableRowCell<>(Invoice::getInvoiceNo));
-		invoiceDateCol.setRowCellFactory(invoice -> new MFXTableRowCell<>(Invoice::getInvoiceDate));
-		dueDateCol.setRowCellFactory(invoice -> new MFXTableRowCell<>(Invoice::getDueDate));
-		unitAmountCol.setRowCellFactory(invoice -> new MFXTableRowCell<>(Invoice::getUnitAmount));
-		importedInvoiceAmountCol.setRowCellFactory(invoice -> new MFXTableRowCell<>(Invoice::getImportedInvoiceAmount));
-		varianceCol.setRowCellFactory(invoice -> new MFXTableRowCell<>(Invoice::getVariance));
-		creditsCol.setRowCellFactory(invoice -> new MFXTableRowCell<>(Invoice::getCredits));
-		totalAfterCreditCol.setRowCellFactory(invoice -> new MFXTableRowCell<>(Invoice::getTotalAfterCredits));
-		notesCol.setRowCellFactory(invoice -> new MFXTableRowCell<>(Invoice::getNotes));
+		supplierNameCol.setCellValueFactory(new PropertyValueFactory<>("supplierName"));
+		invoiceNoCol.setCellValueFactory(new PropertyValueFactory<>("invoiceNo"));
+		invoiceDateCol.setCellValueFactory(new PropertyValueFactory<>("invoiceDate"));
+		dueDateCol.setCellValueFactory(new PropertyValueFactory<>("dueDate"));
+		unitAmountCol.setCellValueFactory(new PropertyValueFactory<>("unitAmount"));
+		importedInvoiceAmountCol.setCellValueFactory(new PropertyValueFactory<>("importedInvoiceAmount"));
+		varianceCol.setCellValueFactory(new PropertyValueFactory<>("variance"));
+		creditsCol.setCellValueFactory(new PropertyValueFactory<>("credits"));
+		totalAfterCreditCol.setCellValueFactory(new PropertyValueFactory<>("totalAfterCredits"));
+		notesCol.setCellValueFactory(new PropertyValueFactory<>("notes"));
 
-		invoicesTable.getTableColumns().addAll(
+		invoicesTable.getColumns().addAll(
 				supplierNameCol,
 				invoiceNoCol,
 				invoiceDateCol,
@@ -125,25 +126,25 @@ public class InvoiceEntryController extends Controller{
 				totalAfterCreditCol,
 				notesCol
 		);
-
-//		invoicesTable.getFilters().addAll(
-//				new StringFilter<>("Invoicename",Invoice::getInvoicename),
-//				new StringFilter<>("First Name",Invoice::getFirst_name),
-//				new StringFilter<>("Last Name",Invoice::getLast_name),
-//				new StringFilter<>("Role",Invoice::getRole)
-//		);
-
-
-		invoicesTable.setFooterVisible(true);
-		invoicesTable.autosizeColumnsOnInitialization();
+		invoicesTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
 		invoicesTable.setMaxWidth(Double.MAX_VALUE);
 		invoicesTable.setMaxHeight(Double.MAX_VALUE);
 		filterView.setPadding(new Insets(20,20,10,20));//top,right,bottom,left
-
 		controlBox.getChildren().addAll(filterView,invoicesTable);
-
+		LocalDate date = LocalDate.now();
+		Invoice test1 = new Invoice("Test","1234",date,date,"test",123,123.45,123.45,123.45,123.45,1234.45,"test");
+		Invoice test2 = new Invoice("Test","5678",date,date,"test",123,123.45,123.45,123.45,123.45,1234.45,"test");
+		Invoice test3 = new Invoice("Test","91011",date,date,"test",123,123.45,123.45,123.45,123.45,1234.45,"test");
+		filterView.getItems().addAll(test1,test2,test3);
+		invoicesTable.setFixedCellSize(25.0);
 		VBox.setVgrow(invoicesTable, Priority.ALWAYS);
 		invoicesTable.setItems(allInvoices);
+		for(TableColumn tc: invoicesTable.getColumns()){
+			tc.setPrefWidth(getColumnWidth(tc)+30);
+		}
+		Platform.runLater(() -> GUIUtils.customResize(invoicesTable));
+
+
 
 
 	}
@@ -164,5 +165,14 @@ public class InvoiceEntryController extends Controller{
 		datePkr.setValue(date);
 	}
 
-	
+	public double getColumnWidth(TableColumn tc){
+		BufferedImage img = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g2d = img.createGraphics();
+		FontMetrics fm = g2d.getFontMetrics();
+		g2d.dispose();
+		return	fm.stringWidth(tc.getText());
+	}
 }
+
+
+

@@ -23,7 +23,7 @@
             <Insets right="639.0" />
          </StackPane.margin>
       </VBox>
-      <VBox alignment="CENTER_LEFT" maxWidth="639.0" prefHeight="200.0" prefWidth="100.0" style="-fx-background-color: #FFFFFF; -fx-background-radius: 30; -fx-border-radius: 30;" StackPane.alignment="CENTER_RIGHT">
+      <VBox alignment="CENTER_LEFT" maxWidth="639.0" prefHeight="200.0" prefWidth="100.0" style="-fx-background-color: WHITE;" StackPane.alignment="CENTER_RIGHT">
          <children>
             <Text fill="#5e5873" focusTraversable="true" strokeType="OUTSIDE" strokeWidth="0.0" styleClass="Heading" text="Welcome to Alpha! 👋">
                <font>
