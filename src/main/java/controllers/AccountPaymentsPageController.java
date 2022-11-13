@@ -7,10 +7,14 @@ import components.ActionableFilterComboBox;
 import io.github.palexdev.materialfx.controls.*;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
 import io.github.palexdev.materialfx.enums.FloatMode;
+import io.github.palexdev.materialfx.validation.Constraint;
+import io.github.palexdev.materialfx.validation.Severity;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -25,6 +29,7 @@ import javafx.stage.FileChooser;
 import javafx.util.Duration;
 import models.*;
 import org.controlsfx.control.PopOver;
+import utils.ValidatorUtils;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -35,10 +40,13 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import static com.dlsc.gemsfx.DialogPane.Type.*;
+import static io.github.palexdev.materialfx.validation.Validated.INVALID_PSEUDO_CLASS;
 
 public class AccountPaymentsPageController extends DateSelectController{
 
@@ -75,6 +83,9 @@ public class AccountPaymentsPageController extends DateSelectController{
 	private MFXDatePicker invoiceDateField,dueDateField;
 	@FXML
 	private MFXTextField invoiceNoField,descriptionField,amountField;
+
+	@FXML
+	private Label afxValidationLabel,invoiceNoValidationLabel,invoiceDateValidationLabel,dueDateValidationLabel,amountValidationLabel;
 	@FXML
 	private MFXCheckbox accountAdjustedBox;
 	@FXML
@@ -177,6 +188,12 @@ public class AccountPaymentsPageController extends DateSelectController{
 				totalCol
 		);
 		setDate(LocalDate.now());
+
+		ValidatorUtils.setupRegexValidation(afx,afxValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveButton);
+		ValidatorUtils.setupRegexValidation(invoiceNoField,invoiceNoValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveButton);
+		ValidatorUtils.setupRegexValidation(invoiceDateField,invoiceDateValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveButton);
+		ValidatorUtils.setupRegexValidation(dueDateField,dueDateValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveButton);
+		ValidatorUtils.setupRegexValidation(amountField,amountValidationLabel,ValidatorUtils.CASH_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
 	}
 
 	private void addDoubleClickfunction(){
@@ -341,12 +358,18 @@ public class AccountPaymentsPageController extends DateSelectController{
 		descriptionField.clear();
 		amountField.clear();
 		accountAdjustedBox.setSelected(false);
-
+		Platform.runLater(() -> afx.requestFocus());
 	}
 
 	public void closePopover(){
 		changeSize(addPaymentPopover,375);
 		contentDarken.setVisible(false);
+		afxValidationLabel.setVisible(false);
+		invoiceNoValidationLabel.setVisible(false);
+		invoiceDateValidationLabel.setVisible(false);
+		dueDateValidationLabel.setVisible(false);
+		amountValidationLabel.setVisible(false);
+		saveButton.setDisable(false);
 	}
 
 	public void openPopover(AccountPayment ap){
@@ -363,6 +386,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 		descriptionField.setText(ap.getDescription());
 		amountField.setText(String.valueOf(ap.getUnitAmount()));
 		accountAdjustedBox.setSelected(ap.isAccountAdjusted());
+		Platform.runLater(() -> afx.requestFocus());
 	}
 
 	public AccountPaymentContactDataPoint getContactfromName(String name){
@@ -448,17 +472,18 @@ public class AccountPaymentsPageController extends DateSelectController{
 	}
 
 	public void addPayment(){
-		AccountPaymentContactDataPoint contact = (AccountPaymentContactDataPoint) afx.getSelectedItem();
-		String contactName = contact.getContactName();
-		String invoiceNo = invoiceNoField.getText();
-		LocalDate invoiceDate = invoiceDateField.getValue();
-		LocalDate dueDate = dueDateField.getValue();
-		String description = descriptionField.getText();
-		Double unitAmount = Double.valueOf(amountField.getText());
-
-		if(contactName.isEmpty() || contactName.isBlank()){
-			//TODO: proper verification here
-		}else{
+ 		Boolean validEntry = true;
+ 		if(!afx.isValid()){afx.requestFocus();}
+		else if(!invoiceNoField.isValid()){invoiceNoField.requestFocus();}
+		else if(!dueDateField.isValid()){dueDateField.requestFocus();}
+		else if(!amountField.isValid()){amountField.requestFocus();}
+		else{
+			AccountPaymentContactDataPoint contact = (AccountPaymentContactDataPoint) afx.getSelectedItem();
+			String invoiceNo = invoiceNoField.getText();
+			LocalDate invoiceDate = invoiceDateField.getValue();
+			LocalDate dueDate = dueDateField.getValue();
+			String description = descriptionField.getText();
+			Double unitAmount = Double.valueOf(amountField.getText());
 			String sql = "INSERT INTO accountPayments(contactID,storeID,invoiceNo,invoiceDate,dueDate,description,unitAmount,accountAdjusted) VALUES(?,?,?,?,?,?,?,?)";
 			try {
 				preparedStatement = con.prepareStatement(sql);

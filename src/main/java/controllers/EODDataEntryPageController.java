@@ -30,6 +30,7 @@ import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.controlsfx.control.PopOver;
+import utils.ValidatorUtils;
 import utils.WorkbookProcessor;
 
 import java.io.File;
@@ -128,20 +129,17 @@ public class EODDataEntryPageController extends DateSelectController{
 			double deltaY = scrollEvent.getDeltaY() * SPEED;
 			popOverScroll.setVvalue(popOverScroll.getVvalue() - deltaY);
 		});
+		
 
-		final String cashRegex = "[0-9]+\\.?[0-9]?[0-9]?";
-		final String cashError = "Please enter a valid dollar amount";
-		final String intRegex = "[0-9]*";
-		final String intError = "Please enter a valid number";
-		setupRegexValidation(cashField,cashValidationLabel,cashRegex,cashError,"$");
-		setupRegexValidation(eftposField,eftposValidationLabel,cashRegex,cashError,"$");
-		setupRegexValidation(amexField,amexValidationLabel,cashRegex,cashError,"$");
-		setupRegexValidation(googleSquareField,googleSquareValidationLabel,cashRegex,cashError,"$");
-		setupRegexValidation(chequeField,chequeValidationLabel,cashRegex,cashError,"$");
-		setupRegexValidation(medschecksField,medschecksValidationLabel,intRegex,intError,null);
-		setupRegexValidation(sohField,sohValidationLabel,cashRegex,cashError,"$");
-		setupRegexValidation(sofField,sofValidationLabel,intRegex,intError,null);
-		setupRegexValidation(smsPatientsField,smsPatientsValidationLabel,intRegex,intError,null);
+		ValidatorUtils.setupRegexValidation(cashField,cashValidationLabel,ValidatorUtils.CASH_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
+		ValidatorUtils.setupRegexValidation(eftposField,eftposValidationLabel,ValidatorUtils.CASH_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
+		ValidatorUtils.setupRegexValidation(amexField,amexValidationLabel,ValidatorUtils.CASH_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
+		ValidatorUtils.setupRegexValidation(googleSquareField,googleSquareValidationLabel,ValidatorUtils.CASH_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
+		ValidatorUtils.setupRegexValidation(chequeField,chequeValidationLabel,ValidatorUtils.CASH_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
+		ValidatorUtils.setupRegexValidation(medschecksField,medschecksValidationLabel,ValidatorUtils.INT_REGEX,ValidatorUtils.INT_ERROR,null,saveButton);
+		ValidatorUtils.setupRegexValidation(sohField,sohValidationLabel,ValidatorUtils.CASH_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
+		ValidatorUtils.setupRegexValidation(sofField,sofValidationLabel,ValidatorUtils.INT_REGEX,ValidatorUtils.INT_ERROR,null,saveButton);
+		ValidatorUtils.setupRegexValidation(smsPatientsField,smsPatientsValidationLabel,ValidatorUtils.INT_REGEX,ValidatorUtils.INT_ERROR,null,saveButton);
 
 		eodDataTable.autosizeColumnsOnInitialization();
 
@@ -194,37 +192,6 @@ public class EODDataEntryPageController extends DateSelectController{
 		eodDataTable.autosizeColumns();
 		eodDataTable.virtualFlowInitializedProperty().addListener((observable, oldValue, newValue) -> {addDoubleClickfunction();});
 	}
-
-	private void setupRegexValidation(MFXTextField field, Label validationLabel,String regex,String errorMessage,String measureUnit) {
-		Constraint digitConstraint = Constraint.Builder.build()
-				.setSeverity(Severity.ERROR)
-				.setMessage(errorMessage)
-				.setCondition(Bindings.createBooleanBinding(
-						() -> Pattern.matches(regex, field.getText()),
-						field.textProperty()
-				))
-				.get();
-		if (measureUnit != null)
-			field.setLeadingIcon(new Label(measureUnit));
-			field.getValidator().constraint(digitConstraint);
-			field.getValidator().validProperty().addListener((observable, oldValue, newValue) -> {
-				if (newValue) {
-					validationLabel.setVisible(false);
-					field.pseudoClassStateChanged(INVALID_PSEUDO_CLASS, false);
-				}
-			});
-
-			field.delegateFocusedProperty().addListener((observable, oldValue, newValue) -> {
-				if (oldValue && !newValue) {
-					List<Constraint> constraints = field.validate();
-					if (!constraints.isEmpty()) {
-						field.pseudoClassStateChanged(INVALID_PSEUDO_CLASS, true);
-						validationLabel.setText(constraints.get(0).getMessage());
-						validationLabel.setVisible(true);
-					}
-				}
-			});
-		}
 
 	private void addDoubleClickfunction(){
 		for (Map.Entry<Integer, MFXTableRow<EODDataPoint>> entry:eodDataTable.getCells().entrySet()) {

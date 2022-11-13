@@ -29,7 +29,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane prefHeight="674.0" prefWidth="1289.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.AccountPaymentsPageController">
+<StackPane prefHeight="674.0" prefWidth="1289.0" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.AccountPaymentsPageController">
    <children>
       <BorderPane prefHeight="200.0" prefWidth="200.0">
          <top>
@@ -237,11 +237,36 @@
                   </HBox>
                </right>
             </BorderPane>
+            <Label fx:id="afxValidationLabel" text="Please enter a valid supplier" textFill="RED" visible="false">
+               <VBox.margin>
+                  <Insets bottom="-5.0" top="-30.0" />
+               </VBox.margin>
+            </Label>
             <MFXTextField fx:id="invoiceNoField" borderGap="0.0" floatMode="ABOVE" floatingText="Invoice Number" layoutX="20.0" layoutY="347.0" maxWidth="1.7976931348623157E308" minHeight="38.4" />
-            <MFXDatePicker fx:id="invoiceDateField" borderGap="0.0" floatMode="ABOVE" floatingText="Invoice Date" maxWidth="1.7976931348623157E308" minHeight="38.4" />
-            <MFXDatePicker fx:id="dueDateField" borderGap="0.0" floatMode="ABOVE" floatingText="Due Date" layoutX="20.0" layoutY="395.0" maxWidth="1.7976931348623157E308" minHeight="38.4" />
+            <Label fx:id="invoiceNoValidationLabel" text="Please enter an invoice number" textFill="RED" visible="false">
+               <VBox.margin>
+                  <Insets bottom="-5.0" top="-30.0" />
+               </VBox.margin>
+            </Label>
+            <MFXDatePicker fx:id="invoiceDateField" allowEdit="false" borderGap="0.0" floatMode="ABOVE" floatingText="Invoice Date" maxWidth="1.7976931348623157E308" minHeight="38.4" />
+            <Label fx:id="invoiceDateValidationLabel" text="Please enter a valid date" textFill="RED" visible="false">
+               <VBox.margin>
+                  <Insets bottom="-5.0" top="-30.0" />
+               </VBox.margin>
+            </Label>
+            <MFXDatePicker fx:id="dueDateField" allowEdit="false" borderGap="0.0" floatMode="ABOVE" floatingText="Due Date" layoutX="20.0" layoutY="395.0" maxWidth="1.7976931348623157E308" minHeight="38.4" />
+            <Label fx:id="dueDateValidationLabel" text="Please enter a valid date" textFill="RED" visible="false">
+               <VBox.margin>
+                  <Insets bottom="-5.0" top="-30.0" />
+               </VBox.margin>
+            </Label>
             <MFXTextField fx:id="descriptionField" borderGap="0.0" floatMode="ABOVE" floatingText="Description" layoutX="20.0" layoutY="322.0" maxWidth="1.7976931348623157E308" minHeight="38.4" />
             <MFXTextField fx:id="amountField" borderGap="0.0" floatMode="ABOVE" floatingText="Unit Amount ($)" layoutX="20.0" layoutY="298.0" maxWidth="1.7976931348623157E308" minHeight="38.4" />
+            <Label fx:id="amountValidationLabel" text="Please enter a valid cash amount" textFill="RED" visible="false">
+               <VBox.margin>
+                  <Insets bottom="-5.0" top="-30.0" />
+               </VBox.margin>
+            </Label>
             <MFXCheckbox fx:id="accountAdjustedBox" text="Account Adjusted?" textExpand="true" VBox.vgrow="ALWAYS">
                <VBox.margin>
                   <Insets />
