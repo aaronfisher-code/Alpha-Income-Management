@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import io.github.palexdev.materialfx.controls.MFXButton?>
+<?import io.github.palexdev.materialfx.controls.MFXRadioButton?>
+<?import io.github.palexdev.materialfx.controls.MFXTextField?>
+<?import java.net.URL?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.paint.Color?>
+<?import javafx.scene.text.Font?>
+
+<StackPane fx:id="backgroundPane" prefHeight="724.0" prefWidth="1080.0" styleClass="HeaderText" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.SettingsController">
+   <children>
+      <BorderPane prefWidth="955.0" style="-fx-background-color: TRANSPARENT;">
+         <padding>
+            <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+         </padding>
+         <effect>
+            <DropShadow height="24.0" offsetY="4.0" radius="11.5" width="24.0">
+               <color>
+                  <Color opacity="0.10000000149011612" />
+               </color>
+            </DropShadow>
+         </effect>
+         <center>
+            <VBox spacing="20.0" style="-fx-background-color: WHITE; -fx-background-radius: 10;" BorderPane.alignment="CENTER">
+               <children>
+                  <Label text="Configure System Backups" textFill="#6e6b7b" />
+                  <Label text="Frequency:">
+                     <font>
+                        <Font size="16.0" />
+                     </font>
+                  </Label>
+                  <HBox alignment="CENTER_LEFT" spacing="20.0" VBox.vgrow="NEVER">
+                     <children>
+                        <MFXRadioButton text="Daily">
+                           <font>
+                              <Font size="14.0" />
+                           </font>
+                           <toggleGroup>
+                              <ToggleGroup fx:id="backupFrequency" />
+                           </toggleGroup>
+                        </MFXRadioButton>
+                        <MFXRadioButton text="Monthly" toggleGroup="$backupFrequency">
+                           <font>
+                              <Font size="14.0" />
+                           </font>
+                        </MFXRadioButton>
+                        <MFXRadioButton selected="true" text="Never" toggleGroup="$backupFrequency">
+                           <font>
+                              <Font size="14.0" />
+                           </font>
+                        </MFXRadioButton>
+                     </children>
+                  </HBox>
+                  <Label text="Backup Save Location:">
+                     <font>
+                        <Font size="16.0" />
+                     </font>
+                     <VBox.margin>
+                        <Insets top="30.0" />
+                     </VBox.margin>
+                  </Label>
+                  <MFXTextField fx:id="filePathField" floatMode="DISABLED" floatingTextGap="0.0" graphicTextGap="0.0" prefHeight="46.0" prefWidth="675.0" promptText="C://" styleClass="filePathField" />
+                  <MFXButton onAction="#chooseFolder" styleClass="locateButton" text="Locate save folder">
+                     <font>
+                        <Font size="14.0" />
+                     </font>
+                  </MFXButton>
+               </children>
+               <padding>
+                  <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+               </padding>
+            </VBox>
+         </center>
+      </BorderPane>
+   </children>
+   <stylesheets>
+      <URL value="@../CSS/application.css" />
+      <URL value="@../CSS/SettingsPage.css" />
+   </stylesheets>
+</StackPane>

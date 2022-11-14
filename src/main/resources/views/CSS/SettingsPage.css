@@ -1,0 +1,20 @@
+.HeaderText{
+    -fx-font-family: "Montserrat Medium";
+    -fx-font-size: 23px;
+    -fx-text-fill: #6e6b7b;
+
+}
+
+.filePathField{
+     -fx-font-size: 18px;
+}
+
+.locateButton{
+    -fx-background-color: #F3F2F7;
+}
+
+.mfx-radio-button{
+    -mfx-main: #0F60FF;
+    -fx-font-family: "Montserrat";
+    -fx-font-size: 14px;
+}
