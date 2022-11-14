@@ -44,7 +44,7 @@ public class MainMenuController extends Controller {
     @FXML
     private BorderPane contentPane,topPane;
     @FXML
-    private HBox controlBox,userNameBox;
+    private HBox controlBox,userNameBox,windowControls;
     @FXML
     private Button maximize,minimize,close;
     @FXML
@@ -107,10 +107,34 @@ public class MainMenuController extends Controller {
         this.main.getBs().setMoveControl(topPane);
 
         close.setOnAction(a -> this.main.getStg().close());
+        close.setOnMouseEntered(a-> colourWindowButton(close,"#c42b1c","#FFFFFF"));
+        close.setOnMouseExited(a-> colourWindowButton(close,"#FFFFFF","#000000"));
 
         minimize.setOnAction(a -> this.main.getStg().setIconified(true));
+        minimize.setOnMouseEntered(a-> colourWindowButton(minimize,"#f5f5f5","#000000"));
+        minimize.setOnMouseExited(a-> colourWindowButton(minimize,"#FFFFFF","#000000"));
 
         maximize.setOnAction(a -> this.main.getBs().maximizeStage());
+        maximize.setOnMouseEntered(a-> colourWindowButton(maximize,"#f5f5f5","#000000"));
+        maximize.setOnMouseExited(a-> colourWindowButton(maximize,"#FFFFFF","#000000"));
+
+        this.main.getBs().maximizedProperty().addListener(e->
+        {
+            if(this.main.getBs().isMaximized()){
+                SVGPath newIcon = (SVGPath) maximize.getGraphic();
+                newIcon.setContent("M13 0H6a2 2 0 0 0-2 2 2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2 2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm0 13V4a2 2 0 0 0-2-2H5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1zM3 4a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4z\n");
+                newIcon.setScaleX(0.95);
+                newIcon.setScaleY(0.75);
+                windowControls.setPrefHeight(25);
+            }else{
+                SVGPath newIcon = (SVGPath) maximize.getGraphic();
+                newIcon.setContent("M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z\n");
+                newIcon.setScaleX(0.575);
+                newIcon.setScaleY(0.575);
+                windowControls.setPrefHeight(30);
+            }
+        });
+
 
         loadTargetGraphs();
     }
@@ -242,6 +266,13 @@ public class MainMenuController extends Controller {
 
     }
 
+    private void colourWindowButton(Button b, String backgroundHex, String strokeHex){
+        b.setStyle("-fx-background-color: "+ backgroundHex+ ";-fx-background-radius:0");
+        SVGPath icon = (SVGPath) b.getGraphic();
+        icon.setFill(Paint.valueOf(strokeHex));
+        icon.setStroke(Paint.valueOf(strokeHex));
+    }
+
     //Page Routing
     public void loadTargetGraphs(){changePage(targetGraphButton,"/views/FXML/TargetGraphsPage.fxml");}
     public void loadEODDataEntry(){changePage(eodDataEntryButton,"/views/FXML/EODDataEntryPage.fxml");}
@@ -252,7 +283,7 @@ public class MainMenuController extends Controller {
     public void loadExpiryTracker(){changePage(expiryTrackerButton,"/views/FXML/AccountEdit.fxml");}
     public void loadBASChecker(){changePage(basCheckerButton,"/views/FXML/BASCheckerPage.fxml");}
     public void loadMonthlySummary(){changePage(monthlySummaryButton,"/views/FXML/AccountEdit.fxml");}
-    public void loadSettings(){changePage(settingsButton,"/views/FXML/AccountEdit.fxml");}
+    public void loadSettings(){changePage(settingsButton,"/views/FXML/SettingsPage.fxml");}
 
 
 
