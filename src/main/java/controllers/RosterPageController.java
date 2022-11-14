@@ -130,12 +130,12 @@ public class RosterPageController extends Controller {
 
         //TODO fix dateTime parsing from strings on till computer
         openStartTimePicker.setOnAction(actionEvent -> {
-            if(!startTimeField.getText().isEmpty()){startTime = LocalTime.parse(startTimeField.getText(), DateTimeFormatter.ofPattern("h:mm a"));}
+            if(!startTimeField.getText().isEmpty()){startTime = LocalTime.parse(startTimeField.getText().toLowerCase(), DateTimeFormatter.ofPattern("h:mm a"));}
             else {startTime = LocalTime.MIDNIGHT;}
             openTimePicker(startTimeField,startTime);
         });
         openEndTimePicker.setOnAction(actionEvent -> {
-            if(!endTimeField.getText().isEmpty()) {endTime = LocalTime.parse(endTimeField.getText(), DateTimeFormatter.ofPattern("h:mm a"));}
+            if(!endTimeField.getText().isEmpty()) {endTime = LocalTime.parse(endTimeField.getText().toLowerCase(), DateTimeFormatter.ofPattern("h:mm a"));}
             else{endTime = LocalTime.MIDNIGHT;}
             openTimePicker(endTimeField,endTime);
         });
@@ -381,8 +381,8 @@ public class RosterPageController extends Controller {
     public void addShift(Shift previousShift, LocalDate manualStartDate){
         String usrname = ((User) employeeSelect.getValue()).getUsername();
         LocalDate sDate = manualStartDate==null?startDate.getValue():manualStartDate;
-        LocalTime sTime = LocalTime.parse(startTimeField.getText(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
-        LocalTime eTime = LocalTime.parse(endTimeField.getText(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
+        LocalTime sTime = LocalTime.parse(startTimeField.getText().toLowerCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
+        LocalTime eTime = LocalTime.parse(endTimeField.getText().toLowerCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
         int thirtyMin = 0;
         int tenMin = 0;
         int daysPerRepeat = 1;
@@ -426,8 +426,8 @@ public class RosterPageController extends Controller {
     public void editShift(Shift s){
         String usrname = ((User) employeeSelect.getValue()).getUsername();
         LocalDate sDate = startDate.getValue();
-        LocalTime sTime = LocalTime.parse(startTimeField.getText(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
-        LocalTime eTime = LocalTime.parse(endTimeField.getText(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
+        LocalTime sTime = LocalTime.parse(startTimeField.getText().toLowerCase(),DateTimeFormatter.ofPattern("h:mm tt" , Locale.US ));
+        LocalTime eTime = LocalTime.parse(endTimeField.getText().toLowerCase(),DateTimeFormatter.ofPattern("h:mm tt" , Locale.US ));
         int thirtyMin = 0;
         int tenMin = 0;
         int daysPerRepeat = 1;
