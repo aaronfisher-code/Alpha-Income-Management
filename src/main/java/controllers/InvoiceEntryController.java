@@ -15,7 +15,9 @@ import javafx.scene.layout.*;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import models.Invoice;
+import utils.AnimationUtils;
 import utils.GUIUtils;
+import utils.TableUtils;
 
 import java.awt.*;
 import java.awt.font.FontRenderContext;
@@ -140,7 +142,7 @@ public class InvoiceEntryController extends Controller{
 		VBox.setVgrow(invoicesTable, Priority.ALWAYS);
 		invoicesTable.setItems(allInvoices);
 		for(TableColumn tc: invoicesTable.getColumns()){
-			tc.setPrefWidth(getColumnWidth(tc)+30);
+			tc.setPrefWidth(TableUtils.getColumnWidth(tc)+30);
 		}
 		Platform.runLater(() -> GUIUtils.customResize(invoicesTable));
 
@@ -165,12 +167,20 @@ public class InvoiceEntryController extends Controller{
 		datePkr.setValue(date);
 	}
 
-	public double getColumnWidth(TableColumn tc){
-		BufferedImage img = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
-		Graphics2D g2d = img.createGraphics();
-		FontMetrics fm = g2d.getFontMetrics();
-		g2d.dispose();
-		return	fm.stringWidth(tc.getText());
+	public void openPopover(){
+//		saveButton.setOnAction(actionEvent -> addPayment());
+//		paymentPopoverTitle.setText("Add new account payment");
+//		deleteButton.setVisible(false);
+//		contentDarken.setVisible(true);
+//		AnimationUtils.changeSize(addPaymentPopover,0);
+//		afx.clear();
+//		invoiceNoField.clear();
+//		invoiceDateField.clear();
+//		dueDateField.clear();
+//		descriptionField.clear();
+//		amountField.clear();
+//		accountAdjustedBox.setSelected(false);
+//		Platform.runLater(() -> afx.requestFocus());
 	}
 }
 

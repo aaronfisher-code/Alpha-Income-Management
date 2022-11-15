@@ -3,13 +3,6 @@ package controllers;
 import application.Main;
 import io.github.palexdev.materialfx.controls.*;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
-import io.github.palexdev.materialfx.validation.Constraint;
-import io.github.palexdev.materialfx.validation.Severity;
-import javafx.animation.Interpolator;
-import javafx.animation.KeyFrame;
-import javafx.animation.KeyValue;
-import javafx.animation.Timeline;
-import javafx.beans.binding.Bindings;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
@@ -21,33 +14,24 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
-import javafx.util.Duration;
 import models.EODDataPoint;
-import models.Store;
 import models.User;
-import org.apache.commons.compress.compressors.lz77support.LZ77Compressor;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.controlsfx.control.PopOver;
+import utils.AnimationUtils;
 import utils.ValidatorUtils;
 import utils.WorkbookProcessor;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Pattern;
-
-import static io.github.palexdev.materialfx.utils.StringUtils.containsAny;
 
 public class EODDataEntryPageController extends DateSelectController{
 
@@ -314,7 +298,7 @@ public class EODDataEntryPageController extends DateSelectController{
 
 	public void openEODPopover(EODDataPoint e){
 		contentDarken.setVisible(true);
-		changeSize(editDayPopover,0);
+		AnimationUtils.slideIn(editDayPopover,0);
 		popoverLabel.setText("Modify EOD Values for " + e.getDateString());
 		cashField.setText(String.valueOf(e.getCashAmount()));
 		eftposField.setText(String.valueOf(e.getEftposAmount()));
@@ -332,7 +316,7 @@ public class EODDataEntryPageController extends DateSelectController{
 	}
 
 	public void closePopover(){
-		changeSize(editDayPopover,375);
+		AnimationUtils.slideIn(editDayPopover,375);
 		contentDarken.setVisible(false);
 	}
 
@@ -381,15 +365,6 @@ public class EODDataEntryPageController extends DateSelectController{
 			System.err.println(ex.getMessage());
 		}
 
-	}
-
-	public void changeSize(final VBox pane, double width) {
-		Duration cycleDuration = Duration.millis(200);
-		Timeline timeline = new Timeline(
-				new KeyFrame(cycleDuration,
-						new KeyValue(pane.translateXProperty(),width, Interpolator.EASE_BOTH))
-		);
-		timeline.play();
 	}
 
 	@Override

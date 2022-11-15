@@ -24,6 +24,7 @@ import javafx.scene.shape.SVGPath;
 import javafx.util.Duration;
 import models.Store;
 import org.controlsfx.control.PopOver;
+import utils.AnimationUtils;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -142,7 +143,7 @@ public class MainMenuController extends Controller {
 
 
     public void extendMenu(){
-        changeSize(sidebar,260);
+        AnimationUtils.changeSize(sidebar,260);
         contentDarken.setVisible(true);
         logoLabel.setContentDisplay(ContentDisplay.LEFT);
         sidebarScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
@@ -160,7 +161,7 @@ public class MainMenuController extends Controller {
     }
 
     public void retractMenu(){
-        changeSize(sidebar,80);
+        AnimationUtils.changeSize(sidebar,80);
         contentDarken.setVisible(false);
         logoLabel.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
         sidebarScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
@@ -172,15 +173,6 @@ public class MainMenuController extends Controller {
                 a.setEffect(null);
             }
         };
-    }
-
-    public void changeSize(final VBox pane, double width) {
-        Duration cycleDuration = Duration.millis(200);
-        Timeline timeline = new Timeline(
-                new KeyFrame(cycleDuration,
-                        new KeyValue(pane.prefWidthProperty(),width,Interpolator.EASE_BOTH))
-        );
-        timeline.play();
     }
 
     public void slide(double duration, double targetPadding, Button targetButton){

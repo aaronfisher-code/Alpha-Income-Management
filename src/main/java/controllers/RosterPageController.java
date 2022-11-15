@@ -7,10 +7,6 @@ import com.dlsc.gemsfx.DialogPane;
 import com.jfoenix.controls.JFXNodesList;
 //import io.github.palexdev.materialfx.controls.MFXDatePicker;
 import io.github.palexdev.materialfx.controls.*;
-import javafx.animation.Interpolator;
-import javafx.animation.KeyFrame;
-import javafx.animation.KeyValue;
-import javafx.animation.Timeline;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -24,13 +20,11 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.util.Duration;
-import models.AccountPayment;
 import models.Shift;
 import models.User;
 import org.controlsfx.control.PopOver;
+import utils.AnimationUtils;
 
-import javax.swing.*;
 import java.io.IOException;
 import java.sql.*;
 import java.time.LocalDate;
@@ -268,7 +262,7 @@ public class RosterPageController extends Controller {
         popoverLabel.setText("Add a new Shift");
         deleteButton.setVisible(false);
         contentDarken.setVisible(true);
-        changeSize(editShiftPopover,0);
+        AnimationUtils.slideIn(editShiftPopover,0);
         employeeSelect.setValue(null);
         startDate.setValue(null);
         startTimeField.setText("");
@@ -288,7 +282,7 @@ public class RosterPageController extends Controller {
         popoverLabel.setText("Edit shift");
         deleteButton.setVisible(true);
         contentDarken.setVisible(true);
-        changeSize(editShiftPopover,0);
+        AnimationUtils.slideIn(editShiftPopover,0);
         String sql = "SELECT * FROM accounts WHERE username = ?";
         try {
             preparedStatement = con.prepareStatement(sql);
@@ -326,17 +320,8 @@ public class RosterPageController extends Controller {
     }
 
     public void closePopover(){
-        changeSize(editShiftPopover,375);
+        AnimationUtils.slideIn(editShiftPopover,375);
         contentDarken.setVisible(false);
-    }
-
-    public void changeSize(final VBox pane, double width) {
-        Duration cycleDuration = Duration.millis(200);
-        Timeline timeline = new Timeline(
-                new KeyFrame(cycleDuration,
-                        new KeyValue(pane.translateXProperty(),width, Interpolator.EASE_BOTH))
-        );
-        timeline.play();
     }
 
     public void openTimePicker(MFXTextField parent, LocalTime time){

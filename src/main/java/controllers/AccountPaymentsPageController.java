@@ -7,14 +7,7 @@ import components.ActionableFilterComboBox;
 import io.github.palexdev.materialfx.controls.*;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
 import io.github.palexdev.materialfx.enums.FloatMode;
-import io.github.palexdev.materialfx.validation.Constraint;
-import io.github.palexdev.materialfx.validation.Severity;
-import javafx.animation.Interpolator;
-import javafx.animation.KeyFrame;
-import javafx.animation.KeyValue;
-import javafx.animation.Timeline;
 import javafx.application.Platform;
-import javafx.beans.binding.Bindings;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -26,9 +19,9 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
-import javafx.util.Duration;
 import models.*;
 import org.controlsfx.control.PopOver;
+import utils.AnimationUtils;
 import utils.ValidatorUtils;
 
 import java.io.File;
@@ -40,13 +33,10 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 import static com.dlsc.gemsfx.DialogPane.Type.*;
-import static io.github.palexdev.materialfx.validation.Validated.INVALID_PSEUDO_CLASS;
 
 public class AccountPaymentsPageController extends DateSelectController{
 
@@ -350,7 +340,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 		paymentPopoverTitle.setText("Add new account payment");
 		deleteButton.setVisible(false);
 		contentDarken.setVisible(true);
-		changeSize(addPaymentPopover,0);
+		AnimationUtils.slideIn(addPaymentPopover,0);
 		afx.clear();
 		invoiceNoField.clear();
 		invoiceDateField.clear();
@@ -362,7 +352,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 	}
 
 	public void closePopover(){
-		changeSize(addPaymentPopover,375);
+		AnimationUtils.slideIn(addPaymentPopover,375);
 		contentDarken.setVisible(false);
 		afxValidationLabel.setVisible(false);
 		invoiceNoValidationLabel.setVisible(false);
@@ -378,7 +368,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 		deleteButton.setVisible(true);
 		deleteButton.setOnAction(actionEvent -> deletePayment(ap));
 		contentDarken.setVisible(true);
-		changeSize(addPaymentPopover,0);
+		AnimationUtils.slideIn(addPaymentPopover,0);
 		afx.setValue(getContactfromName(ap.getContactName()));
 		invoiceNoField.setText(ap.getInvoiceNumber());
 		invoiceDateField.setValue(ap.getInvDate());
@@ -404,15 +394,6 @@ public class AccountPaymentsPageController extends DateSelectController{
 			throwables.printStackTrace();
 		}
 		return null;
-	}
-
-	public void changeSize(final VBox pane, double width) {
-		Duration cycleDuration = Duration.millis(200);
-		Timeline timeline = new Timeline(
-				new KeyFrame(cycleDuration,
-						new KeyValue(pane.translateXProperty(),width, Interpolator.EASE_BOTH))
-		);
-		timeline.play();
 	}
 
 	public void monthForward() {

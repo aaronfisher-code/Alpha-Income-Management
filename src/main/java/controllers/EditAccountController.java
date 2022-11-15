@@ -7,12 +7,7 @@ import com.jfoenix.controls.JFXNodesList;
 import io.github.palexdev.materialfx.controls.*;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
 import io.github.palexdev.materialfx.filter.StringFilter;
-import javafx.animation.Interpolator;
-import javafx.animation.KeyFrame;
-import javafx.animation.KeyValue;
-import javafx.animation.Timeline;
 import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -21,10 +16,10 @@ import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
-import javafx.util.Duration;
 import models.Store;
 import models.User;
 import models.Employment;
+import utils.AnimationUtils;
 
 import java.io.IOException;
 import java.sql.*;
@@ -315,7 +310,7 @@ public class EditAccountController extends Controller{
 		contentDarken.setVisible(true);
 		contentDarken.setOnMouseClicked(event -> closeUserPopover());
 		saveUserButton.setOnAction(event -> addUser());
-		changeSize(editUserPopover,0);
+		AnimationUtils.slideIn(editUserPopover,0);
 	}
 
 	public void openUserPopover(User user){
@@ -414,7 +409,7 @@ public class EditAccountController extends Controller{
 		saveUserButton.setOnAction(event -> editUser(user));
 		deleteUserButton.setOnAction(event -> deleteUser(user));
 		deleteUserButton.setVisible(true);
-		changeSize(editUserPopover,0);
+		AnimationUtils.slideIn(editUserPopover,0);
 	}
 
 	public void openStorePopover(){
@@ -424,7 +419,7 @@ public class EditAccountController extends Controller{
 		contentDarken.setOnMouseClicked(event -> closeStorePopover());
 		saveStoreButton.setOnAction(event -> addStore());
 		deleteStoreButton.setVisible(false);
-		changeSize(editStorePopover,0);
+		AnimationUtils.slideIn(editStorePopover,0);
 	}
 
 	public void openStorePopover(Store store){
@@ -435,16 +430,16 @@ public class EditAccountController extends Controller{
 		saveStoreButton.setOnAction(event -> editStore(store));
 		deleteStoreButton.setOnAction(event -> deleteStore(store));
 		deleteStoreButton.setVisible(true);
-		changeSize(editStorePopover,0);
+		AnimationUtils.slideIn(editStorePopover,0);
 	}
 
 	public void closeStorePopover(){
-		changeSize(editStorePopover,375);
+		AnimationUtils.slideIn(editStorePopover,375);
 		contentDarken.setVisible(false);
 	}
 
 	public void closeUserPopover(){
-		changeSize(editUserPopover,375);
+		AnimationUtils.slideIn(editUserPopover,375);
 		contentDarken.setVisible(false);
 	}
 
@@ -708,16 +703,6 @@ public class EditAccountController extends Controller{
 				a.setStyle("");
 			}
 		}
-	}
-
-
-	public void changeSize(final VBox pane, double width) {
-		Duration cycleDuration = Duration.millis(200);
-		Timeline timeline = new Timeline(
-				new KeyFrame(cycleDuration,
-						new KeyValue(pane.translateXProperty(),width, Interpolator.EASE_BOTH))
-		);
-		timeline.play();
 	}
 
 	public boolean searchAccount(String userquery) {
