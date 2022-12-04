@@ -13,3 +13,21 @@
 .table-view .column-header-background .filler {
     -fx-background-color: #F3F2F7;
 }
+
+.mfx-filter-combo-box{
+    -fx-background-color: WHITE;
+    -fx-border-color: #D3D3D3;
+    -fx-border-radius: 5;
+    -fx-font-size: 12px;
+    -mfx-gap: 5.0;
+}
+
+.mfx-filter-combo-box .floating-text{
+    -fx-background-color: TRANSPARENT;
+}
+
+.mfx-filter-combo-box:focus-within{
+    -mfx-color:#0F60FF;
+}
+
+

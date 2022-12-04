@@ -11,7 +11,7 @@ import java.lang.reflect.Method;
 import java.util.concurrent.atomic.DoubleAdder;
 
 public class GUIUtils {
-    public static void customResize(TableView<?> view) {
+    public static void customResize(TableView<?> view,TableColumn<?,?> targetCol) {
 
         DoubleAdder width = new DoubleAdder();
         view.getColumns().forEach(col -> {
@@ -20,8 +20,7 @@ public class GUIUtils {
         double tableWidth = view.getWidth();
 
         if (tableWidth > width.doubleValue()) {
-            TableColumn<?, ?> col = view.getColumns().get(view.getColumns().size()-1);
-            col.setPrefWidth(col.getWidth()+(tableWidth-width.doubleValue())-5);
+            targetCol.setPrefWidth(targetCol.getWidth()+(tableWidth-width.doubleValue())-7);
         }
 
     }

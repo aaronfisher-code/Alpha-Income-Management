@@ -313,7 +313,7 @@
             <HBox spacing="20.0">
                <children>
                   <MFXTextField fx:id="repeatValue" disable="true" floatMode="DISABLED" minHeight="36.0" minWidth="60.0" prefWidth="60.0" />
-                  <MFXComboBox fx:id="repeatUnit" disable="true" floatMode="DISABLED" maxWidth="1.7976931348623157E308" minHeight="36.0" HBox.hgrow="ALWAYS" />
+                  <MFXComboBox fx:id="repeatUnit" disable="true" floatMode="DISABLED" maxWidth="1.7976931348623157E308" minHeight="36.0" styleClass="popOverComboBox" HBox.hgrow="ALWAYS" />
                </children>
             </HBox>
             <MFXButton fx:id="saveButton" buttonType="RAISED" depthLevel="LEVEL3" maxWidth="1.7976931348623157E308" prefHeight="30.0" style="-fx-background-color: #0F60FF;" text="Save" textFill="WHITE">

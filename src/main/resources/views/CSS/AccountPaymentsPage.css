@@ -30,12 +30,22 @@
     -mfx-color:#0F60FF;
 }
 
-.mfx-combo-box{
-    -fx-font-size: 12px;
-    -mfx-gap: 5;
-    -fx-background-color: #FFFFFF;
-    -fx-border-color: #D3D3D3;
-    -fx-border-radius: 5;
+
+.table-view .column-header * {
+    -fx-background-color: #F3F2F7;
+    -fx-text-fill: #6E6B7B;
+}
+
+.table-view .column-header,
+.table-view .column-header .filler,
+.table-view .column-header-background .filler {
+    -fx-background-color: #F3F2F7;
+}
+
+.totalsText {
+    -fx-font-family: "Montserrat";
+    -fx-font-size: 14px;
+    -fx-text-fill: BLACK;
 }
 
 

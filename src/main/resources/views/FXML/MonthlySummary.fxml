@@ -65,7 +65,7 @@
                               <TableColumn prefWidth="75.0" styleClass="pinkColumn" text="GP ($)&#10;Target 1" />
                               <TableColumn prefWidth="75.0" styleClass="pinkColumn" text="GP ($)&#10;Target 2" />
                               <TableColumn prefWidth="75.0" styleClass="greenColumn" text="Till&#10;Balance" />
-                              <TableColumn prefWidth="75.0" styleClass="greenColumn" text="Running Till&#10;Balance" />
+                              <TableColumn fx:id="endCol" prefWidth="75.0" styleClass="greenColumn" text="Running Till&#10;Balance" />
                           </columns>
                            <columnResizePolicy>
                               <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />

@@ -14,14 +14,14 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import models.*;
 import org.controlsfx.control.PopOver;
 import utils.AnimationUtils;
+import utils.GUIUtils;
+import utils.TableUtils;
 import utils.ValidatorUtils;
 
 import java.io.File;
@@ -29,6 +29,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.*;
+import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
@@ -84,17 +85,17 @@ public class AccountPaymentsPageController extends DateSelectController{
 	@FXML
 	private Button deleteButton;
 	@FXML
-	private Label paymentPopoverTitle;
+	private Label paymentPopoverTitle,supplierTotalLabel;
 	@FXML
 	private MFXComboBox<String> taxRateField;
 
-	private MFXTableColumn<AccountPayment> contactCol;
-	private MFXTableColumn<AccountPayment> invNumberCol;
-	private MFXTableColumn<AccountPayment> invDateCol;
-	private MFXTableColumn<AccountPayment> dueDateCol;
-	private MFXTableColumn<AccountPayment> descriptionCol;
-	private MFXTableColumn<AccountPayment> unitAmountCol;
-	private MFXTableColumn<AccountPayment> accountAdjustedCol;
+	private TableColumn<AccountPayment,String> contactCol;
+	private TableColumn<AccountPayment,String> invNumberCol;
+	private TableColumn<AccountPayment,LocalDate> invDateCol;
+	private TableColumn<AccountPayment,LocalDate> dueDateCol;
+	private TableColumn<AccountPayment,String> descriptionCol;
+	private TableColumn<AccountPayment,Double> unitAmountCol;
+	private TableColumn<AccountPayment,String> accountAdjustedCol;
 	private MFXTableColumn<AccountPaymentContactDataPoint> contactNameCol;
 	private MFXTableColumn<AccountPaymentContactDataPoint> totalCol;
 	private ActionableFilterComboBox afx;
@@ -145,21 +146,21 @@ public class AccountPaymentsPageController extends DateSelectController{
 		entryFieldBox.getChildren().add(1,afx);
 
 		//Init Payments Table
-		contactCol = new MFXTableColumn<>("CONTACT",false, Comparator.comparing(AccountPayment::getContactName));
-		invNumberCol = new MFXTableColumn<>("INVOICE NUMBER",false, Comparator.comparing(AccountPayment::getInvoiceNumber));
-		invDateCol = new MFXTableColumn<>("INVOICE DATE",false, Comparator.comparing(AccountPayment::getInvDate));
-		dueDateCol = new MFXTableColumn<>("DUE DATE",false, Comparator.comparing(AccountPayment::getDueDate));
-		descriptionCol = new MFXTableColumn<>("DESCRIPTION",false, Comparator.comparing(AccountPayment::getDescription));
-		unitAmountCol = new MFXTableColumn<>("UNIT AMOUNT",false, Comparator.comparing(AccountPayment::getUnitAmount));
-		accountAdjustedCol = new MFXTableColumn<>("ACCOUNT ADJUSTED?",false, Comparator.comparing(AccountPayment::isAccountAdjusted));
-		contactCol.setRowCellFactory(accountPayment -> new MFXTableRowCell<>(AccountPayment::getContactName));
-		invNumberCol.setRowCellFactory(accountPayment -> new MFXTableRowCell<>(AccountPayment::getInvoiceNumber));
-		invDateCol.setRowCellFactory(accountPayment -> new MFXTableRowCell<>(AccountPayment::getInvDate));
-		dueDateCol.setRowCellFactory(accountPayment -> new MFXTableRowCell<>(AccountPayment::getDueDate));
-		descriptionCol.setRowCellFactory(accountPayment -> new MFXTableRowCell<>(AccountPayment::getDescription));
-		unitAmountCol.setRowCellFactory(accountPayment -> new MFXTableRowCell<>(AccountPayment::getUnitAmountString));
-		accountAdjustedCol.setRowCellFactory(accountPayment -> new MFXTableRowCell<>(AccountPayment::isAccountAdjusted));
-		accountPaymentTable.getTableColumns().addAll(
+		contactCol = new TableColumn<>("CONTACT");
+		invNumberCol = new TableColumn<>("INVOICE NUMBER");
+		invDateCol = new TableColumn<>("INVOICE DATE");
+		dueDateCol = new TableColumn<>("DUE DATE");
+		descriptionCol = new TableColumn<>("DESCRIPTION");
+		unitAmountCol = new TableColumn<>("UNIT AMOUNT");
+		accountAdjustedCol = new TableColumn<>("ACCOUNT ADJUSTED?");
+		contactCol.setCellValueFactory(new PropertyValueFactory<>("contactName"));
+		invNumberCol.setCellValueFactory(new PropertyValueFactory<>("invoiceNumber"));
+		invDateCol.setCellValueFactory(new PropertyValueFactory<>("invDate"));
+		dueDateCol.setCellValueFactory(new PropertyValueFactory<>("dueDate"));
+		descriptionCol.setCellValueFactory(new PropertyValueFactory<>("description"));
+		unitAmountCol.setCellValueFactory(new PropertyValueFactory<>("unitAmount"));
+		accountAdjustedCol.setCellValueFactory(new PropertyValueFactory<>("accountAdjusted"));
+		accountPaymentTable.getColumns().addAll(
 				contactCol,
 				invNumberCol,
 				invDateCol,
@@ -168,8 +169,16 @@ public class AccountPaymentsPageController extends DateSelectController{
 				unitAmountCol,
 				accountAdjustedCol
 		);
-		accountPaymentTable.autosizeColumnsOnInitialization();
-		accountPaymentTable.virtualFlowInitializedProperty().addListener((observable, oldValue, newValue) -> {addDoubleClickfunction();});
+		accountPaymentTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+		accountPaymentTable.setMaxWidth(Double.MAX_VALUE);
+		accountPaymentTable.setMaxHeight(Double.MAX_VALUE);
+		accountPaymentTable.setFixedCellSize(25.0);
+		VBox.setVgrow(accountPaymentTable, Priority.ALWAYS);
+		for(TableColumn tc: accountPaymentTable.getColumns()){
+			tc.setPrefWidth(TableUtils.getColumnWidth(tc)+30);
+		}
+		Platform.runLater(() -> GUIUtils.customResize(accountPaymentTable,descriptionCol));
+		Platform.runLater(() -> addDoubleClickfunction());
 
 		//Init Totals Table
 		contactNameCol = new MFXTableColumn<>("CONTACT",false, Comparator.comparing(AccountPaymentContactDataPoint::getContactName));
@@ -199,19 +208,16 @@ public class AccountPaymentsPageController extends DateSelectController{
 	}
 
 	private void addDoubleClickfunction(){
-		for (Map.Entry<Integer, MFXTableRow<AccountPayment>> entry:accountPaymentTable.getCells().entrySet()) {
-			entry.getValue().setOnMouseClicked(event -> {
-				if(event.getClickCount()==2) openPopover(entry.getValue().getData());
+		accountPaymentTable.setRowFactory( tv -> {
+			TableRow<AccountPayment> row = new TableRow<>();
+			row.setOnMouseClicked(event -> {
+				if (event.getClickCount() == 2 && (! row.isEmpty()) ) {
+					AccountPayment rowData = row.getItem();
+					openPopover(rowData);
+				}
 			});
-			for (MFXTableRowCell<AccountPayment, ?> cell:entry.getValue().getCells()) {
-				cell.setOnMouseClicked(event -> {
-					if(event.getClickCount()==2){
-						MFXTableRow<AccountPayment> parentRow = (MFXTableRow<AccountPayment>) cell.getParent();
-						openPopover(parentRow.getData());
-					}
-				});
-			}
-		}
+			return row ;
+		});
 	}
 
 	private Node createAddNewContactDialog() {
@@ -301,8 +307,20 @@ public class AccountPaymentsPageController extends DateSelectController{
 		}
 		accountTotalsTable.setItems(currentContactTotals);
 		accountPaymentTable.setItems(currentAccountPaymentDataPoints);
+		double supplierTotal=0;
+		for(AccountPaymentContactDataPoint acdp:currentContactTotals)
+			supplierTotal+=acdp.getTotalValue();
+		supplierTotalLabel.setText(NumberFormat.getCurrencyInstance().format(supplierTotal));
 		addDoubleClickfunction();
-		accountPaymentTable.autosizeColumns();
+		accountPaymentTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+		accountPaymentTable.setMaxWidth(Double.MAX_VALUE);
+		accountPaymentTable.setMaxHeight(Double.MAX_VALUE);
+		accountPaymentTable.setFixedCellSize(25.0);
+		VBox.setVgrow(accountPaymentTable, Priority.ALWAYS);
+		for(TableColumn tc: accountPaymentTable.getColumns()){
+			tc.setPrefWidth(TableUtils.getColumnWidth(tc)+30);
+		}
+		Platform.runLater(() -> GUIUtils.customResize(accountPaymentTable,descriptionCol));
 	}
 
 	public void exportToXero() throws FileNotFoundException {

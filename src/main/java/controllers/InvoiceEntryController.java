@@ -186,7 +186,7 @@ public class InvoiceEntryController extends Controller implements actionableComb
 		for(TableColumn tc: invoicesTable.getColumns()){
 			tc.setPrefWidth(TableUtils.getColumnWidth(tc)+30);
 		}
-		Platform.runLater(() -> GUIUtils.customResize(invoicesTable));
+		Platform.runLater(() -> GUIUtils.customResize(invoicesTable,notesCol));
 
 
 

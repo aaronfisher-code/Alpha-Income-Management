@@ -47,6 +47,9 @@ public class MonthlySummaryController extends Controller{
 	@FXML
 	private TableView<EODDataPoint> summaryTable;
 
+	@FXML
+	private TableColumn<EODDataPoint,String> endCol;
+
     private Connection con = null;
     PreparedStatement preparedStatement = null;
     ResultSet resultSet = null;
@@ -80,7 +83,7 @@ public class MonthlySummaryController extends Controller{
 		for(TableColumn tc: summaryTable.getColumns()){
 			tc.setPrefWidth(TableUtils.getColumnWidth(tc)+30);
 		}
-		Platform.runLater(() -> GUIUtils.customResize(summaryTable));
+		Platform.runLater(() -> GUIUtils.customResize(summaryTable,endCol));
 	}
 
 	public void exportFiles(){}

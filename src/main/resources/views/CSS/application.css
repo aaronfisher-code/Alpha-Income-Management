@@ -10,6 +10,17 @@
 	
 }
 
+.popOverComboBox{
+    -fx-font-size: 14px;
+    -mfx-gap: 5;
+    -fx-background-color: WHITE;
+    -fx-border-color: #D3D3D3;
+    -fx-border-radius: 5;
+    -fx-padding: 4;
+    -fx-background-insets: 0;
+    -fx-font-family: "Monsterrat";
+}
+
 .tableHeader {
     -fx-font-family: "Montserrat Semibold";
     -fx-font-size: 18px;
@@ -92,10 +103,6 @@
 }
 .mfx-combo-box:focus-within  .floating-text{
     -fx-text-fill: #0F60FF;
-}
-
-.mfx-combo-box{
-    -fx-border-radius: 5;
 }
 
 .mfx-date-picker .date-picker-popup .content{
@@ -309,9 +316,24 @@ Popup
     -fx-cell-size: 400px;
 }
 
+.mfx-combo-box:disabled{
+    -fx-border-color: #E7E7E7;
+}
+
+.mfx-combo-box:focus-within{
+    -mfx-color:#0F60FF;
+}
+
 .table-view{
     -fx-font-family: "Montserrat";
     -fx-border-color: #F3F2F7;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.table-view:focused .table-row-cell:focused {
+    -fx-background-color: -fx-table-cell-border-color, -fx-background;
+    -fx-background-insets: 0, 0 0 1 0;
 }
 
 .headingText {
