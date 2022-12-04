@@ -81,6 +81,23 @@
     -fx-text-fill: #0F60FF;
 }
 
+.mfx-combo-box .floating-text{
+    -fx-font-family: "Montserrat";
+}
+
+.mfx-combo-box:focus-within {
+    -fx-border-color: #0F60FF;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+}
+.mfx-combo-box:focus-within  .floating-text{
+    -fx-text-fill: #0F60FF;
+}
+
+.mfx-combo-box{
+    -fx-border-radius: 5;
+}
+
 .mfx-date-picker .date-picker-popup .content{
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.8), 10, 0, 0.0, 2.0);
 }
@@ -262,17 +279,28 @@ Popup
     -fx-font-family: "Montserrat";
 }
 
-.table-view .column-header * {
+.defaultColumn{
     -fx-background-color: #F3F2F7;
-    -fx-font-family: "Montserrat Semibold";
     -fx-text-fill: #6E6B7B;
+}
+
+.defaultColumn .column-header,
+.defaultColumn .column-header .filler,
+.defaultColumn .column-header-background .filler {
+    -fx-background-color: #F3F2F7;
+}
+
+.table-view .column-header * {
+    -fx-font-family: "Montserrat Semibold";
     -fx-border-color: TRANSPARENT;
+    -fx-alignment: center;
+    -fx-text-alignment: center;
+    -fx-padding: 5 0 5 0;
 }
 
 .table-view .column-header,
 .table-view .column-header .filler,
 .table-view .column-header-background .filler {
-    -fx-background-color: #F3F2F7;
     -fx-size: 40;
     -fx-border-color: TRANSPARENT;
 }
@@ -284,6 +312,11 @@ Popup
 .table-view{
     -fx-font-family: "Montserrat";
     -fx-border-color: #F3F2F7;
+}
+
+.headingText {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 14px;
 }
 
 

@@ -111,7 +111,7 @@
          </StackPane.margin>
       </JFXNodesList>
       <Region fx:id="contentDarken" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" opacity="0.25" style="-fx-background-color: BLACK;" visible="false" />
-      <VBox fx:id="editStorePopover" alignment="TOP_RIGHT" maxWidth="375.0" minWidth="375.0" prefWidth="375.0" spacing="10.0" style="-fx-background-color: #FFFFFF;" translateX="375.0" StackPane.alignment="TOP_RIGHT">
+      <VBox fx:id="editStorePopover" alignment="TOP_RIGHT" maxWidth="425.0" minWidth="425.0" prefWidth="425.0" spacing="10.0" style="-fx-background-color: #FFFFFF;" translateX="425.0" StackPane.alignment="TOP_RIGHT">
          <children>
             <BorderPane style="-fx-background-color: #F8F8F8;">
                <left>
@@ -173,7 +173,7 @@
             </MFXScrollPane>
          </children>
       </VBox>
-      <VBox fx:id="editUserPopover" alignment="TOP_RIGHT" maxWidth="375.0" minWidth="375.0" prefWidth="375.0" spacing="10.0" style="-fx-background-color: #FFFFFF;" translateX="375.0" StackPane.alignment="TOP_RIGHT">
+      <VBox fx:id="editUserPopover" alignment="TOP_RIGHT" maxWidth="425.0" minWidth="425.0" prefWidth="425.0" spacing="10.0" style="-fx-background-color: #FFFFFF;" translateX="425.0" StackPane.alignment="TOP_RIGHT">
          <children>
             <BorderPane style="-fx-background-color: #F8F8F8;">
                <left>

@@ -17,6 +17,8 @@ public class AccountPayment {
 	private double quantity;
 	private double unitAmount;
 	private boolean accountAdjusted;
+	private String accountCode;
+	private String taxRate;
 
 	public AccountPayment(ResultSet resultSet) {
 		try {
@@ -29,6 +31,8 @@ public class AccountPayment {
 			this.description = resultSet.getString("description");
 			this.unitAmount = resultSet.getDouble("unitAmount");
 			this.accountAdjusted = resultSet.getBoolean("accountAdjusted");
+			this.taxRate = resultSet.getString("taxRate");
+			this.accountCode = resultSet.getString("accountCode");
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -54,6 +58,9 @@ public class AccountPayment {
 	public void setUnitAmount(double unitAmount) {this.unitAmount = unitAmount;}
 	public boolean isAccountAdjusted() {return accountAdjusted;}
 	public void setAccountAdjusted(boolean accountAdjusted) {this.accountAdjusted = accountAdjusted;}
-
+	public String getAccountCode() {return accountCode;}
+	public void setAccountCode(String accountCode) {this.accountCode = accountCode;}
+	public String getTaxRate() {return taxRate;}
+	public void setTaxRate(String taxRate) {this.taxRate = taxRate;}
 	public String getUnitAmountString(){return NumberFormat.getCurrencyInstance().format(unitAmount);}
 }

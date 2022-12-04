@@ -1,19 +1,27 @@
 package controllers;
 
 import application.Main;
+import com.dlsc.gemsfx.DialogPane;
 import com.dlsc.gemsfx.FilterView;
+import components.ActionableFilterComboBox;
+import interfaces.actionableComboBox;
+import io.github.palexdev.materialfx.controls.MFXButton;
 import io.github.palexdev.materialfx.controls.MFXDatePicker;
+import io.github.palexdev.materialfx.enums.FloatMode;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import models.AccountPaymentContactDataPoint;
 import models.Invoice;
 import utils.AnimationUtils;
 import utils.GUIUtils;
@@ -27,11 +35,14 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 
-public class InvoiceEntryController extends Controller{
+import static com.dlsc.gemsfx.DialogPane.Type.BLANK;
+
+public class InvoiceEntryController extends Controller implements actionableComboBox {
 
 	private MFXDatePicker datePkr;
 	@FXML
@@ -39,11 +50,15 @@ public class InvoiceEntryController extends Controller{
 	@FXML
 	private StackPane backgroundPane;
 	@FXML
-	private VBox controlBox;
+	private VBox controlBox,addInvoicePopover;
 	@FXML
 	private BorderPane storesButton;
 	@FXML
 	private BorderPane invoicesButton;
+	@FXML
+	private Region contentDarken;
+	@FXML
+	private DialogPane dialogPane;
 	private TableView<Invoice> invoicesTable = new TableView<>();
 	private TableColumn<Invoice,String> supplierNameCol;
 	private TableColumn<Invoice,String> invoiceNoCol;
@@ -56,6 +71,8 @@ public class InvoiceEntryController extends Controller{
 	private TableColumn<Invoice,Double> totalAfterCreditCol;
 	private TableColumn<Invoice,String> notesCol;
 	private FilterView<Invoice> filterView = new FilterView<>();
+	private ActionableFilterComboBox afx;
+	private DialogPane.Dialog<Object> dialog;
 	
 	
     private Connection con = null;
@@ -80,6 +97,31 @@ public class InvoiceEntryController extends Controller{
 
 	@Override
 	public void fill() {
+
+		MFXButton addContactButton = new MFXButton("Create New");
+		addContactButton.setOnAction(actionEvent -> {
+			dialog = new DialogPane.Dialog(dialogPane, BLANK);
+			dialog.setPadding(false);
+			dialog.setContent(createAddNewContactDialog());
+			dialogPane.showDialog(dialog);
+		});
+		MFXButton manageContactsButton = new MFXButton("Manage Contacts");
+		manageContactsButton.setOnAction(actionEvent -> {
+			dialog = new DialogPane.Dialog(dialogPane, BLANK);
+			dialog.setPadding(false);
+			dialog.setContent(createManageContactsDialog());
+			dialogPane.showDialog(dialog);
+		});
+		afx = new ActionableFilterComboBox(addContactButton,manageContactsButton);
+
+		afx.setFloatMode(FloatMode.ABOVE);
+		afx.setFloatingText("Contact name");
+		afx.setFloatingTextGap(5);
+		afx.setBorderGap(0);
+		afx.setStyle("-mfx-gap: 5");
+		afx.setMaxWidth(Double.MAX_VALUE);
+		afx.setMinHeight(38.4);
+		addInvoicePopover.getChildren().add(1,afx);
 
 		datePkr = new MFXDatePicker();
 //		datePkr.setOnAction(e -> updatePage());
@@ -151,6 +193,54 @@ public class InvoiceEntryController extends Controller{
 
 	}
 
+	private Node createAddNewContactDialog() {
+		FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/AddNewContactDialog.fxml"));
+		StackPane newContactDialog = null;
+		try {
+			newContactDialog = loader.load();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		AddNewSupplierDialogController dialogController = loader.getController();
+		dialogController.setParent(this);
+		dialogController.setConnection(this.con);
+		dialogController.setMain(this.main);
+		return newContactDialog;
+	}
+
+	private Node createManageContactsDialog() {
+		FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/ManageContactsDialog.fxml"));
+		StackPane manageContactsDialog = null;
+		try {
+			manageContactsDialog = loader.load();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		ManageSuppliersDialogController dialogController = loader.getController();
+		dialogController.setParent(this);
+		dialogController.setConnection(this.con);
+		dialogController.setMain(this.main);
+		dialogController.fill();
+		return manageContactsDialog;
+	}
+
+	public void fillContactList(){
+		ObservableList<AccountPaymentContactDataPoint> contacts = FXCollections.observableArrayList();
+		String sql = null;
+		try {
+			sql = "SELECT * FROM accountPaymentContacts where storeID = ?";
+			preparedStatement = con.prepareStatement(sql);
+			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
+			resultSet = preparedStatement.executeQuery();
+			while (resultSet.next()) {
+				contacts.add(new AccountPaymentContactDataPoint(resultSet));
+			}
+		} catch (SQLException throwables) {
+			throwables.printStackTrace();
+		}
+		afx.setItems(contacts);
+	}
+
 	public void exportFiles(){}
 
 	public void importFiles(){}
@@ -171,8 +261,8 @@ public class InvoiceEntryController extends Controller{
 //		saveButton.setOnAction(actionEvent -> addPayment());
 //		paymentPopoverTitle.setText("Add new account payment");
 //		deleteButton.setVisible(false);
-//		contentDarken.setVisible(true);
-//		AnimationUtils.changeSize(addPaymentPopover,0);
+		contentDarken.setVisible(true);
+		AnimationUtils.slideIn(addInvoicePopover,0);
 //		afx.clear();
 //		invoiceNoField.clear();
 //		invoiceDateField.clear();
@@ -181,6 +271,14 @@ public class InvoiceEntryController extends Controller{
 //		amountField.clear();
 //		accountAdjustedBox.setSelected(false);
 //		Platform.runLater(() -> afx.requestFocus());
+	}
+
+	public void closePopover(){
+		contentDarken.setVisible(false);
+		AnimationUtils.slideIn(addInvoicePopover,425);
+	}
+	public DialogPane.Dialog<Object> getDialog() {
+		return dialog;
 	}
 }
 

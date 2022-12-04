@@ -9,7 +9,7 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<StackPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.ManageContactsDialogController">
+<StackPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.ManageContactsDialogController">
    <children>
       <VBox spacing="10.0">
          <children>
@@ -19,7 +19,8 @@
                   <TableView fx:id="contactsTable">
                     <columns>
                         <TableColumn fx:id="nameCol" maxWidth="1.7976931348623157E308" minWidth="248.0" prefWidth="-1.0" resizable="false" text="Contact Name" />
-                        <TableColumn fx:id="deleteCol" editable="false" maxWidth="1.7976931348623157E308" minWidth="30.0" prefWidth="-1.0" sortable="false" text="🗑" />
+                        <TableColumn fx:id="nameCol1" maxWidth="1.7976931348623157E308" minWidth="79.111083984375" prefWidth="96.4444580078125" resizable="false" text="Account Code" />
+                        <TableColumn fx:id="deleteCol" editable="false" maxWidth="1.7976931348623157E308" minWidth="30.0" prefWidth="181.77767944335938" sortable="false" text="🗑" />
                     </columns>
                   </TableView>
                </children>

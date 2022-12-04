@@ -13,6 +13,12 @@ public class TableUtils {
         Graphics2D g2d = img.createGraphics();
         FontMetrics fm = g2d.getFontMetrics();
         g2d.dispose();
-        return	fm.stringWidth(tc.getText());
+        int width = 0;
+        for(String s: tc.getText().split("\n")){
+            if(fm.stringWidth(s)>width){
+                width=fm.stringWidth(s);
+            }
+        }
+        return	width;
     }
 }

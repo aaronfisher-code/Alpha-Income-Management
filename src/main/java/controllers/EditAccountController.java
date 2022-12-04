@@ -434,12 +434,12 @@ public class EditAccountController extends Controller{
 	}
 
 	public void closeStorePopover(){
-		AnimationUtils.slideIn(editStorePopover,375);
+		AnimationUtils.slideIn(editStorePopover,425);
 		contentDarken.setVisible(false);
 	}
 
 	public void closeUserPopover(){
-		AnimationUtils.slideIn(editUserPopover,375);
+		AnimationUtils.slideIn(editUserPopover,425);
 		contentDarken.setVisible(false);
 	}
 

@@ -32,6 +32,7 @@ import java.sql.*;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Locale;
 import java.util.Map;
@@ -56,11 +57,11 @@ public class AccountPaymentsPageController extends DateSelectController{
 	@FXML
 	private MFXTextField monthSelectorField;
     @FXML
-    private MFXTableView<AccountPayment> accountPaymentTable;
+    private TableView<AccountPayment> accountPaymentTable;
 	@FXML
 	private MFXTableView<AccountPaymentContactDataPoint> accountTotalsTable;
     @FXML
-	private VBox addPaymentPopover;
+	private VBox addPaymentPopover, entryFieldBox;
     @FXML
 	private Region contentDarken;
 	@FXML
@@ -84,6 +85,8 @@ public class AccountPaymentsPageController extends DateSelectController{
 	private Button deleteButton;
 	@FXML
 	private Label paymentPopoverTitle;
+	@FXML
+	private MFXComboBox<String> taxRateField;
 
 	private MFXTableColumn<AccountPayment> contactCol;
 	private MFXTableColumn<AccountPayment> invNumberCol;
@@ -139,7 +142,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 		afx.setStyle("-mfx-gap: 5");
 		afx.setMaxWidth(Double.MAX_VALUE);
 		afx.setMinHeight(38.4);
-		addPaymentPopover.getChildren().add(1,afx);
+		entryFieldBox.getChildren().add(1,afx);
 
 		//Init Payments Table
 		contactCol = new MFXTableColumn<>("CONTACT",false, Comparator.comparing(AccountPayment::getContactName));
@@ -177,6 +180,15 @@ public class AccountPaymentsPageController extends DateSelectController{
 				contactNameCol,
 				totalCol
 		);
+		ObservableList<String> taxRates = FXCollections.observableArrayList("BAS Excluded",
+																			"GST Free Expenses",
+																			"GST Free Income",
+																			"GST on Expenses",
+																			"GST on Imports",
+																			"GST on Income");
+		taxRateField.setItems(taxRates);
+		taxRateField.setValue("Gst Free Income");
+
 		setDate(LocalDate.now());
 
 		ValidatorUtils.setupRegexValidation(afx,afxValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveButton);
@@ -291,7 +303,6 @@ public class AccountPaymentsPageController extends DateSelectController{
 		accountPaymentTable.setItems(currentAccountPaymentDataPoints);
 		addDoubleClickfunction();
 		accountPaymentTable.autosizeColumns();
-
 	}
 
 	public void exportToXero() throws FileNotFoundException {
@@ -301,7 +312,8 @@ public class AccountPaymentsPageController extends DateSelectController{
 		File file = fileChooser.showSaveDialog(main.getStg());
 		if (file != null) {
 			try (PrintWriter pw = new PrintWriter(file)) {
-				pw.println("Contact,,,,,,,,,,Invoice number,Invoice date ,Due Date,,Description,Quantity,Unit amount,,");
+				//TODO: Catch file not found error if this file is in use already
+				pw.println("Contact,,,,,,,,,,Invoice number,Invoice date ,Due Date,,Description,Quantity,Unit amount,Account code,GST free,");
 
 				YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
 				int daysInMonth = yearMonthObject.lengthOfMonth();
@@ -328,9 +340,13 @@ public class AccountPaymentsPageController extends DateSelectController{
 					pw.print(a.getInvDate()+",");
 					pw.print(a.getDueDate()+",,");
 					pw.print(a.getDescription()+",1,");
-					pw.println("$"+a.getUnitAmount()+",,");
+					pw.print("$"+a.getUnitAmount()+",");
+					pw.print(a.getAccountCode()+",");
+					pw.println(a.getTaxRate());
 				}
 				dialogPane.showInformation("Success", "Information exported succesfully");
+			} catch (FileNotFoundException e){
+				dialogPane.showError("Error", "This file could not be accessed, please ensure its not open in another program");
 			}
 		}
 	}
@@ -352,7 +368,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 	}
 
 	public void closePopover(){
-		AnimationUtils.slideIn(addPaymentPopover,375);
+		AnimationUtils.slideIn(addPaymentPopover,425);
 		contentDarken.setVisible(false);
 		afxValidationLabel.setVisible(false);
 		invoiceNoValidationLabel.setVisible(false);
@@ -465,7 +481,8 @@ public class AccountPaymentsPageController extends DateSelectController{
 			LocalDate dueDate = dueDateField.getValue();
 			String description = descriptionField.getText();
 			Double unitAmount = Double.valueOf(amountField.getText());
-			String sql = "INSERT INTO accountPayments(contactID,storeID,invoiceNo,invoiceDate,dueDate,description,unitAmount,accountAdjusted) VALUES(?,?,?,?,?,?,?,?)";
+			String taxRate = taxRateField.getText();
+			String sql = "INSERT INTO accountPayments(contactID,storeID,invoiceNo,invoiceDate,dueDate,description,unitAmount,accountAdjusted,taxRate) VALUES(?,?,?,?,?,?,?,?,?)";
 			try {
 				preparedStatement = con.prepareStatement(sql);
 				preparedStatement.setInt(1, contact.getContactID());
@@ -476,7 +493,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 				preparedStatement.setString(6, description);
 				preparedStatement.setDouble(7, unitAmount);
 				preparedStatement.setBoolean(8, accountAdjustedBox.isSelected());
-
+				preparedStatement.setString(9, taxRate);
 				preparedStatement.executeUpdate();
 			} catch (SQLException ex) {
 				System.err.println(ex.getMessage());
@@ -489,17 +506,21 @@ public class AccountPaymentsPageController extends DateSelectController{
 	}
 
 	public void editPayment(AccountPayment accountPayment){
-		String contactName = accountPayment.getContactName();
-		String invoiceNo = invoiceNoField.getText();
-		LocalDate invoiceDate = invoiceDateField.getValue();
-		LocalDate dueDate = dueDateField.getValue();
-		String description = descriptionField.getText();
-		Double unitAmount = Double.valueOf(amountField.getText());
+		Boolean validEntry = true;
+		if(!afx.isValid()){afx.requestFocus();}
+		else if(!invoiceNoField.isValid()){invoiceNoField.requestFocus();}
+		else if(!dueDateField.isValid()){dueDateField.requestFocus();}
+		else if(!amountField.isValid()){amountField.requestFocus();}
+		else{
+			String contactName = accountPayment.getContactName();
+			String invoiceNo = invoiceNoField.getText();
+			LocalDate invoiceDate = invoiceDateField.getValue();
+			LocalDate dueDate = dueDateField.getValue();
+			String description = descriptionField.getText();
+			Double unitAmount = Double.valueOf(amountField.getText());
+			String taxRate = taxRateField.getText();
 
-		if(contactName.isEmpty() || contactName.isBlank()){
-			//TODO: proper verification here
-		}else{
-			String sql = "UPDATE accountPayments SET contactID = ?,storeID = ?,invoiceNo = ?, invoiceDate = ?, dueDate = ?,description = ?,unitAmount = ?,accountAdjusted = ? WHERE idaccountPayments = ?";
+			String sql = "UPDATE accountPayments SET contactID = ?,storeID = ?,invoiceNo = ?, invoiceDate = ?, dueDate = ?,description = ?,unitAmount = ?,accountAdjusted = ?,taxRate = ? WHERE idaccountPayments = ?";
 			try {
 				preparedStatement = con.prepareStatement(sql);
 				preparedStatement.setInt(1, accountPayment.getContactID());
@@ -510,7 +531,8 @@ public class AccountPaymentsPageController extends DateSelectController{
 				preparedStatement.setString(6, description);
 				preparedStatement.setDouble(7, unitAmount);
 				preparedStatement.setBoolean(8, accountAdjustedBox.isSelected());
-				preparedStatement.setInt(9, accountPayment.getAccountPaymentID());
+				preparedStatement.setString(9, taxRate);
+				preparedStatement.setInt(10, accountPayment.getAccountPaymentID());
 				preparedStatement.executeUpdate();
 			} catch (SQLException ex) {
 				System.err.println(ex.getMessage());

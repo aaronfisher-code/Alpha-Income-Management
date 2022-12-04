@@ -30,6 +30,14 @@
     -mfx-color:#0F60FF;
 }
 
+.mfx-combo-box{
+    -fx-font-size: 12px;
+    -mfx-gap: 5;
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #D3D3D3;
+    -fx-border-radius: 5;
+}
+
 
 
 

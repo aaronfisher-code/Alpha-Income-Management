@@ -105,7 +105,7 @@
                   <Insets bottom="20.0" />
                </BorderPane.margin>
                <right>
-                  <Button fx:id="importDataButton1" graphicTextGap="10.0" mnemonicParsing="false" onAction="#importFiles" prefHeight="35.0" prefWidth="227.0" style="-fx-background-color: #F3F2F7; -fx-border-color: #6e6b7b; -fx-border-radius: 5;" styleClass="controlButton" text="Export in Xero Format" textFill="#6e6b7b" BorderPane.alignment="CENTER">
+                  <Button graphicTextGap="10.0" mnemonicParsing="false" prefHeight="35.0" prefWidth="227.0" style="-fx-background-color: #F3F2F7; -fx-border-color: #6e6b7b; -fx-border-radius: 5;" styleClass="controlButton" text="Export in Xero Format" textFill="#6e6b7b" BorderPane.alignment="CENTER" fx:id="xeroExportButton">
                      <cursor>
                         <Cursor fx:constant="HAND" />
                      </cursor>
@@ -168,7 +168,7 @@
          </effect>
       </BorderPane>
       <Region fx:id="contentDarken" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" onMouseClicked="#closePopover" opacity="0.25" style="-fx-background-color: BLACK;" visible="false" />
-      <VBox fx:id="editDayPopover" alignment="TOP_RIGHT" maxWidth="375.0" minWidth="375.0" prefWidth="375.0" spacing="10.0" style="-fx-background-color: #FFFFFF;" translateX="375.0" StackPane.alignment="TOP_RIGHT">
+      <VBox fx:id="editDayPopover" alignment="TOP_RIGHT" maxWidth="425.0" minWidth="425.0" prefWidth="425.0" spacing="10.0" style="-fx-background-color: #FFFFFF;" translateX="425.0" StackPane.alignment="TOP_RIGHT">
          <children>
             <BorderPane style="-fx-background-color: #F8F8F8;">
                <left>
@@ -199,7 +199,7 @@
                <content>
                   <VBox fx:id="editDayPopover1" maxWidth="1.7976931348623157E308" spacing="30.0" style="-fx-background-color: #FFFFFF;">
                      <children>
-                        <Button fx:id="importDataButton" graphicTextGap="10.0" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#importFiles" style="-fx-background-color: TRANSPARENT; -fx-border-color: #6e6b7b; -fx-border-radius: 5;" styleClass="controlButton" text="Import EOD files" textFill="#6e6b7b">
+                        <Button fx:id="importDataButton" graphicTextGap="10.0" maxWidth="1.7976931348623157E308" mnemonicParsing="false" style="-fx-background-color: TRANSPARENT; -fx-border-color: #6e6b7b; -fx-border-radius: 5;" styleClass="controlButton" text="Import EOD files" textFill="#6e6b7b">
                            <cursor>
                               <Cursor fx:constant="HAND" />
                            </cursor>

@@ -320,7 +320,7 @@ public class RosterPageController extends Controller {
     }
 
     public void closePopover(){
-        AnimationUtils.slideIn(editShiftPopover,375);
+        AnimationUtils.slideIn(editShiftPopover,425);
         contentDarken.setVisible(false);
     }
 

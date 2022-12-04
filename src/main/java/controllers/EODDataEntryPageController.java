@@ -14,6 +14,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import models.CellDataPoint;
 import models.EODDataPoint;
 import models.User;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -28,6 +29,7 @@ import java.io.IOException;
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.format.TextStyle;
 import java.util.Comparator;
 import java.util.Locale;
@@ -72,6 +74,8 @@ public class EODDataEntryPageController extends DateSelectController{
 	private MFXButton saveButton;
 	@FXML
 	private MFXScrollPane popOverScroll;
+	@FXML
+	private Button importDataButton;
 
 	private MFXTableColumn<EODDataPoint> dateCol;
 	private MFXTableColumn<EODDataPoint> cashAmountCol;
@@ -193,7 +197,7 @@ public class EODDataEntryPageController extends DateSelectController{
 		}
 	}
 
-	public void importFiles() throws IOException {
+	public void importFiles(LocalDate targetDate) throws IOException {
 		FileChooser fileChooser = new FileChooser();
 		fileChooser.setTitle("Open Data entry File");
 		fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("XLS Files", "*.xls"));
@@ -202,6 +206,24 @@ public class EODDataEntryPageController extends DateSelectController{
 			FileInputStream file = new FileInputStream(newfile);
 			HSSFWorkbook workbook = new HSSFWorkbook(file);
 			WorkbookProcessor wbp = new WorkbookProcessor(workbook);
+			//TODO: Verify store is correct
+			//TODO: Verify if period overlaps
+			for(CellDataPoint cdp : wbp.getDataPoints()){
+				String sql = "INSERT INTO tillReportDatapoints(storeID,assignedDate,periodStartDate,periodEndDate,`key`,quantity,amount) VALUES(?,?,?,?,?,?,?)";
+				try {
+					preparedStatement = con.prepareStatement(sql);
+					preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
+					preparedStatement.setDate(2, Date.valueOf(targetDate));
+					preparedStatement.setObject(3, wbp.getPeriodStart().atZone(ZoneId.of("Australia/Melbourne")));
+					preparedStatement.setObject(4, wbp.getPeriodEnd().atZone(ZoneId.of("Australia/Melbourne")));
+					preparedStatement.setString(5,cdp.getCategory()+((cdp.getSubCategory()!="")?"-"+cdp.getSubCategory():""));
+					preparedStatement.setDouble(6,cdp.getQuantity());
+					preparedStatement.setDouble(7,cdp.getAmount());
+					preparedStatement.executeUpdate();
+				} catch (SQLException ex) {
+					System.err.println(ex.getMessage());
+				}
+			}
 		}
 	}
 
@@ -313,10 +335,14 @@ public class EODDataEntryPageController extends DateSelectController{
 		smsPatientsField.setText(String.valueOf(e.getSmsPatients()));
 		notesField.setText((e.getNotes()==null || e.getNotes().isBlank())?"":String.valueOf(e.getNotes()));
 		saveButton.setOnAction(actionEvent -> editEODEntry(e));
+		importDataButton.setOnAction(actionEvent -> {
+			try {importFiles(e.getDate());
+			} catch (IOException ex) {throw new RuntimeException(ex);}
+		});
 	}
 
 	public void closePopover(){
-		AnimationUtils.slideIn(editDayPopover,375);
+		AnimationUtils.slideIn(editDayPopover,425);
 		contentDarken.setVisible(false);
 	}
 

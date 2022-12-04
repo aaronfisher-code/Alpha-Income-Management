@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.dlsc.gemsfx.DialogPane?>
 <?import com.jfoenix.controls.JFXButton?>
 <?import com.jfoenix.controls.JFXNodesList?>
 <?import io.github.palexdev.materialfx.controls.MFXButton?>
-<?import io.github.palexdev.materialfx.controls.MFXCheckbox?>
 <?import io.github.palexdev.materialfx.controls.MFXDatePicker?>
 <?import io.github.palexdev.materialfx.controls.MFXTextField?>
 <?import java.net.URL?>
@@ -18,6 +18,7 @@
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.paint.Color?>
@@ -144,11 +145,12 @@
             <Insets bottom="50.0" right="50.0" />
          </StackPane.margin>
       </JFXNodesList>
-      <VBox fx:id="addPaymentPopover" maxWidth="0.0" minWidth="375.0" prefWidth="375.0" spacing="30.0" style="-fx-background-color: #FFFFFF;" translateX="375.0" StackPane.alignment="TOP_RIGHT">
+      <Region fx:id="contentDarken" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" onMouseClicked="#closePopover" opacity="0.25" style="-fx-background-color: BLACK;" visible="false" />
+      <VBox fx:id="addInvoicePopover" maxWidth="0.0" minWidth="425.0" prefWidth="425.0" spacing="30.0" style="-fx-background-color: #FFFFFF;" translateX="425.0" StackPane.alignment="TOP_RIGHT">
          <children>
             <BorderPane style="-fx-background-color: #F8F8F8;">
                <left>
-                  <Label fx:id="paymentPopoverTitle" maxWidth="1.7976931348623157E308" styleClass="popOverTitle" text="Add a new payment" BorderPane.alignment="CENTER">
+                  <Label fx:id="paymentPopoverTitle" maxWidth="1.7976931348623157E308" styleClass="popOverTitle" text="Add a new invoice" BorderPane.alignment="CENTER">
                      <font>
                         <Font size="17.0" />
                      </font>
@@ -210,11 +212,12 @@
                   <Insets bottom="-5.0" top="-30.0" />
                </VBox.margin>
             </Label>
-            <MFXCheckbox fx:id="accountAdjustedBox" text="Account Adjusted?" textExpand="true" VBox.vgrow="ALWAYS">
-               <VBox.margin>
-                  <Insets />
-               </VBox.margin>
-            </MFXCheckbox>
+            <HBox alignment="CENTER" nodeOrientation="LEFT_TO_RIGHT" spacing="20.0">
+               <children>
+                  <MFXTextField fx:id="amountField1" allowEdit="false" borderGap="0.0" editable="false" floatMode="ABOVE" floatingText="Expected Unit Amount ($)" maxWidth="1.7976931348623157E308" minHeight="38.4" minWidth="167.0" HBox.hgrow="ALWAYS" />
+                  <MFXTextField fx:id="amountField11" allowEdit="false" borderGap="0.0" editable="false" floatMode="ABOVE" floatingText="Variance ($)" maxWidth="1.7976931348623157E308" minHeight="38.4" minWidth="167.0" HBox.hgrow="ALWAYS" />
+               </children>
+            </HBox>
             <MFXButton fx:id="saveButton" buttonType="RAISED" depthLevel="LEVEL3" maxWidth="1.7976931348623157E308" prefHeight="30.0" style="-fx-background-color: #0F60FF;" text="Save" textFill="WHITE">
                <VBox.margin>
                   <Insets top="20.0" />
@@ -225,9 +228,10 @@
             <Insets left="10.0" right="10.0" />
          </padding>
       </VBox>
+      <DialogPane fx:id="dialogPane" />
    </children>
    <stylesheets>
       <URL value="@../CSS/application.css" />
-      <URL value="@../CSS/AccountEditPage.css" />
+      <URL value="@../CSS/InvoiceEntryPage.css" />
    </stylesheets>
 </StackPane>
