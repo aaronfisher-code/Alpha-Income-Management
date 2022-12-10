@@ -59,7 +59,7 @@ public class GraphTileController extends Controller{
 	@Override
 	public void fill() {
     	graphPane.getChildren().add(fillGraph("No of scripts", false));
-    	setTableView();
+    	//setTableView();
 	}
 
 	public StackPane fillGraph(String title, Boolean hideYAxis){

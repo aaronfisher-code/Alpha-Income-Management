@@ -27,15 +27,10 @@ public class AccountPaymentContactDataPoint {
 		}
 	}
 
-	public AccountPaymentContactDataPoint(ResultSet resultSet, MFXButton b) {
-			try {
-				this.contactID = resultSet.getInt("idaccountPaymentContacts");
-				this.contactName = resultSet.getString("contactName");
-				this.storeID = resultSet.getInt("storeID");
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
-			this.deleteButton = b;
+	public AccountPaymentContactDataPoint(int contactID,String contactName, int storeID){
+		this.contactID = contactID;
+		this.contactName = contactName;
+		this.storeID = storeID;
 	}
 
 	public int getContactID() {return contactID;}

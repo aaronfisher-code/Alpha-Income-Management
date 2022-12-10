@@ -198,7 +198,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 		taxRateField.setItems(taxRates);
 		taxRateField.setValue("Gst Free Income");
 
-		setDate(LocalDate.now());
+		Platform.runLater(() -> setDate(LocalDate.now()));
 
 		ValidatorUtils.setupRegexValidation(afx,afxValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveButton);
 		ValidatorUtils.setupRegexValidation(invoiceNoField,invoiceNoValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveButton);
@@ -265,7 +265,11 @@ public class AccountPaymentsPageController extends DateSelectController{
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
 		}
-		afx.setItems(contacts);
+		if(contacts.size()==0){
+			afx.getItems().add(new AccountPaymentContactDataPoint(0,"*Please add new suppliers below",0));
+		}else{
+			afx.setItems(contacts);
+		}
 	}
 	
 	

@@ -6,6 +6,7 @@ import components.layouts.BootstrapPane;
 import components.layouts.BootstrapRow;
 import components.layouts.Breakpoint;
 import io.github.palexdev.materialfx.controls.MFXScrollPane;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
@@ -20,6 +21,7 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.time.LocalDate;
 
 public class TargetGraphsPageController extends Controller{
 	
@@ -128,9 +130,9 @@ public class TargetGraphsPageController extends Controller{
 
 		outerPane.addRow(contentRow);
 		graphScrollPane.setContent(outerPane);
-		graphPane.setPrefHeight(graphScrollPane.getHeight());
 
-		adjustHeight();
+		Platform.runLater(() -> graphPane.setPrefHeight(graphScrollPane.getHeight()));
+		Platform.runLater(() -> adjustHeight());
 
 
 	}
