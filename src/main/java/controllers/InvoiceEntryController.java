@@ -7,6 +7,7 @@ import components.ActionableFilterComboBox;
 import interfaces.actionableComboBox;
 import io.github.palexdev.materialfx.controls.MFXButton;
 import io.github.palexdev.materialfx.controls.MFXDatePicker;
+import io.github.palexdev.materialfx.controls.MFXTextField;
 import io.github.palexdev.materialfx.enums.FloatMode;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -15,14 +16,19 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import models.AccountPayment;
 import models.AccountPaymentContactDataPoint;
 import models.Invoice;
+import models.InvoiceSupplier;
+import org.controlsfx.control.PopOver;
 import utils.AnimationUtils;
 import utils.GUIUtils;
 import utils.TableUtils;
@@ -32,21 +38,26 @@ import java.awt.font.FontRenderContext;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
+import java.text.NumberFormat;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.time.format.TextStyle;
+import java.util.Locale;
 
 import static com.dlsc.gemsfx.DialogPane.Type.BLANK;
 
-public class InvoiceEntryController extends Controller implements actionableComboBox {
+public class InvoiceEntryController extends DateSelectController implements actionableComboBox{
 
 	private MFXDatePicker datePkr;
 	@FXML
 	private FlowPane datePickerPane;
+	@FXML
+	private StackPane monthSelector;
+	@FXML
+	private MFXTextField monthSelectorField;
 	@FXML
 	private StackPane backgroundPane;
 	@FXML
@@ -59,6 +70,17 @@ public class InvoiceEntryController extends Controller implements actionableComb
 	private Region contentDarken;
 	@FXML
 	private DialogPane dialogPane;
+	@FXML
+	private MFXTextField invoiceNoField,descriptionField,amountField,expectedAmountField,varianceField;
+	@FXML
+	private MFXDatePicker invoiceDateField, dueDateField;
+	@FXML
+	private MFXButton saveButton;
+	@FXML
+	private Button deleteButton;
+	@FXML
+	private Label paymentPopoverTitle;
+
 	private TableView<Invoice> invoicesTable = new TableView<>();
 	private TableColumn<Invoice,String> supplierNameCol;
 	private TableColumn<Invoice,String> invoiceNoCol;
@@ -80,6 +102,7 @@ public class InvoiceEntryController extends Controller implements actionableComb
     ResultSet resultSet = null;
     private Main main;
     private Invoice selectedInvoice;
+	private PopOver currentDatePopover;
 
 	private ObservableList<Invoice> allInvoices = FXCollections.observableArrayList();
 	
@@ -98,21 +121,21 @@ public class InvoiceEntryController extends Controller implements actionableComb
 	@Override
 	public void fill() {
 
-		MFXButton addContactButton = new MFXButton("Create New");
-		addContactButton.setOnAction(actionEvent -> {
+		MFXButton addSupplierButton = new MFXButton("Create New");
+		addSupplierButton.setOnAction(actionEvent -> {
 			dialog = new DialogPane.Dialog(dialogPane, BLANK);
 			dialog.setPadding(false);
-			dialog.setContent(createAddNewContactDialog());
+			dialog.setContent(createAddNewSupplierDialog());
 			dialogPane.showDialog(dialog);
 		});
-		MFXButton manageContactsButton = new MFXButton("Manage Contacts");
-		manageContactsButton.setOnAction(actionEvent -> {
+		MFXButton manageSuppliersButton = new MFXButton("Manage Contacts");
+		manageSuppliersButton.setOnAction(actionEvent -> {
 			dialog = new DialogPane.Dialog(dialogPane, BLANK);
 			dialog.setPadding(false);
-			dialog.setContent(createManageContactsDialog());
+			dialog.setContent(createManageSuppliersDialog());
 			dialogPane.showDialog(dialog);
 		});
-		afx = new ActionableFilterComboBox(addContactButton,manageContactsButton);
+		afx = new ActionableFilterComboBox(addSupplierButton,manageSuppliersButton);
 
 		afx.setFloatMode(FloatMode.ABOVE);
 		afx.setFloatingText("Contact name");
@@ -122,13 +145,6 @@ public class InvoiceEntryController extends Controller implements actionableComb
 		afx.setMaxWidth(Double.MAX_VALUE);
 		afx.setMinHeight(38.4);
 		addInvoicePopover.getChildren().add(1,afx);
-
-		datePkr = new MFXDatePicker();
-//		datePkr.setOnAction(e -> updatePage());
-		datePickerPane.getChildren().add(1,datePkr);
-		datePkr.setValue(LocalDate.now());
-		datePkr.setText(LocalDate.now().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)));
-		datePkr.getStylesheets().add("/views/CSS/RosterPage.css");
 
 		filterView = new FilterView<>();
 		filterView.setTitle("Current Invoices");
@@ -140,10 +156,10 @@ public class InvoiceEntryController extends Controller implements actionableComb
 		invoiceDateCol = new TableColumn<>("INVOICE DATE");
 		dueDateCol = new TableColumn<>("DUE DATE");
 		unitAmountCol = new TableColumn<>("UNIT AMOUNT");
-		importedInvoiceAmountCol = new TableColumn<>("IMPORTED INVOICE AMOUNT");
+		importedInvoiceAmountCol = new TableColumn<>("IMPORTED INVOICE\nAMOUNT");
 		varianceCol = new TableColumn<>("VARIANCE");
 		creditsCol = new TableColumn<>("CREDITS");
-		totalAfterCreditCol = new TableColumn<>("TOTAL AFTER CREDIT");
+		totalAfterCreditCol = new TableColumn<>("TOTAL AFTER\nCREDIT");
 		notesCol = new TableColumn<>("NOTES");
 
 
@@ -175,11 +191,6 @@ public class InvoiceEntryController extends Controller implements actionableComb
 		invoicesTable.setMaxHeight(Double.MAX_VALUE);
 		filterView.setPadding(new Insets(20,20,10,20));//top,right,bottom,left
 		controlBox.getChildren().addAll(filterView,invoicesTable);
-		LocalDate date = LocalDate.now();
-		Invoice test1 = new Invoice("Test","1234",date,date,"test",123,123.45,123.45,123.45,123.45,1234.45,"test");
-		Invoice test2 = new Invoice("Test","5678",date,date,"test",123,123.45,123.45,123.45,123.45,1234.45,"test");
-		Invoice test3 = new Invoice("Test","91011",date,date,"test",123,123.45,123.45,123.45,123.45,1234.45,"test");
-		filterView.getItems().addAll(test1,test2,test3);
 		invoicesTable.setFixedCellSize(25.0);
 		VBox.setVgrow(invoicesTable, Priority.ALWAYS);
 		invoicesTable.setItems(allInvoices);
@@ -187,14 +198,12 @@ public class InvoiceEntryController extends Controller implements actionableComb
 			tc.setPrefWidth(TableUtils.getColumnWidth(tc)+30);
 		}
 		Platform.runLater(() -> GUIUtils.customResize(invoicesTable,notesCol));
-
-
-
-
+		Platform.runLater(() -> setDate(LocalDate.now()));
+		fillContactList();
 	}
 
-	private Node createAddNewContactDialog() {
-		FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/AddNewContactDialog.fxml"));
+	private Node createAddNewSupplierDialog() {
+		FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/AddNewSupplierDialog.fxml"));
 		StackPane newContactDialog = null;
 		try {
 			newContactDialog = loader.load();
@@ -208,11 +217,11 @@ public class InvoiceEntryController extends Controller implements actionableComb
 		return newContactDialog;
 	}
 
-	private Node createManageContactsDialog() {
-		FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/ManageContactsDialog.fxml"));
-		StackPane manageContactsDialog = null;
+	private Node createManageSuppliersDialog() {
+		FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/ManageSuppliersDialog.fxml"));
+		StackPane manageSuppliersDialog = null;
 		try {
-			manageContactsDialog = loader.load();
+			manageSuppliersDialog = loader.load();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -221,62 +230,173 @@ public class InvoiceEntryController extends Controller implements actionableComb
 		dialogController.setConnection(this.con);
 		dialogController.setMain(this.main);
 		dialogController.fill();
-		return manageContactsDialog;
+		return manageSuppliersDialog;
 	}
 
 	public void fillContactList(){
-		ObservableList<AccountPaymentContactDataPoint> contacts = FXCollections.observableArrayList();
+		ObservableList<InvoiceSupplier> contacts = FXCollections.observableArrayList();
 		String sql = null;
 		try {
-			sql = "SELECT * FROM accountPaymentContacts where storeID = ?";
+			sql = "SELECT * FROM invoiceSuppliers where storeID = ?";
 			preparedStatement = con.prepareStatement(sql);
 			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
 			resultSet = preparedStatement.executeQuery();
 			while (resultSet.next()) {
-				contacts.add(new AccountPaymentContactDataPoint(resultSet));
+				contacts.add(new InvoiceSupplier(resultSet));
 			}
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
 		}
-		afx.setItems(contacts);
+		if(contacts.size()==0){
+			afx.getItems().add(new InvoiceSupplier(0,"*Please add new suppliers below",0));
+		}else{
+			afx.setItems(contacts);
+		}
 	}
 
 	public void exportFiles(){}
 
 	public void importFiles(){}
 
-	public void weekForward() {
-		setDatePkr(datePkr.getValue().plusMonths(1));
+	public void monthForward() {
+		setDate(main.getCurrentDate().plusMonths(1));
 	}
 
-	public void weekBackward() {
-		setDatePkr(datePkr.getValue().minusMonths(1));
+	public void monthBackward() {
+		setDate(main.getCurrentDate().minusMonths(1));
 	}
 
-	public void setDatePkr(LocalDate date) {
-		datePkr.setValue(date);
+	public void openMonthSelector(){
+		if(currentDatePopover!=null&&currentDatePopover.isShowing()){
+			currentDatePopover.hide();
+		}else {
+			PopOver monthSelectorMenu = new PopOver();
+			FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/MonthYearSelectorContent.fxml"));
+			VBox monthSelectorMenuContent = null;
+			try {
+				monthSelectorMenuContent = loader.load();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			MonthYearSelectorContentController rdc = loader.getController();
+			rdc.setMain(main);
+			rdc.setConnection(con);
+			rdc.setParent(this);
+			rdc.fill();
+
+			monthSelectorMenu.setOpacity(1);
+			monthSelectorMenu.setContentNode(monthSelectorMenuContent);
+			monthSelectorMenu.setArrowSize(0);
+			monthSelectorMenu.setAnimated(true);
+			monthSelectorMenu.setArrowLocation(PopOver.ArrowLocation.TOP_CENTER);
+			monthSelectorMenu.setAutoHide(true);
+			monthSelectorMenu.setDetachable(false);
+			monthSelectorMenu.setHideOnEscape(true);
+			monthSelectorMenu.setCornerRadius(10);
+			monthSelectorMenu.setArrowIndent(0);
+			monthSelectorMenu.show(monthSelector);
+			currentDatePopover=monthSelectorMenu;
+			monthSelectorField.requestFocus();
+		}
+	}
+
+	@Override
+	public void setDate(LocalDate date) {
+		main.setCurrentDate(date);
+		String fieldText = main.getCurrentDate().getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
+		fieldText += ", ";
+		fieldText += main.getCurrentDate().getYear();
+		monthSelectorField.setText(fieldText);
+		fillTable();
+		fillContactList();
 	}
 
 	public void openPopover(){
-//		saveButton.setOnAction(actionEvent -> addPayment());
-//		paymentPopoverTitle.setText("Add new account payment");
-//		deleteButton.setVisible(false);
+		saveButton.setOnAction(actionEvent -> addInvoice());
+		paymentPopoverTitle.setText("Add new Invoice");
+		deleteButton.setVisible(false);
 		contentDarken.setVisible(true);
 		AnimationUtils.slideIn(addInvoicePopover,0);
-//		afx.clear();
-//		invoiceNoField.clear();
-//		invoiceDateField.clear();
-//		dueDateField.clear();
-//		descriptionField.clear();
-//		amountField.clear();
-//		accountAdjustedBox.setSelected(false);
-//		Platform.runLater(() -> afx.requestFocus());
+		afx.clear();
+		invoiceNoField.clear();
+		invoiceDateField.clear();
+		dueDateField.clear();
+		descriptionField.clear();
+		amountField.clear();
+		Platform.runLater(() -> afx.requestFocus());
 	}
 
 	public void closePopover(){
 		contentDarken.setVisible(false);
 		AnimationUtils.slideIn(addInvoicePopover,425);
 	}
+
+	public void addInvoice(){
+		Boolean validEntry = true;
+//		if(!afx.isValid()){afx.requestFocus();}
+//		else if(!invoiceNoField.isValid()){invoiceNoField.requestFocus();}
+//		else if(!dueDateField.isValid()){dueDateField.requestFocus();}
+//		else if(!amountField.isValid()){amountField.requestFocus();}
+//		else{
+			InvoiceSupplier contact = (InvoiceSupplier) afx.getSelectedItem();
+			String invoiceNo = invoiceNoField.getText();
+			LocalDate invoiceDate = invoiceDateField.getValue();
+			LocalDate dueDate = dueDateField.getValue();
+			String description = descriptionField.getText();
+			Double unitAmount = Double.valueOf(amountField.getText());
+			String sql = "INSERT INTO invoices(supplierID,invoiceNo,invoiceDate,dueDate,description,unitAmount,storeID) VALUES(?,?,?,?,?,?,?)";
+			try {
+				preparedStatement = con.prepareStatement(sql);
+				preparedStatement.setInt(1, contact.getContactID());
+				preparedStatement.setString(2, invoiceNo);
+				preparedStatement.setDate(3, Date.valueOf(invoiceDate));
+				preparedStatement.setDate(4, Date.valueOf(dueDate));
+				preparedStatement.setString(5, description);
+				preparedStatement.setDouble(6, unitAmount);
+				preparedStatement.setInt(7, main.getCurrentStore().getStoreID());
+				preparedStatement.executeUpdate();
+			} catch (SQLException ex) {
+				System.err.println(ex.getMessage());
+			}
+			closePopover();
+			fillTable();
+			dialogPane.showInformation("Success","Payment was succesfully added");
+//		}
+
+	}
+
+	public void fillTable(){
+
+		YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
+		int daysInMonth = yearMonthObject.lengthOfMonth();
+		ObservableList<Invoice> currentInvoiceDataPoints = FXCollections.observableArrayList();
+		String sql = null;
+		try {
+			sql = "SELECT * FROM invoices JOIN invoiceSuppliers i on invoices.supplierID = i.idinvoiceSuppliers WHERE invoices.storeID = ? AND MONTH(invoiceDate) = ? AND YEAR(invoiceDate) = ?";
+			preparedStatement = con.prepareStatement(sql);
+			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
+			preparedStatement.setInt(2, yearMonthObject.getMonthValue());
+			preparedStatement.setInt(3, yearMonthObject.getYear());
+			resultSet = preparedStatement.executeQuery();
+			while (resultSet.next()) {
+				currentInvoiceDataPoints.add(new Invoice(resultSet));
+			}
+		} catch (SQLException throwables) {
+			throwables.printStackTrace();
+		}
+		filterView.getItems().setAll(currentInvoiceDataPoints);
+//		addDoubleClickfunction();
+		invoicesTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+		invoicesTable.setMaxWidth(Double.MAX_VALUE);
+		invoicesTable.setMaxHeight(Double.MAX_VALUE);
+		invoicesTable.setFixedCellSize(25.0);
+		VBox.setVgrow(invoicesTable, Priority.ALWAYS);
+		for(TableColumn tc: invoicesTable.getColumns()){
+			tc.setPrefWidth(TableUtils.getColumnWidth(tc)+30);
+		}
+		Platform.runLater(() -> GUIUtils.customResize(invoicesTable,notesCol));
+	}
+
 	public DialogPane.Dialog<Object> getDialog() {
 		return dialog;
 	}

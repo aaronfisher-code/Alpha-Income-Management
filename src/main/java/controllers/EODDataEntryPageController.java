@@ -3,25 +3,23 @@ package controllers;
 import application.Main;
 import io.github.palexdev.materialfx.controls.*;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.*;
-import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
+import models.AccountPayment;
 import models.CellDataPoint;
 import models.EODDataPoint;
 import models.User;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.controlsfx.control.PopOver;
-import utils.AnimationUtils;
-import utils.ValidatorUtils;
-import utils.WorkbookProcessor;
+import utils.*;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -49,7 +47,7 @@ public class EODDataEntryPageController extends DateSelectController{
 	@FXML
 	private FlowPane datePickerPane;
     @FXML
-    private MFXTableView<EODDataPoint> eodDataTable;
+    private TableView<EODDataPoint> eodDataTable;
 	@FXML
 	private VBox editDayPopover;
 	@FXML
@@ -77,19 +75,19 @@ public class EODDataEntryPageController extends DateSelectController{
 	@FXML
 	private Button importDataButton;
 
-	private MFXTableColumn<EODDataPoint> dateCol;
-	private MFXTableColumn<EODDataPoint> cashAmountCol;
-	private MFXTableColumn<EODDataPoint> eftposAmountCol;
-	private MFXTableColumn<EODDataPoint> amexAmountCol;
-	private MFXTableColumn<EODDataPoint> googleSquareAmountCol;
-	private MFXTableColumn<EODDataPoint> chequeAmountCol;
-	private MFXTableColumn<EODDataPoint> medschecksCol;
-	private MFXTableColumn<EODDataPoint> stockOnHandAmountCol;
-	private MFXTableColumn<EODDataPoint> scriptsOnFileCol;
-	private MFXTableColumn<EODDataPoint> smsPatientsCol;
-	private MFXTableColumn<EODDataPoint> tillBalanceCol;
-	private MFXTableColumn<EODDataPoint> runningTillBalanceCol;
-	private MFXTableColumn<EODDataPoint> notesCol;
+	private TableColumn<EODDataPoint,LocalDate> dateCol;
+	private TableColumn<EODDataPoint,Double> cashAmountCol;
+	private TableColumn<EODDataPoint,Double> eftposAmountCol;
+	private TableColumn<EODDataPoint,Double> amexAmountCol;
+	private TableColumn<EODDataPoint,Double> googleSquareAmountCol;
+	private TableColumn<EODDataPoint,Double> chequeAmountCol;
+	private TableColumn<EODDataPoint, Integer> medschecksCol;
+	private TableColumn<EODDataPoint, Double> stockOnHandAmountCol;
+	private TableColumn<EODDataPoint, Integer> scriptsOnFileCol;
+	private TableColumn<EODDataPoint, Integer> smsPatientsCol;
+	private TableColumn<EODDataPoint, Double> tillBalanceCol;
+	private TableColumn<EODDataPoint, Double> runningTillBalanceCol;
+	private TableColumn<EODDataPoint, String> notesCol;
 
 	private static final String[] digits = "0 1 2 3 4 5 6 7 8 9".split(" ");
 	private static final PseudoClass INVALID_PSEUDO_CLASS = PseudoClass.getPseudoClass("invalid");
@@ -129,38 +127,36 @@ public class EODDataEntryPageController extends DateSelectController{
 		ValidatorUtils.setupRegexValidation(sofField,sofValidationLabel,ValidatorUtils.INT_REGEX,ValidatorUtils.INT_ERROR,null,saveButton);
 		ValidatorUtils.setupRegexValidation(smsPatientsField,smsPatientsValidationLabel,ValidatorUtils.INT_REGEX,ValidatorUtils.INT_ERROR,null,saveButton);
 
-		eodDataTable.autosizeColumnsOnInitialization();
+		dateCol = new TableColumn<>("DATE");
+		cashAmountCol = new TableColumn<>("CASH");
+		eftposAmountCol = new TableColumn<>("EFTPOS");
+		amexAmountCol = new TableColumn<>("AMEX");
+		googleSquareAmountCol = new TableColumn<>("GOOGLE\nSQUARE");
+		chequeAmountCol = new TableColumn<>("CHEQUE");
+		medschecksCol = new TableColumn<>("MEDSCHECKS");
+		stockOnHandAmountCol = new TableColumn<>("STOCK ON\nHAND");
+		scriptsOnFileCol = new TableColumn<>("SCRIPTS ON\nFILE");
+		smsPatientsCol = new TableColumn<>("SMS PATIENTS");
+		tillBalanceCol = new TableColumn<>("TILL BALANCE");
+		runningTillBalanceCol = new TableColumn<>("RUNNING TILL\nBALANCE");
+		notesCol = new TableColumn<>("NOTES");
+		dateCol.setMinWidth(80);
 
-		dateCol = new MFXTableColumn<>("DATE",true, Comparator.comparing(EODDataPoint::getDate));
-		cashAmountCol = new MFXTableColumn<>("CASH",true, Comparator.comparing(EODDataPoint::getCashAmount));
-		eftposAmountCol = new MFXTableColumn<>("EFTPOS",true, Comparator.comparing(EODDataPoint::getEftposAmount));
-		amexAmountCol = new MFXTableColumn<>("AMEX",true, Comparator.comparing(EODDataPoint::getAmexAmount));
-		googleSquareAmountCol = new MFXTableColumn<>("GOOGLE SQUARE",true, Comparator.comparing(EODDataPoint::getGoogleSquareAmount));
-		chequeAmountCol = new MFXTableColumn<>("CHEQUE",true, Comparator.comparing(EODDataPoint::getChequeAmount));
-		medschecksCol = new MFXTableColumn<>("MEDSCHECKS",true, Comparator.comparing(EODDataPoint::getMedschecks));
-		stockOnHandAmountCol = new MFXTableColumn<>("STOCK ON HAND",true, Comparator.comparing(EODDataPoint::getStockOnHandAmount));
-		scriptsOnFileCol = new MFXTableColumn<>("SCRIPTS ON FILE",true, Comparator.comparing(EODDataPoint::getScriptsOnFile));
-		smsPatientsCol = new MFXTableColumn<>("SMS PATIENTS",true, Comparator.comparing(EODDataPoint::getSmsPatients));
-		tillBalanceCol = new MFXTableColumn<>("TILL BALANCE",true, Comparator.comparing(EODDataPoint::getTillBalance));
-		runningTillBalanceCol = new MFXTableColumn<>("RUNNING TILL BALANCE",true, Comparator.comparing(EODDataPoint::getRunningTillBalance));
-		notesCol = new MFXTableColumn<>("NOTES",true, Comparator.comparing(EODDataPoint::getNotes));
-		dateCol.setMinWidth(400);
+		dateCol.setCellValueFactory(new PropertyValueFactory<>("date"));
+		cashAmountCol.setCellValueFactory(new PropertyValueFactory<>("cashAmount"));
+		eftposAmountCol.setCellValueFactory(new PropertyValueFactory<>("eftposAmount"));
+		amexAmountCol.setCellValueFactory(new PropertyValueFactory<>("amexAmount"));
+		googleSquareAmountCol.setCellValueFactory(new PropertyValueFactory<>("googleSquareAmount"));
+		chequeAmountCol.setCellValueFactory(new PropertyValueFactory<>("chequeAmount"));
+		medschecksCol.setCellValueFactory(new PropertyValueFactory<>("medschecks"));
+		stockOnHandAmountCol.setCellValueFactory(new PropertyValueFactory<>("stockOnHandAmount"));
+		scriptsOnFileCol.setCellValueFactory(new PropertyValueFactory<>("scriptsOnFile"));
+		smsPatientsCol.setCellValueFactory(new PropertyValueFactory<>("smsPatients"));
+		tillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("tillBalance"));
+		runningTillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("runningTillBalance"));
+		notesCol.setCellValueFactory(new PropertyValueFactory<>("notes"));
 
-		dateCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getDateString));
-		cashAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getCashAmountString));
-		eftposAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getEftposAmountString));
-		amexAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getAmexAmountString));
-		googleSquareAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getGoogleSquareAmountString));
-		chequeAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getChequeAmountString));
-		medschecksCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getMedschecks));
-		stockOnHandAmountCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getStockOnHandAmount));
-		scriptsOnFileCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getScriptsOnFile));
-		smsPatientsCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getSmsPatients));
-		tillBalanceCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getTillBalanceString));
-		runningTillBalanceCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getRunningTillBalanceString));
-		notesCol.setRowCellFactory(eodDataPoint -> new MFXTableRowCell<>(EODDataPoint::getNotes));
-
-		eodDataTable.getTableColumns().addAll(
+		eodDataTable.getColumns().addAll(
 				dateCol,
 				cashAmountCol,
 				eftposAmountCol,
@@ -176,25 +172,29 @@ public class EODDataEntryPageController extends DateSelectController{
 				notesCol
 		);
 		setDate(LocalDate.now());
-		eodDataTable.autosizeColumnsOnInitialization();
-		eodDataTable.autosizeColumns();
-		eodDataTable.virtualFlowInitializedProperty().addListener((observable, oldValue, newValue) -> {addDoubleClickfunction();});
+		eodDataTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+		eodDataTable.setMaxWidth(Double.MAX_VALUE);
+		eodDataTable.setMaxHeight(Double.MAX_VALUE);
+		eodDataTable.setFixedCellSize(25.0);
+		VBox.setVgrow(eodDataTable, Priority.ALWAYS);
+		for(TableColumn tc: eodDataTable.getColumns()){
+			tc.setPrefWidth(TableUtils.getColumnWidth(tc)+40);
+		}
+		Platform.runLater(() -> GUIUtils.customResize(eodDataTable,notesCol));
+		Platform.runLater(() -> addDoubleClickfunction());
 	}
 
 	private void addDoubleClickfunction(){
-		for (Map.Entry<Integer, MFXTableRow<EODDataPoint>> entry:eodDataTable.getCells().entrySet()) {
-			entry.getValue().setOnMouseClicked(event -> {
-				if(event.getClickCount()==2) openEODPopover(entry.getValue().getData());
+		eodDataTable.setRowFactory( tv -> {
+			TableRow<EODDataPoint> row = new TableRow<>();
+			row.setOnMouseClicked(event -> {
+				if (event.getClickCount() == 2 && (! row.isEmpty()) ) {
+					EODDataPoint rowData = row.getItem();
+					openEODPopover(rowData);
+				}
 			});
-			for (MFXTableRowCell<EODDataPoint, ?> cell:entry.getValue().getCells()) {
-				cell.setOnMouseClicked(event -> {
-					if(event.getClickCount()==2){
-						MFXTableRow<EODDataPoint> parentRow = (MFXTableRow<EODDataPoint>) cell.getParent();
-						openEODPopover(parentRow.getData());
-					}
-				});
-			}
-		}
+			return row ;
+		});
 	}
 
 	public void importFiles(LocalDate targetDate) throws IOException {
@@ -209,16 +209,20 @@ public class EODDataEntryPageController extends DateSelectController{
 			//TODO: Verify store is correct
 			//TODO: Verify if period overlaps
 			for(CellDataPoint cdp : wbp.getDataPoints()){
-				String sql = "INSERT INTO tillReportDatapoints(storeID,assignedDate,periodStartDate,periodEndDate,`key`,quantity,amount) VALUES(?,?,?,?,?,?,?)";
+				String sql = "INSERT INTO tillReportDatapoints(storeID,assignedDate,periodStartDate,periodEndDate,`key`,quantity,amount) VALUES(?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE periodStartDate=?,periodEndDate=?,quantity=?,amount=?";
 				try {
 					preparedStatement = con.prepareStatement(sql);
 					preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-					preparedStatement.setDate(2, Date.valueOf(targetDate));
-					preparedStatement.setObject(3, wbp.getPeriodStart().atZone(ZoneId.of("Australia/Melbourne")));
-					preparedStatement.setObject(4, wbp.getPeriodEnd().atZone(ZoneId.of("Australia/Melbourne")));
+					preparedStatement.setDate(2, (cdp.getAssignedDate()==null)?Date.valueOf(targetDate): Date.valueOf(cdp.getAssignedDate()));
+					preparedStatement.setObject(3, (wbp.getPeriodStart()!=null)?wbp.getPeriodStart().atZone(ZoneId.of("Australia/Melbourne")):null);
+					preparedStatement.setObject(4, (wbp.getPeriodEnd()!=null)?wbp.getPeriodEnd().atZone(ZoneId.of("Australia/Melbourne")):null);
 					preparedStatement.setString(5,cdp.getCategory()+((cdp.getSubCategory()!="")?"-"+cdp.getSubCategory():""));
 					preparedStatement.setDouble(6,cdp.getQuantity());
 					preparedStatement.setDouble(7,cdp.getAmount());
+					preparedStatement.setObject(8, (wbp.getPeriodStart()!=null)?wbp.getPeriodStart().atZone(ZoneId.of("Australia/Melbourne")):null);
+					preparedStatement.setObject(9, (wbp.getPeriodEnd()!=null)?wbp.getPeriodEnd().atZone(ZoneId.of("Australia/Melbourne")):null);
+					preparedStatement.setDouble(10,cdp.getQuantity());
+					preparedStatement.setDouble(11,cdp.getAmount());
 					preparedStatement.executeUpdate();
 				} catch (SQLException ex) {
 					System.err.println(ex.getMessage());
@@ -289,7 +293,6 @@ public class EODDataEntryPageController extends DateSelectController{
 			throwables.printStackTrace();
 		}
 
-
 		for(int i = 1; i<daysInMonth+1; i++){
 			Boolean dateAlreadyCreated = false;
 			for(EODDataPoint e: currentEODDataPoints){
@@ -302,20 +305,7 @@ public class EODDataEntryPageController extends DateSelectController{
 				eodDataPoints.add(new EODDataPoint(LocalDate.of(main.getCurrentDate().getYear(),main.getCurrentDate().getMonth(),i)));
 		}
 		eodDataTable.setItems(eodDataPoints);
-		for (Map.Entry<Integer, MFXTableRow<EODDataPoint>> entry:eodDataTable.getCells().entrySet()) {
-			entry.getValue().setOnMouseClicked(event -> {
-				if(event.getClickCount()==2) openEODPopover(entry.getValue().getData());
-			});
-			for (MFXTableRowCell<EODDataPoint, ?> cell:entry.getValue().getCells()) {
-				cell.setOnMouseClicked(event -> {
-					if(event.getClickCount()==2){
-						MFXTableRow<EODDataPoint> parentRow = (MFXTableRow<EODDataPoint>) cell.getParent();
-						openEODPopover(parentRow.getData());
-					}
-				});
-			}
-		}
-		eodDataTable.autosizeColumns();
+		addDoubleClickfunction();
 	}
 
 	public void openEODPopover(EODDataPoint e){

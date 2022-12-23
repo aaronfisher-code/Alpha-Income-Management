@@ -28,7 +28,7 @@
                <children>
                   <MFXScrollPane fitToHeight="true" VBox.vgrow="ALWAYS">
                      <content>
-                        <TableView fx:id="summaryTable" maxHeight="1.7976931348623157E308">
+                        <TableView fx:id="summaryTable" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308">
                           <columns>
                             <TableColumn prefWidth="75.0" styleClass="defaultColumn" text="Date" />
                             <TableColumn prefWidth="75.0" styleClass="defaultColumn" text="Duration of&#10;day&#10;(0-1)" />
@@ -47,23 +47,6 @@
                               <TableColumn prefWidth="75.0" styleClass="orangeColumn" text="Wages" />
                               <TableColumn prefWidth="75.0" styleClass="redColumn" text="Z report&#10;Profit" />
                               <TableColumn prefWidth="75.0" styleClass="redColumn" text="Running&#10;Z Profit" />
-                              <TableColumn prefWidth="75.0" styleClass="pinkColumn" text="Number of scripts&#10;(accumulative)" />
-                              <TableColumn prefWidth="75.0" styleClass="pinkColumn" text="Scripts target 1&#10;(accumulative)" />
-                              <TableColumn prefWidth="75.0" styleClass="pinkColumn" text="Scripts target 2&#10;(accumulative)" />
-                              <TableColumn prefWidth="75.0" styleClass="pinkColumn" text="OTC $/&#10;Customer" />
-                              <TableColumn prefWidth="75.0" styleClass="pinkColumn" text="OTC $/&#10;Customer&#10;(accumulative)" />
-                              <TableColumn prefWidth="75.0" styleClass="pinkColumn" text="OTC $/&#10;customer&#10;target 1&#10;(accumulative)" />
-                              <TableColumn minWidth="0.0" prefWidth="57.333251953125" styleClass="pinkColumn" text="OTC $/&#10;Customer&#10;target 2&#10;(accumulative)" />
-                              <TableColumn prefWidth="92.888916015625" styleClass="pinkColumn" text="Scripts on file" />
-                              <TableColumn prefWidth="75.0" styleClass="pinkColumn" text="Scripts on file&#10;target 1" />
-                              <TableColumn prefWidth="75.0" styleClass="pinkColumn" text="Scripts on file&#10;target 2" />
-                              <TableColumn prefWidth="75.0" styleClass="pinkColumn" text="Number of&#10;clinical&#10;interventions" />
-                              <TableColumn prefWidth="75.0" styleClass="pinkColumn" text="Clinical&#10;interventions&#10;target" />
-                              <TableColumn prefWidth="75.0" styleClass="pinkColumn" text="Number of&#10;medschecks" />
-                              <TableColumn prefWidth="75.0" styleClass="pinkColumn" text="Medschecks&#10;target" />
-                              <TableColumn prefWidth="75.0" styleClass="pinkColumn" text="GP ($)&#10;Accumulative" />
-                              <TableColumn prefWidth="75.0" styleClass="pinkColumn" text="GP ($)&#10;Target 1" />
-                              <TableColumn prefWidth="75.0" styleClass="pinkColumn" text="GP ($)&#10;Target 2" />
                               <TableColumn prefWidth="75.0" styleClass="greenColumn" text="Till&#10;Balance" />
                               <TableColumn fx:id="endCol" prefWidth="75.0" styleClass="greenColumn" text="Running Till&#10;Balance" />
                           </columns>

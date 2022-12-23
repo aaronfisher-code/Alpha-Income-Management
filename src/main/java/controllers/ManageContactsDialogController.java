@@ -7,6 +7,7 @@ import io.github.palexdev.materialfx.controls.MFXTableView;
 import io.github.palexdev.materialfx.controls.MFXTextField;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
 import io.github.palexdev.materialfx.controls.legacy.MFXLegacyTableView;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -18,6 +19,8 @@ import javafx.scene.control.cell.TextFieldTableCell;
 import models.AccountPayment;
 import models.AccountPaymentContactDataPoint;
 import models.EODDataPoint;
+import utils.GUIUtils;
+import utils.TableUtils;
 
 import java.io.IOException;
 import java.net.URL;
@@ -37,6 +40,8 @@ public class ManageContactsDialogController extends DateSelectController{
 
 	@FXML
 	private TableColumn<AccountPaymentContactDataPoint,String> nameCol;
+	@FXML
+	private TableColumn<AccountPaymentContactDataPoint,String> accountCodeCol;
 	@FXML
 	private TableColumn<AccountPaymentContactDataPoint,Button> deleteCol;
 
@@ -63,6 +68,7 @@ public class ManageContactsDialogController extends DateSelectController{
 	@Override
 	public void fill() {
 		nameCol.setCellValueFactory(new PropertyValueFactory<>("contactName"));
+		accountCodeCol.setCellValueFactory(new PropertyValueFactory<>("accountCode"));
 		deleteCol.setCellValueFactory(new PropertyValueFactory<>("deleteButton"));
 		editableCols();
 
@@ -93,6 +99,10 @@ public class ManageContactsDialogController extends DateSelectController{
 			throwables.printStackTrace();
 		}
 		contactsTable.setItems(currentAccountPaymentDataPoints);
+		for(TableColumn tc: contactsTable.getColumns()){
+			tc.setPrefWidth(TableUtils.getColumnWidth(tc)+20);
+		}
+		Platform.runLater(() -> GUIUtils.customResize(contactsTable,nameCol));
 	}
 
 	@Override
@@ -102,6 +112,19 @@ public class ManageContactsDialogController extends DateSelectController{
 		nameCol.setCellFactory(TextFieldTableCell.forTableColumn());
 		nameCol.setOnEditCommit(e -> {
 			String sql = "UPDATE accountPaymentContacts SET contactName = ? WHERE idaccountPaymentContacts = ?";
+			try {
+				preparedStatement = con.prepareStatement(sql);
+				preparedStatement.setString(1, e.getNewValue());
+				preparedStatement.setInt(2, e.getTableView().getItems().get(e.getTablePosition().getRow()).getContactID());
+				preparedStatement.executeUpdate();
+			} catch (SQLException ex) {
+				System.err.println(ex.getMessage());
+			}
+		});
+
+		accountCodeCol.setCellFactory(TextFieldTableCell.forTableColumn());
+		accountCodeCol.setOnEditCommit(e -> {
+			String sql = "UPDATE accountPaymentContacts SET accountCode = ? WHERE idaccountPaymentContacts = ?";
 			try {
 				preparedStatement = con.prepareStatement(sql);
 				preparedStatement.setString(1, e.getNewValue());

@@ -6,7 +6,12 @@ import java.time.LocalDate;
 
 public class Invoice {
 
+	private int invoiceID;
 	private String supplierName;
+
+	private int storeID;
+
+	private int supplierID;
 	private String invoiceNo;
 	private LocalDate invoiceDate;
 	private LocalDate dueDate;
@@ -20,21 +25,20 @@ public class Invoice {
 	private String notes;
 
 	public Invoice(ResultSet resultSet) {
-	}
-
-	public Invoice(String supplierName, String invoiceNo, LocalDate invoiceDate, LocalDate dueDate, String description, int quantity, double unitAmount, double importedInvoiceAmount, double variance, double credits, double totalAfterCredits, String notes) {
-		this.supplierName = supplierName;
-		this.invoiceNo = invoiceNo;
-		this.invoiceDate = invoiceDate;
-		this.dueDate = dueDate;
-		this.description = description;
-		this.quantity = quantity;
-		this.unitAmount = unitAmount;
-		this.importedInvoiceAmount = importedInvoiceAmount;
-		this.variance = variance;
-		this.credits = credits;
-		this.totalAfterCredits = totalAfterCredits;
-		this.notes = notes;
+		try {
+			this.invoiceID = resultSet.getInt("idInvoices");
+			this.supplierName = resultSet.getString("supplierName");
+			this.supplierID = resultSet.getInt("supplierID");
+			this.invoiceNo = resultSet.getString("invoiceNo");
+			this.invoiceDate = resultSet.getDate("invoiceDate").toLocalDate();
+			this.dueDate = resultSet.getDate("dueDate").toLocalDate();
+			this.description = resultSet.getString("description");
+			this.unitAmount = resultSet.getDouble("unitAmount");
+			this.storeID = resultSet.getInt("storeID");
+			this.notes = resultSet.getString("notes");
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public String getSupplierName() {return supplierName;}

@@ -12,7 +12,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
-import models.AccountPaymentContactDataPoint;
+import models.InvoiceSupplier;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -30,12 +30,12 @@ public class ManageSuppliersDialogController extends DateSelectController{
 	private actionableComboBox parent;
 
 	@FXML
-	private TableColumn<AccountPaymentContactDataPoint,String> nameCol;
+	private TableColumn<InvoiceSupplier,String> nameCol;
 	@FXML
-	private TableColumn<AccountPaymentContactDataPoint,Button> deleteCol;
+	private TableColumn<InvoiceSupplier,Button> deleteCol;
 
 	@FXML
-	private TableView<AccountPaymentContactDataPoint> contactsTable;
+	private TableView<InvoiceSupplier> contactsTable;
 
 	@FXML
 	private MFXTextField newContactField;
@@ -56,22 +56,22 @@ public class ManageSuppliersDialogController extends DateSelectController{
 
 	@Override
 	public void fill() {
-		nameCol.setCellValueFactory(new PropertyValueFactory<>("contactName"));
+		nameCol.setCellValueFactory(new PropertyValueFactory<>("supplierName"));
 		deleteCol.setCellValueFactory(new PropertyValueFactory<>("deleteButton"));
 		editableCols();
 
-		ObservableList<AccountPaymentContactDataPoint> currentAccountPaymentDataPoints = FXCollections.observableArrayList();
+		ObservableList<InvoiceSupplier> currentInvoiceSuppliers = FXCollections.observableArrayList();
 		String sql = null;
 		try {
-			sql = "SELECT * FROM accountPaymentContacts  WHERE accountPaymentContacts.storeID = ?";
+			sql = "SELECT * FROM invoiceSuppliers  WHERE invoiceSuppliers.storeID = ?";
 			preparedStatement = con.prepareStatement(sql);
 			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
 			resultSet = preparedStatement.executeQuery();
 			while (resultSet.next()) {
-				AccountPaymentContactDataPoint a = new AccountPaymentContactDataPoint(resultSet);
+				InvoiceSupplier a = new InvoiceSupplier(resultSet);
 				MFXButton delButton = new MFXButton("X");
 				delButton.setOnAction(actionEvent -> {
-					String sqlQuery = "DELETE from accountPaymentContacts WHERE idaccountPaymentContacts = ?";
+					String sqlQuery = "DELETE from invoiceSuppliers WHERE idinvoiceSuppliers = ?";
 					try {
 						preparedStatement = con.prepareStatement(sqlQuery);
 						preparedStatement.setInt(1, a.getContactID());
@@ -81,12 +81,12 @@ public class ManageSuppliersDialogController extends DateSelectController{
 					}
 				});
 				a.setDeleteButton(delButton);
-				currentAccountPaymentDataPoints.add(a);
+				currentInvoiceSuppliers.add(a);
 			}
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
 		}
-		contactsTable.setItems(currentAccountPaymentDataPoints);
+		contactsTable.setItems(currentInvoiceSuppliers);
 	}
 
 	@Override
@@ -95,7 +95,7 @@ public class ManageSuppliersDialogController extends DateSelectController{
 	private void editableCols() {
 		nameCol.setCellFactory(TextFieldTableCell.forTableColumn());
 		nameCol.setOnEditCommit(e -> {
-			String sql = "UPDATE accountPaymentContacts SET contactName = ? WHERE idaccountPaymentContacts = ?";
+			String sql = "UPDATE invoiceSuppliers SET supplierName = ? WHERE idinvoiceSuppliers = ?";
 			try {
 				preparedStatement = con.prepareStatement(sql);
 				preparedStatement.setString(1, e.getNewValue());

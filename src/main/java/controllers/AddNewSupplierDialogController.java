@@ -36,11 +36,11 @@ public class AddNewSupplierDialogController {
 	public void setParent(InvoiceEntryController d) {this.parent = d;}
 
 	public void addContact(){
-	 	String contactName = newContactField.getText();
-		String sql = "INSERT INTO accountPaymentContacts(contactName,storeID) VALUES(?,?)";
+	 	String supplierName = newContactField.getText();
+		String sql = "INSERT INTO invoiceSuppliers(supplierName,storeID) VALUES(?,?)";
 		try {
 			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setString(1, contactName);
+			preparedStatement.setString(1, supplierName);
 			preparedStatement.setInt(2,main.getCurrentStore().getStoreID());
 			preparedStatement.executeUpdate();
 		} catch (SQLException ex) {

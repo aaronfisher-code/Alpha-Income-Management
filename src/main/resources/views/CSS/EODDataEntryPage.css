@@ -35,6 +35,17 @@
     -fx-block-increment: 20 ;
 }
 
+.table-view .column-header * {
+    -fx-background-color: #F3F2F7;
+    -fx-text-fill: #6E6B7B;
+}
+
+.table-view .column-header,
+.table-view .column-header .filler,
+.table-view .column-header-background .filler {
+    -fx-background-color: #F3F2F7;
+}
+
 
 
 

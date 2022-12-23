@@ -14,6 +14,8 @@ public class AccountPaymentContactDataPoint {
 	private int contactID;
 	private String contactName;
 	private int storeID;
+
+	private String accountCode;
 	private double totalValue;
 	private MFXButton deleteButton;
 
@@ -21,6 +23,7 @@ public class AccountPaymentContactDataPoint {
 		try {
 			this.contactID = resultSet.getInt("idaccountPaymentContacts");
 			this.contactName = resultSet.getString("contactName");
+			this.accountCode = resultSet.getString("accountCode");
 			this.storeID = resultSet.getInt("storeID");
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -50,6 +53,10 @@ public class AccountPaymentContactDataPoint {
 	public MFXButton getDeleteButton() {return deleteButton;}
 
 	public void setDeleteButton(MFXButton deleteButton) {this.deleteButton = deleteButton;}
+
+	public String getAccountCode() {return accountCode;}
+
+	public void setAccountCode(String accountCode) {this.accountCode = accountCode;}
 
 	@Override
 	public String toString() {

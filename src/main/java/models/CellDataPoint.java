@@ -1,7 +1,10 @@
 package models;
 
+import java.time.LocalDate;
+
 public class CellDataPoint {
 
+    private LocalDate assignedDate;
     private String category;
     private String subCategory;
     private double quantity;
@@ -16,6 +19,18 @@ public class CellDataPoint {
         this.quantity = quantity;
         this.amount = amount;
     }
+
+    public CellDataPoint(LocalDate assignedDate,String category, String subCategory, double quantity, double amount) {
+        this.assignedDate = assignedDate;
+        this.category = category;
+        this.subCategory = subCategory;
+        this.quantity = quantity;
+        this.amount = amount;
+    }
+
+    public LocalDate getAssignedDate() {return assignedDate;}
+
+    public void setAssignedDate(LocalDate assignedDate) {this.assignedDate = assignedDate;}
 
     public String getCategory() {
         return category;

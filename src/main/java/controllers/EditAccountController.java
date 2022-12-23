@@ -327,8 +327,26 @@ public class EditAccountController extends Controller{
 		profileTextPicker.setValue(Color.valueOf(user.getTextColour()));
 		profileBackgroundPicker.setValue(Color.valueOf(user.getBgColour()));
 		passwordResetButton.setVisible(true);
-		passwordResetButton.setDisable(false);
-		passwordResetButton.setOnAction(actionEvent -> resetPassword(user));
+
+		String sql = "SELECT username, password FROM accounts where username = ?";
+		try {
+			preparedStatement = con.prepareStatement(sql);
+			preparedStatement.setString(1, user.getUsername());
+			resultSet = preparedStatement.executeQuery();
+			while(resultSet.next()){
+				if(resultSet.getString("password")==null){
+					passwordResetButton.setDisable(true);
+					passwordResetButton.setText("Password reset requested");
+				}else{
+					passwordResetButton.setDisable(false);
+					passwordResetButton.setText("Request Password Reset");
+					passwordResetButton.setOnAction(actionEvent -> resetPassword(user));
+				}
+			}
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		}
+
 		employeeName.setText(user.getFirst_name() + "." + user.getLast_name().substring(0,1));
 		employeeRole.setText(user.getRole());
 		employeeIcon.setText(user.getFirst_name().substring(0,1));
@@ -338,7 +356,6 @@ public class EditAccountController extends Controller{
 		//Refresh Store list for store selector
 		allStores = FXCollections.observableArrayList();
 		ObservableList<Employment> staffStores = FXCollections.observableArrayList();
-		String sql = null;
 		try {
 			sql = "SELECT * FROM stores";
 			preparedStatement = con.prepareStatement(sql);
