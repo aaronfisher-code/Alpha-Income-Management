@@ -167,7 +167,7 @@ public class EditAccountController extends Controller{
 				if(event.getClickCount()==2)openUserPopover(entry.getValue().getData());
 			});
 			if(entry.getValue().getData().getInactiveDate()!=null){
-				entry.getValue().setStyle("-fx-background-color: #F6F6F6; -fx-strikethrough: true;");
+				entry.getValue().getStyleClass().add("disabledMFXTableRow");
 			}
 			for (MFXTableRowCell<User, ?> cell:entry.getValue().getCells()) {
 				cell.setOnMouseClicked(event -> {

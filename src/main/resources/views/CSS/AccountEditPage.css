@@ -57,3 +57,15 @@
 .mfx-check-list-view .virtual-flow .mfx-check-list-cell .mfx-checkbox:selected{
     -mfx-main: #0F60FF;
 }
+
+.disabledMFXTableRow{
+    /*-fx-background-color: #e8e8e8;*/
+}
+
+.disabledMFXTableRow .text{
+    -fx-strikethrough: true;
+}
+
+.disabledMFXTableRow .mfx-table-row-cell{
+    -fx-text-fill: #808080;
+}
