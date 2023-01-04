@@ -13,10 +13,7 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
-import models.AccountPayment;
-import models.CellDataPoint;
-import models.EODDataPoint;
-import models.User;
+import models.*;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.controlsfx.control.PopOver;
 import utils.*;
@@ -25,6 +22,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.sql.*;
+import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
@@ -89,8 +87,8 @@ public class EODDataEntryPageController extends DateSelectController{
 	private TableColumn<EODDataPoint, Double> runningTillBalanceCol;
 	private TableColumn<EODDataPoint, String> notesCol;
 
-	private static final String[] digits = "0 1 2 3 4 5 6 7 8 9".split(" ");
-	private static final PseudoClass INVALID_PSEUDO_CLASS = PseudoClass.getPseudoClass("invalid");
+	private double currentTotalTakings;
+	private double currentRunningTillBalance;
 
 	
 	 @FXML
@@ -142,18 +140,18 @@ public class EODDataEntryPageController extends DateSelectController{
 		notesCol = new TableColumn<>("NOTES");
 		dateCol.setMinWidth(80);
 
-		dateCol.setCellValueFactory(new PropertyValueFactory<>("date"));
-		cashAmountCol.setCellValueFactory(new PropertyValueFactory<>("cashAmount"));
-		eftposAmountCol.setCellValueFactory(new PropertyValueFactory<>("eftposAmount"));
-		amexAmountCol.setCellValueFactory(new PropertyValueFactory<>("amexAmount"));
-		googleSquareAmountCol.setCellValueFactory(new PropertyValueFactory<>("googleSquareAmount"));
-		chequeAmountCol.setCellValueFactory(new PropertyValueFactory<>("chequeAmount"));
-		medschecksCol.setCellValueFactory(new PropertyValueFactory<>("medschecks"));
-		stockOnHandAmountCol.setCellValueFactory(new PropertyValueFactory<>("stockOnHandAmount"));
-		scriptsOnFileCol.setCellValueFactory(new PropertyValueFactory<>("scriptsOnFile"));
-		smsPatientsCol.setCellValueFactory(new PropertyValueFactory<>("smsPatients"));
-		tillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("tillBalance"));
-		runningTillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("runningTillBalance"));
+		dateCol.setCellValueFactory(new PropertyValueFactory<>("dateString"));
+		cashAmountCol.setCellValueFactory(new PropertyValueFactory<>("cashAmountString"));
+		eftposAmountCol.setCellValueFactory(new PropertyValueFactory<>("eftposAmountString"));
+		amexAmountCol.setCellValueFactory(new PropertyValueFactory<>("amexAmountString"));
+		googleSquareAmountCol.setCellValueFactory(new PropertyValueFactory<>("googleSquareAmountString"));
+		chequeAmountCol.setCellValueFactory(new PropertyValueFactory<>("chequeAmountString"));
+		medschecksCol.setCellValueFactory(new PropertyValueFactory<>("medschecksString"));
+		stockOnHandAmountCol.setCellValueFactory(new PropertyValueFactory<>("stockOnHandAmountString"));
+		scriptsOnFileCol.setCellValueFactory(new PropertyValueFactory<>("scriptsOnFileString"));
+		smsPatientsCol.setCellValueFactory(new PropertyValueFactory<>("smsPatientsString"));
+		tillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("tillBalanceString"));
+		runningTillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("runningTillBalanceString"));
 		notesCol.setCellValueFactory(new PropertyValueFactory<>("notes"));
 
 		eodDataTable.getColumns().addAll(
@@ -180,8 +178,25 @@ public class EODDataEntryPageController extends DateSelectController{
 		for(TableColumn tc: eodDataTable.getColumns()){
 			tc.setPrefWidth(TableUtils.getColumnWidth(tc)+40);
 		}
+		cashField.textProperty().addListener(observable -> updatePopoverTillBalance());
+		eftposField.textProperty().addListener(observable -> updatePopoverTillBalance());
+		amexField.textProperty().addListener(observable -> updatePopoverTillBalance());
+		googleSquareField.textProperty().addListener(observable -> updatePopoverTillBalance());
+		chequeField.textProperty().addListener(observable -> updatePopoverTillBalance());
 		Platform.runLater(() -> GUIUtils.customResize(eodDataTable,notesCol));
 		Platform.runLater(() -> addDoubleClickfunction());
+	}
+
+	private void updatePopoverTillBalance() {
+		 double tillBalanceTotal = 0;
+		 if(cashField.isValid()) tillBalanceTotal += Double.valueOf(cashField.getText());
+		 if(eftposField.isValid()) tillBalanceTotal += Double.valueOf(eftposField.getText());
+		 if(amexField.isValid()) tillBalanceTotal += Double.valueOf(amexField.getText());
+		 if(googleSquareField.isValid()) tillBalanceTotal += Double.valueOf(googleSquareField.getText());
+		 if(chequeField.isValid()) tillBalanceTotal += Double.valueOf(chequeField.getText());
+		tillBalanceTotal-=currentTotalTakings;
+		tillBalanceLabel.setText(NumberFormat.getCurrencyInstance().format(tillBalanceTotal));
+		runningTillBalanceLabel.setText(NumberFormat.getCurrencyInstance().format(currentRunningTillBalance+tillBalanceTotal));
 	}
 
 	private void addDoubleClickfunction(){
@@ -278,6 +293,7 @@ public class EODDataEntryPageController extends DateSelectController{
 		YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
 		int daysInMonth = yearMonthObject.lengthOfMonth();
 		ObservableList<EODDataPoint> currentEODDataPoints = FXCollections.observableArrayList();
+		ObservableList<TillReportDataPoint> currentTillReportDataPoints = FXCollections.observableArrayList();
 		String sql = null;
 		try {
 			sql = "SELECT * FROM eodDataPoints where storeID = ? AND MONTH(date) = ? AND YEAR(date) = ?";
@@ -288,6 +304,16 @@ public class EODDataEntryPageController extends DateSelectController{
 			resultSet = preparedStatement.executeQuery();
 			while (resultSet.next()) {
 				currentEODDataPoints.add(new EODDataPoint(resultSet));
+			}
+			sql = "SELECT * FROM tillreportdatapoints where storeID = ? AND MONTH(assignedDate) = ? AND YEAR(assignedDate) = ? AND `key` = ?";
+			preparedStatement = con.prepareStatement(sql);
+			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
+			preparedStatement.setInt(2, yearMonthObject.getMonthValue());
+			preparedStatement.setInt(3, yearMonthObject.getYear());
+			preparedStatement.setString(4, "Total Takings");
+			resultSet = preparedStatement.executeQuery();
+			while (resultSet.next()) {
+				currentTillReportDataPoints.add(new TillReportDataPoint(resultSet));
 			}
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
@@ -303,6 +329,19 @@ public class EODDataEntryPageController extends DateSelectController{
 			}
 			if(!dateAlreadyCreated)
 				eodDataPoints.add(new EODDataPoint(LocalDate.of(main.getCurrentDate().getYear(),main.getCurrentDate().getMonth(),i)));
+		}
+		double runningTillBalance = 0;
+		for(EODDataPoint e: eodDataPoints){
+			boolean foundTillReport = false;
+			for(TillReportDataPoint t: currentTillReportDataPoints){
+				if(e.getDate().equals(t.getAssignedDate())){
+					e.calculateTillBalances(t.getAmount(),runningTillBalance);
+					foundTillReport = true;
+				}
+			}
+			if(!foundTillReport)
+				e.calculateTillBalances(0,runningTillBalance);
+			runningTillBalance = e.getRunningTillBalance();
 		}
 		eodDataTable.setItems(eodDataPoints);
 		addDoubleClickfunction();
@@ -325,6 +364,22 @@ public class EODDataEntryPageController extends DateSelectController{
 		smsPatientsField.setText(String.valueOf(e.getSmsPatients()));
 		notesField.setText((e.getNotes()==null || e.getNotes().isBlank())?"":String.valueOf(e.getNotes()));
 		saveButton.setOnAction(actionEvent -> editEODEntry(e));
+		currentTotalTakings = 0;
+		try {
+			String sql = "SELECT * FROM tillreportdatapoints where storeID = ? AND assignedDate = ? AND `key`=?";
+			preparedStatement = con.prepareStatement(sql);
+			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
+			preparedStatement.setDate(2, Date.valueOf(e.getDate()));
+			preparedStatement.setString(3, "Total Takings");
+			resultSet = preparedStatement.executeQuery();
+			while (resultSet.next()) {
+				currentTotalTakings = resultSet.getDouble("amount");
+			}
+		} catch (SQLException throwables) {
+			throwables.printStackTrace();
+		}
+		currentRunningTillBalance = e.getRunningTillBalance()-e.getTillBalance();
+		updatePopoverTillBalance();
 		importDataButton.setOnAction(actionEvent -> {
 			try {importFiles(e.getDate());
 			} catch (IOException ex) {throw new RuntimeException(ex);}

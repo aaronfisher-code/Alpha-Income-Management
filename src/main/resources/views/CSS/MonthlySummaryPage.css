@@ -1,66 +1,77 @@
-.yellowColumn{
-    -fx-background-color: #ffd966;
+/*.yellowColumn{*/
+/*    -fx-background-color: #ffd966;*/
+/*    -fx-text-fill: #6E6B7B;*/
+/*}*/
+
+/*.yellowColumn .column-header,*/
+/*.yellowColumn .column-header .filler,*/
+/*.yellowColumn .column-header-background .filler {*/
+/*    -fx-background-color: #ffd966;*/
+/*}*/
+
+/*.blueColumn{*/
+/*    -fx-background-color: #8db3e2;*/
+/*    -fx-text-fill: #6E6B7B;*/
+/*}*/
+
+/*.blueColumn .column-header,*/
+/*.blueColumn .column-header .filler,*/
+/*.blueColumn .column-header-background .filler {*/
+/*    -fx-background-color: #8db3e2;*/
+/*}*/
+
+/*.orangeColumn{*/
+/*    -fx-background-color: #fabf8f;*/
+/*    -fx-text-fill: #6E6B7B;*/
+/*}*/
+
+/*.orangeColumn .column-header,*/
+/*.orangeColumn .column-header .filler,*/
+/*.orangeColumn .column-header-background .filler {*/
+/*    -fx-background-color: #fabf8f;*/
+/*}*/
+
+/*.redColumn{*/
+/*    -fx-background-color: #e06666;*/
+/*    -fx-text-fill: #6E6B7B;*/
+/*}*/
+
+/*.redColumn .column-header,*/
+/*.redColumn .column-header .filler,*/
+/*.redColumn .column-header-background .filler {*/
+/*    -fx-background-color: #e06666;*/
+/*}*/
+
+/*.pinkColumn{*/
+/*    -fx-background-color: #ff47ff;*/
+/*    -fx-text-fill: #6E6B7B;*/
+/*}*/
+
+/*.pinkColumn .column-header,*/
+/*.pinkColumn .column-header .filler,*/
+/*.pinkColumn .column-header-background .filler {*/
+/*    -fx-background-color: #ff47ff;*/
+/*}*/
+
+/*.greenColumn{*/
+/*    -fx-background-color: #b6d7a8;*/
+/*    -fx-text-fill: #6E6B7B;*/
+/*}*/
+
+/*.greenColumn .column-header,*/
+/*.greenColumn .column-header .filler,*/
+/*.greenColumn .column-header-background .filler {*/
+/*    -fx-background-color: #b6d7a8;*/
+/*}*/
+
+.table-view .column-header * {
+    -fx-background-color: #F3F2F7;
     -fx-text-fill: #6E6B7B;
 }
 
-.yellowColumn .column-header,
-.yellowColumn .column-header .filler,
-.yellowColumn .column-header-background .filler {
-    -fx-background-color: #ffd966;
-}
-
-.blueColumn{
-    -fx-background-color: #8db3e2;
-    -fx-text-fill: #6E6B7B;
-}
-
-.blueColumn .column-header,
-.blueColumn .column-header .filler,
-.blueColumn .column-header-background .filler {
-    -fx-background-color: #8db3e2;
-}
-
-.orangeColumn{
-    -fx-background-color: #fabf8f;
-    -fx-text-fill: #6E6B7B;
-}
-
-.orangeColumn .column-header,
-.orangeColumn .column-header .filler,
-.orangeColumn .column-header-background .filler {
-    -fx-background-color: #fabf8f;
-}
-
-.redColumn{
-    -fx-background-color: #e06666;
-    -fx-text-fill: #6E6B7B;
-}
-
-.redColumn .column-header,
-.redColumn .column-header .filler,
-.redColumn .column-header-background .filler {
-    -fx-background-color: #e06666;
-}
-
-.pinkColumn{
-    -fx-background-color: #ff47ff;
-    -fx-text-fill: #6E6B7B;
-}
-
-.pinkColumn .column-header,
-.pinkColumn .column-header .filler,
-.pinkColumn .column-header-background .filler {
-    -fx-background-color: #ff47ff;
-}
-
-.greenColumn{
-    -fx-background-color: #b6d7a8;
-    -fx-text-fill: #6E6B7B;
-}
-
-.greenColumn .column-header,
-.greenColumn .column-header .filler,
-.greenColumn .column-header-background .filler {
-    -fx-background-color: #b6d7a8;
+.table-view .column-header,
+.table-view .column-header .filler,
+.table-view .column-header-background .filler {
+    -fx-background-color: #F3F2F7;
 }
 

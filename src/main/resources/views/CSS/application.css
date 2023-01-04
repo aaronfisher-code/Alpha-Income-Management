@@ -286,16 +286,16 @@ Popup
     -fx-font-family: "Montserrat";
 }
 
-.defaultColumn{
-    -fx-background-color: #F3F2F7;
-    -fx-text-fill: #6E6B7B;
-}
+/*.defaultColumn{*/
+/*    -fx-background-color: #F3F2F7;*/
+/*    -fx-text-fill: #6E6B7B;*/
+/*}*/
 
-.defaultColumn .column-header,
-.defaultColumn .column-header .filler,
-.defaultColumn .column-header-background .filler {
-    -fx-background-color: #F3F2F7;
-}
+/*.defaultColumn .column-header,*/
+/*.defaultColumn .column-header .filler,*/
+/*.defaultColumn .column-header-background .filler {*/
+/*    -fx-background-color: #F3F2F7;*/
+/*}*/
 
 .table-view .column-header * {
     -fx-font-family: "Montserrat Semibold";

@@ -50,6 +50,10 @@ public class EODDataPoint {
 	}
 
 
+	public void calculateTillBalances(double totalTakings, double previousRunningTillBalance){
+		this.tillBalance = cashAmount+eftposAmount+amexAmount+googleSquareAmount+chequeAmount-totalTakings;
+		this.runningTillBalance = previousRunningTillBalance+tillBalance;
+	}
 	public LocalDate getDate() {return date;}
 	public String getDateString() {
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -57,27 +61,32 @@ public class EODDataPoint {
 	}
 	public void setDate(LocalDate date) {this.date = date;}
 	public double getCashAmount() {return cashAmount;}
-	public String getCashAmountString(){return NumberFormat.getCurrencyInstance().format(cashAmount);}
+	public String getCashAmountString(){return (cashAmount == 0)?"":NumberFormat.getCurrencyInstance().format(cashAmount);}
+
 	public void setCashAmount(double cashAmount) {this.cashAmount = cashAmount;}
 	public double getEftposAmount() {return eftposAmount;}
-	public String getEftposAmountString(){return NumberFormat.getCurrencyInstance().format(eftposAmount);}
+	public String getEftposAmountString(){return (eftposAmount == 0)?"":NumberFormat.getCurrencyInstance().format(eftposAmount);}
 	public void setEftposAmount(double eftposAmount) {this.eftposAmount = eftposAmount;}
 	public double getAmexAmount() {return amexAmount;}
-	public String getAmexAmountString(){return NumberFormat.getCurrencyInstance().format(amexAmount);}
+	public String getAmexAmountString(){return (amexAmount == 0)?"":NumberFormat.getCurrencyInstance().format(amexAmount);}
 	public void setAmexAmount(double amexAmount) {this.amexAmount = amexAmount;}
 	public double getGoogleSquareAmount() {return googleSquareAmount;}
-	public String getGoogleSquareAmountString(){return NumberFormat.getCurrencyInstance().format(googleSquareAmount);}
+	public String getGoogleSquareAmountString(){return (googleSquareAmount == 0)?"":NumberFormat.getCurrencyInstance().format(googleSquareAmount);}
 	public void setGoogleSquareAmount(double googleSquareAmount) {this.googleSquareAmount = googleSquareAmount;}
 	public double getChequeAmount() {return chequeAmount;}
-	public String getChequeAmountString(){return NumberFormat.getCurrencyInstance().format(chequeAmount);}
+	public String getChequeAmountString(){return (chequeAmount == 0)?"":NumberFormat.getCurrencyInstance().format(chequeAmount);}
 	public void setChequeAmount(double chequeAmount) {this.chequeAmount = chequeAmount;}
 	public int getMedschecks() {return medschecks;}
+	public String getMedschecksString() {return (medschecks==0)?"":String.valueOf(medschecks);}
 	public void setMedschecks(int medschecks) {this.medschecks = medschecks;}
 	public double getStockOnHandAmount() {return stockOnHandAmount;}
+	public String getStockOnHandAmountString() {return (stockOnHandAmount==0)?"":NumberFormat.getCurrencyInstance().format(stockOnHandAmount);}
 	public void setStockOnHandAmount(double stockOnHandAmount) {this.stockOnHandAmount = stockOnHandAmount;}
 	public int getScriptsOnFile() {return scriptsOnFile;}
+	public String getScriptsOnFileString() {return (scriptsOnFile==0)?"":String.valueOf(scriptsOnFile);}
 	public void setScriptsOnFile(int scriptsOnFile) {this.scriptsOnFile = scriptsOnFile;}
 	public int getSmsPatients() {return smsPatients;}
+	public String getSmsPatientsString() {return (smsPatients==0)?"":String.valueOf(smsPatients);}
 	public void setSmsPatients(int smsPatients) {this.smsPatients = smsPatients;}
 	public double getTillBalance() {return tillBalance;}
 	public String getTillBalanceString(){return NumberFormat.getCurrencyInstance().format(tillBalance);}
