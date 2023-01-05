@@ -21,7 +21,7 @@ public class AddNewContactDialogController{
 	private AccountPaymentsPageController parent;
 
 	@FXML
-	private MFXTextField newContactField;
+	private MFXTextField newContactField,accountCodeField;
 
 	@FXML
 	private void initialize() throws IOException {}
@@ -38,11 +38,13 @@ public class AddNewContactDialogController{
 
 	public void addContact(){
 	 	String contactName = newContactField.getText();
-		String sql = "INSERT INTO accountPaymentContacts(contactName,storeID) VALUES(?,?)";
+		String accountCode = accountCodeField.getText();
+		String sql = "INSERT INTO accountPaymentContacts(contactName,storeID,accountCode) VALUES(?,?,?)";
 		try {
 			preparedStatement = con.prepareStatement(sql);
 			preparedStatement.setString(1, contactName);
 			preparedStatement.setInt(2,main.getCurrentStore().getStoreID());
+			preparedStatement.setString(3,accountCode);
 			preparedStatement.executeUpdate();
 		} catch (SQLException ex) {
 			System.err.println(ex.getMessage());
@@ -54,6 +56,5 @@ public class AddNewContactDialogController{
 	public void closeDialog(){
 		parent.getDialog().cancel();
 	}
-
 
 }

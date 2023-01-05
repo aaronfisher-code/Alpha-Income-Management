@@ -329,7 +329,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 
 	public void exportToXero() throws FileNotFoundException {
 		FileChooser fileChooser = new FileChooser();
-		fileChooser.setTitle("Open Data entry File");
+		fileChooser.setTitle("Choose export save location");
 		fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
 		File file = fileChooser.showSaveDialog(main.getStg());
 		if (file != null) {
