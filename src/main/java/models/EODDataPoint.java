@@ -45,8 +45,28 @@ public class EODDataPoint {
 		}
 	}
 
+
+
 	public EODDataPoint(LocalDate previousDay) {
 		date = previousDay;
+	}
+
+	public EODDataPoint(boolean existsInDB, LocalDate date, int storeID, double cashAmount, double eftposAmount, double amexAmount, double googleSquareAmount, double chequeAmount, int medschecks, double stockOnHandAmount, int scriptsOnFile, int smsPatients, double tillBalance, double runningTillBalance, String notes) {
+		this.existsInDB = existsInDB;
+		this.date = date;
+		this.storeID = storeID;
+		this.cashAmount = cashAmount;
+		this.eftposAmount = eftposAmount;
+		this.amexAmount = amexAmount;
+		this.googleSquareAmount = googleSquareAmount;
+		this.chequeAmount = chequeAmount;
+		this.medschecks = medschecks;
+		this.stockOnHandAmount = stockOnHandAmount;
+		this.scriptsOnFile = scriptsOnFile;
+		this.smsPatients = smsPatients;
+		this.tillBalance = tillBalance;
+		this.runningTillBalance = runningTillBalance;
+		this.notes = notes;
 	}
 
 

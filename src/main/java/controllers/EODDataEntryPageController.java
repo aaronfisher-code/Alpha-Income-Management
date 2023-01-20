@@ -18,15 +18,17 @@ import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.controlsfx.control.PopOver;
 import utils.*;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.sql.*;
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.TextStyle;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Locale;
 import java.util.Map;
@@ -446,5 +448,192 @@ public class EODDataEntryPageController extends DateSelectController{
 		fieldText += main.getCurrentDate().getYear();
 		monthSelectorField.setText(fieldText);
 		fillTable();
+	}
+
+	public void exportToXero() throws FileNotFoundException {
+		FileChooser fileChooser = new FileChooser();
+		fileChooser.setTitle("Choose export save location");
+		fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
+		File file = fileChooser.showSaveDialog(main.getStg());
+		if (file != null) {
+			try (PrintWriter pw = new PrintWriter(file)) {
+				pw.println("*ContactName,Day Of Month,Amount,No. of scripts,Total customers served,"+
+						"Total Sales (#),Total Govt Contribution ($),Total Takings,Gross Profit ($)," +
+						"Total GST Free Sales,*InvoiceNumber,Total GST Sales,*InvoiceDate,*DueDate," +
+						"Total GST Collected,*Description,*Quantity,*UnitAmount,Total OTC Sales (#)," +
+						"Avg. OTC  Sales Per Customer ($),*AccountCode,*TaxType,Z Dispense Govt Cont," +
+						"Stock on hand,Scripts on file count,SMS patients,Clinical Interventions,Medschecks," +
+						"Till Balance,Running till Balance,Notes");
+
+				YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
+				int daysInMonth = yearMonthObject.lengthOfMonth();
+
+				ObservableList<EODDataPoint> currentEODDataPoints = FXCollections.observableArrayList();
+				ObservableList<TillReportDataPoint> currentTillDataPoints = FXCollections.observableArrayList();
+				String sql = null;
+				try {
+					sql = "SELECT * FROM eoddatapoints WHERE eoddatapoints.storeID = ? AND MONTH(date) = ? AND YEAR(date) = ?";
+					preparedStatement = con.prepareStatement(sql);
+					preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
+					preparedStatement.setInt(2, yearMonthObject.getMonthValue());
+					preparedStatement.setInt(3, yearMonthObject.getYear());
+					resultSet = preparedStatement.executeQuery();
+					while (resultSet.next()) {
+						currentEODDataPoints.add(new EODDataPoint(resultSet));
+					}
+					sql = "SELECT * FROM tillreportdatapoints WHERE storeID = ? AND MONTH(assignedDate) = ? AND YEAR(assignedDate) = ?";
+					preparedStatement = con.prepareStatement(sql);
+					preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
+					preparedStatement.setInt(2, yearMonthObject.getMonthValue());
+					preparedStatement.setInt(3, yearMonthObject.getYear());
+					resultSet = preparedStatement.executeQuery();
+					while (resultSet.next()) {
+						currentTillDataPoints.add(new TillReportDataPoint(resultSet));
+					}
+				} catch (SQLException throwables) {
+					throwables.printStackTrace();
+				}
+				double runningTillBalance = 0;
+				for(int i=1;i<daysInMonth+1;i++){
+					LocalDate d = LocalDate.of(yearMonthObject.getYear(),yearMonthObject.getMonth(),i);
+					EODDataPoint e = null;
+					for(EODDataPoint eod:currentEODDataPoints){
+						if(eod.getDate().equals(d)){
+							e=eod;
+							break;
+						}
+					}
+					if(e==null){
+						e = new EODDataPoint(false,d,main.getCurrentStore().getStoreID(),0,0,0,0,0,0,0,0,0,0,0,"");
+					}
+					pw.print("Cash Income,"+i+",");
+					pw.print(e.getCashAmount()+",");
+					pw.print(searchTillData(currentTillDataPoints,d,"Script Count","quantity")+",");
+					pw.print(searchTillData(currentTillDataPoints,d,"Total Customers Served","quantity")+",");
+					pw.print(searchTillData(currentTillDataPoints,d,"Total Sales","quantity")+",");
+					pw.print(searchTillData(currentTillDataPoints,d,"Total Government Contribution","amount")+",");
+					pw.print(searchTillData(currentTillDataPoints,d,"Total Takings","amount")+",");
+					pw.print(searchTillData(currentTillDataPoints,d,"Gross Profit ($)","amount")+",");
+					pw.print(searchTillData(currentTillDataPoints,d,"Total GST Free Sales","quantity")+",");
+					DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("ddMMyyyy");
+					String formattedDate = d.format(dateTimeFormatter);
+					pw.print((e.getCashAmount()>0)?formattedDate+"c,":",");
+					pw.print(searchTillData(currentTillDataPoints,d,"Total GST Sales","amount")+",");
+					dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+					formattedDate = d.format(dateTimeFormatter);
+					pw.print((e.getCashAmount()>0)?formattedDate+",":",");
+					LocalDate lastDayOfMonth  = d.withDayOfMonth(d.getMonth().length(d.isLeapYear()));
+					dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+					formattedDate = lastDayOfMonth.format(dateTimeFormatter);
+					pw.print((e.getCashAmount()>0)?formattedDate+",":",");
+					pw.print(searchTillData(currentTillDataPoints,d,"Total GST Collected","amount")+",");
+					pw.print("Cash Income,1,");
+					pw.print(e.getCashAmount()+",");
+					pw.print(searchTillData(currentTillDataPoints,d,"Total Sales-OTC Sales","quantity")+",");
+					pw.print(searchTillData(currentTillDataPoints,d,"Avg. OTC Sales Per Customer","amount")+",");
+					pw.print("200,GST Free Income,");
+					pw.print(searchTillData(currentTillDataPoints,d,"Govt Recovery","amount")+",");
+					pw.print(e.getStockOnHandAmount()+",");
+					pw.print(e.getScriptsOnFile()+",");
+					pw.print(e.getSmsPatients()+",");
+					pw.print(",");//Clinical interventions
+					pw.print(e.getMedschecks()+",");
+					double totalTakings = 0;
+					try{
+						totalTakings = Double.parseDouble(searchTillData(currentTillDataPoints,d,"Total Takings","amount"));
+					}catch(NumberFormatException ignored){}
+					double tillBalance = e.getCashAmount()+e.getEftposAmount()+e.getAmexAmount()+e.getGoogleSquareAmount()+e.getChequeAmount() - totalTakings;
+					pw.print(NumberFormat.getCurrencyInstance().format(tillBalance)+",");
+					runningTillBalance+=tillBalance;
+					pw.print(NumberFormat.getCurrencyInstance().format(runningTillBalance)+",");
+					pw.println(e.getNotes());
+
+					pw.print("Eftpos Income,"+i+",");
+					pw.print(e.getEftposAmount()+",,,,,,,,");
+					dateTimeFormatter = DateTimeFormatter.ofPattern("ddMMyyyy");
+					formattedDate = d.format(dateTimeFormatter);
+					pw.print((e.getEftposAmount()>0)?formattedDate+"e,,":",,");
+					dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+					formattedDate = d.format(dateTimeFormatter);
+					pw.print((e.getEftposAmount()>0)?formattedDate+",":",");
+					formattedDate = lastDayOfMonth.format(dateTimeFormatter);
+					pw.print((e.getEftposAmount()>0)?formattedDate+",,":",,");
+					pw.println("Eftpos Income,1,"+e.getEftposAmount()+",,,200,GST Free Income");
+
+					pw.print("Amex Income,"+i+",");
+					pw.print(e.getAmexAmount()+",,,,,,,,");
+					dateTimeFormatter = DateTimeFormatter.ofPattern("ddMMyyyy");
+					formattedDate = d.format(dateTimeFormatter);
+					pw.print((e.getAmexAmount()>0)?formattedDate+"a,,":",,");
+					dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+					formattedDate = d.format(dateTimeFormatter);
+					pw.print((e.getAmexAmount()>0)?formattedDate+",":",");
+					formattedDate = lastDayOfMonth.format(dateTimeFormatter);
+					pw.print((e.getAmexAmount()>0)?formattedDate+",,":",,");
+					pw.println("Amex Income,1,"+e.getAmexAmount()+",,,200,GST Free Income");
+
+					pw.print("Google Square Income,"+i+",");
+					pw.print(e.getGoogleSquareAmount()+",,,,,,,,");
+					dateTimeFormatter = DateTimeFormatter.ofPattern("ddMMyyyy");
+					formattedDate = d.format(dateTimeFormatter);
+					pw.print((e.getGoogleSquareAmount()>0)?formattedDate+"gs,,":",,");
+					dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+					formattedDate = d.format(dateTimeFormatter);
+					pw.print((e.getGoogleSquareAmount()>0)?formattedDate+",":",");
+					formattedDate = lastDayOfMonth.format(dateTimeFormatter);
+					pw.print((e.getGoogleSquareAmount()>0)?formattedDate+",,":",,");
+					pw.println("Google Square Income,1,"+e.getGoogleSquareAmount()+",,,200,GST Free Income");
+
+					pw.print("Cheques Income,"+i+",");
+					pw.print(e.getChequeAmount()+",,,,,,,,");
+					dateTimeFormatter = DateTimeFormatter.ofPattern("ddMMyyyy");
+					formattedDate = d.format(dateTimeFormatter);
+					pw.print((e.getChequeAmount()>0)?formattedDate+"ch,,":",,");
+					dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+					formattedDate = d.format(dateTimeFormatter);
+					pw.print((e.getChequeAmount()>0)?formattedDate+",":",");
+					formattedDate = lastDayOfMonth.format(dateTimeFormatter);
+					pw.print((e.getChequeAmount()>0)?formattedDate+",,":",,");
+					pw.println("Cheques Income,1,"+e.getChequeAmount()+",,,200,GST Free Income");
+					double govtRecovery = 0;
+					try{
+						govtRecovery = Double.parseDouble(searchTillData(currentTillDataPoints,d,"Govt Recovery","amount"));
+					}catch(NumberFormatException ignored){}
+
+					pw.print("Medicare PBS (Ex GST),"+i+",");
+					pw.print(govtRecovery+",,,,,,,,");
+					dateTimeFormatter = DateTimeFormatter.ofPattern("ddMMyyyy");
+					formattedDate = d.format(dateTimeFormatter);
+					pw.print((govtRecovery>0)?formattedDate+"ch,,":",,");
+					dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+					formattedDate = d.format(dateTimeFormatter);
+					pw.print((govtRecovery>0)?formattedDate+",":",");
+					formattedDate = lastDayOfMonth.format(dateTimeFormatter);
+					pw.print((govtRecovery>0)?formattedDate+",,":",,");
+					pw.println("Medicare PBS (Ex GST),1,"+govtRecovery+",,,200,GST Free Income");
+				}
+				Dialog<String> dialog = new Dialog<String>();
+				dialog.setTitle("Success");
+				ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
+				dialog.setContentText("EOD data was succesfully added to database");
+				dialog.getDialogPane().getButtonTypes().add(type);
+				dialog.showAndWait();
+			} catch (FileNotFoundException e){
+				System.err.println(e.getMessage());
+			}
+		}
+	}
+
+	private String searchTillData(ObservableList<TillReportDataPoint> dataPoints,LocalDate date, String key,String field){
+		 for(TillReportDataPoint t:dataPoints){
+			 if(t.getAssignedDate().equals(date)&&t.getKey().equals(key)){
+				 if(field.equals("quantity")){
+					 return String.valueOf(t.getQuantity());
+				 }else{
+					 return String.valueOf(t.getAmount());
+				 }
+			 }
+		 }
+		 return "";
 	}
 }

@@ -105,7 +105,7 @@
                   <Insets bottom="20.0" />
                </BorderPane.margin>
                <right>
-                  <Button graphicTextGap="10.0" mnemonicParsing="false" prefHeight="35.0" prefWidth="227.0" style="-fx-background-color: #F3F2F7; -fx-border-color: #6e6b7b; -fx-border-radius: 5;" styleClass="controlButton" text="Export in Xero Format" textFill="#6e6b7b" BorderPane.alignment="CENTER" fx:id="xeroExportButton">
+                  <Button graphicTextGap="10.0" mnemonicParsing="false" onAction="#exportToXero" prefHeight="35.0" prefWidth="227.0" style="-fx-background-color: #F3F2F7; -fx-border-color: #6e6b7b; -fx-border-radius: 5;" styleClass="controlButton" text="Export in Xero Format" textFill="#6e6b7b" BorderPane.alignment="CENTER" fx:id="xeroExportButton">
                      <cursor>
                         <Cursor fx:constant="HAND" />
                      </cursor>
