@@ -16,7 +16,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane fx:id="backgroundPane" alignment="CENTER_LEFT" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" onMouseClicked="#editShift" onMouseEntered="#hoverOn" onMouseExited="#hoverOff" prefWidth="190.0" style="-fx-background-color: WHITE; -fx-background-radius: 8;" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.ShiftCardController">
+<StackPane fx:id="backgroundPane" alignment="CENTER_LEFT" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" onMouseEntered="#hoverOn" onMouseExited="#hoverOff" prefWidth="190.0" style="-fx-background-color: WHITE; -fx-background-radius: 8;" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.ShiftCardController">
    <children>
       <VBox alignment="CENTER_LEFT" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" StackPane.alignment="CENTER_LEFT">
          <children>

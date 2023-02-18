@@ -34,44 +34,20 @@ public class ShiftCardController extends Controller{
 
 	private Main main;
 	private Shift shift;
-	private Connection con;
 	private LocalDate shiftCardDate;
 	private RosterPageController parent;
 	PreparedStatement preparedStatement= null;
 	ResultSet resultSet = null;
 
-	public ShiftCardController() {
-	}
-
-	public void editShift() throws IOException {
-		Stage shiftEditStage = new Stage();
-		EditShiftController c;
-		shiftEditStage.setResizable(false);
-		shiftEditStage.initModality(Modality.APPLICATION_MODAL);
-		FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/ShiftEdit.fxml"));
-		Parent root = loader.load();
-		c = loader.getController();
-		c.setMain(main);
-		c.setConnection(con);
-		c.setDate(shiftCardDate);
-		c.setShift(shift);
-		c.fill();
-		c.setParent(parent);
-		c.newShiftFormat(false);
-		c.setController(shiftEditStage);
-		shiftEditStage.setTitle("Edit Shift");
-		shiftEditStage.setScene(new Scene(root));
-		shiftEditStage.showAndWait();
-	}
+	public ShiftCardController() {}
 
 	@Override
 	public void setMain(Main newMain) {
 		this.main = newMain;
 	}
-	
-	public void setConnection(Connection c) {
-		this.con = c;
-	}
+
+	@Override
+	public void setConnection(Connection conDB) {}
 
 	public void setShift(Shift newShift) {
 		this.shift = newShift;

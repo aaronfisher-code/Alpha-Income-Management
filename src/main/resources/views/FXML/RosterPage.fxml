@@ -232,8 +232,8 @@
                   </HBox>
                </right>
             </BorderPane>
-            <MFXFilterComboBox fx:id="employeeSelect" allowEdit="true" borderGap="0.0" floatMode="ABOVE" floatingText="Employee Name" floatingTextGap="10.0" maxWidth="1.7976931348623157E308" minHeight="36.0" />
-            <MFXDatePicker fx:id="startDate" borderGap="0.0" floatMode="ABOVE" floatingText="Shift Date" maxWidth="1.7976931348623157E308" minHeight="36.0" />
+            <MFXFilterComboBox fx:id="employeeSelect" borderGap="0.0" floatMode="ABOVE" floatingText="Employee Name" floatingTextGap="10.0" maxWidth="1.7976931348623157E308" minHeight="36.0" />
+            <MFXDatePicker fx:id="startDate" allowEdit="false" borderGap="0.0" floatMode="ABOVE" floatingText="Shift Date" maxWidth="1.7976931348623157E308" minHeight="36.0" />
             <HBox alignment="CENTER" spacing="30.0">
                <children>
                   <StackPane fx:id="startTimePicker" maxHeight="-Infinity" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" style="-fx-background-color: TRANSPARENT;" HBox.hgrow="ALWAYS">

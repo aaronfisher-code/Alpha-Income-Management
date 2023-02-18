@@ -48,7 +48,7 @@ public class CalendarEditDialogController{
 		}else if(followingButton.isSelected()){
 			parent.editFutureShifts(this.shift,this.shiftCardDate);
 		}else{
-			parent.addShift(this.shift,this.shiftCardDate);
+			parent.editCurrentShift(this.shift,this.shiftCardDate);
 		}
 		closeDialog();
 	}
