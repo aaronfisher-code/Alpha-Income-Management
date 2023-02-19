@@ -79,16 +79,28 @@ public class ShiftCardController extends Controller{
 		endAMPM.setText(shift.getShiftEndTime().format(formatter));
 	}
 
-	public void checkForLeaveFormat(){
-		//TODO modify to be type dependent
-			if(shift.getShiftType()!=null){
-				shiftOnLeave();
-			}
+	public void setModification(String modificationText){
+		if(modificationText!=null){
+			blurBG.setVisible(true);
+			leaveLabel.setText(modificationText);
+			leaveLabel.setVisible(true);
+		}
 	}
 
-	public void shiftOnLeave() {
-		blurBG.setVisible(true);
-		leaveLabel.setVisible(true);
+	public void showDifference(Shift originalShift, Shift modifiedShift){
+		if(!originalShift.getUsername().equals(modifiedShift.getUsername())){
+			employeeName.setStyle("-fx-text-fill: RED");
+			employeeRole.setStyle("-fx-text-fill: RED");
+		}
+		if(originalShift.getShiftStartTime()!=modifiedShift.getShiftStartTime()){
+			startTime.setStyle("-fx-text-fill: RED");
+			startAMPM.setStyle("-fx-text-fill: RED");
+		}
+		if(originalShift.getShiftEndTime()!=modifiedShift.getShiftEndTime()){
+			endTime.setStyle("-fx-text-fill: RED");
+			endAMPM.setStyle("-fx-text-fill: RED");
+		}
+
 	}
 
 	public void hoverOn(){

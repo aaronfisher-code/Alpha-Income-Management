@@ -146,6 +146,9 @@
       <URL value="@../CSS/application.css" />
       <URL value="@../CSS/ShiftCard.css" />
    </stylesheets>
+   <padding>
+      <Insets bottom="5.0" top="5.0" />
+   </padding>
    <effect>
       <DropShadow height="24.0" offsetY="4.0" radius="11.5" width="24.0">
          <color>
@@ -153,7 +156,4 @@
          </color>
       </DropShadow>
    </effect>
-   <padding>
-      <Insets bottom="5.0" top="5.0" />
-   </padding>
 </StackPane>
