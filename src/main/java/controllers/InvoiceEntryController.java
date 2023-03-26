@@ -16,10 +16,9 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
+import javafx.scene.control.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.scene.text.Font;
@@ -71,7 +70,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 	@FXML
 	private DialogPane dialogPane;
 	@FXML
-	private MFXTextField invoiceNoField,descriptionField,amountField,expectedAmountField,varianceField;
+	private MFXTextField invoiceNoField,descriptionField,amountField,notesField;
 	@FXML
 	private MFXDatePicker invoiceDateField, dueDateField;
 	@FXML
@@ -198,9 +197,25 @@ public class InvoiceEntryController extends DateSelectController implements acti
 			tc.setPrefWidth(TableUtils.getColumnWidth(tc)+30);
 		}
 		Platform.runLater(() -> GUIUtils.customResize(invoicesTable,notesCol));
-		Platform.runLater(() -> setDate(LocalDate.now()));
+		Platform.runLater(() -> addDoubleClickfunction());
 		fillContactList();
+
+		Platform.runLater(() -> setDate(LocalDate.now()));
 	}
+
+	private void addDoubleClickfunction(){
+		invoicesTable.setRowFactory( tv -> {
+			TableRow<Invoice> row = new TableRow<>();
+			row.setOnMouseClicked(event -> {
+				if (event.getClickCount() == 2 && (! row.isEmpty()) ) {
+					Invoice rowData = row.getItem();
+					openPopover(rowData);
+				}
+			});
+			return row ;
+		});
+	}
+
 
 	private Node createAddNewSupplierDialog() {
 		FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/AddNewSupplierDialog.fxml"));
@@ -321,9 +336,42 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		invoiceNoField.clear();
 		invoiceDateField.clear();
 		dueDateField.clear();
-		descriptionField.clear();
 		amountField.clear();
+		notesField.clear();
 		Platform.runLater(() -> afx.requestFocus());
+	}
+
+	public void openPopover(Invoice invoice){
+		saveButton.setOnAction(actionEvent -> editInvoice(invoice));
+		paymentPopoverTitle.setText("Edit Invoice");
+		deleteButton.setVisible(true);
+		deleteButton.setOnAction(actionEvent -> deleteInvoice(invoice));
+		contentDarken.setVisible(true);
+		AnimationUtils.slideIn(addInvoicePopover,0);
+		afx.setValue(getContactfromName(invoice.getSupplierName()));
+		invoiceNoField.setText(invoice.getInvoiceNo());
+		invoiceDateField.setValue(invoice.getInvoiceDate());
+		dueDateField.setValue(invoice.getDueDate());
+		amountField.setText(String.valueOf(invoice.getUnitAmount()));
+		notesField.setText(invoice.getNotes());
+		Platform.runLater(() -> afx.requestFocus());
+	}
+
+	public InvoiceSupplier getContactfromName(String name){
+		String sql = null;
+		try {
+			sql = "SELECT * FROM invoicesuppliers  WHERE supplierName = ? AND storeID = ?";
+			preparedStatement = con.prepareStatement(sql);
+			preparedStatement.setString(1,name);
+			preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
+			resultSet = preparedStatement.executeQuery();
+			while (resultSet.next()) {
+				return new InvoiceSupplier(resultSet);
+			}
+		} catch (SQLException throwables) {
+			throwables.printStackTrace();
+		}
+		return null;
 	}
 
 	public void closePopover(){
@@ -343,8 +391,9 @@ public class InvoiceEntryController extends DateSelectController implements acti
 			LocalDate invoiceDate = invoiceDateField.getValue();
 			LocalDate dueDate = dueDateField.getValue();
 			String description = descriptionField.getText();
+			String notes = notesField.getText();
 			Double unitAmount = Double.valueOf(amountField.getText());
-			String sql = "INSERT INTO invoices(supplierID,invoiceNo,invoiceDate,dueDate,description,unitAmount,storeID) VALUES(?,?,?,?,?,?,?)";
+			String sql = "INSERT INTO invoices(supplierID,invoiceNo,invoiceDate,dueDate,description,unitAmount,notes,storeID) VALUES(?,?,?,?,?,?,?,?)";
 			try {
 				preparedStatement = con.prepareStatement(sql);
 				preparedStatement.setInt(1, contact.getContactID());
@@ -353,15 +402,76 @@ public class InvoiceEntryController extends DateSelectController implements acti
 				preparedStatement.setDate(4, Date.valueOf(dueDate));
 				preparedStatement.setString(5, description);
 				preparedStatement.setDouble(6, unitAmount);
-				preparedStatement.setInt(7, main.getCurrentStore().getStoreID());
+				preparedStatement.setString(7,notes);
+				preparedStatement.setInt(8, main.getCurrentStore().getStoreID());
+				preparedStatement.executeUpdate();
+			} catch (SQLException ex) {
+				System.err.println(ex.getMessage());
+			}
+			invoiceNoField.clear();
+			invoiceDateField.setValue(null);
+			dueDateField.setValue(null);
+			amountField.clear();
+			notesField.clear();
+			fillTable();
+			Platform.runLater(() -> invoiceNoField.requestFocus());
+	}
+
+	public void editInvoice(Invoice invoice){
+		Boolean validEntry = true;
+		//TODO: ensure validation is added here and for Add Invoice
+//		if(!afx.isValid()){afx.requestFocus();}
+//		else if(!invoiceNoField.isValid()){invoiceNoField.requestFocus();}
+//		else if(!dueDateField.isValid()){dueDateField.requestFocus();}
+//		else if(!amountField.isValid()){amountField.requestFocus();}
+//		else{
+			InvoiceSupplier contact = (InvoiceSupplier) afx.getValue();
+			String invoiceNo = invoiceNoField.getText();
+			LocalDate invoiceDate = invoiceDateField.getValue();
+			LocalDate dueDate = dueDateField.getValue();
+			String description = descriptionField.getText();
+			Double unitAmount = Double.valueOf(amountField.getText());
+			String notes = notesField.getText();
+
+			String sql = "UPDATE invoices SET supplierID = ?,storeID = ?,invoiceNo = ?, invoiceDate = ?, dueDate = ?,description = ?,unitAmount = ?,notes = ? WHERE idInvoices = ?";
+			try {
+				preparedStatement = con.prepareStatement(sql);
+				preparedStatement.setInt(1, contact.getContactID());
+				preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
+				preparedStatement.setString(3, invoiceNo);
+				preparedStatement.setDate(4, Date.valueOf(invoiceDate));
+				preparedStatement.setDate(5, Date.valueOf(dueDate));
+				preparedStatement.setString(6, description);
+				preparedStatement.setDouble(7, unitAmount);
+				preparedStatement.setString(8, notes);
+				preparedStatement.setInt(9, invoice.getInvoiceID());
 				preparedStatement.executeUpdate();
 			} catch (SQLException ex) {
 				System.err.println(ex.getMessage());
 			}
 			closePopover();
 			fillTable();
-			dialogPane.showInformation("Success","Payment was succesfully added");
-//		}
+			dialogPane.showInformation("Success","Invoice was succesfully edited");
+	}
+
+	public void deleteInvoice(Invoice invoice){
+		dialogPane.showWarning("Confirm Delete",
+				"This action will permanently delete this Invoice from all systems,\n" +
+						"Are you sure you still want to delete this Invoice?").thenAccept(buttonType -> {
+			if (buttonType.equals(ButtonType.OK)) {
+				String sql = "DELETE from invoices WHERE idInvoices = ?";
+				try {
+					preparedStatement = con.prepareStatement(sql);
+					preparedStatement.setInt(1, invoice.getInvoiceID());
+					preparedStatement.executeUpdate();
+				} catch (SQLException ex) {
+					System.err.println(ex.getMessage());
+				}
+				closePopover();
+				fillTable();
+				dialogPane.showInformation("Success","Invoice was succesfully deleted");
+			}
+		});
 
 	}
 

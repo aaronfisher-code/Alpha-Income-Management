@@ -89,4 +89,8 @@ public class Invoice {
 
 	public void setNotes(String notes) {this.notes = notes;}
 
+	public int getInvoiceID() {return invoiceID;}
+
+	public void setInvoiceID(int invoiceID) {this.invoiceID = invoiceID;}
+
 }

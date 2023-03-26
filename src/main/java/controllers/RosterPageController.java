@@ -151,7 +151,7 @@ public class RosterPageController extends Controller {
         updatePage();
     }
 
-    public void updateDay(LocalDate date, VBox shiftContainer, int dayOfWeek, ArrayList<Shift> allShifts) {
+    public void updateDay(LocalDate date, VBox shiftContainer, int dayOfWeek, ArrayList<Shift> allShifts,ArrayList<Shift> allModifications) {
         //empty the contents of the current day VBox
         shiftContainer.getChildren().removeAll(shiftContainer.getChildren());
         long weekDay = date.getDayOfWeek().getValue();
@@ -176,7 +176,6 @@ public class RosterPageController extends Controller {
         }
         HBox.setHgrow(rosterDayCard, Priority.ALWAYS);
         weekdayBox.add(rosterDayCard,dayOfWeek-1,0);
-
         for (Shift s : allShifts) {
             boolean repeatShiftDay = (s.isRepeating() && DAYS.between(s.getShiftStartDate(), date.minusDays(weekDay - dayOfWeek)) % s.getDaysPerRepeat() == 0 && DAYS.between(s.getShiftStartDate(), date.minusDays(weekDay - dayOfWeek)) >= 0);
             boolean equalDay = s.getShiftStartDate().equals(date.minusDays(weekDay - dayOfWeek));
@@ -184,32 +183,51 @@ public class RosterPageController extends Controller {
             if ((equalDay || repeatShiftDay) && !pastEnd) {
                 Shift updatedShift = s;
                 boolean shiftIsModified = false;
-                String sql = "SELECT * FROM shiftmodifications JOIN accounts a on a.username = shiftmodifications.username " +
-                             "WHERE shift_id=? AND shiftStartDate =?";
-                try {
-                    preparedStatement = con.prepareStatement(sql);
-                    preparedStatement.setInt(1, s.getShiftID());
-                    preparedStatement.setDate(2, Date.valueOf(date.minusDays(weekDay - dayOfWeek)));
-                    resultSet = preparedStatement.executeQuery();
-                    while (resultSet.next()) {
-                        updatedShift = new Shift(resultSet);
+                for(Shift m: allModifications){
+                    if(m.getShiftID()==s.getShiftID() && m.getOriginalDate().equals(date.minusDays(weekDay - dayOfWeek))){
+                        System.out.println("Modified Shift: "+m.getShiftID());
+                        updatedShift = m;
                         shiftIsModified=true;
                     }
+                }
+                if(!shiftIsModified || (shiftIsModified&&updatedShift.getShiftStartDate().equals(date.minusDays(weekDay - dayOfWeek)))){
+                    try {
+                        loader = new FXMLLoader(getClass().getResource("/views/FXML/ShiftCard.fxml"));
+                        StackPane shiftCard = loader.load();
+                        ShiftCardController sc = loader.getController();
+                        sc.setMain(main);
+                        sc.setConnection(con);
+                        sc.setShift(updatedShift);
+                        sc.setParent(this);
+                        sc.fill();
+                        sc.setDate(date.minusDays(weekDay - dayOfWeek));
+                        if(shiftIsModified)
+                            sc.showDifference(s,updatedShift);
+                        Shift finalS = updatedShift;
+                        shiftCard.setOnMouseClicked(event -> openPopover(finalS,sc.getDate()));
+                        shiftContainer.getChildren().add(shiftCard);
+                    } catch (Exception ex) {
+                        System.err.println(ex.getMessage());
+                    }
+                }
+            }
+        }
+
+        for(Shift m: allModifications){
+            if(m.getShiftStartDate().equals(date.minusDays(weekDay - dayOfWeek))&&(!(m.getShiftStartDate().equals(m.getOriginalDate())))){
+                try {
                     loader = new FXMLLoader(getClass().getResource("/views/FXML/ShiftCard.fxml"));
                     StackPane shiftCard = loader.load();
                     ShiftCardController sc = loader.getController();
                     sc.setMain(main);
                     sc.setConnection(con);
-                    sc.setShift(updatedShift);
+                    sc.setShift(m);
                     sc.setParent(this);
                     sc.fill();
+                    sc.setModification("test");
                     sc.setDate(date.minusDays(weekDay - dayOfWeek));
-                    if(shiftIsModified)
-                        sc.showDifference(s,updatedShift);
-                    Shift finalS = updatedShift;
-                    shiftCard.setOnMouseClicked(event -> openPopover(finalS,sc.getDate()));
+                    shiftCard.setOnMouseClicked(event -> openPopover(m,sc.getDate()));
                     shiftContainer.getChildren().add(shiftCard);
-
                 } catch (Exception ex) {
                     System.err.println(ex.getMessage());
                 }
@@ -219,6 +237,7 @@ public class RosterPageController extends Controller {
 
     public void updatePage() {
         ArrayList<Shift> allShifts = new ArrayList<>();
+        ArrayList<Shift> allModifications = new ArrayList<>();
 
         //Set date in case the value is still null
         if (datePkr.getValue() == null)
@@ -243,18 +262,34 @@ public class RosterPageController extends Controller {
             while (resultSet.next()) {
                 allShifts.add(new Shift(resultSet));
             }
+
+            sql = "SELECT * FROM shiftmodifications JOIN accounts a on a.username = shiftmodifications.username " +
+                    "WHERE modificationID in (select max(modificationID) from shiftmodifications group by shift_id, originalDate) AND" +
+                    "((shiftmodifications.shiftStartDate>? AND shiftmodifications.shiftStartDate<?) OR " +
+                    "(shiftmodifications.originalDate>? AND shiftmodifications.originalDate<?))";
+
+            preparedStatement = con.prepareStatement(sql);
+            preparedStatement.setDate(1, Date.valueOf(weekStart));
+            preparedStatement.setDate(2, Date.valueOf(weekEnd));
+            preparedStatement.setDate(3, Date.valueOf(weekStart));
+            preparedStatement.setDate(4, Date.valueOf(weekEnd));
+            resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()) {
+                allModifications.add(new Shift(resultSet));;
+            }
+            System.out.println(allModifications.size());
         } catch (SQLException ex) {
             System.err.println(ex.getMessage());
         }
 
         weekdayBox.getChildren().removeAll(weekdayBox.getChildren());
-        updateDay(datePkr.getValue(), monBox, 1, allShifts);
-        updateDay(datePkr.getValue(), tueBox, 2, allShifts);
-        updateDay(datePkr.getValue(), wedBox, 3, allShifts);
-        updateDay(datePkr.getValue(), thuBox, 4, allShifts);
-        updateDay(datePkr.getValue(), friBox, 5, allShifts);
-        updateDay(datePkr.getValue(), satBox, 6, allShifts);
-        updateDay(datePkr.getValue(), sunBox, 7, allShifts);
+        updateDay(datePkr.getValue(), monBox, 1, allShifts,allModifications);
+        updateDay(datePkr.getValue(), tueBox, 2, allShifts,allModifications);
+        updateDay(datePkr.getValue(), wedBox, 3, allShifts,allModifications);
+        updateDay(datePkr.getValue(), thuBox, 4, allShifts,allModifications);
+        updateDay(datePkr.getValue(), friBox, 5, allShifts,allModifications);
+        updateDay(datePkr.getValue(), satBox, 6, allShifts,allModifications);
+        updateDay(datePkr.getValue(), sunBox, 7, allShifts,allModifications);
 
         adjustGridSize();
     }
@@ -269,7 +304,7 @@ public class RosterPageController extends Controller {
 
     public void setDatePkr(LocalDate date) {
         datePkr.setValue(date);
-        updatePage();
+//        updatePage();
     }
 
     public void openPopover(){
@@ -289,7 +324,7 @@ public class RosterPageController extends Controller {
         repeatLabel.setDisable(true);
         repeatValue.setText("");
         repeatUnit.setValue(null);
-        saveButton.setOnAction(actionEvent -> addShift(null,null));
+        saveButton.setOnAction(actionEvent -> addShift(null,null,null));
     }
 
     public void openPopover(Shift s,LocalDate shiftCardDate){
@@ -377,7 +412,8 @@ public class RosterPageController extends Controller {
         }
     }
 
-    public void addShift(Shift previousShift, LocalDate manualStartDate){
+    public void addShift(Shift previousShift, LocalDate manualStartDate, LocalDate originalShiftDate){
+        System.out.println("Date being added as original: " + originalShiftDate);
         String usrname = ((User) employeeSelect.getValue()).getUsername();
         LocalDate sDate = manualStartDate==null?startDate.getValue():manualStartDate;
         LocalDate eDate = manualStartDate==null?startDate.getValue():manualStartDate;
@@ -395,9 +431,10 @@ public class RosterPageController extends Controller {
         try {
             String sql = "";
             if(previousShift!=null){
-                sql = "INSERT INTO shiftModifications(username,shiftStartTime,shiftEndTime,shiftStartDate,thirtyMinBreaks,tenMinBreaks,repeating,daysPerRepeat,shift_id) VALUES(?,?,?,?,?,?,?,?,?)";
+                sql = "INSERT INTO shiftModifications(username,shiftStartTime,shiftEndTime,shiftStartDate,thirtyMinBreaks,tenMinBreaks,repeating,daysPerRepeat,shift_id,originalDate) VALUES(?,?,?,?,?,?,?,?,?,?)";
                 preparedStatement = con.prepareStatement(sql);
                 preparedStatement.setInt(9, previousShift.getShiftID());
+                preparedStatement.setDate(10, Date.valueOf(originalShiftDate));
             }else{
                 sql = "INSERT INTO shifts(username,shiftStartTime,shiftEndTime,shiftStartDate,thirtyMinBreaks,tenMinBreaks,repeating,daysPerRepeat) VALUES(?,?,?,?,?,?,?,?)";
                 preparedStatement = con.prepareStatement(sql);
@@ -467,7 +504,7 @@ public class RosterPageController extends Controller {
             preparedStatement.setInt(2,s.getShiftID());
             preparedStatement.executeUpdate();
             //start new shift with new data
-            addShift(null,shiftCardDate);
+            addShift(null,shiftCardDate,null);
             updatePage();
         } catch (SQLException ex) {
             System.err.println(ex.getMessage());
@@ -475,9 +512,11 @@ public class RosterPageController extends Controller {
     }
 
     public void editCurrentShift(Shift s,LocalDate shiftCardDate){
-            addShift(s,shiftCardDate);
-            updatePage();
-            dialogPane.showInformation("Success", "Shift edited succesfully");
+        System.out.println("Original date on previous shift was null :" + s.getOriginalDate()==null);
+        System.out.println(s.getOriginalDate());
+        addShift(s,startDate.getValue(),s.getOriginalDate()==null?shiftCardDate:s.getOriginalDate());
+        updatePage();
+        dialogPane.showInformation("Success", "Shift edited succesfully");
     }
 
     private Node createCalendarEditDialog(Shift s,LocalDate shiftCardDate) {

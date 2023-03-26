@@ -224,31 +224,48 @@
                   <Insets bottom="-5.0" top="-30.0" />
                </VBox.margin>
             </Label>
-            <MFXDatePicker fx:id="invoiceDateField" allowEdit="false" borderGap="0.0" floatMode="ABOVE" floatingText="Invoice Date" maxWidth="1.7976931348623157E308" minHeight="38.4" />
+            <MFXDatePicker fx:id="invoiceDateField" borderGap="0.0" floatMode="ABOVE" floatingText="Invoice Date" maxWidth="1.7976931348623157E308" minHeight="38.4" />
             <Label fx:id="invoiceDateValidationLabel" text="Please enter a valid date" textFill="RED" visible="false">
                <VBox.margin>
                   <Insets bottom="-5.0" top="-30.0" />
                </VBox.margin>
             </Label>
-            <MFXDatePicker fx:id="dueDateField" allowEdit="false" borderGap="0.0" floatMode="ABOVE" floatingText="Due Date" layoutX="20.0" layoutY="395.0" maxWidth="1.7976931348623157E308" minHeight="38.4" />
+            <MFXDatePicker fx:id="dueDateField" borderGap="0.0" floatMode="ABOVE" floatingText="Due Date" layoutX="20.0" layoutY="395.0" maxWidth="1.7976931348623157E308" minHeight="38.4" />
             <Label fx:id="dueDateValidationLabel" text="Please enter a valid date" textFill="RED" visible="false">
                <VBox.margin>
                   <Insets bottom="-5.0" top="-30.0" />
                </VBox.margin>
             </Label>
-            <MFXTextField fx:id="descriptionField" borderGap="0.0" floatMode="ABOVE" floatingText="Description" layoutX="20.0" layoutY="322.0" maxWidth="1.7976931348623157E308" minHeight="38.4" text="pharmacy stock" />
+            <MFXTextField fx:id="descriptionField" borderGap="0.0" disable="true" editable="false" floatMode="ABOVE" floatingText="Description" focusTraversable="false" layoutX="20.0" layoutY="322.0" maxWidth="1.7976931348623157E308" minHeight="38.4" text="pharmacy stock" />
             <MFXTextField fx:id="amountField" borderGap="0.0" floatMode="ABOVE" floatingText="Unit Amount ($)" layoutX="20.0" layoutY="298.0" maxWidth="1.7976931348623157E308" minHeight="38.4" />
             <Label fx:id="amountValidationLabel" text="Please enter a valid cash amount" textFill="RED" visible="false">
                <VBox.margin>
                   <Insets bottom="-5.0" top="-30.0" />
                </VBox.margin>
             </Label>
-            <HBox alignment="CENTER" nodeOrientation="LEFT_TO_RIGHT" spacing="20.0">
+            <HBox alignment="CENTER" spacing="50.0">
                <children>
-                  <MFXTextField fx:id="expectedAmountField" allowEdit="false" borderGap="0.0" editable="false" floatMode="ABOVE" floatingText="Expected Unit Amount ($)" maxWidth="1.7976931348623157E308" minHeight="38.4" minWidth="167.0" HBox.hgrow="ALWAYS" />
-                  <MFXTextField fx:id="varianceField" allowEdit="false" borderGap="0.0" editable="false" floatMode="ABOVE" floatingText="Variance ($)" maxWidth="1.7976931348623157E308" minHeight="38.4" minWidth="167.0" HBox.hgrow="ALWAYS" />
+                  <Label contentDisplay="BOTTOM" text="Expected Unit Amount" HBox.hgrow="ALWAYS">
+                     <graphic>
+                        <Label fx:id="tillBalanceLabel" contentDisplay="TOP" text="\$123.45">
+                           <font>
+                              <Font size="20.0" />
+                           </font>
+                        </Label>
+                     </graphic>
+                  </Label>
+                  <Label contentDisplay="BOTTOM" layoutX="158.0" layoutY="24.0" text="Variance">
+                     <graphic>
+                        <Label fx:id="runningTillBalanceLabel" contentDisplay="TOP" text="\$123.45">
+                           <font>
+                              <Font size="20.0" />
+                           </font>
+                        </Label>
+                     </graphic>
+                  </Label>
                </children>
             </HBox>
+            <MFXTextField fx:id="notesField" borderGap="0.0" floatMode="ABOVE" floatingText="Additional Notes:" maxWidth="1.7976931348623157E308" minHeight="38.4" />
             <MFXButton fx:id="saveButton" buttonType="RAISED" depthLevel="LEVEL3" maxWidth="1.7976931348623157E308" prefHeight="30.0" style="-fx-background-color: #0F60FF;" text="Save" textFill="WHITE">
                <VBox.margin>
                   <Insets top="20.0" />

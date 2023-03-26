@@ -24,6 +24,7 @@ public class Shift {
 	private String role;
 	private String profileBG;
 	private String profileText;
+	private LocalDate originalDate = null;
 
 	public Shift(ResultSet resultSet) {
 		try {
@@ -53,6 +54,8 @@ public class Shift {
 					this.profileBG = resultSet.getString("profileBG");
 				if(resultSet.getString("profileText") != null && !resultSet.getString("profileText").isEmpty())
 					this.profileText = resultSet.getString("profileText");
+				if(resultSet.getString("originalDate") != null && !resultSet.getString("originalDate").isEmpty())
+					this.originalDate = LocalDate.parse(resultSet.getString("originalDate"));
 			}catch(SQLException s){}
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -189,4 +192,8 @@ public class Shift {
 	public String getShiftType() { return shiftType; }
 
 	public void setShiftType(String shiftType) { this.shiftType = shiftType; }
+
+	public LocalDate getOriginalDate() {return originalDate;}
+
+	public void setOriginalDate(LocalDate originalDate) {this.originalDate = originalDate;}
 }
