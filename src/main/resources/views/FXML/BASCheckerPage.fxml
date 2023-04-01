@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import io.github.palexdev.materialfx.controls.MFXCheckbox?>
+<?import io.github.palexdev.materialfx.controls.MFXTextField?>
 <?import java.net.URL?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.Cursor?>
@@ -87,7 +88,7 @@
          <center>
             <VBox fillWidth="false" spacing="20.0" BorderPane.alignment="CENTER">
                <children>
-                  <GridPane gridLinesVisible="true" style="-fx-background-color: #FFFFFF; -fx-background-radius: 10;" styleClass="mygridStyle" VBox.vgrow="SOMETIMES">
+                  <GridPane gridLinesVisible="true" style="-fx-background-color: #FFFFFF; -fx-background-radius: 10;" styleClass="mygridStyle">
                     <columnConstraints>
                       <ColumnConstraints hgrow="SOMETIMES" minWidth="-Infinity" prefWidth="227.0" />
                       <ColumnConstraints halignment="LEFT" hgrow="SOMETIMES" maxWidth="1.7976931348623157E308" minWidth="90.0" />
@@ -100,6 +101,7 @@
                       <RowConstraints minHeight="45.0" vgrow="SOMETIMES" />
                       <RowConstraints vgrow="SOMETIMES" />
                       <RowConstraints vgrow="SOMETIMES" />
+                        <RowConstraints vgrow="SOMETIMES" />
                         <RowConstraints vgrow="SOMETIMES" />
                         <RowConstraints vgrow="SOMETIMES" />
                         <RowConstraints vgrow="SOMETIMES" />
@@ -178,7 +180,7 @@
                            <padding>
                               <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                            </padding></Label>
-                        <Label layoutX="448.0" layoutY="167.0" text="Total income recorded in this spreadsheet minus GST owed to ATO (note: this excludes TAC income, ozzymart, stock transfers, Roche, other rebates and any other income streams entered directly into xero)" wrapText="true" GridPane.columnIndex="5" GridPane.hgrow="SOMETIMES" GridPane.rowIndex="7" GridPane.vgrow="SOMETIMES">
+                        <Label layoutX="448.0" layoutY="167.0" text="Total income recorded in this spreadsheet minus GST owed to ATO (note: this excludes TAC income, ozzymart, stock transfers, Roche, other rebates and any other income streams entered directly into xero)" wrapText="true" GridPane.columnIndex="5" GridPane.hgrow="SOMETIMES" GridPane.rowIndex="7" GridPane.vgrow="ALWAYS">
                            <font>
                               <Font name="System Italic" size="12.0" />
                            </font>
@@ -186,6 +188,31 @@
                               <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                            </padding></Label>
                         <AnchorPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" styleClass="headerCell" />
+                        <MFXTextField editable="false" floatMode="DISABLED" maxWidth="1.7976931348623157E308" styleClass="disableText" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                        <MFXTextField floatMode="DISABLED" maxWidth="1.7976931348623157E308" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+                        <MFXTextField editable="false" floatMode="DISABLED" maxWidth="1.7976931348623157E308" styleClass="disableText" GridPane.columnIndex="3" GridPane.rowIndex="1" />
+                        <MFXTextField editable="false" floatMode="DISABLED" maxWidth="1.7976931348623157E308" styleClass="disableText" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                        <MFXTextField floatMode="DISABLED" maxWidth="1.7976931348623157E308" GridPane.columnIndex="2" GridPane.rowIndex="2" />
+                        <MFXTextField editable="false" floatMode="DISABLED" maxWidth="1.7976931348623157E308" styleClass="disableText" GridPane.columnIndex="3" GridPane.rowIndex="2" />
+                        <MFXTextField editable="false" floatMode="DISABLED" maxWidth="1.7976931348623157E308" styleClass="disableText" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                        <MFXTextField editable="false" floatMode="DISABLED" maxWidth="1.7976931348623157E308" styleClass="disableText" GridPane.columnIndex="3" GridPane.rowIndex="3" />
+                        <MFXTextField editable="false" floatMode="DISABLED" maxWidth="1.7976931348623157E308" styleClass="disableText" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+                        <MFXTextField editable="false" floatMode="DISABLED" maxWidth="1.7976931348623157E308" styleClass="disableText" GridPane.columnIndex="3" GridPane.rowIndex="4" />
+                        <MFXTextField editable="false" floatMode="DISABLED" maxWidth="1.7976931348623157E308" styleClass="disableText" GridPane.columnIndex="1" GridPane.rowIndex="5" />
+                        <MFXTextField editable="false" floatMode="DISABLED" maxWidth="1.7976931348623157E308" styleClass="disableText" GridPane.columnIndex="3" GridPane.rowIndex="5" />
+                        <MFXTextField editable="false" floatMode="DISABLED" maxWidth="1.7976931348623157E308" styleClass="disableText" GridPane.columnIndex="1" GridPane.rowIndex="6" />
+                        <MFXTextField editable="false" floatMode="DISABLED" maxWidth="1.7976931348623157E308" styleClass="disableText" GridPane.columnIndex="3" GridPane.rowIndex="6" />
+                        <MFXTextField editable="false" floatMode="DISABLED" maxWidth="1.7976931348623157E308" styleClass="disableText" GridPane.columnIndex="1" GridPane.rowIndex="7" />
+                        <MFXTextField editable="false" floatMode="DISABLED" maxWidth="1.7976931348623157E308" styleClass="disableText" GridPane.columnIndex="3" GridPane.rowIndex="7" />
+                        <Label text="Till Balance (If nothing here, dont adjust)" wrapText="true" GridPane.hgrow="NEVER" GridPane.rowIndex="9" GridPane.vgrow="NEVER">
+                           <padding>
+                              <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                           </padding>
+                        </Label>
+                        <MFXTextField editable="false" floatMode="DISABLED" maxWidth="1.7976931348623157E308" styleClass="disableText" GridPane.columnIndex="2" GridPane.rowIndex="8" />
+                        <MFXTextField editable="false" floatMode="DISABLED" maxWidth="1.7976931348623157E308" styleClass="disableText" GridPane.columnIndex="3" GridPane.rowIndex="8" />
+                        <MFXTextField editable="false" floatMode="DISABLED" maxWidth="1.7976931348623157E308" style="-fx-background-color: Yellow;" GridPane.columnIndex="1" GridPane.rowIndex="8" />
+                        <MFXTextField editable="false" floatMode="DISABLED" maxWidth="1.7976931348623157E308" style="-fx-background-color: Yellow;" GridPane.columnIndex="1" GridPane.rowIndex="9" />
                      </children>
                      <padding>
                         <Insets bottom="20.0" left="10.0" right="10.0" top="20.0" />

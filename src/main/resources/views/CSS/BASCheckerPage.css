@@ -1,9 +1,13 @@
-.mygridStyle Line {
-    -fx-stroke: #D3D3D3;
-    -fx-stroke-width: 1px;
-}
+/*.mygridStyle Line {*/
+/*    -fx-stroke: #D3D3D3;*/
+/*    -fx-stroke-width: 1px;*/
+/*}*/
 
 .headerCell{
     -fx-background-color: #F3F2F7;
     -fx-text-fill: #6E6B7B;
+}
+
+.disableText{
+    -fx-background-color: #E6E6E6;
 }
