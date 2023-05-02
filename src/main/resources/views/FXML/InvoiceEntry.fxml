@@ -17,9 +17,12 @@
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.RowConstraints?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.paint.Color?>
@@ -29,13 +32,6 @@
 <StackPane fx:id="backgroundPane" prefHeight="800.0" prefWidth="500.0" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.InvoiceEntryController">
    <children>
       <BorderPane style="-fx-background-color: TRANSPARENT;">
-         <center>
-            <VBox fx:id="controlBox" alignment="TOP_CENTER" style="-fx-background-color: #FFFFFF; -fx-background-radius: 10;" BorderPane.alignment="CENTER">
-               <BorderPane.margin>
-                  <Insets />
-               </BorderPane.margin>
-            </VBox>
-         </center>
          <top>
             <BorderPane style="-fx-background-color: #F3F2F7; -fx-background-radius: 10;" BorderPane.alignment="CENTER">
                <padding>
@@ -116,7 +112,7 @@
                <right>
                   <HBox alignment="CENTER" BorderPane.alignment="CENTER">
                      <children>
-                        <Button fx:id="exportDataButton" graphicTextGap="10.0" minHeight="42.5" minWidth="227.0" mnemonicParsing="false" onAction="#exportFiles" prefHeight="42.5" prefWidth="227.0" style="-fx-background-color: #F3F2F7; -fx-border-color: #6e6b7b; -fx-border-radius: 5;" styleClass="controlButton" text="Export in Xero Format" textFill="#6e6b7b">
+                        <Button fx:id="exportDataButton" graphicTextGap="10.0" minHeight="42.5" minWidth="227.0" mnemonicParsing="false" onAction="#exportToXero" prefHeight="42.5" prefWidth="227.0" style="-fx-background-color: #F3F2F7; -fx-border-color: #6e6b7b; -fx-border-radius: 5;" styleClass="controlButton" text="Export in Xero Format" textFill="#6e6b7b">
                            <cursor>
                               <Cursor fx:constant="HAND" />
                            </cursor>
@@ -157,16 +153,79 @@
          <StackPane.margin>
             <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
          </StackPane.margin>
+         <center>
+            <BorderPane BorderPane.alignment="CENTER">
+               <center>
+                  <VBox fx:id="controlBox" alignment="TOP_CENTER" style="-fx-background-color: #FFFFFF; -fx-background-radius: 10;" BorderPane.alignment="CENTER">
+                     <BorderPane.margin>
+                        <Insets />
+                     </BorderPane.margin>
+                  </VBox>
+               </center>
+               <top>
+                  <GridPane prefHeight="50.0" style="-fx-background-color: #FFFFFF; -fx-background-radius: 5;" BorderPane.alignment="CENTER">
+                     <columnConstraints>
+                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                     </columnConstraints>
+                     <rowConstraints>
+                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                     </rowConstraints>
+                     <children>
+                        <BorderPane fx:id="invoicesButton" onMouseClicked="#invoicesView" prefHeight="200.0" prefWidth="200.0" styleClass="periodTabSelect">
+                           <center>
+                              <Label text="INVOICES" textFill="#0f60ff" BorderPane.alignment="CENTER" />
+                           </center>
+                           <bottom>
+                              <Region maxWidth="1.7976931348623157E308" prefHeight="5.0" style="-fx-background-color: #0F60FF;" BorderPane.alignment="CENTER" />
+                           </bottom>
+                           <GridPane.margin>
+                              <Insets />
+                           </GridPane.margin>
+                           <cursor>
+                              <Cursor fx:constant="HAND" />
+                           </cursor>
+                        </BorderPane>
+                        <BorderPane fx:id="creditsButton" onMouseClicked="#creditsView" prefHeight="200.0" prefWidth="200.0" styleClass="periodTabSelect" GridPane.columnIndex="1">
+                           <center>
+                              <Label text="CREDITS" textFill="#6e6b7b" BorderPane.alignment="CENTER" />
+                           </center>
+                           <bottom>
+                              <Region maxWidth="1.7976931348623157E308" prefHeight="5.0" BorderPane.alignment="CENTER" />
+                           </bottom>
+                           <cursor>
+                              <Cursor fx:constant="HAND" />
+                           </cursor>
+                        </BorderPane>
+                     </children>
+                     <effect>
+                        <DropShadow height="24.0" offsetY="4.0" radius="11.5" width="24.0">
+                           <color>
+                              <Color opacity="0.10000000149011612" />
+                           </color>
+                        </DropShadow>
+                     </effect>
+                     <BorderPane.margin>
+                        <Insets bottom="20.0" />
+                     </BorderPane.margin>
+                  </GridPane>
+               </top>
+            </BorderPane>
+         </center>
       </BorderPane>
-      <JFXNodesList fx:id="addList" alignment="CENTER" nodeOrientation="LEFT_TO_RIGHT" spacing="10.0" StackPane.alignment="BOTTOM_RIGHT">
+      <JFXNodesList fx:id="addList" alignment="CENTER_RIGHT" nodeOrientation="LEFT_TO_RIGHT" rotate="180.0" spacing="10.0" StackPane.alignment="BOTTOM_RIGHT">
          <children>
-            <JFXButton alignment="CENTER" buttonType="RAISED" contentDisplay="CENTER" graphicTextGap="0.0" onAction="#openPopover" scaleShape="false" styleClass="animated-option-button" stylesheets="@../CSS/application.css" text=" ">
+            <JFXButton fx:id="plusButton" alignment="CENTER" buttonType="RAISED" contentDisplay="CENTER" graphicTextGap="0.0" onAction="#openInvoicePopover" scaleShape="false" styleClass="animated-option-button" text=" ">
                <font>
                   <Font name="System Bold" size="8.0" />
                </font>
                <graphic>
                   <SVGPath content="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" fill="WHITE" scaleX="3.0" scaleY="3.0" scaleZ="3.0" />
                </graphic>
+               <stylesheets>
+                  <URL value="@../CSS/application.css" />
+                  <URL value="@../CSS/MainMenu.css" />
+               </stylesheets>
             </JFXButton>
          </children>
          <cursor>
@@ -176,7 +235,7 @@
             <Insets bottom="50.0" right="50.0" />
          </StackPane.margin>
       </JFXNodesList>
-      <Region fx:id="contentDarken" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" onMouseClicked="#closePopover" opacity="0.25" style="-fx-background-color: BLACK;" visible="false" />
+      <Region fx:id="contentDarken" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" onMouseClicked="#closeInvoicePopover" opacity="0.25" style="-fx-background-color: BLACK;" visible="false" />
       <VBox fx:id="addInvoicePopover" maxWidth="0.0" minWidth="425.0" prefWidth="425.0" spacing="30.0" style="-fx-background-color: #FFFFFF;" translateX="425.0" StackPane.alignment="TOP_RIGHT">
          <children>
             <BorderPane style="-fx-background-color: #F8F8F8;">
@@ -204,7 +263,7 @@
                               <Insets />
                            </HBox.margin>
                         </Button>
-                        <Button layoutX="10.0" layoutY="10.0" maxHeight="46.4" maxWidth="46.4" minHeight="46.4" minWidth="46.4" mnemonicParsing="false" onAction="#closePopover" prefHeight="46.4" prefWidth="46.4" style="-fx-background-color: #F8F8F8;">
+                        <Button layoutX="10.0" layoutY="10.0" maxHeight="46.4" maxWidth="46.4" minHeight="46.4" minWidth="46.4" mnemonicParsing="false" onAction="#closeInvoicePopover" prefHeight="46.4" prefWidth="46.4" style="-fx-background-color: #F8F8F8;">
                            <graphic>
                               <SVGPath content="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z&#10;" fill="#6e6b7b" scaleX="1.5" scaleY="1.5" />
                            </graphic>
@@ -247,7 +306,7 @@
                <children>
                   <Label contentDisplay="BOTTOM" text="Expected Unit Amount" HBox.hgrow="ALWAYS">
                      <graphic>
-                        <Label fx:id="tillBalanceLabel" contentDisplay="TOP" text="\$123.45">
+                        <Label fx:id="expectedUnitAmountLabel" contentDisplay="TOP" text="\$0.00">
                            <font>
                               <Font size="20.0" />
                            </font>
@@ -256,7 +315,7 @@
                   </Label>
                   <Label contentDisplay="BOTTOM" layoutX="158.0" layoutY="24.0" text="Variance">
                      <graphic>
-                        <Label fx:id="runningTillBalanceLabel" contentDisplay="TOP" text="\$123.45">
+                        <Label fx:id="varianceLabel" contentDisplay="TOP" text="\$0.00">
                            <font>
                               <Font size="20.0" />
                            </font>
@@ -264,9 +323,88 @@
                      </graphic>
                   </Label>
                </children>
+               <VBox.margin>
+                  <Insets top="-10.0" />
+               </VBox.margin>
             </HBox>
             <MFXTextField fx:id="notesField" borderGap="0.0" floatMode="ABOVE" floatingText="Additional Notes:" maxWidth="1.7976931348623157E308" minHeight="38.4" />
             <MFXButton fx:id="saveButton" buttonType="RAISED" depthLevel="LEVEL3" maxWidth="1.7976931348623157E308" prefHeight="30.0" style="-fx-background-color: #0F60FF;" text="Save" textFill="WHITE">
+               <VBox.margin>
+                  <Insets top="20.0" />
+               </VBox.margin>
+            </MFXButton>
+         </children>
+         <padding>
+            <Insets left="10.0" right="10.0" />
+         </padding>
+      </VBox>
+      <VBox fx:id="addCreditPopover" maxWidth="0.0" minWidth="425.0" prefWidth="425.0" spacing="30.0" style="-fx-background-color: #FFFFFF;" translateX="425.0" StackPane.alignment="TOP_RIGHT">
+         <children>
+            <BorderPane style="-fx-background-color: #F8F8F8;">
+               <left>
+                  <Label fx:id="creditPopoverTitle" maxWidth="1.7976931348623157E308" styleClass="popOverTitle" text="Add a new credit" BorderPane.alignment="CENTER">
+                     <font>
+                        <Font size="17.0" />
+                     </font>
+                  </Label>
+               </left>
+               <VBox.margin>
+                  <Insets bottom="10.0" left="-10.0" right="-10.0" />
+               </VBox.margin>
+               <padding>
+                  <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+               </padding>
+               <right>
+                  <HBox alignment="CENTER_RIGHT" BorderPane.alignment="CENTER">
+                     <children>
+                        <Button fx:id="creditDeleteButton" maxHeight="46.4" maxWidth="46.4" minHeight="46.4" minWidth="46.4" mnemonicParsing="false" prefHeight="46.4" prefWidth="46.4" style="-fx-background-color: #F8F8F8;">
+                           <graphic>
+                              <SVGPath content="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z&#10;" fill="#6e6b7b" scaleX="1.25" scaleY="1.25" />
+                           </graphic>
+                           <HBox.margin>
+                              <Insets />
+                           </HBox.margin>
+                        </Button>
+                        <Button layoutX="10.0" layoutY="10.0" maxHeight="46.4" maxWidth="46.4" minHeight="46.4" minWidth="46.4" mnemonicParsing="false" onAction="#closeCreditPopover" prefHeight="46.4" prefWidth="46.4" style="-fx-background-color: #F8F8F8;">
+                           <graphic>
+                              <SVGPath content="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z&#10;" fill="#6e6b7b" scaleX="1.5" scaleY="1.5" />
+                           </graphic>
+                        </Button>
+                     </children>
+                  </HBox>
+               </right>
+            </BorderPane>
+            <Label fx:id="creditAFXValidationLabel" text="Please enter a valid supplier" textFill="RED" visible="false">
+               <VBox.margin>
+                  <Insets bottom="-5.0" top="-30.0" />
+               </VBox.margin>
+            </Label>
+            <MFXTextField fx:id="creditNoField" borderGap="0.0" floatMode="ABOVE" floatingText="Credit Note Number" layoutX="20.0" layoutY="347.0" maxWidth="1.7976931348623157E308" minHeight="38.4" />
+            <Label fx:id="creditNoValidationLabel" text="Please enter a credit number" textFill="RED" visible="false">
+               <VBox.margin>
+                  <Insets bottom="-5.0" top="-30.0" />
+               </VBox.margin>
+            </Label>
+            <MFXTextField fx:id="refInvNoField" borderGap="0.0" floatMode="ABOVE" floatingText="Reference Invoice Number" maxWidth="1.7976931348623157E308" minHeight="38.4" />
+            <Label fx:id="refInvNoValidationLabel" text="Please enter a credit number" textFill="RED" visible="false">
+               <VBox.margin>
+                  <Insets bottom="-5.0" top="-30.0" />
+               </VBox.margin>
+            </Label>
+            <MFXDatePicker fx:id="creditDateField" borderGap="0.0" floatMode="ABOVE" floatingText="Credit Date" maxWidth="1.7976931348623157E308" minHeight="38.4" />
+            <Label fx:id="creditDateValidationLabel" text="Please enter a valid date" textFill="RED" visible="false">
+               <VBox.margin>
+                  <Insets bottom="-5.0" top="-30.0" />
+               </VBox.margin>
+            </Label>
+            <MFXTextField fx:id="creditAmountField" borderGap="0.0" floatMode="ABOVE" floatingText="Amount ($)" layoutX="20.0" layoutY="298.0" maxWidth="1.7976931348623157E308" minHeight="38.4" />
+            <Label fx:id="creditAmountValidationLabel" text="Please enter a valid cash amount" textFill="RED" visible="false">
+               <VBox.margin>
+                  <Insets bottom="-5.0" top="-30.0" />
+               </VBox.margin>
+            </Label>
+            <MFXTextField fx:id="creditNotesField" borderGap="0.0" floatMode="ABOVE" floatingText="Additional Notes:" maxWidth="1.7976931348623157E308" minHeight="38.4" />
+            <MFXButton fx:id="creditSaveButton" buttonType="RAISED" depthLevel="LEVEL3" maxWidth="1.7976931348623157E308" prefHeight="30.0" style="-fx-background-color: #0F60FF;" text="Save" textFill="WHITE">
                <VBox.margin>
                   <Insets top="20.0" />
                </VBox.margin>

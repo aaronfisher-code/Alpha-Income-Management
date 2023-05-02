@@ -4,6 +4,7 @@ import application.Main;
 import com.dlsc.gemsfx.DialogPane;
 import com.dlsc.gemsfx.DialogPane.Dialog;
 import components.ActionableFilterComboBox;
+import components.CustomDateStringConverter;
 import io.github.palexdev.materialfx.controls.*;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
 import io.github.palexdev.materialfx.enums.FloatMode;
@@ -202,9 +203,11 @@ public class AccountPaymentsPageController extends DateSelectController{
 
 		ValidatorUtils.setupRegexValidation(afx,afxValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveButton);
 		ValidatorUtils.setupRegexValidation(invoiceNoField,invoiceNoValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveButton);
-		ValidatorUtils.setupRegexValidation(invoiceDateField,invoiceDateValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveButton);
-		ValidatorUtils.setupRegexValidation(dueDateField,dueDateValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveButton);
+		ValidatorUtils.setupRegexValidation(invoiceDateField,invoiceDateValidationLabel,ValidatorUtils.DATE_REGEX,ValidatorUtils.DATE_ERROR,null,saveButton);
+		ValidatorUtils.setupRegexValidation(dueDateField,dueDateValidationLabel,ValidatorUtils.DATE_REGEX,ValidatorUtils.DATE_ERROR,null,saveButton);
 		ValidatorUtils.setupRegexValidation(amountField,amountValidationLabel,ValidatorUtils.CASH_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
+		invoiceDateField.setConverterSupplier(() -> new CustomDateStringConverter("dd/MM/yyyy"));
+		dueDateField.setConverterSupplier(() -> new CustomDateStringConverter("dd/MM/yyyy"));
 	}
 
 	private void addDoubleClickfunction(){
@@ -380,6 +383,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 		contentDarken.setVisible(true);
 		AnimationUtils.slideIn(addPaymentPopover,0);
 		afx.clear();
+		afx.clearSelection();
 		invoiceNoField.clear();
 		invoiceDateField.clear();
 		dueDateField.clear();
@@ -491,8 +495,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 	}
 
 	public void addPayment(){
- 		Boolean validEntry = true;
- 		if(!afx.isValid()){afx.requestFocus();}
+		if(!afx.isValid()){afx.requestFocus();}
 		else if(!invoiceNoField.isValid()){invoiceNoField.requestFocus();}
 		else if(!dueDateField.isValid()){dueDateField.requestFocus();}
 		else if(!amountField.isValid()){amountField.requestFocus();}
@@ -528,13 +531,11 @@ public class AccountPaymentsPageController extends DateSelectController{
 	}
 
 	public void editPayment(AccountPayment accountPayment){
-		Boolean validEntry = true;
 		if(!afx.isValid()){afx.requestFocus();}
 		else if(!invoiceNoField.isValid()){invoiceNoField.requestFocus();}
 		else if(!dueDateField.isValid()){dueDateField.requestFocus();}
 		else if(!amountField.isValid()){amountField.requestFocus();}
 		else{
-			String contactName = accountPayment.getContactName();
 			String invoiceNo = invoiceNoField.getText();
 			LocalDate invoiceDate = invoiceDateField.getValue();
 			LocalDate dueDate = dueDateField.getValue();

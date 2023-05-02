@@ -2,7 +2,9 @@ package models;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.NumberFormat;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 public class Invoice {
 
@@ -24,6 +26,8 @@ public class Invoice {
 	private double totalAfterCredits;
 	private String notes;
 
+	private boolean invoiceExists,importExists,creditExists;
+
 	public Invoice(ResultSet resultSet) {
 		try {
 			this.invoiceID = resultSet.getInt("idInvoices");
@@ -35,7 +39,18 @@ public class Invoice {
 			this.description = resultSet.getString("description");
 			this.unitAmount = resultSet.getDouble("unitAmount");
 			this.storeID = resultSet.getInt("storeID");
+			this.credits = resultSet.getDouble("creditAmount");
 			this.notes = resultSet.getString("notes");
+			this.importedInvoiceAmount = resultSet.getDouble("amount");
+			this.credits = resultSet.getDouble("total_credits");
+			if(resultSet.getObject("unitAmount") != null){
+				this.invoiceExists = true;
+			}
+			if(resultSet.getObject("amount") != null){
+				this.variance = unitAmount-importedInvoiceAmount;
+				importExists = true;
+			}
+			this.totalAfterCredits = unitAmount-credits;
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -51,9 +66,19 @@ public class Invoice {
 
 	public LocalDate getInvoiceDate() {return invoiceDate;}
 
+	public String getInvoiceDateString() {
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+		return formatter.format(invoiceDate);
+	}
+
 	public void setInvoiceDate(LocalDate invoiceDate) {this.invoiceDate = invoiceDate;}
 
 	public LocalDate getDueDate() {return dueDate;}
+
+	public String getDueDateString() {
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+		return formatter.format(dueDate);
+	}
 
 	public void setDueDate(LocalDate dueDate) {this.dueDate = dueDate;}
 
@@ -67,21 +92,31 @@ public class Invoice {
 
 	public double getUnitAmount() {return unitAmount;}
 
+	public String getUnitAmountString(){return (!invoiceExists)?"": NumberFormat.getCurrencyInstance().format(unitAmount);}
+
 	public void setUnitAmount(double unitAmount) {this.unitAmount = unitAmount;}
 
 	public double getImportedInvoiceAmount() {return importedInvoiceAmount;}
+
+	public String getImportedInvoiceAmountString(){return (!importExists)?"": NumberFormat.getCurrencyInstance().format(importedInvoiceAmount);}
 
 	public void setImportedInvoiceAmount(double importedInvoiceAmount) {this.importedInvoiceAmount = importedInvoiceAmount;}
 
 	public double getVariance() {return variance;}
 
+	public String getVarianceString(){return (!importExists)?"": NumberFormat.getCurrencyInstance().format(variance);}
+
 	public void setVariance(double variance) {this.variance = variance;}
 
 	public double getCredits() {return credits;}
 
+	public String getCreditsString(){return (NumberFormat.getCurrencyInstance().format(credits));}
+
 	public void setCredits(double credits) {this.credits = credits;}
 
 	public double getTotalAfterCredits() {return totalAfterCredits;}
+
+	public String getTotalAfterCreditsString(){return (NumberFormat.getCurrencyInstance().format(totalAfterCredits));}
 
 	public void setTotalAfterCredits(double totalAfterCredits) {this.totalAfterCredits = totalAfterCredits;}
 

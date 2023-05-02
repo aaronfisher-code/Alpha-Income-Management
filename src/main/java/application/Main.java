@@ -82,7 +82,6 @@ public class Main extends Application {
 //		stg.setMinWidth(950);
 		bs.removeDefaultCSS();
 		c.fill();
-
 }
 	
 	public void setCurrentUser(User newUser){

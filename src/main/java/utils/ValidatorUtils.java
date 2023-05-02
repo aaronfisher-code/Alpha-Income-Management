@@ -24,6 +24,9 @@ public class ValidatorUtils {
     public final static String BLANK_ERROR = "This field must not be blank";
     public final static String INT_REGEX = "[0-9]*";
     public final static String INT_ERROR = "Please enter a valid number";
+    public final static String DATE_REGEX = "^(0?[1-9]|[12][0-9]|3[01])/(0?[1-9]|1[012])/((19|20)?\\d\\d)$";
+
+    public final static String DATE_ERROR = "Please enter a valid date";
 
     public static void setupRegexValidation(MFXTextField field, Label validationLabel, String regex, String errorMessage, String measureUnit, MFXButton disableButton) {
         Constraint digitConstraint = Constraint.Builder.build()
@@ -52,6 +55,7 @@ public class ValidatorUtils {
                 if (!constraints.isEmpty()) {
                     field.pseudoClassStateChanged(INVALID_PSEUDO_CLASS, true);
                     validationLabel.setText(constraints.get(0).getMessage());
+                    validationLabel.setStyle("-fx-text-fill: red;");
                     validationLabel.setVisible(true);
                     if(disableButton!=null)
                         disableButton.setDisable(true);
@@ -117,6 +121,7 @@ public class ValidatorUtils {
 
         field.delegateFocusedProperty().addListener((observable, oldValue, newValue) -> {
             if (oldValue && !newValue) {
+                field.commit(field.getText());
                 List<Constraint> constraints = field.validate();
                 if (!constraints.isEmpty()) {
                     field.pseudoClassStateChanged(INVALID_PSEUDO_CLASS, true);

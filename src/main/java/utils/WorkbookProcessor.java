@@ -26,10 +26,13 @@ public class WorkbookProcessor {
         HSSFSheet sheet=wb.getSheetAt(0);
         //evaluating cell type
         for(int i=0;i<3;i++){
-            if(sheet.getRow(1).getCell(i)!=null){
-                if(sheet.getRow(1).getCell(i).getStringCellValue().equals("Daily Script Totals")){
+            if(sheet.getRow(0)!=null || sheet.getRow(1)!=null) {
+                if (sheet.getRow(1)!=null && sheet.getRow(1).getCell(i).getStringCellValue().equals("Daily Script Totals")) {
                     System.out.println("Identified as Daily script totals report");
                     processDailyScriptTotals(sheet);
+                }else if(sheet.getRow(0)!=null && sheet.getRow(0).getCell(i).getStringCellValue().equals("Order Invoices List")){
+                    System.out.println("Identified as Invoice export report");
+                    processInvoiceExport(sheet);
                 }else{
                     processTillReport(sheet);
                 }
@@ -83,12 +86,9 @@ public class WorkbookProcessor {
     }
 
     private void processDailyScriptTotals(HSSFSheet sheet){
-        System.out.println(sheet.getRow(6).getCell(1).getStringCellValue());
-        String format = "dd/MM/yyyy";
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
         for(Row row: sheet)     //iteration over row using for each loop
         {
-            if(row.getRowNum()<16){
+            if(row.getRowNum()<16){ //skip to row 16
                 continue;
             }
             if(row.getCell(1)!=null) {
@@ -114,6 +114,31 @@ public class WorkbookProcessor {
             }
         }
     }
+
+    private void processInvoiceExport(HSSFSheet sheet){
+        for(Row row: sheet)     //iteration over row using for each loop
+        {
+            if(row.getRowNum()<2){//Skip to invoices
+                continue;
+            }
+            if(row.getCell(1)!=null) {
+                try{
+                    String invoiceNumber = row.getCell(0).getStringCellValue();
+                    String invoiceAmountString = row.getCell(8).getStringCellValue();
+                    String formattedAmount = invoiceAmountString.replaceAll("[$,]", "");
+                    Double actualAmount = Double.parseDouble(formattedAmount);
+                    CellDataPoint invoiceDataPoint = new CellDataPoint();
+                    invoiceDataPoint.setCategory(invoiceNumber);
+                    invoiceDataPoint.setSubCategory("");
+                    invoiceDataPoint.setAmount(actualAmount);
+                    dataPoints.add(invoiceDataPoint);
+                }catch(IllegalStateException e){
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
     public LocalDateTime getPeriodStart() {
         return periodStart;
     }

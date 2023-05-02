@@ -280,13 +280,13 @@
                               <Insets bottom="-5.0" top="-30.0" />
                            </VBox.margin>
                         </Label>
-                        <MFXDatePicker fx:id="invoiceDateField" allowEdit="false" borderGap="0.0" floatMode="ABOVE" floatingText="Invoice Date" maxWidth="1.7976931348623157E308" minHeight="38.4" />
+                        <MFXDatePicker fx:id="invoiceDateField" borderGap="0.0" floatMode="ABOVE" floatingText="Invoice Date" maxWidth="1.7976931348623157E308" minHeight="38.4" />
                         <Label fx:id="invoiceDateValidationLabel" text="Please enter a valid date" textFill="RED" visible="false">
                            <VBox.margin>
                               <Insets bottom="-5.0" top="-30.0" />
                            </VBox.margin>
                         </Label>
-                        <MFXDatePicker fx:id="dueDateField" allowEdit="false" borderGap="0.0" floatMode="ABOVE" floatingText="Due Date" layoutX="20.0" layoutY="395.0" maxWidth="1.7976931348623157E308" minHeight="38.4" />
+                        <MFXDatePicker fx:id="dueDateField" borderGap="0.0" floatMode="ABOVE" floatingText="Due Date" layoutX="20.0" layoutY="395.0" maxWidth="1.7976931348623157E308" minHeight="38.4" />
                         <Label fx:id="dueDateValidationLabel" text="Please enter a valid date" textFill="RED" visible="false">
                            <VBox.margin>
                               <Insets bottom="-5.0" top="-30.0" />

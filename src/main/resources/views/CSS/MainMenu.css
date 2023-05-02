@@ -19,9 +19,10 @@
 
 .animated-option-sub-button {
     -fx-pref-width:50px;
+    -fx-background-color:#A1A1A1;
     -fx-background-radius:50px;
     -fx-pref-height:50px;
-    -fx-text-fill:white;
+    -fx-text-fill:BLACK;
 }
 
 .userNameText {
