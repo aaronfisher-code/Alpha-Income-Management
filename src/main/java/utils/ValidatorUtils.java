@@ -18,11 +18,12 @@ import java.util.regex.Pattern;
 import static io.github.palexdev.materialfx.validation.Validated.INVALID_PSEUDO_CLASS;
 
 public class ValidatorUtils {
-    public final static String CASH_REGEX = "[0-9]+\\.?[0-9]?[0-9]?";
+    public final static String CASH_REGEX = "-?[0-9]+\\.?[0-9]?[0-9]?";
+    public final static String CASH_EMPTY_REGEX = "^(-?[0-9]+\\.?[0-9]?[0-9]?)?$";
     public final static String CASH_ERROR = "Please enter a valid dollar amount";
     public final static String BLANK_REGEX = "(.|\\s)*\\S(.|\\s)*";
     public final static String BLANK_ERROR = "This field must not be blank";
-    public final static String INT_REGEX = "[0-9]*";
+    public final static String INT_REGEX = "-?[0-9]*";
     public final static String INT_ERROR = "Please enter a valid number";
     public final static String DATE_REGEX = "^(0?[1-9]|[12][0-9]|3[01])/(0?[1-9]|1[012])/((19|20)?\\d\\d)$";
 
@@ -43,6 +44,7 @@ public class ValidatorUtils {
         field.getValidator().validProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue) {
                 validationLabel.setVisible(false);
+                field.setStyle("-fx-background-color: white;-fx-text-fill: black;");
                 if(disableButton!=null)
                     disableButton.setDisable(false);
                 field.pseudoClassStateChanged(INVALID_PSEUDO_CLASS, false);
@@ -54,6 +56,7 @@ public class ValidatorUtils {
                 List<Constraint> constraints = field.validate();
                 if (!constraints.isEmpty()) {
                     field.pseudoClassStateChanged(INVALID_PSEUDO_CLASS, true);
+                    field.setStyle("-fx-background-color: red;-fx-text-fill: white;");
                     validationLabel.setText(constraints.get(0).getMessage());
                     validationLabel.setStyle("-fx-text-fill: red;");
                     validationLabel.setVisible(true);
