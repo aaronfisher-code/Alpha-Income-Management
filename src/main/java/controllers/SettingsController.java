@@ -8,12 +8,19 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.DirectoryChooser;
+import javafx.stage.FileChooser;
+import models.CellDataPoint;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import utils.LegacyImportTool;
+import utils.WorkbookProcessor;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.sql.*;
+import java.time.ZoneId;
 
 public class SettingsController extends Controller{
 
@@ -51,5 +58,17 @@ public class SettingsController extends Controller{
 		filePathField.setText(selectedDirectory.getAbsolutePath());
 	}
 
+	@FXML
+	private void legacyImport() throws IOException {
+		FileChooser fileChooser = new FileChooser();
+		fileChooser.setTitle("Open Archived file");
+		fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("XLSM Files", "*.xlsm"));
+		File newfile = fileChooser.showOpenDialog(main.getStg());
+		if (newfile != null) {
+			FileInputStream file = new FileInputStream(newfile);
+			XSSFWorkbook workbook = new XSSFWorkbook(file);
+			LegacyImportTool wbp = new LegacyImportTool(workbook);
+		}
+	}
 	
 }
