@@ -41,7 +41,7 @@ public class MainMenuController extends Controller {
     private VBox sidebar,buttonPane;
     @FXML
     private Button targetGraphButton,eodDataEntryButton,accountPaymentsButton,rosterButton,accountsButton,
-            invoiceTrackingButton,expiryTrackerButton,basCheckerButton,monthlySummaryButton,settingsButton;
+            invoiceTrackingButton,expiryTrackerButton,basCheckerButton,budgetExpensesButton,monthlySummaryButton,settingsButton;
     @FXML
     private BorderPane contentPane,topPane;
     @FXML
@@ -274,6 +274,7 @@ public class MainMenuController extends Controller {
     public void loadInvoiceTracking(){changePage(invoiceTrackingButton,"/views/FXML/InvoiceEntry.fxml");}
     public void loadExpiryTracker(){changePage(expiryTrackerButton,"/views/FXML/AccountEdit.fxml");}
     public void loadBASChecker(){changePage(basCheckerButton,"/views/FXML/BASCheckerPage.fxml");}
+    public void loadBudgetExpenses(){changePage(budgetExpensesButton,"/views/FXML/BudgetAndExpensesPage.fxml");}
     public void loadMonthlySummary(){changePage(monthlySummaryButton,"/views/FXML/MonthlySummary.fxml");}
     public void loadSettings(){changePage(settingsButton,"/views/FXML/SettingsPage.fxml");}
 

@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import io.github.palexdev.materialfx.controls.MFXButton?>
+<?import io.github.palexdev.materialfx.controls.MFXTextField?>
+<?import io.github.palexdev.materialfx.font.MFXFontIcon?>
+<?import java.net.URL?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.Cursor?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.paint.Color?>
+<?import javafx.scene.text.Font?>
+
+<StackPane fx:id="backgroundPane" prefHeight="724.0" prefWidth="1080.0" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.BudgetAndExpensesController">
+   <children>
+      <BorderPane prefWidth="955.0" style="-fx-background-color: TRANSPARENT;">
+         <padding>
+            <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+         </padding>
+         <effect>
+            <DropShadow height="24.0" offsetY="4.0" radius="11.5" width="24.0">
+               <color>
+                  <Color opacity="0.10000000149011612" />
+               </color>
+            </DropShadow>
+         </effect>
+         <top>
+            <BorderPane style="-fx-background-color: #F3F2F7; -fx-background-radius: 10;" BorderPane.alignment="CENTER">
+               <padding>
+                  <Insets bottom="12.0" left="10.0" right="10.0" top="10.0" />
+               </padding>
+               <left>
+                  <FlowPane fx:id="datePickerPane" hgap="5.0" prefHeight="38.0" prefWidth="575.0" prefWrapLength="495.0" snapToPixel="false" vgap="5.0" BorderPane.alignment="CENTER">
+                     <children>
+                        <Label prefHeight="32.0" styleClass="headingText" text="NOW SHOWING THE MONTH OF:" textFill="#6e6b7b">
+                           <font>
+                              <Font size="17.0" />
+                           </font>
+                           <FlowPane.margin>
+                              <Insets right="10.0" />
+                           </FlowPane.margin>
+                        </Label>
+                        <StackPane fx:id="monthSelector" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" style="-fx-background-color: TRANSPARENT;">
+                           <children>
+                              <MFXTextField fx:id="monthSelectorField" allowEdit="false" borderGap="0.0" editable="false" floatMode="DISABLED" prefWidth="200.0" selectable="false" text="Feb 28, 2022">
+                                 <StackPane.margin>
+                                    <Insets />
+                                 </StackPane.margin>
+                                 <padding>
+                                    <Insets bottom="10.0" left="5.0" top="10.0" />
+                                 </padding>
+                                 <opaqueInsets>
+                                    <Insets />
+                                 </opaqueInsets>
+                                 <textFill>
+                                    <Color red="0.4313725531101227" green="0.41960784792900085" blue="0.48235294222831726" opacity="0.8700000047683716" />
+                                 </textFill>
+                              </MFXTextField>
+                              <MFXButton contentDisplay="GRAPHIC_ONLY" rippleAnimateShadow="true" style="-fx-background-radius: 25; -fx-border-radius: 25;" StackPane.alignment="CENTER_RIGHT">
+                                 <graphic>
+                                    <MFXFontIcon fx:id="calIcon" description="mfx-calendar-alt-semi-dark" onMouseClicked="#openMonthSelector" size="20.0">
+                                       <color>
+                                          <Color red="0.4313725531101227" green="0.41960784792900085" blue="0.48235294222831726" />
+                                       </color>
+                                    </MFXFontIcon>
+                                 </graphic>
+                                 <StackPane.margin>
+                                    <Insets bottom="5.0" right="3.0" top="5.0" />
+                                 </StackPane.margin>
+                              </MFXButton>
+                           </children>
+                        </StackPane>
+                        <Button alignment="TOP_CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#monthBackward" prefHeight="30.0" prefWidth="20.0" style="-fx-background-color: #F3F2F7; -fx-padding: 1;" text="&lt;" textFill="#b2bac9">
+                           <font>
+                              <Font size="19.0" />
+                           </font>
+                           <opaqueInsets>
+                              <Insets />
+                           </opaqueInsets>
+                           <cursor>
+                              <Cursor fx:constant="HAND" />
+                           </cursor>
+                        </Button>
+                        <Button alignment="TOP_CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#monthForward" prefHeight="30.0" prefWidth="20.0" style="-fx-background-color: #f3F2F7; -fx-padding: 1;" text="&gt;" textFill="#b2bac9">
+                           <font>
+                              <Font size="19.0" />
+                           </font>
+                           <opaqueInsets>
+                              <Insets />
+                           </opaqueInsets>
+                           <cursor>
+                              <Cursor fx:constant="HAND" />
+                           </cursor>
+                        </Button>
+                     </children>
+                     <padding>
+                        <Insets top="5.0" />
+                     </padding>
+                  </FlowPane>
+               </left>
+               <right>
+                  <HBox alignment="CENTER" BorderPane.alignment="CENTER" />
+               </right>
+               <BorderPane.margin>
+                  <Insets bottom="20.0" />
+               </BorderPane.margin>
+            </BorderPane>
+         </top>
+         <center>
+            <VBox fillWidth="false" maxHeight="1.7976931348623157E308" spacing="20.0" BorderPane.alignment="CENTER">
+               <children>
+                  <VBox style="-fx-background-color: White; -fx-background-radius: 10;">
+                     <children>
+                        <Label text="Daily expenses Calculator" underline="true">
+                           <padding>
+                              <Insets left="15.0" top="10.0" />
+                           </padding>
+                           <font>
+                              <Font size="14.0" />
+                           </font>
+                        </Label>
+                        <GridPane styleClass="mygridStyle">
+                          <columnConstraints>
+                            <ColumnConstraints fillWidth="false" hgrow="NEVER" minWidth="10.0" />
+                            <ColumnConstraints fillWidth="false" hgrow="NEVER" minWidth="10.0" />
+                              <ColumnConstraints hgrow="SOMETIMES" minWidth="200.0" />
+                          </columnConstraints>
+                          <rowConstraints>
+                            <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                            <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                              <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                              <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                              <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                              <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                              <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                              <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                              <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                          </rowConstraints>
+                           <children>
+                              <Label text="General">
+                                 <font>
+                                    <Font name="System Bold" size="12.0" />
+                                 </font>
+                                 <padding>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                 </padding>
+                              </Label>
+                              <Label text="No. days this month" GridPane.columnIndex="1">
+                                 <padding>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                 </padding>
+                              </Label>
+                              <Label text="No. Open Days" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                                 <padding>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                 </padding>
+                              </Label>
+                              <Label text="No. Partial Days" GridPane.columnIndex="1" GridPane.rowIndex="2">
+                                 <padding>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                 </padding>
+                              </Label>
+                              <Label text="Rent" GridPane.rowIndex="3">
+                                 <padding>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                 </padding>
+                                 <font>
+                                    <Font name="System Bold" size="12.0" />
+                                 </font>
+                              </Label>
+                              <Label text="Monthly Rent (ex GST)" GridPane.columnIndex="1" GridPane.rowIndex="3">
+                                 <padding>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                 </padding>
+                              </Label>
+                              <Label text="Daily Rent" GridPane.columnIndex="1" GridPane.rowIndex="4">
+                                 <padding>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                 </padding>
+                              </Label>
+                              <Label text="Weekly wages" GridPane.columnIndex="1" GridPane.rowIndex="5">
+                                 <padding>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                 </padding>
+                              </Label>
+                              <Label text="Wages" GridPane.rowIndex="5">
+                                 <padding>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                 </padding>
+                                 <font>
+                                    <Font name="System Bold" size="12.0" />
+                                 </font>
+                              </Label>
+                              <Label text="Outgoings" GridPane.rowIndex="6">
+                                 <padding>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                 </padding>
+                                 <font>
+                                    <Font name="System Bold" size="12.0" />
+                                 </font>
+                              </Label>
+                              <Label text="Daily outgoings (previously detirmined)           " GridPane.columnIndex="1" GridPane.rowIndex="6">
+                                 <padding>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                 </padding>
+                              </Label>
+                              <Label text="Total Daily average Rent and expenses      " GridPane.rowIndex="7">
+                                 <padding>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                 </padding>
+                                 <font>
+                                    <Font name="System Bold" size="12.0" />
+                                 </font>
+                              </Label>
+                              <Label text="Loan" GridPane.rowIndex="8">
+                                 <padding>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                 </padding>
+                                 <font>
+                                    <Font name="System Bold" size="12.0" />
+                                 </font>
+                              </Label>
+                              <Label text="Monthly loan expense" GridPane.columnIndex="1" GridPane.rowIndex="8">
+                                 <padding>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                 </padding>
+                              </Label>
+                              <MFXTextField fx:id="numDaysField" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="2" />
+                              <MFXTextField fx:id="numOpenDaysField" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+                              <MFXTextField fx:id="numPartialDaysField" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="2" GridPane.rowIndex="2" />
+                              <MFXTextField fx:id="dailyRentField" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="2" GridPane.rowIndex="4" />
+                              <MFXTextField fx:id="weeklyWagesField" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="2" GridPane.rowIndex="5" />
+                              <MFXTextField fx:id="totalAvgField" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="2" GridPane.rowIndex="7" />
+                              <MFXTextField fx:id="monthlyRentField" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="2" GridPane.rowIndex="3" />
+                              <MFXTextField fx:id="dailyOutgoingsField" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="2" GridPane.rowIndex="6" />
+                              <MFXTextField fx:id="monthlyLoanField" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="2" GridPane.rowIndex="8" />
+                           </children>
+                           <padding>
+                              <Insets bottom="15.0" left="10.0" right="10.0" top="15.0" />
+                           </padding>
+                        </GridPane>
+                     </children>
+                  </VBox>
+                  <GridPane gridLinesVisible="true" style="-fx-background-color: WHITE; -fx-background-radius: 10;" styleClass="mygridStyle">
+                     <columnConstraints>
+                        <ColumnConstraints hgrow="NEVER" minWidth="10.0" />
+                        <ColumnConstraints hgrow="NEVER" maxWidth="1.7976931348623157E308" minWidth="120.0" />
+                        <ColumnConstraints hgrow="NEVER" maxWidth="1.7976931348623157E308" minWidth="120.0" />
+                        <ColumnConstraints hgrow="NEVER" maxWidth="1.7976931348623157E308" minWidth="120.0" />
+                     </columnConstraints>
+                     <rowConstraints>
+                        <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                        <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                        <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                        <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                        <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                     </rowConstraints>
+                     <children>
+                        <Label maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" styleClass="headerCell" text="End of month figures" underline="true">
+                           <padding>
+                              <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                           </padding>
+                        </Label>
+                        <Label maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" styleClass="headerCell" text="6CPA Income" GridPane.rowIndex="1">
+                           <padding>
+                              <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                           </padding>
+                        </Label>
+                        <Label maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" styleClass="headerCell" text="Lantern Pay Income" GridPane.rowIndex="2">
+                           <padding>
+                              <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                           </padding>
+                        </Label>
+                        <Label maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" styleClass="headerCell" text="Other direct debit income" GridPane.rowIndex="3">
+                           <padding>
+                              <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                           </padding>
+                        </Label>
+                        <Label maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" styleClass="headerCell" text="ATO - GST BAS refund" GridPane.rowIndex="4">
+                           <padding>
+                              <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                           </padding>
+                        </Label>
+                        <Label maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" styleClass="headerCell" text="Income from xero" GridPane.columnIndex="1">
+                           <padding>
+                              <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                           </padding>
+                        </Label>
+                        <Label maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" styleClass="headerCell" text="From Spreadsheet" GridPane.columnIndex="2">
+                           <padding>
+                              <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                           </padding>
+                        </Label>
+                        <Label maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" styleClass="headerCell" text="Variance" GridPane.columnIndex="3">
+                           <padding>
+                              <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                           </padding>
+                        </Label>
+                        <MFXTextField fx:id="cpaIncomeXero" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                        <MFXTextField fx:id="cpaIncomeSpreadsheet" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+                        <MFXTextField fx:id="cpaIncomeVariance" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="3" GridPane.rowIndex="1" />
+                        <MFXTextField fx:id="lanternPayIncomeXero" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                        <MFXTextField fx:id="lanternPayIncomeSpreadsheet" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="2" GridPane.rowIndex="2" />
+                        <MFXTextField fx:id="lanternPayIncomeVariance" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="3" GridPane.rowIndex="2" />
+                        <MFXTextField fx:id="otherIncomeXero" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                        <MFXTextField fx:id="otherIncomeSpreadsheet" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="2" GridPane.rowIndex="3" />
+                        <MFXTextField fx:id="otherIncomeVariance" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="3" GridPane.rowIndex="3" />
+                        <MFXTextField fx:id="atoGSTrefundXero" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+                        <MFXTextField fx:id="atoGSTrefundSpreadsheet" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="2" GridPane.rowIndex="4" />
+                        <MFXTextField fx:id="atoGSTrefundVariance" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="3" GridPane.rowIndex="4" />
+                     </children>
+                     <padding>
+                        <Insets bottom="15.0" left="10.0" right="10.0" top="15.0" />
+                     </padding>
+                  </GridPane>
+                  <HBox alignment="CENTER_LEFT" maxWidth="1.7976931348623157E308" spacing="20.0" style="-fx-background-color: WHITE; -fx-background-radius: 10;">
+                     <children>
+                        <MFXButton fx:id="saveButton" buttonType="RAISED" depthLevel="LEVEL3" minHeight="30.0" minWidth="150.0" prefHeight="40.0" style="-fx-background-color: #0F60FF;" text="Save" textFill="WHITE" />
+                        <Label fx:id="errorLabel" text="Please ensure all values are entered correctly!" textFill="RED" visible="false" />
+                     </children>
+                     <padding>
+                        <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                     </padding>
+                  </HBox>
+               </children>
+            </VBox>
+         </center>
+      </BorderPane>
+   </children>
+   <stylesheets>
+      <URL value="@../CSS/application.css" />
+      <URL value="@../CSS/BASCheckerPage.css" />
+   </stylesheets>
+</StackPane>
