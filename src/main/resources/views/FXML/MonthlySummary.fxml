@@ -28,27 +28,118 @@
                   <Insets />
                </BorderPane.margin>
                <children>
-                  <TableView fx:id="summaryTable" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" VBox.vgrow="ALWAYS">
+                  <TableView fx:id="summaryTable" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" stylesheets="@../CSS/MonthlySummaryPage.css" VBox.vgrow="ALWAYS">
                     <columns>
-                      <TableColumn fx:id="dateCol" prefWidth="75.0" styleClass="defaultColumn" text="Date" />
-                      <TableColumn fx:id="durationCol" prefWidth="75.0" styleClass="defaultColumn" text="Duration of&#10;day&#10;(0-1)" />
-                        <TableColumn fx:id="scriptsCol" prefWidth="75.0" styleClass="defaultColumn" text="No. of&#10;scripts" />
-                        <TableColumn fx:id="customersCol" prefWidth="75.0" styleClass="defaultColumn" text="No. of&#10;Customers" />
-                        <TableColumn fx:id="itemsCol" prefWidth="75.0" styleClass="defaultColumn" text="No. of&#10;items" />
-                        <TableColumn fx:id="otcItemsCol" prefWidth="75.0" styleClass="defaultColumn" text="No. of OTC&#10;items" />
-                        <TableColumn fx:id="itemsPerCustomerCol" prefWidth="75.0" styleClass="yellowColumn" text="Items/&#10;Customer" />
-                        <TableColumn fx:id="otcPerCustomerCol" prefWidth="75.0" styleClass="yellowColumn" text="OTC/&#10;Customer" />
-                        <TableColumn fx:id="dollarPerCustomerCol" prefWidth="75.0" styleClass="yellowColumn" text="\$/&#10;Customer" />
-                        <TableColumn fx:id="otcDollarPerCustomerCol" prefWidth="75.0" styleClass="yellowColumn" text="OTC $/&#10;Customer" />
-                        <TableColumn fx:id="totalIncomeCol" prefWidth="75.0" styleClass="blueColumn" text="Total income&#10;(in-store sales&#10;only)" />
-                        <TableColumn fx:id="gpDollarCol" prefWidth="75.0" styleClass="orangeColumn" text="GP ($)" />
-                        <TableColumn fx:id="gpPercentCol" prefWidth="75.0" styleClass="orangeColumn" text="GP %" />
-                        <TableColumn fx:id="rentAndOngoingsCol" prefWidth="75.0" styleClass="orangeColumn" text="Rent and&#10;outgoings" />
-                        <TableColumn fx:id="wagesCol" prefWidth="75.0" styleClass="orangeColumn" text="Wages" />
-                        <TableColumn fx:id="zReportProfitCol" prefWidth="75.0" styleClass="redColumn" text="Z report&#10;Profit" />
-                        <TableColumn fx:id="runningZProfitCol" prefWidth="75.0" styleClass="redColumn" text="Running&#10;Z Profit" />
-                        <TableColumn fx:id="tillBalanceCol" prefWidth="75.0" styleClass="greenColumn" text="Till&#10;Balance" />
-                        <TableColumn fx:id="runningTillBalanceCol" prefWidth="75.0" styleClass="greenColumn" text="Running Till&#10;Balance" />
+                      <TableColumn fx:id="dateCol" prefWidth="75.0" sortable="false" text="Date" />
+                      <TableColumn fx:id="durationCol" prefWidth="75.0" sortable="false" text="Duration of&#10;day&#10;(0-1)" />
+                        <TableColumn fx:id="scriptsCol" prefWidth="75.0" sortable="false" text="No. of&#10;scripts" />
+                        <TableColumn fx:id="customersCol" prefWidth="75.0" sortable="false" text="No. of&#10;Customers" />
+                        <TableColumn fx:id="itemsCol" prefWidth="75.0" sortable="false" text="No. of&#10;items" />
+                        <TableColumn fx:id="otcItemsCol" prefWidth="75.0" sortable="false" text="No. of OTC&#10;items" />
+                        <TableColumn fx:id="itemsPerCustomerCol" prefWidth="75.0" sortable="false" styleClass="yellowColumn">
+                           <graphic>
+                              <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="100.0" minWidth="100.0" style="-fx-background-color: #ffd966;" styleClass="yellowHeader" text="ITEMS/&#10;CUSTOMER">
+                                 <padding>
+                                    <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                                 </padding>
+                              </Label>
+                           </graphic></TableColumn>
+                        <TableColumn fx:id="otcPerCustomerCol" prefWidth="75.0" sortable="false" styleClass="yellowColumn">
+                           <graphic>
+                              <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="100.0" minWidth="100.0" style="-fx-background-color: #ffd966;" styleClass="yellowHeader" text="OTC/&#10;CUSTOMER">
+                                 <padding>
+                                    <Insets bottom="4.0" left="4.0" right="4.0" top="4.0" />
+                                 </padding>
+                              </Label>
+                           </graphic></TableColumn>
+                        <TableColumn fx:id="dollarPerCustomerCol" prefWidth="75.0" sortable="false" styleClass="yellowColumn">
+                           <graphic>
+                              <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="100.0" minWidth="100.0" style="-fx-background-color: #ffd966;" styleClass="yellowHeader" text="\$/&#10;CUSTOMER">
+                                 <padding>
+                                    <Insets bottom="4.0" left="4.0" right="4.0" top="4.0" />
+                                 </padding>
+                              </Label>
+                           </graphic></TableColumn>
+                        <TableColumn fx:id="otcDollarPerCustomerCol" prefWidth="75.0" sortable="false" styleClass="yellowColumn">
+                           <graphic>
+                              <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="100.0" minWidth="100.0" style="-fx-background-color: #ffd966;" styleClass="yellowHeader" text="OTC $/&#10;CUSTOMER">
+                                 <padding>
+                                    <Insets bottom="4.0" left="4.0" right="4.0" top="4.0" />
+                                 </padding>
+                              </Label>
+                           </graphic></TableColumn>
+                        <TableColumn fx:id="totalIncomeCol" prefWidth="75.0" sortable="false" styleClass="blueColumn">
+                           <graphic>
+                              <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="100.0" minWidth="100.0" style="-fx-background-color: #8db3e2;" styleClass="blueHeader" text="TOTAL INCOME&#10;(IN-STORE SALES&#10;ONLY)">
+                                 <padding>
+                                    <Insets bottom="4.0" left="4.0" right="4.0" top="4.0" />
+                                 </padding>
+                              </Label>
+                           </graphic></TableColumn>
+                        <TableColumn fx:id="gpDollarCol" prefWidth="75.0" sortable="false" styleClass="orangeColumn">
+                           <graphic>
+                              <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="100.0" minWidth="100.0" style="-fx-background-color: #fabf8f;" styleClass="orangeHeader" text="GP ($)">
+                                 <padding>
+                                    <Insets bottom="4.0" left="4.0" right="4.0" top="4.0" />
+                                 </padding>
+                              </Label>
+                           </graphic></TableColumn>
+                        <TableColumn fx:id="gpPercentCol" prefWidth="75.0" sortable="false" styleClass="orangeColumn">
+                           <graphic>
+                              <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="100.0" minWidth="100.0" style="-fx-background-color: #fabf8f;" styleClass="orangeHeader" text="GP %">
+                                 <padding>
+                                    <Insets bottom="4.0" left="4.0" right="4.0" top="4.0" />
+                                 </padding>
+                              </Label>
+                           </graphic></TableColumn>
+                        <TableColumn fx:id="rentAndOutgoingsCol" prefWidth="75.0" sortable="false" styleClass="orangeColumn">
+                           <graphic>
+                              <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="100.0" minWidth="100.0" style="-fx-background-color: #fabf8f;" styleClass="orangeHeader" text="RENT AND&#10;OUTGOINGS">
+                                 <padding>
+                                    <Insets bottom="4.0" left="4.0" right="4.0" top="4.0" />
+                                 </padding>
+                              </Label>
+                           </graphic></TableColumn>
+                        <TableColumn fx:id="wagesCol" prefWidth="75.0" sortable="false" styleClass="orangeColumn">
+                           <graphic>
+                              <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="100.0" minWidth="100.0" style="-fx-background-color: #fabf8f;" styleClass="orangeHeader" text="WAGES">
+                                 <padding>
+                                    <Insets bottom="4.0" left="4.0" right="4.0" top="4.0" />
+                                 </padding>
+                              </Label>
+                           </graphic></TableColumn>
+                        <TableColumn fx:id="zReportProfitCol" prefWidth="75.0" sortable="false" styleClass="redColumn">
+                           <graphic>
+                              <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="100.0" minWidth="100.0" style="-fx-background-color: #e06666;" styleClass="redHeader" text="Z REPORT&#10;PROFIT">
+                                 <padding>
+                                    <Insets bottom="4.0" left="4.0" right="4.0" top="4.0" />
+                                 </padding>
+                              </Label>
+                           </graphic></TableColumn>
+                        <TableColumn fx:id="runningZProfitCol" prefWidth="75.0" sortable="false" styleClass="redColumn">
+                           <graphic>
+                              <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="100.0" minWidth="100.0" style="-fx-background-color: #e06666;" styleClass="redHeader" text="RUNNING&#10;Z PROFIT">
+                                 <padding>
+                                    <Insets bottom="4.0" left="4.0" right="4.0" top="4.0" />
+                                 </padding>
+                              </Label>
+                           </graphic></TableColumn>
+                        <TableColumn fx:id="tillBalanceCol" prefWidth="75.0" sortable="false" styleClass="greenColumn">
+                           <graphic>
+                              <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="100.0" minWidth="100.0" style="-fx-background-color: #b6d7a8;" text="TILL&#10;BALANCE">
+                                 <padding>
+                                    <Insets bottom="4.0" left="4.0" right="4.0" top="4.0" />
+                                 </padding>
+                              </Label>
+                           </graphic></TableColumn>
+                        <TableColumn fx:id="runningTillBalanceCol" prefWidth="75.0" sortable="false" styleClass="greenColumn">
+                           <graphic>
+                              <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="100.0" minWidth="100.0" style="-fx-background-color: #b6d7a8;" text="RUNNING TILL&#10;BALANCE">
+                                 <padding>
+                                    <Insets bottom="4.0" left="4.0" right="4.0" top="4.0" />
+                                 </padding>
+                              </Label>
+                           </graphic></TableColumn>
                     </columns>
                      <columnResizePolicy>
                         <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />

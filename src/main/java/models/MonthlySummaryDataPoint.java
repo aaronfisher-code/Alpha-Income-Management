@@ -3,6 +3,7 @@ package models;
 import javafx.collections.ObservableList;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 public class MonthlySummaryDataPoint {
 
@@ -33,25 +34,25 @@ public class MonthlySummaryDataPoint {
 		date = dayOfMonth;
 		dayDuration = 1; //TODO: link day duration with roster
 		for(TillReportDataPoint t:currentTillReportDataPoints){
-			if(t.getAssignedDate()==date&&t.getKey().equals("Script Count"))
+			if(t.getAssignedDate().equals(date)&&t.getKey().equals("Script Count"))
 				noOfScripts = t.getQuantity();
-			if(t.getAssignedDate()==date&&t.getKey().equals("Total Customers Served"))
+			if(t.getAssignedDate().equals(date)&&t.getKey().equals("Total Customers Served"))
 				noOfCustomers = t.getQuantity();
-			if(t.getAssignedDate()==date&&t.getKey().equals("Total Sales"))
+			if(t.getAssignedDate().equals(date)&&t.getKey().equals("Total Sales"))
 				noOfItems = t.getQuantity();
-			if(t.getAssignedDate()==date&&t.getKey().equals("Total Sales-OTC Sales"))
+			if(t.getAssignedDate().equals(date)&&t.getKey().equals("Total Sales-OTC Sales"))
 				noOfOTCItems = t.getQuantity();
-			if(t.getAssignedDate()==date&&t.getKey().equals("Avg. OTC Sales Per Customer"))
+			if(t.getAssignedDate().equals(date)&&t.getKey().equals("Avg. OTC Sales Per Customer"))
 				otcDollarPerCustomer = t.getAmount();
-			if(t.getAssignedDate()==date&&t.getKey().equals("Govt Recovery"))
+			if(t.getAssignedDate().equals(date)&&t.getKey().equals("Govt Recovery"))
 				govtRecovery = t.getAmount();
-			if(t.getAssignedDate()==date&&t.getKey().equals("Gross Profit ($)"))
+			if(t.getAssignedDate().equals(date)&&t.getKey().equals("Gross Profit ($)"))
 				grossProfitDollars = t.getAmount();
-			if(t.getAssignedDate()==date&&t.getKey().equals("Total Government Contribution"))
+			if(t.getAssignedDate().equals(date)&&t.getKey().equals("Total Government Contribution"))
 				totalGovtContribution = t.getAmount();
 		}
 		for(EODDataPoint e: currentEODDataPoints){
-			if(e.getDate() == date){
+			if(e.getDate().equals(date)){
 				totalIncome=e.getCashAmount()
 						+e.getAmexAmount()
 						+e.getChequeAmount()
@@ -80,16 +81,18 @@ public class MonthlySummaryDataPoint {
 		runningZProfit += zReportProfit;
 		runningTillBalance += tillBalance;
 		for(MonthlySummaryDataPoint m: monthlySummaryPoints){
-			runningZProfit += m.getzReportProfit();
+			runningZProfit += m.getZReportProfit();
 			runningTillBalance += m.getTillBalance();
 		}
-
-
-
 	}
 
 	public LocalDate getDate() {
 		return date;
+	}
+
+	public String getDateString() {
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+		return formatter.format(date);
 	}
 
 	public void setDate(LocalDate date) {
@@ -208,11 +211,11 @@ public class MonthlySummaryDataPoint {
 		this.wages = wages;
 	}
 
-	public double getzReportProfit() {
+	public double getZReportProfit() {
 		return zReportProfit;
 	}
 
-	public void setzReportProfit(double zReportProfit) {
+	public void setZReportProfit(double zReportProfit) {
 		this.zReportProfit = zReportProfit;
 	}
 

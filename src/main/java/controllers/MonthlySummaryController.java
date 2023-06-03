@@ -7,8 +7,11 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.control.Label;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import models.*;
 import org.controlsfx.control.PopOver;
@@ -61,7 +64,7 @@ public class MonthlySummaryController extends DateSelectController{
 	@FXML
 	private TableColumn<?, ?> otcPerCustomerCol;
 	@FXML
-	private TableColumn<?, ?> rentAndOngoingsCol;
+	private TableColumn<?, ?> rentAndOutgoingsCol;
 	@FXML
 	private TableColumn<?, ?> runningZProfitCol;
 	@FXML
@@ -100,15 +103,47 @@ public class MonthlySummaryController extends DateSelectController{
 
 	@Override
 	public void fill() {
+//		itemsPerCustomerCol.getStyleClass().add("yellowColumn");
+//		System.out.println(itemsPerCustomerCol.getStyleClass().get(1));
+//		System.out.println(summaryTable.getStylesheets().get(0));
+		summaryTable.setSelectionModel(null);
+		dateCol.setCellValueFactory(new PropertyValueFactory<>("dateString"));
+		//Add center alignment to date column
+		
+		durationCol.setCellValueFactory(new PropertyValueFactory<>("dayDuration"));
+		customersCol.setCellValueFactory(new PropertyValueFactory<>("noOfCustomers"));
+		itemsCol.setCellValueFactory(new PropertyValueFactory<>("noOfItems"));
+		scriptsCol.setCellValueFactory(new PropertyValueFactory<>("noOfScripts"));
+		dollarPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("dollarPerCustomer"));
+		itemsPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("itemsPerCustomer"));
+		otcDollarPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("otcDollarPerCustomer"));
+		otcItemsCol.setCellValueFactory(new PropertyValueFactory<>("noOfOTCItems"));
+		otcPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("otcPerCustomer"));
+		totalIncomeCol.setCellValueFactory(new PropertyValueFactory<>("totalIncome"));
+		gpDollarCol.setCellValueFactory(new PropertyValueFactory<>("gpDollars"));
+		gpPercentCol.setCellValueFactory(new PropertyValueFactory<>("gpPercentage"));
+		wagesCol.setCellValueFactory(new PropertyValueFactory<>("wages"));
+		rentAndOutgoingsCol.setCellValueFactory(new PropertyValueFactory<>("rentAndOutgoings"));
+		runningZProfitCol.setCellValueFactory(new PropertyValueFactory<>("runningZProfit"));
+		zReportProfitCol.setCellValueFactory(new PropertyValueFactory<>("zReportProfit"));
+		tillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("tillBalance"));
+		runningTillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("runningTillBalance"));
 
-		setDate(LocalDate.now());
 		summaryTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
 		summaryTable.setFixedCellSize(25.0);
 		VBox.setVgrow(summaryTable, Priority.ALWAYS);
 		for(TableColumn tc: summaryTable.getColumns()){
-			tc.setPrefWidth(TableUtils.getColumnWidth(tc)+30);
+			if(tc.getGraphic()!=null){
+				Label l = (Label) tc.getGraphic();
+				tc.setPrefWidth(TableUtils.getColumnWidth(l)+30);
+				l.setMinWidth(TableUtils.getColumnWidth(l)+30);
+			}else{
+				tc.setPrefWidth(TableUtils.getColumnWidth(tc)+50);
+			}
+
 		}
-		Platform.runLater(() -> GUIUtils.customResize(summaryTable,runningTillBalanceCol));
+		Platform.runLater(() -> GUIUtils.customResize(summaryTable,runningTillBalanceCol,(Label) runningTillBalanceCol.getGraphic()));
+		setDate(LocalDate.now());
 
 	}
 

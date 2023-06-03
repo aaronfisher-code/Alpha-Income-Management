@@ -1,68 +1,51 @@
-/*.yellowColumn{*/
-/*    -fx-background-color: #ffd966;*/
-/*    -fx-text-fill: #6E6B7B;*/
-/*}*/
+.yellowColumn{
+    -fx-background-color: rgba(255, 244, 215, 0.5);
+}
 
-/*.yellowColumn .column-header,*/
-/*.yellowColumn .column-header .filler,*/
-/*.yellowColumn .column-header-background .filler {*/
-/*    -fx-background-color: #ffd966;*/
-/*}*/
+.yellowHeader{
+    -fx-background-color: #ffd966;
+}
 
-/*.blueColumn{*/
-/*    -fx-background-color: #8db3e2;*/
-/*    -fx-text-fill: #6E6B7B;*/
-/*}*/
+.blueColumn{
+    -fx-background-color: rgba(141, 179, 226, 0.3);
+}
 
-/*.blueColumn .column-header,*/
-/*.blueColumn .column-header .filler,*/
-/*.blueColumn .column-header-background .filler {*/
-/*    -fx-background-color: #8db3e2;*/
-/*}*/
+.blueHeader {
+    -fx-background-color: #8db3e2;
+}
 
-/*.orangeColumn{*/
-/*    -fx-background-color: #fabf8f;*/
-/*    -fx-text-fill: #6E6B7B;*/
-/*}*/
+.orangeColumn{
+    -fx-background-color: rgba(250, 191, 143, 0.3);
+}
 
-/*.orangeColumn .column-header,*/
-/*.orangeColumn .column-header .filler,*/
-/*.orangeColumn .column-header-background .filler {*/
-/*    -fx-background-color: #fabf8f;*/
-/*}*/
+.orangeHeader{
+    -fx-background-color: #fabf8f;
+}
 
-/*.redColumn{*/
-/*    -fx-background-color: #e06666;*/
-/*    -fx-text-fill: #6E6B7B;*/
-/*}*/
+.redColumn{
+    -fx-background-color: rgba(224, 102, 102, 0.3);
+}
 
-/*.redColumn .column-header,*/
-/*.redColumn .column-header .filler,*/
-/*.redColumn .column-header-background .filler {*/
-/*    -fx-background-color: #e06666;*/
-/*}*/
+.redHeader{
+    -fx-background-color: #e06666;
+}
 
-/*.pinkColumn{*/
-/*    -fx-background-color: #ff47ff;*/
-/*    -fx-text-fill: #6E6B7B;*/
-/*}*/
+.pinkColumn{
+    -fx-background-color: rgba(255, 71, 255, 0.3);
+}
 
-/*.pinkColumn .column-header,*/
-/*.pinkColumn .column-header .filler,*/
-/*.pinkColumn .column-header-background .filler {*/
-/*    -fx-background-color: #ff47ff;*/
-/*}*/
+.pinkHeader{
+    -fx-background-color: #ff47ff;
+}
 
-/*.greenColumn{*/
-/*    -fx-background-color: #b6d7a8;*/
-/*    -fx-text-fill: #6E6B7B;*/
-/*}*/
+.greenColumn{
+    -fx-background-color: rgba(182, 215, 168, 0.3);
+}
 
-/*.greenColumn .column-header,*/
-/*.greenColumn .column-header .filler,*/
-/*.greenColumn .column-header-background .filler {*/
-/*    -fx-background-color: #b6d7a8;*/
-/*}*/
+.greenHeader {
+    -fx-background-color: #b6d7a8;
+}
+
 
 .table-view .column-header * {
     -fx-background-color: #F3F2F7;
@@ -74,4 +57,22 @@
 .table-view .column-header-background .filler {
     -fx-background-color: #F3F2F7;
 }
+
+.center-aligned {
+    -fx-alignment: CENTER;
+}
+
+.table-view .table-column{
+    -fx-alignment: CENTER;
+}
+
+/*.table-row-cell {*/
+/*    !* Define the default (light) row color here. *!*/
+/*    -fx-background: white;*/
+/*}*/
+
+/*.table-row-cell:odd {*/
+/*    !* Define the alternate (dark) row color here. *!*/
+/*    -fx-background: lightgray;*/
+/*}*/
 
