@@ -21,6 +21,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.sql.*;
 import java.time.ZoneId;
+import java.util.List;
 
 public class SettingsController extends Controller{
 
@@ -63,11 +64,17 @@ public class SettingsController extends Controller{
 		FileChooser fileChooser = new FileChooser();
 		fileChooser.setTitle("Open Archived file");
 		fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("XLSM Files", "*.xlsm"));
-		File newfile = fileChooser.showOpenDialog(main.getStg());
-		if (newfile != null) {
-			FileInputStream file = new FileInputStream(newfile);
-			XSSFWorkbook workbook = new XSSFWorkbook(file);
-			LegacyImportTool wbp = new LegacyImportTool(workbook);
+		List<File> files = fileChooser.showOpenMultipleDialog(main.getStg());
+
+		if (files != null) {
+			for (File newfile : files) {
+				FileInputStream file = new FileInputStream(newfile);
+				XSSFWorkbook workbook = new XSSFWorkbook(file);
+				LegacyImportTool wbp = new LegacyImportTool(con, preparedStatement, main);
+				wbp.ImportStaffCopy(workbook);
+				System.out.println("Imported file: " + newfile.getName());
+			}
+			System.out.println("All done!");
 		}
 	}
 	
