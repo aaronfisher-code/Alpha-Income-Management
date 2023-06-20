@@ -205,10 +205,14 @@ public class BASCheckerController extends DateSelectController{
 			chequesTotal+=eod.getChequeAmount();
 			runningTillBalance+=eod.getTillBalance();
 		}
+		double totalSales = 0;
+		double gp = 0;
 		for(int i=1;i<daysInMonth+1;i++) {
 			LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(), i);
 			boolean foundMedicare = false;
 			boolean foundGST = false;
+			boolean foundSales = false;
+			boolean foundGP = false;
 			for (TillReportDataPoint tdp : currentTillDataPoints) {
 				if (tdp.getAssignedDate().equals(d) && tdp.getKey().equals("Govt Recovery")) {
 					medicareTotal += tdp.getAmount();
@@ -218,7 +222,15 @@ public class BASCheckerController extends DateSelectController{
 					gstTotal += tdp.getAmount();
 					foundGST = true;
 				}
-				if(foundMedicare&&foundGST){
+				if(tdp.getAssignedDate().equals(d)&&tdp.getKey().equals("Total Sales")){
+					totalSales += tdp.getAmount();
+					foundSales = true;
+				}
+				if(tdp.getAssignedDate().equals(d)&&tdp.getKey().equals("Gross Profit ($)")){
+					gp += tdp.getAmount();
+					foundGP = true;
+				}
+				if(foundMedicare&&foundGST&&foundSales&&foundGP){
 					break;
 				}
 			}
@@ -267,8 +279,24 @@ public class BASCheckerController extends DateSelectController{
 			resultSet = preparedStatement.executeQuery();
 			if(resultSet.next()){
 				cogsCheck1.setText(String.format("%.2f", resultSet.getDouble("total")));
-				cogsCheck2.setText(String.format("%.2f", resultSet.getDouble("total")));
-				cogsCheck3.setText("0.00");
+				double sohGrowth = 0;
+				LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(), daysInMonth);
+				for(EODDataPoint e: currentEODDataPoints){
+					if(e.getDate().equals(d)){
+						sohGrowth += e.getStockOnHandAmount();
+						break;
+					}
+				}
+				d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(), 1);
+				for(EODDataPoint e: currentEODDataPoints){
+					if(e.getDate().equals(d)){
+						sohGrowth -= e.getStockOnHandAmount();
+						break;
+					}
+				}
+				//total sales - gp($) + soh growth
+				cogsCheck2.setText(String.format("%.2f", totalSales-gp+sohGrowth));
+				cogsCheck3.setText(String.format("%.2f", Double.parseDouble(cogsCheck1.getText())-Double.parseDouble(cogsCheck2.getText())));
 			}
 		}catch(SQLException e){
 				e.printStackTrace();
