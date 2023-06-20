@@ -147,20 +147,20 @@ public class AccountPaymentsPageController extends DateSelectController{
 		entryFieldBox.getChildren().add(1,afx);
 
 		//Init Payments Table
-		contactCol = new TableColumn<>("CONTACT");
+		contactCol = new TableColumn<>("CONTACT NAME");
 		invNumberCol = new TableColumn<>("INVOICE NUMBER");
 		invDateCol = new TableColumn<>("INVOICE DATE");
 		dueDateCol = new TableColumn<>("DUE DATE");
 		descriptionCol = new TableColumn<>("DESCRIPTION");
 		unitAmountCol = new TableColumn<>("UNIT AMOUNT");
-		accountAdjustedCol = new TableColumn<>("ACCOUNT ADJUSTED?");
+		accountAdjustedCol = new TableColumn<>("ACCOUNT\nADJUSTED?");
 		contactCol.setCellValueFactory(new PropertyValueFactory<>("contactName"));
-		invNumberCol.setCellValueFactory(new PropertyValueFactory<>("invoiceNumber"));
-		invDateCol.setCellValueFactory(new PropertyValueFactory<>("invDate"));
-		dueDateCol.setCellValueFactory(new PropertyValueFactory<>("dueDate"));
+		invNumberCol.setCellValueFactory(new PropertyValueFactory<>("invoiceNumberString"));
+		invDateCol.setCellValueFactory(new PropertyValueFactory<>("invDateString"));
+		dueDateCol.setCellValueFactory(new PropertyValueFactory<>("dueDateString"));
 		descriptionCol.setCellValueFactory(new PropertyValueFactory<>("description"));
-		unitAmountCol.setCellValueFactory(new PropertyValueFactory<>("unitAmount"));
-		accountAdjustedCol.setCellValueFactory(new PropertyValueFactory<>("accountAdjusted"));
+		unitAmountCol.setCellValueFactory(new PropertyValueFactory<>("unitAmountString"));
+		accountAdjustedCol.setCellValueFactory(new PropertyValueFactory<>("accountAdjustedString"));
 		accountPaymentTable.getColumns().addAll(
 				contactCol,
 				invNumberCol,
@@ -555,7 +555,6 @@ public class AccountPaymentsPageController extends DateSelectController{
 				preparedStatement.setDouble(7, unitAmount);
 				preparedStatement.setBoolean(8, accountAdjustedBox.isSelected());
 				preparedStatement.setString(9, taxRate);
-				preparedStatement.setInt(10, accountPayment.getAccountPaymentID());
 				preparedStatement.executeUpdate();
 			} catch (SQLException ex) {
 				System.err.println(ex.getMessage());
@@ -572,10 +571,11 @@ public class AccountPaymentsPageController extends DateSelectController{
 				 "This action will permanently delete this Account payment from all systems,\n" +
 				 "Are you sure you still want to delete this Account payment?").thenAccept(buttonType -> {
 			 if (buttonType.equals(ButtonType.OK)) {
-				 String sql = "DELETE from accountPayments WHERE idaccountPayments = ?";
+				 String sql = "DELETE from accountPayments WHERE invoiceNo = ? AND storeID = ?";
 				 try {
 					 preparedStatement = con.prepareStatement(sql);
-					 preparedStatement.setInt(1, accountPayment.getAccountPaymentID());
+					 preparedStatement.setString(1, accountPayment.getInvoiceNumber());
+					 preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
 					 preparedStatement.executeUpdate();
 				 } catch (SQLException ex) {
 					 System.err.println(ex.getMessage());

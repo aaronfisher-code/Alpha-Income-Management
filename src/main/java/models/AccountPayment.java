@@ -4,10 +4,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.NumberFormat;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 public class AccountPayment {
-
-	private int accountPaymentID;
 	private String contactName;
 	private int contactID;
 	private String invoiceNumber;
@@ -22,7 +21,6 @@ public class AccountPayment {
 
 	public AccountPayment(ResultSet resultSet) {
 		try {
-			this.accountPaymentID = resultSet.getInt("idaccountPayments");
 			this.contactName = resultSet.getString("contactName");
 			this.contactID = resultSet.getInt("contactID");
 			this.invoiceNumber = resultSet.getString("invoiceNo");
@@ -37,18 +35,26 @@ public class AccountPayment {
 			e.printStackTrace();
 		}
 	}
-
-	public int getAccountPaymentID() {return accountPaymentID;}
-	public void setAccountPaymentID(int accountPaymentID) {this.accountPaymentID = accountPaymentID;}
 	public String getContactName() {return contactName;}
 	public void setContactName(String contactName) {this.contactName = contactName;}
 	public int getContactID() {return contactID;}
 	public void setContactID(int contactID) {this.contactID = contactID;}
 	public String getInvoiceNumber() {return invoiceNumber;}
+	public String getInvoiceNumberString() {return invoiceNumber==null?"":invoiceNumber;}
 	public void setInvoiceNumber(String invoiceNumber) {this.invoiceNumber = invoiceNumber;}
 	public LocalDate getInvDate() {return invDate;}
+
+	public String getInvDateString() {
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+		return formatter.format(invDate);
+	}
 	public void setInvDate(LocalDate invDate) {this.invDate = invDate;}
 	public LocalDate getDueDate() {return dueDate;}
+
+	public String getDueDateString() {
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+		return formatter.format(dueDate);
+	}
 	public void setDueDate(LocalDate dueDate) {this.dueDate = dueDate;}
 	public String getDescription() {return description;}
 	public void setDescription(String description) {this.description = description;}
@@ -57,6 +63,10 @@ public class AccountPayment {
 	public double getUnitAmount() {return unitAmount;}
 	public void setUnitAmount(double unitAmount) {this.unitAmount = unitAmount;}
 	public boolean isAccountAdjusted() {return accountAdjusted;}
+
+	public String getAccountAdjustedString() {
+		return accountAdjusted?"Y":"";
+	}
 	public void setAccountAdjusted(boolean accountAdjusted) {this.accountAdjusted = accountAdjusted;}
 	public String getAccountCode() {return accountCode;}
 	public void setAccountCode(String accountCode) {this.accountCode = accountCode;}
