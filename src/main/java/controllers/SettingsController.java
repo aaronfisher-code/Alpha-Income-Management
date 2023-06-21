@@ -11,6 +11,7 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import models.CellDataPoint;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import utils.LegacyImportTool;
 import utils.WorkbookProcessor;
@@ -20,8 +21,11 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.sql.*;
+import java.time.Month;
 import java.time.ZoneId;
+import java.time.format.TextStyle;
 import java.util.List;
+import java.util.Locale;
 
 public class SettingsController extends Controller{
 
@@ -66,12 +70,23 @@ public class SettingsController extends Controller{
 		fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("XLSM Files", "*.xlsm"));
 		List<File> files = fileChooser.showOpenMultipleDialog(main.getStg());
 
+		String password = "1234"; // replace with the actual password
+
 		if (files != null) {
 			for (File newfile : files) {
 				FileInputStream file = new FileInputStream(newfile);
-				XSSFWorkbook workbook = new XSSFWorkbook(file);
+				XSSFWorkbook workbook = (XSSFWorkbook) WorkbookFactory.create(file, password);
 				LegacyImportTool wbp = new LegacyImportTool(con, preparedStatement, main);
-				wbp.ImportStaffCopy(workbook);
+				if(newfile.getName().contains("owners")){
+					wbp.importOwnersCopy(workbook);
+					String filename = newfile.getName().substring(0, newfile.getName().lastIndexOf("."));
+					String[] parts = filename.split(" "); // split the filename into parts
+					String month = parts[parts.length - 2]; // second last part is the month
+					String year = parts[parts.length - 1]; // last part is the year
+					System.out.println("Currently importing: " + month + " " + year + " (Owner's Copy)");
+				}else{
+					wbp.ImportStaffCopy(workbook);
+				}
 				System.out.println("Imported file: " + newfile.getName());
 			}
 			System.out.println("All done!");

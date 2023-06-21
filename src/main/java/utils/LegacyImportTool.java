@@ -303,6 +303,67 @@ public class LegacyImportTool {
         }
     }
 
+    public void importOwnersCopy(XSSFWorkbook wb){
+        //creating a Sheet object to retrieve the object
+        XSSFSheet sheet = wb.getSheet("COGS");
+        for(int i=1;i<999;i++) {//arbitrarily large row count to hopefully catch all invoices
+            if (sheet.getRow(i).getCell(16) != null && sheet.getRow(i).getCell(16).getCellType() != CellType.BLANK){
+                String contactName = sheet.getRow(i).getCell(0).getStringCellValue();
+
+                try {
+                    //Check if contact name exists in db
+                    sql = "SELECT * FROM invoicesuppliers WHERE supplierName=? AND storeID=?";
+                    preparedStatement = con.prepareStatement(sql);
+                    preparedStatement.setString(1, contactName);
+                    preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
+                    resultSet = preparedStatement.executeQuery();
+                    int contactID;
+                    if (!resultSet.next()) {
+                        //insert contact name, store id, account code into db
+                        sql = "INSERT INTO invoicesuppliers (supplierName, storeID) VALUES (?,?)";
+                        preparedStatement = con.prepareStatement(sql);
+                        preparedStatement.setString(1, contactName);
+                        preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
+                        preparedStatement.executeUpdate();
+
+                        //get contact id
+                        sql = "SELECT * FROM invoicesuppliers WHERE supplierName=? AND storeID=?";
+                        preparedStatement = con.prepareStatement(sql);
+                        preparedStatement.setString(1, contactName);
+                        preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
+                        resultSet = preparedStatement.executeQuery();
+                        resultSet.next();
+                        contactID = resultSet.getInt("idinvoiceSuppliers");
+                    } else {
+                        //get contact ID
+                        contactID = resultSet.getInt("idinvoiceSuppliers");
+                    }
+                    sql = "INSERT INTO invoices (supplierID, invoiceNo, invoiceDate, dueDate, description, unitAmount, storeID, notes) VALUES (?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE supplierID=?, invoiceNo=?, invoiceDate=?, dueDate=?, description=?, unitAmount=?, storeID=?, notes=?";
+                    preparedStatement = con.prepareStatement(sql);
+                    preparedStatement.setInt(1, contactID);
+                    preparedStatement.setString(2, getCellAsString(sheet,i,10));
+                    preparedStatement.setDate(3, Date.valueOf(findDate(sheet,i,11)));
+                    preparedStatement.setDate(4, Date.valueOf(findDate(sheet,i,12)));
+                    preparedStatement.setString(5, getCellAsString(sheet,i,14));
+                    preparedStatement.setDouble(6, findNum(sheet,i,16));
+                    preparedStatement.setInt(7, main.getCurrentStore().getStoreID());
+                    preparedStatement.setString(8, "");
+                    preparedStatement.setInt(9, contactID);
+                    preparedStatement.setString(10, getCellAsString(sheet,i,10));
+                    preparedStatement.setDate(11, Date.valueOf(findDate(sheet,i,11)));
+                    preparedStatement.setDate(12, Date.valueOf(findDate(sheet,i,12)));
+                    preparedStatement.setString(13, getCellAsString(sheet,i,14));
+                    preparedStatement.setDouble(14, findNum(sheet,i,16));
+                    preparedStatement.setInt(15, main.getCurrentStore().getStoreID());
+                    preparedStatement.setString(16, "");
+                    preparedStatement.executeUpdate();
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+    }
+
     private String getCellAsString(XSSFSheet sheet, int row, int col) {
         DataFormatter formatter = new DataFormatter();
         return formatter.formatCellValue(sheet.getRow(row).getCell(col));

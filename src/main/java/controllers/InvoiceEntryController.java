@@ -25,6 +25,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
+import javafx.util.Callback;
 import models.*;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.controlsfx.control.PopOver;
@@ -36,6 +37,7 @@ import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
+import java.util.Comparator;
 import java.util.Locale;
 
 import static com.dlsc.gemsfx.DialogPane.Type.BLANK;
@@ -659,7 +661,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 			double unitAmount = Double.parseDouble(amountField.getText());
 			String notes = notesField.getText();
 
-			String sql = "UPDATE invoices SET supplierID = ?,storeID = ?,invoiceNo = ?, invoiceDate = ?, dueDate = ?,description = ?,unitAmount = ?,notes = ? WHERE idInvoices = ?";
+			String sql = "UPDATE invoices SET supplierID = ?,storeID = ?,invoiceNo = ?, invoiceDate = ?, dueDate = ?,description = ?,unitAmount = ?,notes = ? WHERE invoiceNo = ? AND storeID = ?";
 			try {
 				preparedStatement = con.prepareStatement(sql);
 				preparedStatement.setInt(1, contact.getContactID());
@@ -670,7 +672,8 @@ public class InvoiceEntryController extends DateSelectController implements acti
 				preparedStatement.setString(6, description);
 				preparedStatement.setDouble(7, unitAmount);
 				preparedStatement.setString(8, notes);
-				preparedStatement.setInt(9, invoice.getInvoiceID());
+				preparedStatement.setString(9, invoice.getInvoiceNo());
+				preparedStatement.setInt(10, main.getCurrentStore().getStoreID());
 				preparedStatement.executeUpdate();
 			} catch (SQLException ex) {
 				System.err.println(ex.getMessage());
@@ -686,10 +689,11 @@ public class InvoiceEntryController extends DateSelectController implements acti
 				"This action will permanently delete this Invoice from all systems,\n" +
 						"Are you sure you still want to delete this Invoice?").thenAccept(buttonType -> {
 			if (buttonType.equals(ButtonType.OK)) {
-				String sql = "DELETE from invoices WHERE idInvoices = ?";
+				String sql = "DELETE from invoices WHERE invoiceNo=? AND storeID=?";
 				try {
 					preparedStatement = con.prepareStatement(sql);
-					preparedStatement.setInt(1, invoice.getInvoiceID());
+					preparedStatement.setString(1, invoice.getInvoiceNo());
+					preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
 					preparedStatement.executeUpdate();
 				} catch (SQLException ex) {
 					System.err.println(ex.getMessage());

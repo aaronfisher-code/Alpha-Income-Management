@@ -8,7 +8,6 @@ import java.time.format.DateTimeFormatter;
 
 public class Invoice {
 
-	private int invoiceID;
 	private String supplierName;
 
 	private int storeID;
@@ -30,7 +29,6 @@ public class Invoice {
 
 	public Invoice(ResultSet resultSet) {
 		try {
-			this.invoiceID = resultSet.getInt("idInvoices");
 			this.supplierName = resultSet.getString("supplierName");
 			this.supplierID = resultSet.getInt("supplierID");
 			this.invoiceNo = resultSet.getString("invoiceNo");
@@ -39,7 +37,6 @@ public class Invoice {
 			this.description = resultSet.getString("description");
 			this.unitAmount = resultSet.getDouble("unitAmount");
 			this.storeID = resultSet.getInt("storeID");
-			this.credits = resultSet.getDouble("creditAmount");
 			this.notes = resultSet.getString("notes");
 			this.importedInvoiceAmount = resultSet.getDouble("amount");
 			this.credits = resultSet.getDouble("total_credits");
@@ -123,9 +120,5 @@ public class Invoice {
 	public String getNotes() {return notes;}
 
 	public void setNotes(String notes) {this.notes = notes;}
-
-	public int getInvoiceID() {return invoiceID;}
-
-	public void setInvoiceID(int invoiceID) {this.invoiceID = invoiceID;}
 
 }
