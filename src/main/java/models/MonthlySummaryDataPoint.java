@@ -2,6 +2,7 @@ package models;
 
 import javafx.collections.ObservableList;
 
+import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
@@ -33,6 +34,7 @@ public class MonthlySummaryDataPoint {
 	public MonthlySummaryDataPoint(LocalDate dayOfMonth, ObservableList<TillReportDataPoint> currentTillReportDataPoints, ObservableList<EODDataPoint> currentEODDataPoints, ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints) {
 		date = dayOfMonth;
 		dayDuration = 1; //TODO: link day duration with roster
+		double totalTakings = 0;
 		for(TillReportDataPoint t:currentTillReportDataPoints){
 			if(t.getAssignedDate().equals(date)&&t.getKey().equals("Script Count"))
 				noOfScripts = t.getQuantity();
@@ -50,6 +52,8 @@ public class MonthlySummaryDataPoint {
 				grossProfitDollars = t.getAmount();
 			if(t.getAssignedDate().equals(date)&&t.getKey().equals("Total Government Contribution"))
 				totalGovtContribution = t.getAmount();
+			if(t.getAssignedDate().equals(date)&&t.getKey().equals("Total Takings"))
+				totalTakings = t.getAmount();
 		}
 		for(EODDataPoint e: currentEODDataPoints){
 			if(e.getDate().equals(date)){
@@ -64,7 +68,7 @@ public class MonthlySummaryDataPoint {
 						+e.getChequeAmount()
 						+e.getEftposAmount()
 						+e.getGoogleSquareAmount()
-						-govtRecovery;
+						-totalTakings;
 			}
 		}
 		itemsPerCustomer = (noOfCustomers==0)?0:noOfItems/noOfCustomers;
@@ -111,12 +115,20 @@ public class MonthlySummaryDataPoint {
 		return noOfScripts;
 	}
 
+	public String getNoOfScriptsString() {
+		return (noOfScripts == 0)?"": String.valueOf((int)noOfScripts);
+	}
+
 	public void setNoOfScripts(double noOfScripts) {
 		this.noOfScripts = noOfScripts;
 	}
 
 	public double getNoOfCustomers() {
 		return noOfCustomers;
+	}
+
+	public String getNoOfCustomersString() {
+		return (noOfCustomers == 0)?"": String.valueOf((int)noOfCustomers);
 	}
 
 	public void setNoOfCustomers(double noOfCustomers) {
@@ -127,12 +139,20 @@ public class MonthlySummaryDataPoint {
 		return noOfItems;
 	}
 
+	public String getNoOfItemsString() {
+		return (noOfItems == 0)?"": String.valueOf((int)noOfItems);
+	}
+
 	public void setNoOfItems(double noOfItems) {
 		this.noOfItems = noOfItems;
 	}
 
 	public double getNoOfOTCItems() {
 		return noOfOTCItems;
+	}
+
+	public String getNoOfOTCItemsString() {
+		return (noOfOTCItems == 0)?"": String.valueOf((int)noOfOTCItems);
 	}
 
 	public void setNoOfOTCItems(double noOfOTCItems) {
@@ -143,12 +163,20 @@ public class MonthlySummaryDataPoint {
 		return itemsPerCustomer;
 	}
 
+	public String getItemsPerCustomerString() {
+		return (itemsPerCustomer == 0)?"": String.format("%.2f", itemsPerCustomer);
+	}
+
 	public void setItemsPerCustomer(double itemsPerCustomer) {
 		this.itemsPerCustomer = itemsPerCustomer;
 	}
 
 	public double getOtcPerCustomer() {
 		return otcPerCustomer;
+	}
+
+	public String getOtcPerCustomerString() {
+		return (otcPerCustomer == 0)?"": String.format("%.2f", otcPerCustomer);
 	}
 
 	public void setOtcPerCustomer(double otcPerCustomer) {
@@ -159,12 +187,20 @@ public class MonthlySummaryDataPoint {
 		return dollarPerCustomer;
 	}
 
+	public String getDollarPerCustomerString() {
+		return (dollarPerCustomer == 0)?"": NumberFormat.getCurrencyInstance().format(dollarPerCustomer);
+	}
+
 	public void setDollarPerCustomer(double dollarPerCustomer) {
 		this.dollarPerCustomer = dollarPerCustomer;
 	}
 
 	public double getOtcDollarPerCustomer() {
 		return otcDollarPerCustomer;
+	}
+
+	public String getOtcDollarPerCustomerString() {
+		return (otcDollarPerCustomer == 0)?"": NumberFormat.getCurrencyInstance().format(otcDollarPerCustomer);
 	}
 
 	public void setOtcDollarPerCustomer(double otcDollarPerCustomer) {
@@ -175,12 +211,20 @@ public class MonthlySummaryDataPoint {
 		return totalIncome;
 	}
 
+	public String getTotalIncomeString() {
+		return (totalIncome == 0)?"": NumberFormat.getCurrencyInstance().format(totalIncome);
+	}
+
 	public void setTotalIncome(double totalIncome) {
 		this.totalIncome = totalIncome;
 	}
 
 	public double getGpDollars() {
 		return gpDollars;
+	}
+
+	public String getGpDollarsString() {
+		return (gpDollars == 0)?"": NumberFormat.getCurrencyInstance().format(gpDollars);
 	}
 
 	public void setGpDollars(double gpDollars) {
@@ -191,12 +235,20 @@ public class MonthlySummaryDataPoint {
 		return gpPercentage;
 	}
 
+	public String getGpPercentageString() {
+		return (Double.isNaN(gpPercentage) || gpPercentage == 0)?"": String.format("%.2f", gpPercentage*100)+"%";
+	}
+
 	public void setGpPercentage(double gpPercentage) {
 		this.gpPercentage = gpPercentage;
 	}
 
 	public double getRentAndOutgoings() {
 		return rentAndOutgoings;
+	}
+
+	public String getRentAndOutgoingsString() {
+		return (rentAndOutgoings == 0)?"": NumberFormat.getCurrencyInstance().format(rentAndOutgoings);
 	}
 
 	public void setRentAndOutgoings(double rentAndOutgoings) {
@@ -207,12 +259,20 @@ public class MonthlySummaryDataPoint {
 		return wages;
 	}
 
+	public String getWagesString() {
+		return (wages == 0)?"": NumberFormat.getCurrencyInstance().format(wages);
+	}
+
 	public void setWages(double wages) {
 		this.wages = wages;
 	}
 
 	public double getZReportProfit() {
 		return zReportProfit;
+	}
+
+	public String getZReportProfitString() {
+		return (zReportProfit == 0)?"": NumberFormat.getCurrencyInstance().format(zReportProfit);
 	}
 
 	public void setZReportProfit(double zReportProfit) {
@@ -223,6 +283,10 @@ public class MonthlySummaryDataPoint {
 		return runningZProfit;
 	}
 
+	public String getRunningZProfitString() {
+		return (runningZProfit == 0)?"": NumberFormat.getCurrencyInstance().format(runningZProfit);
+	}
+
 	public void setRunningZProfit(double runningZProfit) {
 		this.runningZProfit = runningZProfit;
 	}
@@ -231,12 +295,20 @@ public class MonthlySummaryDataPoint {
 		return tillBalance;
 	}
 
+	public String getTillBalanceString() {
+		return (tillBalance == 0)?"": NumberFormat.getCurrencyInstance().format(tillBalance);
+	}
+
 	public void setTillBalance(double tillBalance) {
 		this.tillBalance = tillBalance;
 	}
 
 	public double getRunningTillBalance() {
 		return runningTillBalance;
+	}
+
+	public String getRunningTillBalanceString() {
+		return (runningTillBalance == 0)?"": NumberFormat.getCurrencyInstance().format(runningTillBalance);
 	}
 
 	public void setRunningTillBalance(double runningTillBalance) {

@@ -111,23 +111,23 @@ public class MonthlySummaryController extends DateSelectController{
 		//Add center alignment to date column
 		
 		durationCol.setCellValueFactory(new PropertyValueFactory<>("dayDuration"));
-		customersCol.setCellValueFactory(new PropertyValueFactory<>("noOfCustomers"));
-		itemsCol.setCellValueFactory(new PropertyValueFactory<>("noOfItems"));
-		scriptsCol.setCellValueFactory(new PropertyValueFactory<>("noOfScripts"));
-		dollarPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("dollarPerCustomer"));
-		itemsPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("itemsPerCustomer"));
-		otcDollarPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("otcDollarPerCustomer"));
-		otcItemsCol.setCellValueFactory(new PropertyValueFactory<>("noOfOTCItems"));
-		otcPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("otcPerCustomer"));
-		totalIncomeCol.setCellValueFactory(new PropertyValueFactory<>("totalIncome"));
-		gpDollarCol.setCellValueFactory(new PropertyValueFactory<>("gpDollars"));
-		gpPercentCol.setCellValueFactory(new PropertyValueFactory<>("gpPercentage"));
-		wagesCol.setCellValueFactory(new PropertyValueFactory<>("wages"));
-		rentAndOutgoingsCol.setCellValueFactory(new PropertyValueFactory<>("rentAndOutgoings"));
-		runningZProfitCol.setCellValueFactory(new PropertyValueFactory<>("runningZProfit"));
-		zReportProfitCol.setCellValueFactory(new PropertyValueFactory<>("zReportProfit"));
-		tillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("tillBalance"));
-		runningTillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("runningTillBalance"));
+		customersCol.setCellValueFactory(new PropertyValueFactory<>("noOfCustomersString"));
+		itemsCol.setCellValueFactory(new PropertyValueFactory<>("noOfItemsString"));
+		scriptsCol.setCellValueFactory(new PropertyValueFactory<>("noOfScriptsString"));
+		dollarPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("dollarPerCustomerString"));
+		itemsPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("itemsPerCustomerString"));
+		otcDollarPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("otcDollarPerCustomerString"));
+		otcItemsCol.setCellValueFactory(new PropertyValueFactory<>("noOfOTCItemsString"));
+		otcPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("otcPerCustomerString"));
+		totalIncomeCol.setCellValueFactory(new PropertyValueFactory<>("totalIncomeString"));
+		gpDollarCol.setCellValueFactory(new PropertyValueFactory<>("gpDollarsString"));
+		gpPercentCol.setCellValueFactory(new PropertyValueFactory<>("gpPercentageString"));
+		wagesCol.setCellValueFactory(new PropertyValueFactory<>("wagesString"));
+		rentAndOutgoingsCol.setCellValueFactory(new PropertyValueFactory<>("rentAndOutgoingsString"));
+		runningZProfitCol.setCellValueFactory(new PropertyValueFactory<>("runningZProfitString"));
+		zReportProfitCol.setCellValueFactory(new PropertyValueFactory<>("zReportProfitString"));
+		tillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("tillBalanceString"));
+		runningTillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("runningTillBalanceString"));
 
 		summaryTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
 		summaryTable.setFixedCellSize(25.0);

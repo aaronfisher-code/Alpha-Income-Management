@@ -78,7 +78,7 @@
                            </graphic></TableColumn>
                         <TableColumn fx:id="gpDollarCol" prefWidth="75.0" sortable="false" styleClass="orangeColumn">
                            <graphic>
-                              <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="100.0" minWidth="100.0" style="-fx-background-color: #fabf8f;" styleClass="orangeHeader" text="GP ($)">
+                              <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="100.0" minWidth="100.0" style="-fx-background-color: #fabf8f;" styleClass="orangeHeader" text="    GP ($)    ">
                                  <padding>
                                     <Insets bottom="4.0" left="4.0" right="4.0" top="4.0" />
                                  </padding>
