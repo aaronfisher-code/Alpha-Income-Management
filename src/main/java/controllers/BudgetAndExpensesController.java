@@ -84,7 +84,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 		ValidatorUtils.setupRegexValidation(otherIncomeXero,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR, "$", saveButton);
 		ValidatorUtils.setupRegexValidation(atoGSTrefundXero,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR, "$", saveButton);
 		saveButton.setOnAction(actionEvent -> save());
-		setDate(LocalDate.now());
+		setDate(main.getCurrentDate());
 	}
 
 	public void updateValues(){

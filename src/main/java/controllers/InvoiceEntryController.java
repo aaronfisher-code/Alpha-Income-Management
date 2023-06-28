@@ -142,7 +142,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 	public void fill(){
 		invoiceAFX = createAFX();
 		creditAFX = createAFX();
-		setDate(LocalDate.now());
+		setDate(main.getCurrentDate());
 		addInvoicePopover.getChildren().add(1, invoiceAFX);
 		addCreditPopover.getChildren().add(1, creditAFX);
 		//setup invoice validation

@@ -143,7 +143,7 @@ public class MonthlySummaryController extends DateSelectController{
 
 		}
 		Platform.runLater(() -> GUIUtils.customResize(summaryTable,runningTillBalanceCol,(Label) runningTillBalanceCol.getGraphic()));
-		setDate(LocalDate.now());
+		setDate(main.getCurrentDate());
 
 	}
 

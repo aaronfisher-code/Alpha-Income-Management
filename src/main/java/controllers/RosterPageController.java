@@ -101,8 +101,8 @@ public class RosterPageController extends Controller {
         datePkr = new MFXDatePicker();
         datePkr.setOnAction(e -> updatePage());
         datePickerPane.getChildren().add(1,datePkr);
-        datePkr.setValue(LocalDate.now());
-        datePkr.setText(LocalDate.now().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)));
+        datePkr.setValue(main.getCurrentDate());
+        datePkr.setText(main.getCurrentDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)));
         datePkr.getStyleClass().add("custDatePicker");
         datePkr.getStylesheets().add("/views/CSS/RosterPage.css");
         ObservableList<User> currentUsers = FXCollections.observableArrayList();
@@ -241,7 +241,7 @@ public class RosterPageController extends Controller {
 
         //Set date in case the value is still null
         if (datePkr.getValue() == null)
-            datePkr.setValue(LocalDate.now());
+            datePkr.setValue(main.getCurrentDate());
 
         //Get Week start and End dates for search range
         long weekDay = datePkr.getValue().getDayOfWeek().getValue();

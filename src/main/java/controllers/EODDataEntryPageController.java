@@ -171,7 +171,7 @@ public class EODDataEntryPageController extends DateSelectController{
 				runningTillBalanceCol,
 				notesCol
 		);
-		setDate(LocalDate.now());
+		setDate(main.getCurrentDate());
 		eodDataTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
 		eodDataTable.setMaxWidth(Double.MAX_VALUE);
 		eodDataTable.setMaxHeight(Double.MAX_VALUE);

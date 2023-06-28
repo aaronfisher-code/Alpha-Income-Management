@@ -140,7 +140,7 @@ public class BASCheckerController extends DateSelectController{
 			}
 		}
 
-		setDate(LocalDate.now());
+		setDate(main.getCurrentDate());
 	}
 
 	private MFXTextField getTextFieldAt(int targetRow, int targetColumn) {

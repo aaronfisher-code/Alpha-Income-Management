@@ -42,6 +42,7 @@ public class Main extends Application {
 		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_Bold.otf"),16);
 		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_ExtraBold.otf"),16);
 		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_Black.otf"),16);
+		setCurrentDate(LocalDate.now());
 		stg = primaryStage;
 		System.setProperty("prism.lcdtext", "false");
 		FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/LogIn.fxml"));
