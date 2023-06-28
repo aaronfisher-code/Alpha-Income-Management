@@ -490,10 +490,9 @@ public class BASCheckerController extends DateSelectController{
 		} catch (SQLException ex) {
 			System.err.println(ex.getMessage());
 		}
-		LocalTime now = LocalTime.now();
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss a");
 		errorLabel.setVisible(true);
-		errorLabel.setText("Last saved at "+now.format(formatter));
+		errorLabel.setText("Last saved at "+LocalTime.now().format(formatter));
 		errorLabel.setStyle("-fx-text-fill: black");
 	}
 
