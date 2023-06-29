@@ -1,37 +1,48 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import com.jfoenix.controls.*?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
-<?import javafx.scene.paint.*?>
-<?import javafx.scene.text.*?>
+<?import io.github.palexdev.materialfx.controls.MFXButton?>
+<?import io.github.palexdev.materialfx.controls.MFXTextField?>
+<?import io.github.palexdev.materialfx.controls.MFXToggleButton?>
+<?import java.net.URL?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
 
-<AnchorPane prefHeight="161.0" prefWidth="291.0" xmlns="http://javafx.com/javafx/9.0.4" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EditRosterDayController">
+<StackPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EditRosterDayController">
    <children>
-      <JFXButton layoutX="28.0" layoutY="111.0" onAction="#addDayInfo" prefHeight="25.0" prefWidth="238.0" ripplerFill="#99bdff" style="-fx-background-color: #0f60ff;" text="Add Changes" textFill="WHITE" />
-      <JFXRadioButton layoutX="32.0" layoutY="29.0" selected="true" text="Open">
-         <toggleGroup>
-            <ToggleGroup fx:id="status" />
-         </toggleGroup>
-         <font>
-            <Font size="17.0" />
-         </font>
-         <selectedColor>
-            <Color red="0.05882352963089943" green="0.3764705955982208" blue="1.0" />
-         </selectedColor>
-      </JFXRadioButton>
-      <JFXRadioButton layoutX="121.0" layoutY="29.0" text="Public Holiday" toggleGroup="$status">
-         <font>
-            <Font size="17.0" />
-         </font>
-         <selectedColor>
-            <Color red="0.05882352963089943" green="0.3764705955982208" blue="1.0" />
-         </selectedColor></JFXRadioButton>
-      <JFXTextField fx:id="noteField" focusColor="#0f60ff" layoutX="78.0" layoutY="69.0" prefHeight="25.0" prefWidth="188.0" style="-fx-background-color: #FFFFFF;" />
-      <Label layoutX="28.0" layoutY="68.0" text="Note:">
-         <font>
-            <Font size="17.0" />
-         </font>
-      </Label>
+      <VBox alignment="CENTER_LEFT" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" spacing="25.0" StackPane.alignment="CENTER">
+         <children>
+            <Label fx:id="dateLabel" text="Editing Tuesday, 27/2/2023">
+               <VBox.margin>
+                  <Insets bottom="-10.0" />
+               </VBox.margin>
+               <font>
+                  <Font size="14.0" />
+               </font>
+            </Label>
+            <MFXToggleButton fx:id="publicHolidayToggle" text="Public Holiday?">
+               <stylesheets>
+                  <URL value="@../CSS/application.css" />
+                  <URL value="@../CSS/RosterDayEdit.css" />
+               </stylesheets></MFXToggleButton>
+            <MFXTextField fx:id="noteField" floatMode="ABOVE" floatingText="Reason" maxWidth="1.7976931348623157E308" promptText="Whats special about this day?" />
+            <HBox alignment="CENTER" spacing="30.0">
+               <children>
+                  <MFXButton minWidth="115.0" onAction="#addDayInfo" style="-fx-background-color: #0F60FF;" text="OK" textFill="WHITE" HBox.hgrow="ALWAYS" />
+                  <MFXButton minWidth="115.0" onAction="#closeDialog" style="-fx-border-color: #6e6b7b; -fx-border-radius: 5;" text="Cancel" textFill="#6e6b7b" HBox.hgrow="ALWAYS" />
+               </children>
+            </HBox>
+         </children>
+         <padding>
+            <Insets bottom="20.0" left="20.0" right="20.0" top="40.0" />
+         </padding>
+      </VBox>
    </children>
-</AnchorPane>
+   <stylesheets>
+      <URL value="@../CSS/application.css" />
+      <URL value="@../CSS/RosterDayEdit.css" />
+   </stylesheets>
+</StackPane>

@@ -2,6 +2,8 @@ package controllers;
 
 import application.Main;
 import com.jfoenix.controls.*;
+import io.github.palexdev.materialfx.controls.MFXTextField;
+import io.github.palexdev.materialfx.controls.MFXToggleButton;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -17,19 +19,20 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
+import java.util.Locale;
 
 public class EditRosterDayController extends Controller {
 
+    @FXML
+    private Label dateLabel;
 
     @FXML
-    private Button saveSingle, saveMultiple, cancelSingle, cancelMultiple, addShift;
+    private MFXToggleButton publicHolidayToggle;
 
     @FXML
-    private ToggleGroup status;
-
-    @FXML
-    private JFXTextField noteField;
-
+    private MFXTextField noteField;
 
     private Connection con = null;
     PreparedStatement preparedStatement = null;
@@ -55,6 +58,11 @@ public class EditRosterDayController extends Controller {
 
     @Override
     public void fill() {
+        // Create a formatter
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        String formattedDate = date.format(formatter);
+
+        dateLabel.setText("Editing " + date.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH) + ", " + formattedDate);
         String sql = "SELECT * FROM specialDates Where eventDate = ?";
         try {
             preparedStatement = con.prepareStatement(sql);
@@ -63,13 +71,13 @@ public class EditRosterDayController extends Controller {
             if (!(resultSet == null || !resultSet.next())) {
                 noEntries = false;
                 if(resultSet.getString("storeStatus").equals("Public Holiday"))
-                    status.selectToggle(status.getToggles().get(1));
+                    publicHolidayToggle.setSelected(true);
                  else
-                    status.selectToggle(status.getToggles().get(0));
+                    publicHolidayToggle.setSelected(false);
                 noteField.setText(resultSet.getString("note"));
             }else{
                 noEntries = true;
-                status.selectToggle(status.getToggles().get(0));
+                publicHolidayToggle.setSelected(false);
             }
         } catch (SQLException ex) {
             System.err.println(ex.getMessage());
@@ -79,8 +87,7 @@ public class EditRosterDayController extends Controller {
     public void addDayInfo(){
         String sql = "";
         String eventDate = date.toString();
-        JFXRadioButton selectedButton = (JFXRadioButton) status.getSelectedToggle();
-        String storeStatus = selectedButton.getText();
+        String storeStatus = publicHolidayToggle.isSelected() ? "Public Holiday" : "Open";
         String note = noteField.getText();
         if(noEntries){
             sql = "INSERT INTO specialDates(storeStatus,note,eventDate) VALUES(?,?,?)";
@@ -99,6 +106,10 @@ public class EditRosterDayController extends Controller {
         } catch (SQLException ex) {
             System.err.println(ex.getMessage());
         }
+    }
+
+    public void closeDialog(){
+        parent.getDialog().cancel();
     }
 
 }

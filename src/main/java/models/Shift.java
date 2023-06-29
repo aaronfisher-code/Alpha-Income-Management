@@ -32,7 +32,8 @@ public class Shift {
 			this.username = resultSet.getString("username");
 			this.shiftStartTime = LocalTime.parse(resultSet.getString("shiftStartTime"));
 			this.shiftEndTime = LocalTime.parse(resultSet.getString("shiftEndTime"));
-			this.shiftStartDate = LocalDate.parse(resultSet.getString("shiftStartDate"));
+			if(resultSet.getString("shiftStartDate") != null && !resultSet.getString("shiftStartDate").isEmpty())
+				this.shiftStartDate = LocalDate.parse(resultSet.getString("shiftStartDate"));
 			if(resultSet.getString("shiftEndDate") != null && !resultSet.getString("shiftEndDate").isEmpty())
 				this.shiftEndDate = LocalDate.parse(resultSet.getString("shiftEndDate"));
 			this.thirtyMinBreaks = resultSet.getInt("thirtyMinBreaks");

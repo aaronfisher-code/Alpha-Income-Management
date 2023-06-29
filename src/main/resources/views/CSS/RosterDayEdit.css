@@ -1,0 +1,14 @@
+@import 'Common.css';
+@import 'MFXColors.css';
+
+.mfx-toggle-button{
+    -mfx-color: #0F60FF;
+}
+
+.mfx-text-field .floating-text{
+    -fx-background-color: TRANSPARENT;
+}
+
+
+
+

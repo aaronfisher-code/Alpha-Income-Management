@@ -76,27 +76,7 @@ public class RosterDayCardController extends Controller {
     }
 
     public void editDay() {
-        parent.setDatePkr(date);
-        Stage dayEditStage = new Stage();
-        EditRosterDayController c;
-        dayEditStage.setResizable(false);
-        dayEditStage.initModality(Modality.APPLICATION_MODAL);
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/RosterDayEdit.fxml"));
-        Parent root = null;
-        try {
-            root = loader.load();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        c = loader.getController();
-        c.setMain(main);
-        c.setConnection(con);
-        c.setDate(date);
-        c.setParent(parent);
-        c.fill();
-        dayEditStage.setTitle("Edit Details for " + weekdayLbl.getText() + " " + dateLbl.getText());
-        dayEditStage.setScene(new Scene(root));
-        dayEditStage.showAndWait();
+        parent.createRosterDayEditDialog(date);
     }
 
     public void singleClick(){
