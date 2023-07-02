@@ -32,6 +32,22 @@
     -mfx-color:#0F60FF;
 }
 
+.mfx-combo-box .floating-text{
+    -fx-font-family: "Montserrat";
+    -fx-font-size: 12px;
+}
+
+.table-view .column-header * {
+    -fx-background-color: #F3F2F7;
+    -fx-text-fill: #6E6B7B;
+}
+
+.table-view .column-header,
+.table-view .column-header .filler,
+.table-view .column-header-background .filler {
+    -fx-background-color: #F3F2F7;
+}
+
 
 
 

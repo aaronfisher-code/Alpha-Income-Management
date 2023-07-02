@@ -16,7 +16,6 @@ public class Shift {
 	private int tenMinBreaks;
 	private boolean repeating;
 	private int daysPerRepeat;
-	private String shiftType;
 
 	private String password;
 	private String first_name;
@@ -40,8 +39,6 @@ public class Shift {
 			this.tenMinBreaks = resultSet.getInt("tenMinBreaks");
 			this.repeating = resultSet.getInt("repeating") == 1;
 			this.daysPerRepeat = resultSet.getInt("daysPerRepeat");
-			if(resultSet.getString("shiftType") != null && !resultSet.getString("shiftType").isEmpty())
-				this.shiftType = resultSet.getString("shiftType");
 			try{
 				if(resultSet.getString("password") != null && !resultSet.getString("password").isEmpty())
 					this.password = resultSet.getString("password");
@@ -189,10 +186,6 @@ public class Shift {
 	public void setProfileText(String profileText) {
 		this.profileText = profileText;
 	}
-
-	public String getShiftType() { return shiftType; }
-
-	public void setShiftType(String shiftType) { this.shiftType = shiftType; }
 
 	public LocalDate getOriginalDate() {return originalDate;}
 

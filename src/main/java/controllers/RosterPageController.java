@@ -251,29 +251,33 @@ public class RosterPageController extends Controller {
         LocalDate weekEnd = datePkr.getValue().plusDays(7-weekDay);
 
         String sql = "SELECT * FROM shifts JOIN accounts a on a.username = shifts.username " +
-                    "WHERE (shifts.repeating=TRUE AND (isNull(shiftEndDate) OR shiftEndDate>=?) AND shiftStartDate<=?)"+
+                    "WHERE storeID = ? AND" +
+                    "(shifts.repeating=TRUE AND (isNull(shiftEndDate) OR shiftEndDate>=?) AND shiftStartDate<=?)"+
                     "OR (shifts.repeating=false AND shiftStartDate>=? AND shiftStartDate<=?)"+
                     "ORDER BY shiftStartTime, a.first_name";
         try {
             preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setDate(1, Date.valueOf(weekStart));
-            preparedStatement.setDate(2, Date.valueOf(weekEnd));
-            preparedStatement.setDate(3, Date.valueOf(weekStart));
-            preparedStatement.setDate(4, Date.valueOf(weekEnd));
+            preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
+            preparedStatement.setDate(2, Date.valueOf(weekStart));
+            preparedStatement.setDate(3, Date.valueOf(weekEnd));
+            preparedStatement.setDate(4, Date.valueOf(weekStart));
+            preparedStatement.setDate(5, Date.valueOf(weekEnd));
             resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
                 allShifts.add(new Shift(resultSet));
             }
 
             sql = "SELECT * FROM shiftmodifications JOIN accounts a on a.username = shiftmodifications.username " +
-                    "WHERE modificationID in (select max(modificationID) from shiftmodifications group by shift_id, originalDate) AND" +
+                    "WHERE storeID = ? AND "+
+                    "modificationID in (select max(modificationID) from shiftmodifications group by shift_id, originalDate) AND" +
                     "((shiftmodifications.shiftStartDate>=? AND shiftmodifications.shiftStartDate<=?) OR (shiftmodifications.originalDate>=? AND shiftmodifications.originalDate<=?))";
 
             preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setDate(1, Date.valueOf(weekStart));
-            preparedStatement.setDate(2, Date.valueOf(weekEnd));
-            preparedStatement.setDate(3, Date.valueOf(weekStart));
-            preparedStatement.setDate(4, Date.valueOf(weekEnd));
+            preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
+            preparedStatement.setDate(2, Date.valueOf(weekStart));
+            preparedStatement.setDate(3, Date.valueOf(weekEnd));
+            preparedStatement.setDate(4, Date.valueOf(weekStart));
+            preparedStatement.setDate(5, Date.valueOf(weekEnd));
             resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
                 allModifications.add(new Shift(resultSet));;
@@ -636,21 +640,9 @@ public class RosterPageController extends Controller {
         dialogPane.showDialog(dialog);
     }
 
-    public void addNewLeave() throws IOException {
-        Stage leaveEditStage = new Stage();
-        EditLeaveController c;
-        leaveEditStage.setResizable(false);
-        leaveEditStage.initModality(Modality.APPLICATION_MODAL);
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/LeaveEdit.fxml"));
-        Parent root = loader.load();
-        c = loader.getController();
-        c.setMain(main);
-        c.setConnection(con);
-        c.fill();
-        c.setParent(this);
-        leaveEditStage.setTitle("Add a new Leave Request");
-        leaveEditStage.setScene(new Scene(root));
-        leaveEditStage.showAndWait();
+    public void addNewLeave() {
+        MainMenuController m = (MainMenuController) main.getController();
+        m.changePage("/views/FXML/LeaveManagementPage.fxml");
     }
 
     public void exportData() throws IOException {

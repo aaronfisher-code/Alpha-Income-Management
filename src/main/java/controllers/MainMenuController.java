@@ -299,5 +299,24 @@ public class MainMenuController extends Controller {
         contentPane.setCenter(pageContent);
         currentPageController.fill();
     }
+
+    public void changePage(String fxml){
+        storeSearchCombo.setOnAction(event -> {
+            main.setCurrentStore((Store) storeSearchCombo.getSelectedItem());
+            changePage(fxml);
+        });
+        FXMLLoader loader = new FXMLLoader(getClass().getResource(fxml));
+        StackPane pageContent = null;
+        try {
+            pageContent = loader.load();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        currentPageController = loader.getController();
+        currentPageController.setMain(main);
+        currentPageController.setConnection(con);
+        contentPane.setCenter(pageContent);
+        currentPageController.fill();
+    }
 }
 
