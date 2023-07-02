@@ -120,7 +120,7 @@
          <center>
             <VBox maxHeight="1.7976931348623157E308" spacing="20.0" BorderPane.alignment="CENTER">
                <children>
-                  <GridPane fx:id="incomeCheckTable" gridLinesVisible="true" style="-fx-background-color: #FFFFFF; -fx-background-radius: 10;" styleClass="mygridStyle" VBox.vgrow="ALWAYS">
+                  <GridPane fx:id="incomeCheckTable" gridLinesVisible="true" style="-fx-background-color: #FFFFFF; -fx-background-radius: 10;" styleClass="mygridStyle">
                     <columnConstraints>
                       <ColumnConstraints hgrow="SOMETIMES" minWidth="227.0" prefWidth="227.0" />
                       <ColumnConstraints halignment="LEFT" hgrow="SOMETIMES" maxWidth="120.0" minWidth="120.0" prefWidth="120.0" />
@@ -244,7 +244,7 @@
                         <MFXTextField fx:id="total2" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="120.0" minWidth="120.0" prefWidth="120.0" style="-fx-border-radius: 0;" GridPane.columnIndex="2" GridPane.rowIndex="7" />
                         <VBox GridPane.columnIndex="5" GridPane.rowIndex="7">
                            <children>
-                              <Label maxHeight="1.7976931348623157E308" text="Total income recorded in this spreadsheet minus GST owed to ATO (note: this excludes TAC income, ozzymart, stock transfers, Roche, other rebates and any other income streams entered directly into xero)" wrapText="true" VBox.vgrow="ALWAYS">
+                              <Label maxHeight="1.7976931348623157E308" text="Total income recorded in this spreadsheet minus GST owed to ATO &#10;(note: this excludes TAC income, ozzymart, stock transfers,&#10;Roche, other rebates and any other income streams entered directly into xero)" wrapText="true" VBox.vgrow="ALWAYS">
                                  <font>
                                     <Font name="System Italic" size="12.0" />
                                  </font>
