@@ -536,6 +536,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 		else if(!dueDateField.isValid()){dueDateField.requestFocus();}
 		else if(!amountField.isValid()){amountField.requestFocus();}
 		else{
+			AccountPaymentContactDataPoint contact = (AccountPaymentContactDataPoint) afx.getSelectedItem();
 			String invoiceNo = invoiceNoField.getText();
 			LocalDate invoiceDate = invoiceDateField.getValue();
 			LocalDate dueDate = dueDateField.getValue();
@@ -543,10 +544,10 @@ public class AccountPaymentsPageController extends DateSelectController{
 			Double unitAmount = Double.valueOf(amountField.getText());
 			String taxRate = taxRateField.getText();
 
-			String sql = "UPDATE accountPayments SET contactID = ?,storeID = ?,invoiceNo = ?, invoiceDate = ?, dueDate = ?,description = ?,unitAmount = ?,accountAdjusted = ?,taxRate = ? WHERE idaccountPayments = ?";
+			String sql = "UPDATE accountPayments SET contactID = ?,storeID = ?,invoiceNo = ?, invoiceDate = ?, dueDate = ?,description = ?,unitAmount = ?,accountAdjusted = ?,taxRate = ? WHERE storeID = ? AND invoiceNo = ?";
 			try {
 				preparedStatement = con.prepareStatement(sql);
-				preparedStatement.setInt(1, accountPayment.getContactID());
+				preparedStatement.setInt(1, contact.getContactID());
 				preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
 				preparedStatement.setString(3, invoiceNo);
 				preparedStatement.setDate(4, Date.valueOf(invoiceDate));
@@ -555,6 +556,8 @@ public class AccountPaymentsPageController extends DateSelectController{
 				preparedStatement.setDouble(7, unitAmount);
 				preparedStatement.setBoolean(8, accountAdjustedBox.isSelected());
 				preparedStatement.setString(9, taxRate);
+				preparedStatement.setInt(10, main.getCurrentStore().getStoreID());
+				preparedStatement.setString(11, accountPayment.getInvoiceNumber());
 				preparedStatement.executeUpdate();
 			} catch (SQLException ex) {
 				System.err.println(ex.getMessage());

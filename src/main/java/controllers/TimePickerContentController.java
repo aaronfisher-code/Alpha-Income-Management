@@ -2,6 +2,8 @@ package controllers;
 
 import application.Main;
 import io.github.palexdev.materialfx.controls.MFXTextField;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.control.ToggleButton;
 import models.Shift;
 import javafx.fxml.FXML;
@@ -24,16 +26,11 @@ public class TimePickerContentController extends Controller {
     ResultSet resultSet = null;
     private Main main;
     private Shift shift;
-    private RosterPageController parent;
 
     private LocalTime currentTime;
 
     @Override
     public void setMain(Main main) { this.main = main; }
-
-    public void setParent(RosterPageController m) {
-        this.parent = m;
-    }
 
     public void setConnection(Connection c) {
         this.con = c;
@@ -42,6 +39,17 @@ public class TimePickerContentController extends Controller {
 
     @Override
     public void fill() {
+        hourField.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue.matches("\\d+") || Integer.parseInt(newValue) > 12) {
+                hourField.setText(oldValue);
+            }
+        });
+        minuteField.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue.matches("\\d+") || Integer.parseInt(newValue) > 59) {
+                minuteField.setText(oldValue);
+            }
+        });
+
         amSelect.setOnAction(event -> {if(!amSelect.isSelected()){amSelect.setSelected(true);}});
         pmSelect.setOnAction(event -> {if(!pmSelect.isSelected()){pmSelect.setSelected(true);}});
     }

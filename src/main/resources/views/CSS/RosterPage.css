@@ -37,6 +37,10 @@
     -fx-font-size: 12px;
 }
 
+.mfx-combo-box {
+    -fx-font-size: 12px;
+}
+
 .table-view .column-header * {
     -fx-background-color: #F3F2F7;
     -fx-text-fill: #6E6B7B;

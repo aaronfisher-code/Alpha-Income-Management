@@ -47,7 +47,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 	private MFXTextField numDaysField,numOpenDaysField,numPartialDaysField,dailyRentField,weeklyWagesField,totalAvgField,monthlyRentField,dailyOutgoingsField,monthlyLoanField;
 
 	@FXML
-	private MFXTextField cpaIncomeXero, cpaIncomeSpreadsheet,cpaIncomeVariance,lanternPayIncomeXero,lanternPayIncomeSpreadsheet,lanternPayIncomeVariance,otherIncomeXero,otherIncomeSpreadsheet,otherIncomeVariance,atoGSTrefundXero,atoGSTrefundSpreadsheet,atoGSTrefundVariance;
+	private MFXTextField cpaIncomeXero, cpaIncomeSpreadsheet,cpaIncomeVariance,lanternPayIncomeXero,lanternPayIncomeSpreadsheet,lanternPayIncomeVariance,otherIncomeXero,otherIncomeSpreadsheet,otherIncomeVariance,atoGSTrefundXero;
 
 	@FXML
 	private MFXButton saveButton;
