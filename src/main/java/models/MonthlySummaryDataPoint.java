@@ -1,6 +1,7 @@
 package models;
 
 import javafx.collections.ObservableList;
+import utils.RosterUtils;
 
 import java.text.NumberFormat;
 import java.time.LocalDate;
@@ -31,9 +32,9 @@ public class MonthlySummaryDataPoint {
 	private double grossProfitDollars;
 	private double govtRecovery;
 	private double totalGovtContribution;
-	public MonthlySummaryDataPoint(LocalDate dayOfMonth, ObservableList<TillReportDataPoint> currentTillReportDataPoints, ObservableList<EODDataPoint> currentEODDataPoints, ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints) {
+	public MonthlySummaryDataPoint(LocalDate dayOfMonth, ObservableList<TillReportDataPoint> currentTillReportDataPoints, ObservableList<EODDataPoint> currentEODDataPoints, ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints, double dayDuration) {
 		date = dayOfMonth;
-		dayDuration = 1; //TODO: link day duration with roster
+		this.dayDuration = dayDuration;
 		double totalTakings = 0;
 		for(TillReportDataPoint t:currentTillReportDataPoints){
 			if(t.getAssignedDate().equals(date)&&t.getKey().equals("Script Count"))

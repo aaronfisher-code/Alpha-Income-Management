@@ -16,6 +16,7 @@ import javafx.scene.layout.*;
 import models.*;
 import org.controlsfx.control.PopOver;
 import utils.GUIUtils;
+import utils.RosterUtils;
 import utils.TableUtils;
 
 import java.io.IOException;
@@ -190,9 +191,11 @@ public class MonthlySummaryController extends DateSelectController{
 			throwables.printStackTrace();
 		}
 
+		RosterUtils rosterUtils = new RosterUtils(con,main,yearMonthObject);
 		for(int i = 1; i<daysInMonth+1; i++){
 			LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(),i);
-			monthlySummaryPoints.add(new MonthlySummaryDataPoint(d,currentTillReportDataPoints,currentEODDataPoints,monthlySummaryPoints));
+			double dayDuration = rosterUtils.getDayDuration(d);
+			monthlySummaryPoints.add(new MonthlySummaryDataPoint(d,currentTillReportDataPoints,currentEODDataPoints,monthlySummaryPoints,dayDuration));
 		}
 		summaryTable.setItems(monthlySummaryPoints);
 	}
