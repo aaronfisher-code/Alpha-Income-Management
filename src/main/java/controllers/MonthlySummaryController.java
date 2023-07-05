@@ -143,7 +143,7 @@ public class MonthlySummaryController extends DateSelectController{
 			}
 
 		}
-		Platform.runLater(() -> GUIUtils.customResize(summaryTable,runningTillBalanceCol,(Label) runningTillBalanceCol.getGraphic()));
+//		Platform.runLater(() -> GUIUtils.customResize(summaryTable,runningTillBalanceCol,(Label) runningTillBalanceCol.getGraphic()));
 		setDate(main.getCurrentDate());
 
 	}
@@ -198,6 +198,7 @@ public class MonthlySummaryController extends DateSelectController{
 			monthlySummaryPoints.add(new MonthlySummaryDataPoint(d,currentTillReportDataPoints,currentEODDataPoints,monthlySummaryPoints,dayDuration));
 		}
 		summaryTable.setItems(monthlySummaryPoints);
+		Platform.runLater(() -> GUIUtils.customResize(summaryTable,runningTillBalanceCol,(Label) runningTillBalanceCol.getGraphic()));
 	}
 
 	public void openMonthSelector(){
