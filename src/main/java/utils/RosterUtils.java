@@ -14,6 +14,8 @@ import java.io.IOException;
 import java.sql.*;
 import java.time.*;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import static java.time.temporal.ChronoUnit.DAYS;
 
@@ -24,12 +26,17 @@ public class RosterUtils {
     PreparedStatement preparedStatement;
     ResultSet resultSet;
 
+    YearMonth yearMonth;
+
     ArrayList<Shift> allShifts = new ArrayList<>();
     ArrayList<Shift> allModifications = new ArrayList<>();
     ArrayList<LeaveRequest> allLeaveRequests = new ArrayList<>();
+
+    Map<LocalDate, Double> dayDurationMap = new HashMap<>();
     public RosterUtils(Connection conn, Main main, YearMonth yearMonth){
         this.conn = conn;
         this.main = main;
+        this.yearMonth = yearMonth;
 
         LocalDate monthStart = yearMonth.atDay(1);
         LocalDate monthEnd = yearMonth.atEndOfMonth();
@@ -79,9 +86,17 @@ public class RosterUtils {
         } catch (SQLException ex) {
             System.err.println(ex.getMessage());
         }
+
+        for (LocalDate day = monthStart; day.isBefore(monthEnd.plusDays(1)); day = day.plusDays(1)) {
+            dayDurationMap.put(day, loadDayDuration(day));
+        }
     }
 
     public double getDayDuration(LocalDate day){
+        return dayDurationMap.get(day);
+    }
+
+    private double loadDayDuration(LocalDate day){
         LocalTime earliestStart = LocalTime.MAX;
         LocalTime latestEnd = LocalTime.MIN;
 
@@ -144,5 +159,29 @@ public class RosterUtils {
         }else {
             return (double) Duration.between(earliestStart, latestEnd).toHours() / 10;
         }
+    }
+
+    public int getOpenDays(){
+        int openDays = 0;
+        for(LocalDate day = yearMonth.atDay(1); day.isBefore(yearMonth.atEndOfMonth().plusDays(1)); day = day.plusDays(1)){
+            if(getDayDuration(day)>0){
+                openDays++;
+            }
+        }
+        return openDays;
+    }
+
+    public int getPartialDays(){
+        int partialDays = 0;
+        for(LocalDate day = yearMonth.atDay(1); day.isBefore(yearMonth.atEndOfMonth().plusDays(1)); day = day.plusDays(1)){
+            if(getDayDuration(day)>0&&getDayDuration(day)<0.5){
+                partialDays++;
+            }
+        }
+        return partialDays;
+    }
+
+    public int getTotalDays(){
+        return yearMonth.lengthOfMonth();
     }
 }

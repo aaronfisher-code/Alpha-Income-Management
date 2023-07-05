@@ -195,7 +195,9 @@ public class MonthlySummaryController extends DateSelectController{
 		for(int i = 1; i<daysInMonth+1; i++){
 			LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(),i);
 			double dayDuration = rosterUtils.getDayDuration(d);
-			monthlySummaryPoints.add(new MonthlySummaryDataPoint(d,currentTillReportDataPoints,currentEODDataPoints,monthlySummaryPoints,dayDuration));
+			int openDays = rosterUtils.getOpenDays();
+			int totalDays = yearMonthObject.lengthOfMonth();
+			monthlySummaryPoints.add(new MonthlySummaryDataPoint(d,currentTillReportDataPoints,currentEODDataPoints,monthlySummaryPoints,rosterUtils));
 		}
 		summaryTable.setItems(monthlySummaryPoints);
 		Platform.runLater(() -> GUIUtils.customResize(summaryTable,runningTillBalanceCol,(Label) runningTillBalanceCol.getGraphic()));

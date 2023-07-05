@@ -19,6 +19,7 @@ import models.BASCheckerDataPoint;
 import models.EODDataPoint;
 import models.TillReportDataPoint;
 import org.controlsfx.control.PopOver;
+import utils.RosterUtils;
 import utils.ValidatorUtils;
 
 import java.io.IOException;
@@ -92,10 +93,13 @@ public class BudgetAndExpensesController extends DateSelectController{
 		errorLabel.setVisible(false);
 		errorLabel.setStyle("-fx-text-fill: red");
 		YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
-		int daysInMonth = yearMonthObject.lengthOfMonth();
+		RosterUtils rosterUtils = new RosterUtils(con,main,yearMonthObject);
+		int daysInMonth = rosterUtils.getTotalDays();
+		int openDays = rosterUtils.getOpenDays();
+		int partialDays = rosterUtils.getPartialDays();
 		numDaysField.setText(daysInMonth+" days");
-		//todo: use roster to calculate open days
-		//todo: use roster to calculate partial days
+		numOpenDaysField.setText(openDays+" days");
+		numPartialDaysField.setText(partialDays+" days");
 		String sql = null;
 		try {
 			sql = "SELECT * FROM budgetandexpenses WHERE storeID = ? AND MONTH(date) = ? AND YEAR(date) = ?";
@@ -185,7 +189,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 			throwables.printStackTrace();
 		}
 
-		formatTextFields(dailyExpensesTable);
+//		formatTextFields(dailyExpensesTable);
 		formatTextFields(endOfMonthTable);
 
 		updateTotals();
