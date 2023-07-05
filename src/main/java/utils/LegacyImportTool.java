@@ -204,9 +204,12 @@ public class LegacyImportTool {
             preparedStatement = con.prepareStatement(sql);
             con.setAutoCommit(false);
             //Pull Daily script values
-            for(int i=17;i<daysInMonth*2;i++) {
+            for(int i=17;i<71;i++) {
                 if (sheet.getRow(i).getCell(1) != null && sheet.getRow(i).getCell(1).getCellType()!= CellType.BLANK) {
-                    LocalDate date = null;
+                    LocalDate date;
+                    if(sheet.getRow(i).getCell(1).getCellType()==CellType.STRING&&sheet.getRow(i).getCell(1).getStringCellValue().equals("TOTAL")) {
+                        break;
+                    }
                     if(sheet.getRow(i).getCell(1).getCellType()==CellType.STRING){
                         date = LocalDate.parse(sheet.getRow(i).getCell(1).getStringCellValue(), DateTimeFormatter.ofPattern("dd/MM/yyyy"));
                     }else{
