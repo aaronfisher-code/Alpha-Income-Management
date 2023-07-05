@@ -120,7 +120,6 @@ public class AccountPaymentsPageController extends DateSelectController{
 	public void fill() {
 		accountTotalsTable.autosizeColumnsOnInitialization();
 
-
 		MFXButton addContactButton = new MFXButton("Create New");
 		addContactButton.setOnAction(actionEvent -> {
 			dialog = new Dialog(dialogPane, BLANK);
@@ -256,7 +255,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 
 	public void fillContactList(){
 		ObservableList<AccountPaymentContactDataPoint> contacts = FXCollections.observableArrayList();
-		String sql = null;
+		String sql;
 		try {
 			sql = "SELECT * FROM accountPaymentContacts where storeID = ?";
 			preparedStatement = con.prepareStatement(sql);
@@ -274,11 +273,8 @@ public class AccountPaymentsPageController extends DateSelectController{
 			afx.setItems(contacts);
 		}
 	}
-	
-	
 
 	public void fillTable(){
-
 		YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
 		int daysInMonth = yearMonthObject.lengthOfMonth();
 		ObservableList<AccountPayment> currentAccountPaymentDataPoints = FXCollections.observableArrayList();
@@ -337,7 +333,6 @@ public class AccountPaymentsPageController extends DateSelectController{
 		File file = fileChooser.showSaveDialog(main.getStg());
 		if (file != null) {
 			try (PrintWriter pw = new PrintWriter(file)) {
-				//TODO: Catch file not found error if this file is in use already
 				pw.println("Contact,,,,,,,,,,Invoice number,Invoice date ,Due Date,,Description,Quantity,Unit amount,Account code,GST free,");
 
 				YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
@@ -499,7 +494,12 @@ public class AccountPaymentsPageController extends DateSelectController{
 		else if(!invoiceNoField.isValid()){invoiceNoField.requestFocus();}
 		else if(!dueDateField.isValid()){dueDateField.requestFocus();}
 		else if(!amountField.isValid()){amountField.requestFocus();}
-		else{
+		else if(invoiceDateField.getValue().isAfter(dueDateField.getValue())){
+			invoiceDateValidationLabel.setVisible(true);
+			invoiceDateValidationLabel.setText("Invoice date must be before due date");
+			invoiceDateField.requestFocus();
+		}else{
+			invoiceDateValidationLabel.setVisible(false);
 			AccountPaymentContactDataPoint contact = (AccountPaymentContactDataPoint) afx.getSelectedItem();
 			String invoiceNo = invoiceNoField.getText();
 			LocalDate invoiceDate = invoiceDateField.getValue();
@@ -535,7 +535,12 @@ public class AccountPaymentsPageController extends DateSelectController{
 		else if(!invoiceNoField.isValid()){invoiceNoField.requestFocus();}
 		else if(!dueDateField.isValid()){dueDateField.requestFocus();}
 		else if(!amountField.isValid()){amountField.requestFocus();}
-		else{
+		else if(invoiceDateField.getValue().isAfter(dueDateField.getValue())){
+			invoiceDateValidationLabel.setVisible(true);
+			invoiceDateValidationLabel.setText("Invoice date must be before due date");
+			invoiceDateField.requestFocus();
+		}else{
+			invoiceDateValidationLabel.setVisible(false);
 			AccountPaymentContactDataPoint contact = (AccountPaymentContactDataPoint) afx.getSelectedItem();
 			String invoiceNo = invoiceNoField.getText();
 			LocalDate invoiceDate = invoiceDateField.getValue();

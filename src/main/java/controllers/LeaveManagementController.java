@@ -33,6 +33,7 @@ import utils.ValidatorUtils;
 import java.io.IOException;
 import java.sql.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
@@ -275,58 +276,98 @@ public class LeaveManagementController extends DateSelectController {
     public void closePopover(){
         AnimationUtils.slideIn(editLeavePopover,425);
         contentDarken.setVisible(false);
+        employeeSelectValidationLabel.setVisible(false);
+        leaveTypeValidationLabel.setVisible(false);
+        startDateValidationLabel.setVisible(false);
+        endDateValidationLabel.setVisible(false);
+        startTimeValidationLabel.setVisible(false);
+        endTimeValidationLabel.setVisible(false);
     }
 
     public void addLeaveRequest(){
-        User employee = (User) employeeSelect.getValue();
-        String leaveType = leaveTypeCombo.getValue();
-        LocalDate fromDate = startDate.getValue();
-        LocalDate toDate = endDate.getValue();
-        LocalTime startTime = LocalTime.parse(startTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
-        LocalTime endTime = LocalTime.parse(endTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
-        String reason = reasonField.getText();
-        String sql = "INSERT INTO leaverequests (employeeID, storeID, leaveType, leaveStartDate, leaveEndDate, reason) VALUES (?,?,?,?,?,?)";
-        try {
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setString(1, employee.getUsername());
-            preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
-            preparedStatement.setString(3, leaveType);
-            preparedStatement.setTimestamp(4, Timestamp.valueOf(fromDate.atTime(startTime)));
-            preparedStatement.setTimestamp(5, Timestamp.valueOf(toDate.atTime(endTime)));
-            preparedStatement.setString(6, reason);
-            preparedStatement.executeUpdate();
-        } catch (SQLException ex) {
-            System.err.println(ex.getMessage());
+        if(!employeeSelect.isValid()){employeeSelect.requestFocus();}
+        else if(!leaveTypeCombo.isValid()){leaveTypeCombo.requestFocus();}
+        else if(!startDate.isValid()){startDate.requestFocus();}
+        else if(!endDate.isValid()){endDate.requestFocus();}
+        else if(!startTimeField.isValid()){startTimeField.requestFocus();}
+        else if(!endTimeField.isValid()){endTimeField.requestFocus();}
+        else {
+            LocalDateTime startDateTime = LocalDateTime.of(startDate.getValue(), LocalTime.parse(startTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US)));
+            LocalDateTime endDateTime = LocalDateTime.of(endDate.getValue(), LocalTime.parse(endTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US)));
+            if (startDateTime.isAfter(endDateTime)) {
+                startDateValidationLabel.setVisible(true);
+                startDateValidationLabel.setText("Start of leave must be before end of leave");
+                startDate.requestFocus();
+            } else {
+                startDateValidationLabel.setVisible(false);
+                User employee = (User) employeeSelect.getValue();
+                String leaveType = leaveTypeCombo.getValue();
+                LocalDate fromDate = startDate.getValue();
+                LocalDate toDate = endDate.getValue();
+                LocalTime startTime = LocalTime.parse(startTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
+                LocalTime endTime = LocalTime.parse(endTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
+                String reason = reasonField.getText();
+                String sql = "INSERT INTO leaverequests (employeeID, storeID, leaveType, leaveStartDate, leaveEndDate, reason) VALUES (?,?,?,?,?,?)";
+                try {
+                    preparedStatement = con.prepareStatement(sql);
+                    preparedStatement.setString(1, employee.getUsername());
+                    preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
+                    preparedStatement.setString(3, leaveType);
+                    preparedStatement.setTimestamp(4, Timestamp.valueOf(fromDate.atTime(startTime)));
+                    preparedStatement.setTimestamp(5, Timestamp.valueOf(toDate.atTime(endTime)));
+                    preparedStatement.setString(6, reason);
+                    preparedStatement.executeUpdate();
+                } catch (SQLException ex) {
+                    System.err.println(ex.getMessage());
+                }
+                closePopover();
+                fillTable();
+                dialogPane.showInformation("Success", "Leave request succesfully added");
+            }
         }
-        closePopover();
-        fillTable();
-        dialogPane.showInformation("Success","Leave request succesfully added");
     }
 
     public void editLeaveRequest(LeaveRequest leaveRequest){
-        User employee = (User) employeeSelect.getValue();
-        String leaveType = leaveTypeCombo.getValue();
-        LocalDate fromDate = startDate.getValue();
-        LocalDate toDate = endDate.getValue();
-        LocalTime startTime = LocalTime.parse(startTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
-        LocalTime endTime = LocalTime.parse(endTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
-        String reason = reasonField.getText();
-        String sql = "UPDATE leaverequests SET employeeID = ?, leaveType = ?, leaveStartDate = ?, leaveEndDate = ?, reason = ? WHERE leaveID = ?";
-        try {
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setString(1, employee.getUsername());
-            preparedStatement.setString(2, leaveType);
-            preparedStatement.setTimestamp(3, Timestamp.valueOf(fromDate.atTime(startTime)));
-            preparedStatement.setTimestamp(4, Timestamp.valueOf(toDate.atTime(endTime)));
-            preparedStatement.setString(5, reason);
-            preparedStatement.setInt(6, leaveRequest.getLeaveID());
-            preparedStatement.executeUpdate();
-        } catch (SQLException ex) {
-            System.err.println(ex.getMessage());
+        if(!employeeSelect.isValid()){employeeSelect.requestFocus();}
+        else if(!leaveTypeCombo.isValid()){leaveTypeCombo.requestFocus();}
+        else if(!startDate.isValid()){startDate.requestFocus();}
+        else if(!endDate.isValid()){endDate.requestFocus();}
+        else if(!startTimeField.isValid()){startTimeField.requestFocus();}
+        else if(!endTimeField.isValid()){endTimeField.requestFocus();}
+        else {
+            LocalDateTime startDateTime = LocalDateTime.of(startDate.getValue(), LocalTime.parse(startTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US)));
+            LocalDateTime endDateTime = LocalDateTime.of(endDate.getValue(), LocalTime.parse(endTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US)));
+            if (startDateTime.isAfter(endDateTime)) {
+                startDateValidationLabel.setVisible(true);
+                startDateValidationLabel.setText("Start of leave must be before end of leave");
+                startDate.requestFocus();
+            } else {
+                startDateValidationLabel.setVisible(false);
+                User employee = (User) employeeSelect.getValue();
+                String leaveType = leaveTypeCombo.getValue();
+                LocalDate fromDate = startDate.getValue();
+                LocalDate toDate = endDate.getValue();
+                LocalTime startTime = LocalTime.parse(startTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
+                LocalTime endTime = LocalTime.parse(endTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
+                String reason = reasonField.getText();
+                String sql = "UPDATE leaverequests SET employeeID = ?, leaveType = ?, leaveStartDate = ?, leaveEndDate = ?, reason = ? WHERE leaveID = ?";
+                try {
+                    preparedStatement = con.prepareStatement(sql);
+                    preparedStatement.setString(1, employee.getUsername());
+                    preparedStatement.setString(2, leaveType);
+                    preparedStatement.setTimestamp(3, Timestamp.valueOf(fromDate.atTime(startTime)));
+                    preparedStatement.setTimestamp(4, Timestamp.valueOf(toDate.atTime(endTime)));
+                    preparedStatement.setString(5, reason);
+                    preparedStatement.setInt(6, leaveRequest.getLeaveID());
+                    preparedStatement.executeUpdate();
+                } catch (SQLException ex) {
+                    System.err.println(ex.getMessage());
+                }
+                closePopover();
+                fillTable();
+                dialogPane.showInformation("Success", "Leave request succesfully edited");
+            }
         }
-        closePopover();
-        fillTable();
-        dialogPane.showInformation("Success","Leave request succesfully edited");
     }
 
     public void deleteLeaveRequest(LeaveRequest leaveRequest){

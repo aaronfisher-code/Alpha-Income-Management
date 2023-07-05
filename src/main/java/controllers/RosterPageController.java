@@ -441,6 +441,13 @@ public class RosterPageController extends Controller {
 
     public void closePopover(){
         AnimationUtils.slideIn(editShiftPopover,425);
+        employeeSelectValidationLabel.setVisible(false);
+        startTimeValidationLabel.setVisible(false);
+        endTimeValidationLabel.setVisible(false);
+        startDateValidationLabel.setVisible(false);
+        thirtyMinBreaksValidationLabel.setVisible(false);
+        tenMinBreaksValidationLabel.setVisible(false);
+        repeatValueValidationLabel.setVisible(false);
         contentDarken.setVisible(false);
     }
 
@@ -490,8 +497,13 @@ public class RosterPageController extends Controller {
         else if(!endTimeField.isValid()){endTimeField.requestFocus();}
         else if(!thirtyMinBreaks.isValid()){thirtyMinBreaks.requestFocus();}
         else if(!tenMinBreaks.isValid()){tenMinBreaks.requestFocus();}
-        else if(!repeatValue.isValid()){repeatValue.requestFocus();} //TODO: Add extra check here and everywhere else its needed for end date < start date
-        else {
+        else if(!repeatValue.isValid()){repeatValue.requestFocus();}
+        else if(LocalTime.parse(startTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US )).isAfter(LocalTime.parse(endTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US )))){
+            startTimeField.requestFocus();
+            startTimeValidationLabel.setText("Start time must be before end time");
+            startTimeValidationLabel.setVisible(true);
+        }else {
+            startTimeValidationLabel.setVisible(false);
             String usrname = ((User) employeeSelect.getValue()).getUsername();
             LocalDate sDate = manualStartDate==null?startDate.getValue():manualStartDate;
             if(deleteShift){
@@ -558,7 +570,12 @@ public class RosterPageController extends Controller {
         else if(!thirtyMinBreaks.isValid()){thirtyMinBreaks.requestFocus();}
         else if(!tenMinBreaks.isValid()){tenMinBreaks.requestFocus();}
         else if(!repeatValue.isValid()){repeatValue.requestFocus();}
-        else {
+        else if(LocalTime.parse(startTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US )).isAfter(LocalTime.parse(endTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US )))){
+            startTimeField.requestFocus();
+            startTimeValidationLabel.setText("Start time must be before end time");
+            startTimeValidationLabel.setVisible(true);
+        }else {
+            startTimeValidationLabel.setVisible(false);
             String usrname = ((User) employeeSelect.getValue()).getUsername();
             LocalDate sDate = startDate.getValue();
             LocalTime sTime = LocalTime.parse(startTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
@@ -754,4 +771,3 @@ public class RosterPageController extends Controller {
         shiftCardGrid.setPrefHeight(100*(maxCards+1));
     }
 }
-

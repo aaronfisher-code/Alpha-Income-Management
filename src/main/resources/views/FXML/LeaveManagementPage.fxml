@@ -239,7 +239,7 @@
                   <VBox>
                      <children>
                         <MFXDatePicker fx:id="startDate" borderGap="0.0" floatMode="ABOVE" floatingText="Start Date" minHeight="36.0" />
-                        <Label fx:id="startDateValidationLabel" text="Please enter valid employee" visible="false" />
+                        <Label fx:id="startDateValidationLabel" text="Please enter valid employee" textFill="RED" visible="false" />
                      </children>
                   </VBox>
                   <VBox maxWidth="1.7976931348623157E308" HBox.hgrow="ALWAYS">
@@ -267,7 +267,7 @@
                               </MFXButton>
                            </children>
                         </StackPane>
-                        <Label fx:id="startTimeValidationLabel" text="Please enter valid employee" visible="false" />
+                        <Label fx:id="startTimeValidationLabel" text="Please enter valid employee" textFill="RED" visible="false" />
                      </children>
                   </VBox>
                </children>
@@ -277,7 +277,7 @@
                   <VBox>
                      <children>
                         <MFXDatePicker fx:id="endDate" borderGap="0.0" floatMode="ABOVE" floatingText="End Date" maxWidth="1.7976931348623157E308" minHeight="36.0" />
-                        <Label fx:id="endDateValidationLabel" text="Please enter valid employee" visible="false" />
+                        <Label fx:id="endDateValidationLabel" text="Please enter valid employee" textFill="RED" visible="false" />
                      </children>
                   </VBox>
                   <VBox HBox.hgrow="ALWAYS">
@@ -305,7 +305,7 @@
                               </MFXButton>
                            </children>
                         </StackPane>
-                        <Label fx:id="endTimeValidationLabel" text="Please enter valid employee" visible="false" />
+                        <Label fx:id="endTimeValidationLabel" text="Please enter valid employee" textFill="RED" visible="false" />
                      </children>
                   </VBox>
                </children>
