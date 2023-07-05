@@ -26,7 +26,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane fx:id="backgroundPane" prefHeight="900.0" prefWidth="998.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EditAccountController">
+<StackPane fx:id="backgroundPane" prefHeight="900.0" prefWidth="998.0" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EditAccountController">
    <children>
       <BorderPane style="-fx-background-color: TRANSPARENT;">
          <top>
@@ -253,7 +253,7 @@
                               </VBox>
                            </center>
                            <right>
-                              <MFXRectangleToggleNode fx:id="inactiveUserToggle" text="Mark as Inactive" BorderPane.alignment="CENTER" />
+                              <MFXRectangleToggleNode fx:id="inactiveUserToggle" text="Active" BorderPane.alignment="CENTER" />
                            </right>
                         </BorderPane>
                         <MFXTextField fx:id="usernameField" borderGap="0.0" floatMode="ABOVE" floatingText="Username" layoutX="15.0" layoutY="79.0" maxWidth="1.7976931348623157E308" minHeight="36.0" />

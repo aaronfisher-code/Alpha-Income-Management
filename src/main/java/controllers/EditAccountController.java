@@ -108,6 +108,14 @@ public class EditAccountController extends Controller{
 	public void fill() {usersView();}
 
 	public void usersView(){
+		 //Change inactive user text depending on if its selected or not
+		inactiveUserToggle.selectedProperty().addListener(actionEvent -> {
+			if (inactiveUserToggle.isSelected()) {
+				inactiveUserToggle.setText("Inactive");
+			} else {
+				inactiveUserToggle.setText("Active");
+			}
+		});
 		formatTabSelect(usersButton);
 		formatTabDeselect(storesButton);
 		addButton.setOnAction(e -> openUserPopover());
