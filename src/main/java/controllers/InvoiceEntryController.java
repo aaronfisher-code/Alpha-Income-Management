@@ -174,7 +174,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		invoiceFilterView.setTextFilterProvider(text -> invoice -> invoice.getInvoiceNo().toLowerCase().contains(text) || invoice.getSupplierName().toLowerCase().contains(text));
 		allInvoices = invoiceFilterView.getFilteredItems();
 
-		supplierNameCol = new TableColumn<>("SUPPLIER");
+		supplierNameCol = new TableColumn<>("     SUPPLIER NAME     ");
 		invoiceNoCol = new TableColumn<>("INVOICE NUMBER");
 		invoiceDateCol = new TableColumn<>("INVOICE DATE");
 		dueDateCol = new TableColumn<>("DUE DATE");
@@ -278,7 +278,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		creditFilterView.setTextFilterProvider(text -> credit -> credit.getSupplierName().toLowerCase().contains(text) || credit.getCreditNo().toLowerCase().contains(text) || credit.getReferenceInvoiceNo().toLowerCase().contains(text));
 		allCredits = creditFilterView.getFilteredItems();
 
-		creditSupplierNameCol = new TableColumn<>("SUPPLIER");
+		creditSupplierNameCol = new TableColumn<>("     SUPPLIER NAME     ");
 		creditNoCol = new TableColumn<>("CREDIT NUMBER");
 		referenceInvCol = new TableColumn<>("REFERENCE INVOICE NUMBER");
 		creditDateCol = new TableColumn<>("CREDIT DATE");
