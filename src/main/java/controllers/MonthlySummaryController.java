@@ -7,10 +7,9 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.control.Label;
-import javafx.scene.control.TableCell;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
+import javafx.geometry.Orientation;
+import javafx.scene.Node;
+import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import models.*;
@@ -59,7 +58,6 @@ public class MonthlySummaryController extends DateSelectController{
 	private TableColumn<?, ?> itemsPerCustomerCol;
 	@FXML
 	private TableColumn<?, ?> otcDollarPerCustomerCol;
-
 	@FXML
 	private TableColumn<?, ?> otcItemsCol;
 	@FXML
@@ -81,6 +79,49 @@ public class MonthlySummaryController extends DateSelectController{
 	@FXML
 	private TableColumn<MonthlySummaryDataPoint,String> runningTillBalanceCol;
 
+	@FXML
+	private TableView<MonthlySummaryDataPoint> totalsTable;
+	@FXML
+	private TableColumn<?, ?> totalsDateCol;
+	@FXML
+	private TableColumn<?, ?> totalsCustomersCol;
+	@FXML
+	private TableColumn<?, ?> totalsDollarPerCustomerCol;
+	@FXML
+	private TableColumn<?, ?> totalsDurationCol;
+	@FXML
+	private TableColumn<?, ?> totalsGpDollarCol;
+	@FXML
+	private TableColumn<?, ?> totalsGpPercentCol;
+	@FXML
+	private TableColumn<?, ?> totalsItemsCol;
+	@FXML
+	private TableColumn<?, ?> totalsItemsPerCustomerCol;
+	@FXML
+	private TableColumn<?, ?> totalsOtcDollarPerCustomerCol;
+	@FXML
+	private TableColumn<?, ?> totalsOtcItemsCol;
+	@FXML
+	private TableColumn<?, ?> totalsOtcPerCustomerCol;
+	@FXML
+	private TableColumn<?, ?> totalsRentAndOutgoingsCol;
+	@FXML
+	private TableColumn<?, ?> totalsRunningZProfitCol;
+	@FXML
+	private TableColumn<?, ?> totalsScriptsCol;
+	@FXML
+	private TableColumn<?, ?> totalsTillBalanceCol;
+	@FXML
+	private TableColumn<?, ?> totalsTotalIncomeCol;
+	@FXML
+	private TableColumn<?, ?> totalsWagesCol;
+	@FXML
+	private TableColumn<?, ?> totalsZReportProfitCol;
+	@FXML
+	private TableColumn<MonthlySummaryDataPoint,String> totalsRunningTillBalanceCol;
+
+
+
 	private PopOver currentDatePopover;
 
     private Connection con = null;
@@ -91,7 +132,7 @@ public class MonthlySummaryController extends DateSelectController{
 	private ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints = FXCollections.observableArrayList();
 	
 	 @FXML
-	private void initialize() throws IOException {}
+	private void initialize() {}
 
 	@Override
 	public void setMain(Main main) {
@@ -143,9 +184,79 @@ public class MonthlySummaryController extends DateSelectController{
 			}
 
 		}
+
+		totalsDateCol.setCellValueFactory(new PropertyValueFactory<>("dateString"));
+		//Add center alignment to date column
+
+		totalsDurationCol.setCellValueFactory(new PropertyValueFactory<>("dayDuration"));
+		totalsCustomersCol.setCellValueFactory(new PropertyValueFactory<>("noOfCustomersString"));
+		totalsItemsCol.setCellValueFactory(new PropertyValueFactory<>("noOfItemsString"));
+		totalsScriptsCol.setCellValueFactory(new PropertyValueFactory<>("noOfScriptsString"));
+		totalsDollarPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("dollarPerCustomerString"));
+		totalsItemsPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("itemsPerCustomerString"));
+		totalsOtcDollarPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("otcDollarPerCustomerString"));
+		totalsOtcItemsCol.setCellValueFactory(new PropertyValueFactory<>("noOfOTCItemsString"));
+		totalsOtcPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("otcPerCustomerString"));
+		totalsTotalIncomeCol.setCellValueFactory(new PropertyValueFactory<>("totalIncomeString"));
+		totalsGpDollarCol.setCellValueFactory(new PropertyValueFactory<>("gpDollarsString"));
+		totalsGpPercentCol.setCellValueFactory(new PropertyValueFactory<>("gpPercentageString"));
+		totalsWagesCol.setCellValueFactory(new PropertyValueFactory<>("wagesString"));
+		totalsRentAndOutgoingsCol.setCellValueFactory(new PropertyValueFactory<>("rentAndOutgoingsString"));
+		totalsRunningZProfitCol.setCellValueFactory(new PropertyValueFactory<>("runningZProfitString"));
+		totalsZReportProfitCol.setCellValueFactory(new PropertyValueFactory<>("zReportProfitString"));
+		totalsTillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("tillBalanceString"));
+		totalsRunningTillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("runningTillBalanceString"));
+
+		totalsDateCol.prefWidthProperty().bind(dateCol.widthProperty());
+		totalsDurationCol.prefWidthProperty().bind(durationCol.widthProperty());
+		totalsCustomersCol.prefWidthProperty().bind(customersCol.widthProperty());
+		totalsItemsCol.prefWidthProperty().bind(itemsCol.widthProperty());
+		totalsScriptsCol.prefWidthProperty().bind(scriptsCol.widthProperty());
+		totalsDollarPerCustomerCol.prefWidthProperty().bind(dollarPerCustomerCol.widthProperty());
+		totalsItemsPerCustomerCol.prefWidthProperty().bind(itemsPerCustomerCol.widthProperty());
+		totalsOtcDollarPerCustomerCol.prefWidthProperty().bind(otcDollarPerCustomerCol.widthProperty());
+		totalsOtcItemsCol.prefWidthProperty().bind(otcItemsCol.widthProperty());
+		totalsOtcPerCustomerCol.prefWidthProperty().bind(otcPerCustomerCol.widthProperty());
+		totalsTotalIncomeCol.prefWidthProperty().bind(totalIncomeCol.widthProperty());
+		totalsGpDollarCol.prefWidthProperty().bind(gpDollarCol.widthProperty());
+		totalsGpPercentCol.prefWidthProperty().bind(gpPercentCol.widthProperty());
+		totalsWagesCol.prefWidthProperty().bind(wagesCol.widthProperty());
+		totalsRentAndOutgoingsCol.prefWidthProperty().bind(rentAndOutgoingsCol.widthProperty());
+		totalsRunningZProfitCol.prefWidthProperty().bind(runningZProfitCol.widthProperty());
+		totalsZReportProfitCol.prefWidthProperty().bind(zReportProfitCol.widthProperty());
+		totalsTillBalanceCol.prefWidthProperty().bind(tillBalanceCol.widthProperty());
+		totalsRunningTillBalanceCol.prefWidthProperty().bind(runningTillBalanceCol.widthProperty());
+		totalsTable.setFixedCellSize(25.0);
+		totalsTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+
+		Platform.runLater(() -> {
+			ScrollBar mainTableScrollBar = getHorizontalScrollbar(summaryTable);
+			ScrollBar summaryTableScrollBar = getHorizontalScrollbar(totalsTable);
+
+			if (mainTableScrollBar != null && summaryTableScrollBar != null) {
+				mainTableScrollBar.valueProperty().bindBidirectional(summaryTableScrollBar.valueProperty());
+			}
+		});
+
 //		Platform.runLater(() -> GUIUtils.customResize(summaryTable,runningTillBalanceCol,(Label) runningTillBalanceCol.getGraphic()));
 		setDate(main.getCurrentDate());
 
+	}
+
+	private ScrollBar getHorizontalScrollbar(TableView<?> table) {
+		ScrollBar result = null;
+
+		for (Node node : table.lookupAll(".scroll-bar")) {
+			if (node instanceof ScrollBar) {
+				ScrollBar bar = (ScrollBar) node;
+
+				if (bar.getOrientation().equals(Orientation.HORIZONTAL)) {
+					result = bar;
+				}
+			}
+		}
+
+		return result;
 	}
 
 	public void exportFiles(){}
@@ -194,12 +305,11 @@ public class MonthlySummaryController extends DateSelectController{
 		RosterUtils rosterUtils = new RosterUtils(con,main,yearMonthObject);
 		for(int i = 1; i<daysInMonth+1; i++){
 			LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(),i);
-			double dayDuration = rosterUtils.getDayDuration(d);
-			int openDays = rosterUtils.getOpenDays();
-			int totalDays = yearMonthObject.lengthOfMonth();
 			monthlySummaryPoints.add(new MonthlySummaryDataPoint(d,currentTillReportDataPoints,currentEODDataPoints,monthlySummaryPoints,rosterUtils));
 		}
 		summaryTable.setItems(monthlySummaryPoints);
+		totalsTable.getItems().add(monthlySummaryPoints.get(0));
+		totalsTable.getItems().add(monthlySummaryPoints.get(1));
 		Platform.runLater(() -> GUIUtils.customResize(summaryTable,runningTillBalanceCol,(Label) runningTillBalanceCol.getGraphic()));
 	}
 

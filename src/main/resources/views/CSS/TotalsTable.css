@@ -50,6 +50,9 @@
 .table-view .column-header * {
     -fx-background-color: #F3F2F7;
     -fx-text-fill: #6E6B7B;
+    max-height: 2;
+    pref-height: 2;
+    min-height: 2;
 }
 
 .table-view .column-header,
@@ -66,14 +69,36 @@
     -fx-alignment: CENTER;
 }
 
-.hideHorizontal .scroll-bar:horizontal {
+.table-view .column-header-background {
+    visibility: hidden;
+    -fx-padding: -0.2em; /* this reduces the space */
+    max-height: 2;
+    pref-height: 2;
+    min-height: 2;
+}
+
+.table-view .column-header, .filler {
+    -fx-size: 2px;
+    -fx-min-width: 2;
+    -fx-max-width: 2;
+    -fx-pref-width: 2;
+    visibility: hidden;
+}
+
+
+.table-view .scroll-bar:vertical {
     -fx-opacity: 0;
 }
 
-.hideHorizontal .scroll-bar {
-    -fx-max-height: 0;
-    -fx-pref-height: 0;
+.table-view .scroll-bar {
+    -fx-max-width: 0;
+    -fx-pref-width: 0;
 }
+
+.table-view {
+    -fx-background-color: TRANSPARENT;
+}
+
 
 /*.table-row-cell {*/
 /*    !* Define the default (light) row color here. *!*/

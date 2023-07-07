@@ -64,7 +64,7 @@ public class BudgetAndExpensesController extends DateSelectController{
     private Main main;
 
 	@FXML
-	private void initialize() throws IOException {}
+	private void initialize() {}
 
 	@Override
 	public void setMain(Main main) {
