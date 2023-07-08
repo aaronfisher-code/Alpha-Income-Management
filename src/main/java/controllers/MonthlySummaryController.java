@@ -146,8 +146,6 @@ public class MonthlySummaryController extends DateSelectController{
 	@Override
 	public void fill() {
 //		itemsPerCustomerCol.getStyleClass().add("yellowColumn");
-//		System.out.println(itemsPerCustomerCol.getStyleClass().get(1));
-//		System.out.println(summaryTable.getStylesheets().get(0));
 		summaryTable.setSelectionModel(null);
 		dateCol.setCellValueFactory(new PropertyValueFactory<>("dateString"));
 		//Add center alignment to date column
@@ -206,6 +204,26 @@ public class MonthlySummaryController extends DateSelectController{
 		totalsZReportProfitCol.setCellValueFactory(new PropertyValueFactory<>("zReportProfitString"));
 		totalsTillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("tillBalanceString"));
 		totalsRunningTillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("runningTillBalanceString"));
+
+		totalsDateCol.setCellValueFactory(new PropertyValueFactory<>("dateValue"));
+		totalsDurationCol.setCellValueFactory(new PropertyValueFactory<>("dateDurationValue"));
+		totalsCustomersCol.setCellValueFactory(new PropertyValueFactory<>("noOfCustomersValue"));
+		totalsItemsCol.setCellValueFactory(new PropertyValueFactory<>("noOfItemsValue"));
+		totalsScriptsCol.setCellValueFactory(new PropertyValueFactory<>("noOfScriptsValue"));
+		totalsDollarPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("dollarPerCustomerValue"));
+		totalsItemsPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("itemsPerCustomerValue"));
+		totalsOtcDollarPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("otcDollarPerCustomerValue"));
+		totalsOtcItemsCol.setCellValueFactory(new PropertyValueFactory<>("noOfOTCItemsValue"));
+		totalsOtcPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("otcPerCustomerValue"));
+		totalsTotalIncomeCol.setCellValueFactory(new PropertyValueFactory<>("totalIncomeValue"));
+		totalsGpDollarCol.setCellValueFactory(new PropertyValueFactory<>("gpDollarsValue"));
+		totalsGpPercentCol.setCellValueFactory(new PropertyValueFactory<>("gpPercentageValue"));
+		totalsWagesCol.setCellValueFactory(new PropertyValueFactory<>("wagesValue"));
+		totalsRentAndOutgoingsCol.setCellValueFactory(new PropertyValueFactory<>("rentAndOutgoingsValue"));
+		totalsRunningZProfitCol.setCellValueFactory(new PropertyValueFactory<>("runningZProfitValue"));
+		totalsZReportProfitCol.setCellValueFactory(new PropertyValueFactory<>("zReportProfitValue"));
+		totalsTillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("tillBalanceValue"));
+		totalsRunningTillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("runningTillBalanceValue"));
 
 		totalsDateCol.prefWidthProperty().bind(dateCol.widthProperty());
 		totalsDurationCol.prefWidthProperty().bind(durationCol.widthProperty());
@@ -271,7 +289,6 @@ public class MonthlySummaryController extends DateSelectController{
 	}
 
 	public void fillTable(){
-//		System.out.println("fill table method called");
 		monthlySummaryPoints = FXCollections.observableArrayList();
 		YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
 		int daysInMonth = yearMonthObject.lengthOfMonth();
@@ -308,8 +325,9 @@ public class MonthlySummaryController extends DateSelectController{
 			monthlySummaryPoints.add(new MonthlySummaryDataPoint(d,currentTillReportDataPoints,currentEODDataPoints,monthlySummaryPoints,rosterUtils));
 		}
 		summaryTable.setItems(monthlySummaryPoints);
-		totalsTable.getItems().add(monthlySummaryPoints.get(0));
-		totalsTable.getItems().add(monthlySummaryPoints.get(1));
+		totalsTable.getItems().clear();
+		totalsTable.getItems().add(new MonthlySummaryDataPoint(monthlySummaryPoints, true));
+		totalsTable.getItems().add(new MonthlySummaryDataPoint(monthlySummaryPoints, false));
 		Platform.runLater(() -> GUIUtils.customResize(summaryTable,runningTillBalanceCol,(Label) runningTillBalanceCol.getGraphic()));
 	}
 

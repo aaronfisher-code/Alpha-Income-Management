@@ -5,7 +5,10 @@ import utils.RosterUtils;
 
 import java.text.NumberFormat;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.format.DateTimeFormatter;
+import java.util.Objects;
+import java.util.OptionalDouble;
 
 public class MonthlySummaryDataPoint {
 
@@ -28,6 +31,27 @@ public class MonthlySummaryDataPoint {
 	private double runningZProfit;
 	private double tillBalance;
 	private double runningTillBalance;
+
+	private String dateValue;
+	private String dateDurationValue;
+	private String noOfScriptsValue;
+	private String noOfCustomersValue;
+	private String noOfItemsValue;
+	private String noOfOTCItemsValue;
+	private String itemsPerCustomerValue;
+	private String otcPerCustomerValue;
+	private String dollarPerCustomerValue;
+	private String otcDollarPerCustomerValue;
+	private String totalIncomeValue;
+	private String gpDollarsValue;
+	private String gpPercentageValue;
+	private String rentAndOutgoingsValue;
+	private String wagesValue;
+	private String zReportProfitValue;
+	private String runningZProfitValue;
+	private String tillBalanceValue;
+	private String runningTillBalanceValue;
+
 
 	private double grossProfitDollars;
 	private double govtRecovery;
@@ -88,6 +112,61 @@ public class MonthlySummaryDataPoint {
 		for(MonthlySummaryDataPoint m: monthlySummaryPoints){
 			runningZProfit += m.getZReportProfit();
 			runningTillBalance += m.getTillBalance();
+		}
+	}
+
+	public MonthlySummaryDataPoint(ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints, boolean totals){
+		if(totals){
+			dateValue = "Total";
+			dateDurationValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getDayDuration).sum());
+			noOfScriptsValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getNoOfScripts).sum());
+			noOfCustomersValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getNoOfCustomers).sum());
+			noOfItemsValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getNoOfItems).sum());
+			noOfOTCItemsValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getNoOfOTCItems).sum());
+			itemsPerCustomerValue = "-";
+			otcPerCustomerValue = "-";
+			dollarPerCustomerValue = "-";
+			otcDollarPerCustomerValue = "-";
+			totalIncomeValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTotalIncome).sum());
+			gpDollarsValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getGpDollars).sum());
+			gpPercentageValue = "-";
+			rentAndOutgoingsValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getRentAndOutgoings).sum());
+			wagesValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getWages).sum());
+			zReportProfitValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getZReportProfit).sum());
+			runningZProfitValue = "-";
+			tillBalanceValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTillBalance).sum());
+			runningTillBalanceValue = "-";
+		}else{
+			dateValue = "Average";
+			dateDurationValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getDayDuration).average().getAsDouble());
+			noOfScriptsValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getNoOfScripts).average().getAsDouble());
+			noOfCustomersValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getNoOfCustomers).average().getAsDouble());
+			noOfItemsValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getNoOfItems).average().getAsDouble());
+			noOfOTCItemsValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getNoOfOTCItems).average().getAsDouble());
+			itemsPerCustomerValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getItemsPerCustomer).average().getAsDouble());
+			otcPerCustomerValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getOtcPerCustomer).average().getAsDouble());
+			dollarPerCustomerValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getDollarPerCustomer).average().getAsDouble());
+			otcDollarPerCustomerValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getOtcDollarPerCustomer).average().getAsDouble());
+			totalIncomeValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTotalIncome).average().getAsDouble());
+			gpDollarsValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getGpDollars).average().getAsDouble());
+			OptionalDouble optional = monthlySummaryPoints.stream()
+					.filter(Objects::nonNull) // Ignore null MonthlySummaryDataPoint objects
+					.map(MonthlySummaryDataPoint::getGpPercentage)
+					.filter(Objects::nonNull) // Ignore null gpPercentage values
+					.filter(value -> !value.isNaN() && value != 0) // Ignore NaN or 0 gpPercentage values
+					.mapToDouble(Double::doubleValue) // Convert to primitive double
+					.average();
+			if (optional.isPresent()) {
+				gpPercentageValue = String.format("%.2f", optional.getAsDouble()*100) + "%";
+			} else {
+				gpPercentageValue = "-";
+			}
+			rentAndOutgoingsValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getRentAndOutgoings).average().getAsDouble());
+			wagesValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getWages).average().getAsDouble());
+			zReportProfitValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getZReportProfit).average().getAsDouble());
+			runningZProfitValue = "-";
+			tillBalanceValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTillBalance).average().getAsDouble());
+			runningTillBalanceValue = "-";
 		}
 	}
 
@@ -338,5 +417,81 @@ public class MonthlySummaryDataPoint {
 
 	public void setTotalGovtContribution(double totalGovtContribution) {
 		this.totalGovtContribution = totalGovtContribution;
+	}
+
+	public String getDateValue() {
+		return dateValue;
+	}
+
+	public String getDateDurationValue() {
+		return dateDurationValue;
+	}
+
+	public String getNoOfScriptsValue() {
+		return noOfScriptsValue;
+	}
+
+	public String getNoOfCustomersValue() {
+		return noOfCustomersValue;
+	}
+
+	public String getNoOfItemsValue() {
+		return noOfItemsValue;
+	}
+
+	public String getNoOfOTCItemsValue() {
+		return noOfOTCItemsValue;
+	}
+
+	public String getItemsPerCustomerValue() {
+		return itemsPerCustomerValue;
+	}
+
+	public String getOtcPerCustomerValue() {
+		return otcPerCustomerValue;
+	}
+
+	public String getDollarPerCustomerValue() {
+		return dollarPerCustomerValue;
+	}
+
+	public String getOtcDollarPerCustomerValue() {
+		return otcDollarPerCustomerValue;
+	}
+
+	public String getTotalIncomeValue() {
+		return totalIncomeValue;
+	}
+
+	public String getGpDollarsValue() {
+		return gpDollarsValue;
+	}
+
+	public String getGpPercentageValue() {
+		return gpPercentageValue;
+	}
+
+	public String getRentAndOutgoingsValue() {
+		return rentAndOutgoingsValue;
+	}
+
+	public String getWagesValue() {
+		return wagesValue;
+	}
+
+	public String getZReportProfitValue() {
+		return zReportProfitValue;
+	}
+
+	public String getRunningZProfitValue() {
+		return runningZProfitValue;
+	}
+
+	public String getTillBalanceValue() {
+		return tillBalanceValue;
+	}
+
+	public String getRunningTillBalanceValue() {
+		return runningTillBalanceValue;
 	}
 }
