@@ -197,6 +197,19 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		totalAfterCreditCol.setCellValueFactory(new PropertyValueFactory<>("totalAfterCreditsString"));
 		notesCol.setCellValueFactory(new PropertyValueFactory<>("notes"));
 
+		invoiceNoCol.setComparator((o1, o2) -> {
+			// Here you need to decide how you want to sort your strings.
+			// For example, you can sort numerically if both strings are parseable as integers, 
+			// or lexicographically otherwise. 
+			try {
+				int i1 = Integer.parseInt(o1);
+				int i2 = Integer.parseInt(o2);
+				return Integer.compare(i1, i2);
+			} catch(NumberFormatException e) {
+				return o1.compareTo(o2);
+			}
+		});
+
 		invoicesTable.getColumns().clear();
 
 		invoicesTable.getColumns().addAll(
@@ -811,7 +824,8 @@ public class InvoiceEntryController extends DateSelectController implements acti
 					"        LEFT JOIN\n" +
 					"    invoicedatapoints idp ON invoices.invoiceNo = idp.invoiceNo\n" +
 					"WHERE\n" +
-					"    invoices.storeID = ?\n" + "AND MONTH(invoices.invoiceDate) = ?\n" + "AND YEAR(invoices.invoiceDate) = ?\n";
+					"    invoices.storeID = ?\n" + "AND MONTH(invoices.invoiceDate) = ?\n" + "AND YEAR(invoices.invoiceDate) = ?\n" +
+					"ORDER BY invoices.invoiceNo ASC";
 
 			preparedStatement = con.prepareStatement(sql);
 			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
@@ -833,8 +847,11 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		VBox.setVgrow(invoicesTable, Priority.ALWAYS);
 		for(TableColumn tc: invoicesTable.getColumns()){
 			tc.setPrefWidth(TableUtils.getColumnWidth(tc)+30);
+			tc.setSortable(true);
 		}
 		Platform.runLater(() -> GUIUtils.customResize(invoicesTable,notesCol));
+		Platform.runLater(() -> invoicesTable.sort());
+
 	}
 
 	public void fillCreditTable(){
@@ -863,6 +880,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		VBox.setVgrow(creditsTable, Priority.ALWAYS);
 		for(TableColumn tc: creditsTable.getColumns()){
 			tc.setPrefWidth(TableUtils.getColumnWidth(tc)+30);
+			tc.setSortable(true);
 		}
 		Platform.runLater(() -> GUIUtils.customResize(creditsTable,notesCol));
 	}
@@ -908,7 +926,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 				ObservableList<Invoice> currentInvoices = FXCollections.observableArrayList();
 				String sql = null;
 				try {
-					sql = "SELECT * FROM invoices JOIN invoicesuppliers a on a.idinvoiceSuppliers = invoices.supplierID WHERE invoices.storeID = ? AND MONTH(invoiceDate) = ? AND YEAR(invoiceDate) = ?";
+					sql = "SELECT * FROM invoices JOIN invoicesuppliers a on a.idinvoiceSuppliers = invoices.supplierID JOIN invoicedatapoints i on invoices.invoiceNo = i.invoiceNo WHERE invoices.storeID = ? AND MONTH(invoiceDate) = ? AND YEAR(invoiceDate) = ?";
 					preparedStatement = con.prepareStatement(sql);
 					preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
 					preparedStatement.setInt(2, yearMonthObject.getMonthValue());

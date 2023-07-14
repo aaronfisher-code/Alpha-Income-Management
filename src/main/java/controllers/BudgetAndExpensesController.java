@@ -45,7 +45,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 	private StackPane backgroundPane;
 
 	@FXML
-	private MFXTextField numDaysField,numOpenDaysField,numPartialDaysField,dailyRentField,weeklyWagesField,totalAvgField,monthlyRentField,dailyOutgoingsField,monthlyLoanField;
+	private MFXTextField numDaysField,numOpenDaysField,numPartialDaysField,dailyRentField,totalAvgField,monthlyRentField,dailyOutgoingsField,monthlyLoanField;
 
 	@FXML
 	private MFXTextField cpaIncomeXero, cpaIncomeSpreadsheet,cpaIncomeVariance,lanternPayIncomeXero,lanternPayIncomeSpreadsheet,lanternPayIncomeVariance,otherIncomeXero,otherIncomeSpreadsheet,otherIncomeVariance,atoGSTrefundXero;
@@ -113,7 +113,6 @@ public class BudgetAndExpensesController extends DateSelectController{
 				//Daily expenses calculator
 				monthlyRentField.setText("");
 				dailyRentField.setText("");
-				weeklyWagesField.setText("");
 				dailyOutgoingsField.setText("");
 				totalAvgField.setText("");
 				monthlyLoanField.setText("");
@@ -128,7 +127,6 @@ public class BudgetAndExpensesController extends DateSelectController{
 				double monthlyRent = resultSet.getDouble("monthlyRent");
 				monthlyRentField.setText(String.format("%.2f", monthlyRent));
 				dailyRentField.setText(String.format("%.2f", monthlyRent/daysInMonth));
-				weeklyWagesField.setText(String.format("%.2f", 0.00)); //todo: add wage calculation
 				dailyOutgoingsField.setText(String.format("%.2f", resultSet.getDouble("dailyOutgoings")));
 				totalAvgField.setText(String.format("%.2f", resultSet.getDouble("dailyOutgoings")+(monthlyRent/daysInMonth)));
 				monthlyLoanField.setText(String.format("%.2f", resultSet.getDouble("monthlyLoan")));

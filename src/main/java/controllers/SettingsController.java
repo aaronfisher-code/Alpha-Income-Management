@@ -67,7 +67,7 @@ public class SettingsController extends Controller{
 	private void legacyImport() throws IOException {
 		FileChooser fileChooser = new FileChooser();
 		fileChooser.setTitle("Open Archived file");
-		fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("XLSM Files", "*.xlsm"));
+		fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("Income Report Files", "*.xlsm","*.xlsx"));
 		List<File> files = fileChooser.showOpenMultipleDialog(main.getStg());
 
 		String password = "1234"; // replace with the actual password

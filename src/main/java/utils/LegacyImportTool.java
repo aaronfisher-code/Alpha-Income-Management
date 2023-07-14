@@ -4,6 +4,7 @@ import application.Main;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -307,7 +308,7 @@ public class LegacyImportTool {
     }
 
     public void importOwnersCopy(XSSFWorkbook wb){
-        //creating a Sheet object to retrieve the object
+        //creating a Sheet object to retrieve the invoices
         XSSFSheet sheet = wb.getSheet("COGS");
         for(int i=1;i<999;i++) {//arbitrarily large row count to hopefully catch all invoices
             if (sheet.getRow(i).getCell(16) != null && sheet.getRow(i).getCell(16).getCellType() != CellType.BLANK){
@@ -365,6 +366,52 @@ public class LegacyImportTool {
                 }
             }
         }
+
+        //Import BAS Checker values
+        LocalDate date = LocalDate.of((int) findNum(wb.getSheet("EOD"),1,0), (int) findNum(wb.getSheet("EOD"),0,0), 1);
+        sheet = wb.getSheet("BAS Checker");
+        try{
+            sql = "INSERT INTO baschecker (date, storeID, cashAdjustment, eftposAdjustment, amexAdjustment, googleSquareAdjustment, chequesAdjustment, medicareAdjustment, totalIncomeAdjustment, cashCorrect, eftposCorrect, amexCorrect, googleSquareCorrect, chequesCorrect, medicareCorrect, totalIncomeCorrect, gstCorrect, basDailyScript) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE cashAdjustment=?, eftposAdjustment=?, amexAdjustment=?, googleSquareAdjustment=?, chequesAdjustment=?, medicareAdjustment=?, totalIncomeAdjustment=?, cashCorrect=?, eftposCorrect=?, amexCorrect=?, googleSquareCorrect=?, chequesCorrect=?, medicareCorrect=?, totalIncomeCorrect=?, gstCorrect=?, basDailyScript=?";
+            preparedStatement = con.prepareStatement(sql);
+            preparedStatement.setDate(1, Date.valueOf(date));
+            preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
+            preparedStatement.setDouble(3, findNum(sheet, 2, 2));
+            preparedStatement.setDouble(4, findNum(sheet, 3, 2));
+            preparedStatement.setDouble(5, findNum(sheet, 4, 2));
+            preparedStatement.setDouble(6, findNum(sheet, 5, 2));
+            preparedStatement.setDouble(7, findNum(sheet, 6, 2));
+            preparedStatement.setDouble(8, findNum(sheet, 7, 2));
+            preparedStatement.setDouble(9, findNum(sheet, 8, 2));
+            preparedStatement.setBoolean(10, sheet.getRow(2).getCell(4).getStringCellValue().toLowerCase().equals("y"));
+            preparedStatement.setBoolean(11, sheet.getRow(3).getCell(4).getStringCellValue().toLowerCase().equals("y"));
+            preparedStatement.setBoolean(12, sheet.getRow(4).getCell(4).getStringCellValue().toLowerCase().equals("y"));
+            preparedStatement.setBoolean(13, sheet.getRow(5).getCell(4).getStringCellValue().toLowerCase().equals("y"));
+            preparedStatement.setBoolean(14, sheet.getRow(6).getCell(4).getStringCellValue().toLowerCase().equals("y"));
+            preparedStatement.setBoolean(15, sheet.getRow(7).getCell(4).getStringCellValue().toLowerCase().equals("y"));
+            preparedStatement.setBoolean(16, sheet.getRow(8).getCell(4).getStringCellValue().toLowerCase().equals("y"));
+            preparedStatement.setBoolean(17, sheet.getRow(9).getCell(4).getStringCellValue().toLowerCase().equals("y"));
+            preparedStatement.setDouble(18, findNum(sheet, 14, 2));
+            preparedStatement.setDouble(19, findNum(sheet, 2, 2));
+            preparedStatement.setDouble(20, findNum(sheet, 3, 2));
+            preparedStatement.setDouble(21, findNum(sheet, 4, 2));
+            preparedStatement.setDouble(22, findNum(sheet, 5, 2));
+            preparedStatement.setDouble(23, findNum(sheet, 6, 2));
+            preparedStatement.setDouble(24, findNum(sheet, 7, 2));
+            preparedStatement.setDouble(25, findNum(sheet, 8, 2));
+            preparedStatement.setBoolean(26, sheet.getRow(2).getCell(4).getStringCellValue().toLowerCase().equals("y"));
+            preparedStatement.setBoolean(27, sheet.getRow(3).getCell(4).getStringCellValue().toLowerCase().equals("y"));
+            preparedStatement.setBoolean(28, sheet.getRow(4).getCell(4).getStringCellValue().toLowerCase().equals("y"));
+            preparedStatement.setBoolean(29, sheet.getRow(5).getCell(4).getStringCellValue().toLowerCase().equals("y"));
+            preparedStatement.setBoolean(30, sheet.getRow(6).getCell(4).getStringCellValue().toLowerCase().equals("y"));
+            preparedStatement.setBoolean(31, sheet.getRow(7).getCell(4).getStringCellValue().toLowerCase().equals("y"));
+            preparedStatement.setBoolean(32, sheet.getRow(8).getCell(4).getStringCellValue().toLowerCase().equals("y"));
+            preparedStatement.setBoolean(33, sheet.getRow(9).getCell(4).getStringCellValue().toLowerCase().equals("y"));
+            preparedStatement.setDouble(34, findNum(sheet, 14, 2));
+            preparedStatement.executeUpdate();
+        }catch(SQLException e){
+            throw new RuntimeException(e);
+        }
+
     }
 
     private String getCellAsString(XSSFSheet sheet, int row, int col) {
@@ -372,15 +419,54 @@ public class LegacyImportTool {
         return formatter.formatCellValue(sheet.getRow(row).getCell(col));
     }
 
-    private double findNum(XSSFSheet sheet,int row,int col){
-        double num = 0.00;
-        try{
-            num = sheet.getRow(row).getCell(col).getNumericCellValue();
-        }catch(Exception e){
-            num = 0.00;
+    public double findNum(XSSFSheet sheet,int row,int col) {
+        double value = 0.0;
+        Cell cell = sheet.getRow(row).getCell(col);
+        if (cell != null) {
+            switch (cell.getCellType()) {
+                case STRING:
+                    try {
+                        value = Double.parseDouble(cell.getStringCellValue().trim());
+                    } catch (NumberFormatException e) {
+                        System.out.println("Could not parse the string into a double at " + row + ", " + col);
+                        e.printStackTrace();
+                    }
+                    break;
+
+                case NUMERIC:
+                    value = cell.getNumericCellValue();
+                    break;
+
+                case FORMULA: //If the cell contains formula, evaluate it
+                    try {
+                        FormulaEvaluator evaluator = cell.getSheet().getWorkbook().getCreationHelper().createFormulaEvaluator();
+                        value = evaluator.evaluate(cell).getNumberValue();
+                    } catch (Exception e) {
+                        System.out.println("Could not evaluate the formula");
+                        e.printStackTrace();
+                    }
+                    break;
+
+                case BLANK:
+                    value = 0.0;
+                    break;
+
+                default:
+                    System.out.println("The cell contains an unsupported type");
+            }
         }
-        return num;
+        return value;
     }
+
+//    private double findNum(XSSFSheet sheet,int row,int col){
+//        double num = 0.00;
+//        try{
+//            num = sheet.getRow(row).getCell(col).getNumericCellValue();
+//        }catch(Exception e){
+//            num = 0.00;
+//        }
+//        return num;
+//    }
 
     private LocalDate findDate(XSSFSheet sheet, int row, int col) {
         LocalDate date = null;

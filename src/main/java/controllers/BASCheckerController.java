@@ -17,6 +17,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.*;
 import models.*;
 import org.controlsfx.control.PopOver;
+import utils.RosterUtils;
 import utils.ValidatorUtils;
 
 import java.io.IOException;
@@ -165,13 +166,15 @@ public class BASCheckerController extends DateSelectController{
 		int daysInMonth = yearMonthObject.lengthOfMonth();
 		ObservableList<EODDataPoint> currentEODDataPoints = FXCollections.observableArrayList();
 		ObservableList<TillReportDataPoint> currentTillDataPoints = FXCollections.observableArrayList();
+		LocalDate startOfMonth = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonthValue(), 1);
+		LocalDate startOfNextMonth = startOfMonth.plusMonths(1);
 		String sql = null;
 		try {
-			sql = "SELECT * FROM eoddatapoints WHERE eoddatapoints.storeID = ? AND MONTH(date) = ? AND YEAR(date) = ?";
+			sql = "SELECT * FROM eoddatapoints WHERE eoddatapoints.storeID = ? AND date >= ? AND date <= ?";
 			preparedStatement = con.prepareStatement(sql);
 			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-			preparedStatement.setInt(2, yearMonthObject.getMonthValue());
-			preparedStatement.setInt(3, yearMonthObject.getYear());
+			preparedStatement.setDate(2, Date.valueOf(startOfMonth));
+			preparedStatement.setDate(3, Date.valueOf(startOfNextMonth));
 			resultSet = preparedStatement.executeQuery();
 			while (resultSet.next()) {
 				currentEODDataPoints.add(new EODDataPoint(resultSet));
@@ -266,7 +269,14 @@ public class BASCheckerController extends DateSelectController{
 		}
 
 		spreadsheetCheck1.setText(String.format("%.2f", cashTotal+eftposTotal+amexTotal+googleSquareTotal+chequesTotal+medicareTotal));
-		spreadsheetCheck2.setText("0.00"); //TODO: implement spreadsheetCheck2 to match monthly summary
+		ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints = FXCollections.observableArrayList();
+		RosterUtils rosterUtils = new RosterUtils(con,main,yearMonthObject);
+		for(int i = 1; i<daysInMonth+1; i++){
+			LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(),i);
+			monthlySummaryPoints.add(new MonthlySummaryDataPoint(d,currentTillDataPoints,currentEODDataPoints,monthlySummaryPoints,rosterUtils));
+		}
+		MonthlySummaryDataPoint totalList = new MonthlySummaryDataPoint(monthlySummaryPoints, true);
+		spreadsheetCheck2.setText(String.format("%.2f",totalList.getTotalIncome()));
 		spreadsheetCheck3.setText(String.format("%.2f", Double.parseDouble(spreadsheetCheck2.getText())-Double.parseDouble(spreadsheetCheck1.getText())));
 
 
@@ -279,8 +289,8 @@ public class BASCheckerController extends DateSelectController{
 			resultSet = preparedStatement.executeQuery();
 			if(resultSet.next()){
 				cogsCheck1.setText(String.format("%.2f", resultSet.getDouble("total")));
+				LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth().plus(1), 1);
 				double sohGrowth = 0;
-				LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(), daysInMonth);
 				for(EODDataPoint e: currentEODDataPoints){
 					if(e.getDate().equals(d)){
 						sohGrowth += e.getStockOnHandAmount();
@@ -294,8 +304,14 @@ public class BASCheckerController extends DateSelectController{
 						break;
 					}
 				}
-				//total sales - gp($) + soh growth
-				cogsCheck2.setText(String.format("%.2f", totalSales-gp+sohGrowth));
+//				total sales - gp($) + soh growth
+//				System.out.println("Total invoice amount: "+resultSet.getDouble("total"));
+//				System.out.println("Total sales: "+totalSales);
+//				System.out.println("GP: "+gp);
+//				System.out.println("SOH Growth: "+sohGrowth);
+				//todo: revist this formula
+
+				cogsCheck2.setText(String.format("%.2f", (totalSales+gp)-sohGrowth));
 				cogsCheck3.setText(String.format("%.2f", Double.parseDouble(cogsCheck1.getText())-Double.parseDouble(cogsCheck2.getText())));
 			}
 		}catch(SQLException e){

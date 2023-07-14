@@ -102,7 +102,10 @@ public class MonthlySummaryDataPoint {
 		gpDollars = grossProfitDollars+govtRecovery-totalGovtContribution;
 		gpPercentage = gpDollars/totalIncome;
 
-		rentAndOutgoings = 0/rosterUtils.getOpenDays(); //TODO: Get this from equivalent of budget and expenses
+		if(rosterUtils.getOpenDays()==0)
+			rentAndOutgoings = 0;
+		else
+			rentAndOutgoings = 0/rosterUtils.getOpenDays(); //TODO: Get this from equivalent of budget and expenses
 		wages = 0; //TODO: Get this from wage calculator
 		zReportProfit = gpDollars-rentAndOutgoings-wages;
 		runningZProfit = 0;
@@ -127,6 +130,7 @@ public class MonthlySummaryDataPoint {
 			otcPerCustomerValue = "-";
 			dollarPerCustomerValue = "-";
 			otcDollarPerCustomerValue = "-";
+			totalIncome = monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTotalIncome).sum();
 			totalIncomeValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTotalIncome).sum());
 			gpDollarsValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getGpDollars).sum());
 			gpPercentageValue = "-";
@@ -147,6 +151,7 @@ public class MonthlySummaryDataPoint {
 			otcPerCustomerValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getOtcPerCustomer).average().getAsDouble());
 			dollarPerCustomerValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getDollarPerCustomer).average().getAsDouble());
 			otcDollarPerCustomerValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getOtcDollarPerCustomer).average().getAsDouble());
+			totalIncome = monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTotalIncome).average().getAsDouble();
 			totalIncomeValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTotalIncome).average().getAsDouble());
 			gpDollarsValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getGpDollars).average().getAsDouble());
 			OptionalDouble optional = monthlySummaryPoints.stream()

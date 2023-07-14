@@ -143,7 +143,6 @@
                               <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
                               <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
                               <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
-                              <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
                           </rowConstraints>
                            <children>
                               <Label text="General">
@@ -187,12 +186,7 @@
                                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                  </padding>
                               </Label>
-                              <Label text="Weekly wages" GridPane.columnIndex="1" GridPane.rowIndex="5">
-                                 <padding>
-                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
-                                 </padding>
-                              </Label>
-                              <Label text="Wages" GridPane.rowIndex="5">
+                              <Label text="Outgoings" GridPane.rowIndex="5">
                                  <padding>
                                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                  </padding>
@@ -200,7 +194,12 @@
                                     <Font name="System Bold" size="12.0" />
                                  </font>
                               </Label>
-                              <Label text="Outgoings" GridPane.rowIndex="6">
+                              <Label text="Daily outgoings (previously detirmined)           " GridPane.columnIndex="1" GridPane.rowIndex="5">
+                                 <padding>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                 </padding>
+                              </Label>
+                              <Label text="Total Daily average Rent and expenses      " GridPane.rowIndex="6">
                                  <padding>
                                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                  </padding>
@@ -208,12 +207,7 @@
                                     <Font name="System Bold" size="12.0" />
                                  </font>
                               </Label>
-                              <Label text="Daily outgoings (previously detirmined)           " GridPane.columnIndex="1" GridPane.rowIndex="6">
-                                 <padding>
-                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
-                                 </padding>
-                              </Label>
-                              <Label text="Total Daily average Rent and expenses      " GridPane.rowIndex="7">
+                              <Label text="Loan" GridPane.rowIndex="7">
                                  <padding>
                                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                  </padding>
@@ -221,15 +215,7 @@
                                     <Font name="System Bold" size="12.0" />
                                  </font>
                               </Label>
-                              <Label text="Loan" GridPane.rowIndex="8">
-                                 <padding>
-                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
-                                 </padding>
-                                 <font>
-                                    <Font name="System Bold" size="12.0" />
-                                 </font>
-                              </Label>
-                              <Label text="Monthly loan expense" GridPane.columnIndex="1" GridPane.rowIndex="8">
+                              <Label text="Monthly loan expense" GridPane.columnIndex="1" GridPane.rowIndex="7">
                                  <padding>
                                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                  </padding>
@@ -238,11 +224,10 @@
                               <MFXTextField fx:id="numOpenDaysField" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="2" GridPane.rowIndex="1" />
                               <MFXTextField fx:id="numPartialDaysField" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="2" GridPane.rowIndex="2" />
                               <MFXTextField fx:id="dailyRentField" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="2" GridPane.rowIndex="4" />
-                              <MFXTextField fx:id="weeklyWagesField" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="2" GridPane.rowIndex="5" />
-                              <MFXTextField fx:id="totalAvgField" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="2" GridPane.rowIndex="7" />
+                              <MFXTextField fx:id="totalAvgField" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="2" GridPane.rowIndex="6" />
                               <MFXTextField fx:id="monthlyRentField" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="2" GridPane.rowIndex="3" />
-                              <MFXTextField fx:id="dailyOutgoingsField" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="2" GridPane.rowIndex="6" />
-                              <MFXTextField fx:id="monthlyLoanField" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="2" GridPane.rowIndex="8" />
+                              <MFXTextField fx:id="dailyOutgoingsField" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="2" GridPane.rowIndex="5" />
+                              <MFXTextField fx:id="monthlyLoanField" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="2" GridPane.rowIndex="7" />
                            </children>
                            <padding>
                               <Insets bottom="15.0" left="10.0" right="10.0" top="15.0" />
