@@ -328,7 +328,6 @@ public class EditAccountController extends Controller{
 		editUserPopoverTitle.setText("Edit user");
 		inactiveUserToggle.setVisible(true);
 		deleteUserButton.setVisible(true);
-		//TODO change inactive text to reflect current active status
 		inactiveUserToggle.setSelected(user.getInactiveDate()!=null);
 		usernameField.setText(user.getUsername());
 		firstNameField.setText(user.getFirst_name());

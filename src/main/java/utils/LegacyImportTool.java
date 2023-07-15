@@ -412,6 +412,31 @@ public class LegacyImportTool {
             throw new RuntimeException(e);
         }
 
+        //Import budget and expenses values
+        sheet = wb.getSheet("Budget and Expenses");
+        try{
+            sql = "INSERT INTO budgetandexpenses (date, storeID, monthlyRent, dailyOutgoings, monthlyLoan, `6CPAIncome`, LanternPayIncome, OtherIncome, ATO_GST_BAS_refund) VALUES (?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE monthlyRent=?, dailyOutgoings=?, monthlyLoan=?, `6CPAIncome`=?, LanternPayIncome=?, OtherIncome=?, ATO_GST_BAS_refund=?";
+            preparedStatement = con.prepareStatement(sql);
+            preparedStatement.setDate(1, Date.valueOf(date));
+            preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
+            preparedStatement.setDouble(3, findNum(sheet, 4, 2));
+            preparedStatement.setDouble(4, findNum(sheet, 9, 2));
+            preparedStatement.setDouble(5, findNum(sheet, 15, 2));
+            preparedStatement.setDouble(6, findNum(sheet, 18, 1));
+            preparedStatement.setDouble(7, findNum(sheet, 19, 1));
+            preparedStatement.setDouble(8, findNum(sheet, 20, 1));
+            preparedStatement.setDouble(9, findNum(sheet, 21, 1));
+            preparedStatement.setDouble(10, findNum(sheet, 4, 2));
+            preparedStatement.setDouble(11, findNum(sheet, 9, 2));
+            preparedStatement.setDouble(12, findNum(sheet, 15, 2));
+            preparedStatement.setDouble(13, findNum(sheet, 18, 1));
+            preparedStatement.setDouble(14, findNum(sheet, 19, 1));
+            preparedStatement.setDouble(15, findNum(sheet, 20, 1));
+            preparedStatement.setDouble(16, findNum(sheet, 21, 1));
+            preparedStatement.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private String getCellAsString(XSSFSheet sheet, int row, int col) {

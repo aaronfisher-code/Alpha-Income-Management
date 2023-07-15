@@ -74,20 +74,25 @@ public class SettingsController extends Controller{
 
 		if (files != null) {
 			for (File newfile : files) {
-				FileInputStream file = new FileInputStream(newfile);
-				XSSFWorkbook workbook = (XSSFWorkbook) WorkbookFactory.create(file, password);
-				LegacyImportTool wbp = new LegacyImportTool(con, preparedStatement, main);
-				if(newfile.getName().contains("owners")){
-					wbp.importOwnersCopy(workbook);
-					String filename = newfile.getName().substring(0, newfile.getName().lastIndexOf("."));
-					String[] parts = filename.split(" "); // split the filename into parts
-					String month = parts[parts.length - 2]; // second last part is the month
-					String year = parts[parts.length - 1]; // last part is the year
-					System.out.println("Currently importing: " + month + " " + year + " (Owner's Copy)");
-				}else{
-					wbp.ImportStaffCopy(workbook);
+				try{
+					FileInputStream file = new FileInputStream(newfile);
+					XSSFWorkbook workbook = (XSSFWorkbook) WorkbookFactory.create(file, password);
+					LegacyImportTool wbp = new LegacyImportTool(con, preparedStatement, main);
+					if(newfile.getName().contains("owners")){
+						String filename = newfile.getName().substring(0, newfile.getName().lastIndexOf("."));
+						String[] parts = filename.split(" "); // split the filename into parts
+						String month = parts[parts.length - 2]; // second last part is the month
+						String year = parts[parts.length - 1]; // last part is the year
+						System.out.println("Currently importing: " + month + " " + year + " (Owner's Copy)");
+						wbp.importOwnersCopy(workbook);
+					}else{
+						wbp.ImportStaffCopy(workbook);
+					}
+					System.out.println("Imported file: " + newfile.getName());
+				}catch(Exception e){
+					System.out.println("Error importing file: " + newfile.getName());
+					e.printStackTrace();
 				}
-				System.out.println("Imported file: " + newfile.getName());
 			}
 			System.out.println("All done!");
 		}
