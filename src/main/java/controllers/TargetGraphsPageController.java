@@ -1,5 +1,7 @@
 package controllers;
 
+import Strategies.LineGraphTargetStrategy;
+import Strategies.NumberOfScriptsStrategy;
 import application.Main;
 import components.layouts.BootstrapColumn;
 import components.layouts.BootstrapPane;
@@ -15,12 +17,12 @@ import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.*;
 import models.User;
-import org.apache.logging.log4j.core.util.JsonUtils;
 
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 
 public class TargetGraphsPageController extends Controller{
@@ -35,9 +37,9 @@ public class TargetGraphsPageController extends Controller{
     ResultSet resultSet = null;
     private Main main;
     private User selectedUser;
-    private BootstrapPane outerPane = new BootstrapPane();
-	private BootstrapPane graphPane = new BootstrapPane();
-	private BootstrapPane gaugePane = new BootstrapPane();
+    private BootstrapPane outerPane;
+	private BootstrapPane graphPane;
+	private BootstrapPane gaugePane;
 	
 	 @FXML
 	private void initialize() throws IOException {
@@ -57,7 +59,12 @@ public class TargetGraphsPageController extends Controller{
 
 	@Override
 	public void fill() {
+		 mtdView();
+	}
 
+	public void updateGraphs(LocalDate startDate,LocalDate endDate){
+		 graphScrollPane.setContent(null);
+		outerPane = new BootstrapPane();
 		outerPane.setVgap(20);
 		outerPane.setHgap(20);
 		outerPane.setPadding(new Insets(20));
@@ -70,10 +77,10 @@ public class TargetGraphsPageController extends Controller{
 		graphPane.setHgap(20);
 
 		BootstrapRow graphRow = new BootstrapRow();
-		BootstrapColumn graph1 = new BootstrapColumn(loadGraph());
-		BootstrapColumn graph2 = new BootstrapColumn(loadGraph());
-		BootstrapColumn graph3 = new BootstrapColumn(loadGraph());
-		BootstrapColumn graph4 = new BootstrapColumn(loadGraph());
+		BootstrapColumn graph1 = new BootstrapColumn(loadGraph(new NumberOfScriptsStrategy(startDate, endDate)));
+		BootstrapColumn graph2 = new BootstrapColumn(loadGraph(new NumberOfScriptsStrategy(startDate, endDate)));
+		BootstrapColumn graph3 = new BootstrapColumn(loadGraph(new NumberOfScriptsStrategy(startDate, endDate)));
+		BootstrapColumn graph4 = new BootstrapColumn(loadGraph(new NumberOfScriptsStrategy(startDate, endDate)));
 		graph1.setBreakpointColumnWidth(Breakpoint.XSMALL, 12);
 		graph1.setBreakpointColumnWidth(Breakpoint.SMALL, 12);
 		graph1.setBreakpointColumnWidth(Breakpoint.LARGE, 6);
@@ -104,6 +111,7 @@ public class TargetGraphsPageController extends Controller{
 		contentRow.addColumn(graphCol);
 
 		//Setup Gauges
+		gaugePane = new BootstrapPane(graphScrollPane);
 		gaugePane.setVgap(20);
 		gaugePane.setHgap(20);
 
@@ -133,11 +141,9 @@ public class TargetGraphsPageController extends Controller{
 
 		Platform.runLater(() -> graphPane.setPrefHeight(graphScrollPane.getHeight()));
 		Platform.runLater(() -> adjustHeight());
-
-
 	}
 
-	public BorderPane loadGraph() {
+	public BorderPane loadGraph(LineGraphTargetStrategy strategy){
 		FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/GraphTile.fxml"));
 		BorderPane graphTile = null;
 		try {
@@ -150,6 +156,7 @@ public class TargetGraphsPageController extends Controller{
 		gtc.setMain(main);
 		gtc.setConnection(con);
 		gtc.setParent(this);
+		gtc.setStrategy(strategy);
 		gtc.fill();
 		return graphTile;
 	}
@@ -176,19 +183,27 @@ public class TargetGraphsPageController extends Controller{
 		formatTabSelect(wtdButton);
 		formatTabDeselect(mtdButton);
 		formatTabDeselect(ytdButton);
+		LocalDate weekStart = LocalDate.now().with(DayOfWeek.MONDAY);
+		LocalDate weekEnd = LocalDate.now().with(DayOfWeek.SUNDAY);
+		updateGraphs(weekStart,weekEnd);
 	}
 
 	public void mtdView(){
 		formatTabSelect(mtdButton);
 		formatTabDeselect(wtdButton);
 		formatTabDeselect(ytdButton);
+		LocalDate monthStart = LocalDate.now().withDayOfMonth(1);
+		LocalDate monthEnd = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
+		updateGraphs(monthStart,monthEnd);
 	}
 
 	public void ytdView(){
 		formatTabSelect(ytdButton);
 		formatTabDeselect(wtdButton);
 		formatTabDeselect(mtdButton);
-
+		LocalDate yearStart = LocalDate.now().withDayOfYear(1);
+		LocalDate yearEnd = LocalDate.now().withDayOfYear(LocalDate.now().lengthOfYear());
+		updateGraphs(yearStart,yearEnd);
 	}
 
 	public void formatTabSelect(BorderPane b){

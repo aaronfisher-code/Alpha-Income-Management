@@ -15,9 +15,14 @@ import javafx.util.Pair;
  */
 public class CurvedFittedAreaChart extends AreaChart<Number,Number> {
 
-    public CurvedFittedAreaChart(NumberAxis xAxis, NumberAxis yAxis) {
+    public CurvedFittedAreaChart(WeekdayAxis xAxis, NumberAxis yAxis) {
         super(xAxis, yAxis);
-    } 
+    }
+    public CurvedFittedAreaChart(MonthAxis xAxis, NumberAxis yAxis) {
+        super(xAxis, yAxis);
+    }
+
+    public CurvedFittedAreaChart(NumberAxis xAxis, NumberAxis yAxis) {super(xAxis, yAxis);}
 
     /** @inheritDoc */
     @Override protected void layoutPlotChildren() {
