@@ -80,22 +80,39 @@ public class GraphTileController extends Controller{
 	}
 
 	public void updateVariance(){
-		double currentActual = strategy.getActualSeries().getData().get(strategy.getActualSeries().getData().size()-1).getYValue().doubleValue();
-		double currentTarget1 = strategy.getTarget1Series().getData().get(strategy.getActualSeries().getData().size()-1).getYValue().doubleValue();
-		double currentTarget2 = strategy.getTarget2Series().getData().get(strategy.getActualSeries().getData().size()-1).getYValue().doubleValue();
+		double currentActual = (strategy.getActualSeries().getData().size()>0)?strategy.getActualSeries().getData().get(strategy.getActualSeries().getData().size()-1).getYValue().doubleValue():0;
+		double currentTarget1 = (strategy.getActualSeries().getData().size()>0)?strategy.getTarget1Series().getData().get(strategy.getActualSeries().getData().size()-1).getYValue().doubleValue():0;
+		double currentTarget2 = (strategy.getActualSeries().getData().size()>0)?strategy.getTarget2Series().getData().get(strategy.getActualSeries().getData().size()-1).getYValue().doubleValue():0;
 		double target1Variance = currentTarget1 - currentActual;
-		double target2Variance = currentActual - currentTarget2;
+		double target2Variance = currentTarget2 - currentActual;
 
 		if(target1Variance>0){
-			target1VarianceLabel.setText(NumberFormat.getCurrencyInstance().format(target1Variance) + " left until you hit Target 1!");
+			if(strategy.isDollarFormat()){
+				target1VarianceLabel.setText(NumberFormat.getCurrencyInstance().format(target1Variance) + " left until you hit Target 1!");
+			}else{
+				target1VarianceLabel.setText(String.format("%.0f", target1Variance) + " left until you hit Target 1!");
+			}
 		}else{
-			target1VarianceLabel.setText(NumberFormat.getCurrencyInstance().format(-target1Variance) + " over Target 1!");
+			if(strategy.isDollarFormat()){
+				target1VarianceLabel.setText(NumberFormat.getCurrencyInstance().format(-target1Variance) + " over Target 1!");
+			}else{
+				target1VarianceLabel.setText(String.format("%.0f", -target1Variance) + " over Target 1!");
+			}
 		}
 
 		if(target2Variance>0){
-			target2VarianceLabel.setText(NumberFormat.getCurrencyInstance().format(target2Variance) + " left until you hit Target 2!");
+			if(strategy.isDollarFormat()){
+				target2VarianceLabel.setText(NumberFormat.getCurrencyInstance().format(target2Variance) + " left until you hit Target 2!");
+			}else{
+				//format to 0 decimal places
+				target2VarianceLabel.setText(String.format("%.0f", target2Variance) + " left until you hit Target 2!");
+			}
 		}else{
-			target2VarianceLabel.setText(NumberFormat.getCurrencyInstance().format(-target2Variance) + " over Target 2!");
+			if(strategy.isDollarFormat()){
+				target2VarianceLabel.setText(NumberFormat.getCurrencyInstance().format(-target2Variance) + " over Target 2!");
+			}else{
+				target2VarianceLabel.setText(String.format("%.0f", -target2Variance) + " over Target 2!");
+			}
 		}
 	}
 
@@ -104,7 +121,13 @@ public class GraphTileController extends Controller{
 		graphPane.getChildren().add(fillGraph(strategy.getStrategyName(), strategy.getYAxisVisibility()));
 		legend.setVisible(true);
 		updateVariance();
-		swapViewButton.setOnAction(event -> setTableView());
+		if(!strategy.getYAxisVisibility()){
+			swapViewButton.setVisible(false);
+			target1VarianceLabel.setVisible(false);
+			target2VarianceLabel.setVisible(false);
+		}else{
+			swapViewButton.setOnAction(event -> setTableView());
+		}
 	}
 
 	public void setTableView(){

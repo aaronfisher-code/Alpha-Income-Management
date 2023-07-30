@@ -29,9 +29,12 @@ public class CurvedFittedAreaChart extends AreaChart<Number,Number> {
         super.layoutPlotChildren();
         for (int seriesIndex=0; seriesIndex < getDataSize(); seriesIndex++) {
             final Series<Number, Number> series = getData().get(seriesIndex);
-            final Path seriesLine = (Path)((Group)series.getNode()).getChildren().get(1);
-            final Path fillPath = (Path)((Group)series.getNode()).getChildren().get(0);
-            smooth(seriesLine.getElements(), fillPath.getElements());
+            if(series.getNode() != null && ((Group)series.getNode()).getChildren().size() > 1){
+                final Path seriesLine = (Path)((Group)series.getNode()).getChildren().get(1);
+                final Path fillPath = (Path)((Group)series.getNode()).getChildren().get(0);
+                smooth(seriesLine.getElements(), fillPath.getElements());
+            }
+
         }
     }
 
@@ -41,6 +44,7 @@ public class CurvedFittedAreaChart extends AreaChart<Number,Number> {
     }
 
     private static void smooth(ObservableList<PathElement> strokeElements, ObservableList<PathElement> fillElements) {
+        if(strokeElements.isEmpty()) return;
         // as we do not have direct access to the data, first recreate the list of all the data points we have
         final Point2D[] dataPoints = new Point2D[strokeElements.size()];
         for (int i = 0; i < strokeElements.size(); i++) {

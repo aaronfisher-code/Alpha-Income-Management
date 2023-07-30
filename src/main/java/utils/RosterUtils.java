@@ -33,6 +33,13 @@ public class RosterUtils {
     ArrayList<LeaveRequest> allLeaveRequests = new ArrayList<>();
 
     Map<LocalDate, Double> dayDurationMap = new HashMap<>();
+
+    public RosterUtils(Connection conn, Main main, LocalDate startDate, LocalDate endDate){
+        this.conn = conn;
+        this.main = main;
+
+        fillDayDurations(startDate, endDate);
+    }
     public RosterUtils(Connection conn, Main main, YearMonth yearMonth){
         this.conn = conn;
         this.main = main;
@@ -40,7 +47,10 @@ public class RosterUtils {
 
         LocalDate monthStart = yearMonth.atDay(1);
         LocalDate monthEnd = yearMonth.atEndOfMonth();
+        fillDayDurations(monthStart, monthEnd);
+    }
 
+    private void fillDayDurations(LocalDate startDate, LocalDate endDate){
         String sql = "SELECT * FROM shifts JOIN accounts a on a.username = shifts.username " +
                 "WHERE storeID = ? AND" +
                 "(shifts.repeating=TRUE AND (isNull(shiftEndDate) OR shiftEndDate>=?) AND shiftStartDate<=?)"+
@@ -49,10 +59,10 @@ public class RosterUtils {
         try {
             preparedStatement = conn.prepareStatement(sql);
             preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-            preparedStatement.setDate(2, Date.valueOf(monthStart));
-            preparedStatement.setDate(3, Date.valueOf(monthEnd));
-            preparedStatement.setDate(4, Date.valueOf(monthStart));
-            preparedStatement.setDate(5, Date.valueOf(monthEnd));
+            preparedStatement.setDate(2, Date.valueOf(startDate));
+            preparedStatement.setDate(3, Date.valueOf(endDate));
+            preparedStatement.setDate(4, Date.valueOf(startDate));
+            preparedStatement.setDate(5, Date.valueOf(endDate));
             resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
                 allShifts.add(new Shift(resultSet));
@@ -65,10 +75,10 @@ public class RosterUtils {
 
             preparedStatement = conn.prepareStatement(sql);
             preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-            preparedStatement.setDate(2, Date.valueOf(monthStart));
-            preparedStatement.setDate(3, Date.valueOf(monthEnd));
-            preparedStatement.setDate(4, Date.valueOf(monthStart));
-            preparedStatement.setDate(5, Date.valueOf(monthEnd));
+            preparedStatement.setDate(2, Date.valueOf(startDate));
+            preparedStatement.setDate(3, Date.valueOf(endDate));
+            preparedStatement.setDate(4, Date.valueOf(startDate));
+            preparedStatement.setDate(5, Date.valueOf(endDate));
             resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
                 allModifications.add(new Shift(resultSet));;
@@ -77,8 +87,8 @@ public class RosterUtils {
             sql = "SELECT * FROM leaverequests JOIN accounts a on a.username = leaverequests.employeeID WHERE storeID = ? AND (leaveStartDate<=?) OR (leaveEndDate>=?)";
             preparedStatement = conn.prepareStatement(sql);
             preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-            preparedStatement.setDate(2, Date.valueOf(monthEnd));
-            preparedStatement.setDate(3, Date.valueOf(monthStart));
+            preparedStatement.setDate(2, Date.valueOf(startDate));
+            preparedStatement.setDate(3, Date.valueOf(endDate));
             resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
                 allLeaveRequests.add(new LeaveRequest(resultSet));
@@ -87,7 +97,7 @@ public class RosterUtils {
             System.err.println(ex.getMessage());
         }
 
-        for (LocalDate day = monthStart; day.isBefore(monthEnd.plusDays(1)); day = day.plusDays(1)) {
+        for (LocalDate day = startDate; day.isBefore(endDate.plusDays(1)); day = day.plusDays(1)) {
             dayDurationMap.put(day, loadDayDuration(day));
         }
     }
@@ -183,5 +193,13 @@ public class RosterUtils {
 
     public int getTotalDays(){
         return yearMonth.lengthOfMonth();
+    }
+
+    public double getDuration(LocalDate startDate, LocalDate endDate){
+        double duration = 0;
+        for(LocalDate day = startDate; day.isBefore(endDate.plusDays(1)); day = day.plusDays(1)){
+            duration+=getDayDuration(day);
+        }
+        return duration;
     }
 }

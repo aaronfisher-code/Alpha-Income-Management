@@ -12,13 +12,13 @@ import java.sql.*;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
-public class NumberOfScriptsStrategy implements LineGraphTargetStrategy {
+public class GPDollarStrategy implements LineGraphTargetStrategy {
 
-    public static final boolean SHOW_Y_AXIS = true;
-    public static final String GRAPH_TITLE = "Number of Scripts";
-    public static final String AXIS_LABEL = "Script #";
+    public static final boolean SHOW_Y_AXIS = false;
+    public static final String GRAPH_TITLE = "GP ($)";
+    public static final String AXIS_LABEL = "Gross Profit ($)";
 
-    public static final boolean DOLLAR_FORMAT = false;
+    public static final boolean DOLLAR_FORMAT = true;
 
     public int length;
 
@@ -39,7 +39,7 @@ public class NumberOfScriptsStrategy implements LineGraphTargetStrategy {
     private ObservableList<TillReportDataPoint> currentTillReportDataPoints = FXCollections.observableArrayList();
     private RosterUtils rosterUtils;
 
-    public NumberOfScriptsStrategy(LocalDate startDate, LocalDate endDate, TargetGraphsPageController parent) {
+    public GPDollarStrategy(LocalDate startDate, LocalDate endDate, TargetGraphsPageController parent) {
         this.length = (int) ChronoUnit.DAYS.between(startDate, endDate);
         this.startDate = startDate;
         this.endDate = endDate;
@@ -57,7 +57,7 @@ public class NumberOfScriptsStrategy implements LineGraphTargetStrategy {
             preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
             preparedStatement.setDate(2, Date.valueOf(startDate));
             preparedStatement.setDate(3, Date.valueOf(endDate));
-            preparedStatement.setString(4, "Script Count");
+            preparedStatement.setString(4, "Gross Profit ($)");
             resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
                 currentTillReportDataPoints.add(new TillReportDataPoint(resultSet));
@@ -65,7 +65,7 @@ public class NumberOfScriptsStrategy implements LineGraphTargetStrategy {
             sql = "SELECT * FROM targets where storeID = ? AND targetName = ?";
             preparedStatement = con.prepareStatement(sql);
             preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-            preparedStatement.setString(2, "Script Count");
+            preparedStatement.setString(2, "gpDollar");
             resultSet = preparedStatement.executeQuery();
             if (resultSet.next()) {
                 target1 = resultSet.getDouble("target1");
@@ -116,7 +116,7 @@ public class NumberOfScriptsStrategy implements LineGraphTargetStrategy {
             //find current till report data point with date
             for(int j=0;j<currentTillReportDataPoints.size();j++){
                 if(currentTillReportDataPoints.get(j).getAssignedDate().equals(date)){
-                    accumulatedQuantity += currentTillReportDataPoints.get(j).getQuantity();  // Add the quantity for the current day to the total
+                    accumulatedQuantity += currentTillReportDataPoints.get(j).getAmount();  // Add the quantity for the current day to the total
                     series.getData().add(new XYChart.Data(i, accumulatedQuantity));  // Add the accumulated quantity to the series
                     break;
                 }

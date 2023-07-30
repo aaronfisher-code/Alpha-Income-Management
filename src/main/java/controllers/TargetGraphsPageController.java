@@ -1,7 +1,9 @@
 package controllers;
 
+import Strategies.GPDollarStrategy;
 import Strategies.LineGraphTargetStrategy;
 import Strategies.NumberOfScriptsStrategy;
+import Strategies.OTCDollarPerCustomerStrategy;
 import application.Main;
 import components.layouts.BootstrapColumn;
 import components.layouts.BootstrapPane;
@@ -52,14 +54,22 @@ public class TargetGraphsPageController extends Controller{
 	public void setMain(Main main) {
 		this.main = main;
 	}
+
+	public Main getMain() {return main;}
 	
 	public void setConnection(Connection c) {
 		this.con = c;
 	}
 
+	public Connection getConnection() {return con;}
+
+	public PreparedStatement getPreparedStatement() {return preparedStatement;}
+
+	public ResultSet getResultSet() {return resultSet;}
+
 	@Override
 	public void fill() {
-		 mtdView();
+		 wtdView();
 	}
 
 	public void updateGraphs(LocalDate startDate,LocalDate endDate){
@@ -77,10 +87,10 @@ public class TargetGraphsPageController extends Controller{
 		graphPane.setHgap(20);
 
 		BootstrapRow graphRow = new BootstrapRow();
-		BootstrapColumn graph1 = new BootstrapColumn(loadGraph(new NumberOfScriptsStrategy(startDate, endDate)));
-		BootstrapColumn graph2 = new BootstrapColumn(loadGraph(new NumberOfScriptsStrategy(startDate, endDate)));
-		BootstrapColumn graph3 = new BootstrapColumn(loadGraph(new NumberOfScriptsStrategy(startDate, endDate)));
-		BootstrapColumn graph4 = new BootstrapColumn(loadGraph(new NumberOfScriptsStrategy(startDate, endDate)));
+		BootstrapColumn graph1 = new BootstrapColumn(loadGraph(new NumberOfScriptsStrategy(startDate, endDate, this)));
+		BootstrapColumn graph2 = new BootstrapColumn(loadGraph(new OTCDollarPerCustomerStrategy(startDate, endDate, this)));
+		BootstrapColumn graph3 = new BootstrapColumn(loadGraph(new GPDollarStrategy(startDate, endDate, this)));
+		BootstrapColumn graph4 = new BootstrapColumn(loadGraph(new NumberOfScriptsStrategy(startDate, endDate, this)));
 		graph1.setBreakpointColumnWidth(Breakpoint.XSMALL, 12);
 		graph1.setBreakpointColumnWidth(Breakpoint.SMALL, 12);
 		graph1.setBreakpointColumnWidth(Breakpoint.LARGE, 6);
