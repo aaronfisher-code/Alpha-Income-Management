@@ -16,8 +16,10 @@ import models.User;
 import utils.DBConnector;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.time.LocalDate;
+import java.util.Properties;
 
 
 public class Main extends Application {
@@ -30,6 +32,8 @@ public class Main extends Application {
 	private static BorderlessScene bs;
 	private Image icon = new Image(getClass().getResourceAsStream("/images/alpha logo.png"));
 	private LocalDate currentDate;
+
+	private String version;
 
 	@Override
 	public void start(Stage primaryStage) throws Exception{
@@ -51,7 +55,13 @@ public class Main extends Application {
 		c.setMain(this);
 		con = DBConnector.conDB();
 		c.setConnection(con);
-		primaryStage.setTitle("Alpha Income Management");
+		Properties prop = new Properties();
+		InputStream in = DBConnector.class.getClassLoader().getResourceAsStream("application.properties");
+		prop.load(in);
+		assert in != null;
+		in.close();
+		version = prop.getProperty("VERSION");
+		primaryStage.setTitle("Alpha Income Management "+ version);
 		bs = new BorderlessScene(primaryStage,StageStyle.TRANSPARENT,root);
 		bs.removeDefaultCSS();
 		bs.setFill(Color.TRANSPARENT);
@@ -72,7 +82,7 @@ public class Main extends Application {
 		c.setConnection(con);
 		stg.close();
 		stg = new Stage();
-		stg.setTitle("Alpha Income Management");
+		stg.setTitle("Alpha Income Management "+ version);
 		bs = new BorderlessScene(stg,StageStyle.UNDECORATED,root);
 		setBs(bs);
 		stg.setScene(bs);
