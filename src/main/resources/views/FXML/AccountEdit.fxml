@@ -26,7 +26,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane fx:id="backgroundPane" prefHeight="900.0" prefWidth="998.0" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EditAccountController">
+<StackPane fx:id="backgroundPane" prefHeight="900.0" prefWidth="998.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EditAccountController">
    <children>
       <BorderPane style="-fx-background-color: TRANSPARENT;">
          <top>
@@ -156,6 +156,11 @@
                               <Insets top="20.0" />
                            </VBox.margin>
                         </MFXTextField>
+                        <Label fx:id="storeNameValidationLabel" text="Please enter a store name" textFill="RED" visible="false">
+                           <VBox.margin>
+                              <Insets bottom="-5.0" top="-10.0" />
+                           </VBox.margin>
+                        </Label>
                         <MFXButton fx:id="saveStoreButton" depthLevel="LEVEL3" maxWidth="1.7976931348623157E308" onAction="#addStore" prefHeight="30.0" style="-fx-background-color: #0F60FF;" styleClass="popOverButton" text="Save" textFill="WHITE">
                            <VBox.margin>
                               <Insets bottom="50.0" top="20.0" />
@@ -257,8 +262,23 @@
                            </right>
                         </BorderPane>
                         <MFXTextField fx:id="usernameField" borderGap="0.0" floatMode="ABOVE" floatingText="Username" layoutX="15.0" layoutY="79.0" maxWidth="1.7976931348623157E308" minHeight="36.0" />
+                        <Label fx:id="usernameValidationLabel" text="Please enter a valid username" textFill="RED" visible="false">
+                           <VBox.margin>
+                              <Insets bottom="-5.0" top="-30.0" />
+                           </VBox.margin>
+                        </Label>
                         <MFXTextField fx:id="firstNameField" borderGap="0.0" floatMode="ABOVE" floatingText="First Name" layoutX="15.0" layoutY="30.0" maxWidth="1.7976931348623157E308" minHeight="36.0" />
+                        <Label fx:id="firstNameValidationLabel" text="Please enter a valid name" textFill="RED" visible="false">
+                           <VBox.margin>
+                              <Insets bottom="-5.0" top="-30.0" />
+                           </VBox.margin>
+                        </Label>
                         <MFXTextField fx:id="lastNameField" borderGap="0.0" floatMode="ABOVE" floatingText="Last Name" layoutX="15.0" layoutY="229.0" maxWidth="1.7976931348623157E308" minHeight="36.0" />
+                        <Label fx:id="lastNameValidationLabel" text="Please enter a valid name" textFill="RED" visible="false">
+                           <VBox.margin>
+                              <Insets bottom="-5.0" top="-30.0" />
+                           </VBox.margin>
+                        </Label>
                         <MFXTextField fx:id="roleField" borderGap="0.0" floatMode="ABOVE" floatingText="Role" layoutX="15.0" layoutY="296.0" maxWidth="1.7976931348623157E308" minHeight="36.0" />
                         <HBox alignment="TOP_CENTER" maxWidth="1.7976931348623157E308" spacing="30.0">
                            <children>

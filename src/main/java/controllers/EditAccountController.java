@@ -20,6 +20,7 @@ import models.Store;
 import models.User;
 import models.Employment;
 import utils.AnimationUtils;
+import utils.ValidatorUtils;
 
 import java.io.IOException;
 import java.sql.*;
@@ -54,7 +55,7 @@ public class EditAccountController extends Controller{
 	private MFXTextField storeNameField;
 
 	@FXML
-	private Label editStorePopoverTitle,editUserPopoverTitle,employeeIcon,employeeName,employeeRole;
+	private Label editStorePopoverTitle,editUserPopoverTitle,employeeIcon,employeeName,employeeRole,storeNameValidationLabel,usernameValidationLabel,firstNameValidationLabel,lastNameValidationLabel;
 
 	@FXML
 	private MFXRectangleToggleNode inactiveUserToggle;
@@ -167,6 +168,10 @@ public class EditAccountController extends Controller{
 		accountsTable.virtualFlowInitializedProperty().addListener((observable, oldValue, newValue) -> {addUserDoubleClickfunction();});
 		userFilterView.filteredItemsProperty().addListener((observable, oldValue, newValue) -> {addUserDoubleClickfunction();});
 		accountsTable.setItems(allUsers);
+
+		ValidatorUtils.setupRegexValidation(usernameField,usernameValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveUserButton);
+		ValidatorUtils.setupRegexValidation(firstNameField,firstNameValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveUserButton);
+		ValidatorUtils.setupRegexValidation(lastNameField,lastNameValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveUserButton);
 	}
 
 	private void addUserDoubleClickfunction(){
@@ -230,6 +235,8 @@ public class EditAccountController extends Controller{
 		storesTable.virtualFlowInitializedProperty().addListener((observable, oldValue, newValue) -> {addStoreDoubleClickFunction();});
 		storeFilterView.filteredItemsProperty().addListener((observable, oldValue, newValue) -> {addStoreDoubleClickFunction();});
 		storesTable.setItems(allStores);
+
+		ValidatorUtils.setupRegexValidation(storeNameField,storeNameValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveStoreButton);
 
 	}
 
@@ -463,17 +470,21 @@ public class EditAccountController extends Controller{
 	public void closeStorePopover(){
 		AnimationUtils.slideIn(editStorePopover,425);
 		contentDarken.setVisible(false);
+		storeNameValidationLabel.setVisible(false);
 	}
 
 	public void closeUserPopover(){
 		AnimationUtils.slideIn(editUserPopover,425);
 		contentDarken.setVisible(false);
+		usernameValidationLabel.setVisible(false);
+		firstNameValidationLabel.setVisible(false);
+		lastNameValidationLabel.setVisible(false);
 	}
 
 	public void addStore(){
 		String name = storeNameField.getText();
-		if(name.isEmpty() || name.isBlank()){
-			//TODO name field verification
+		if(!storeNameField.isValid()) {
+			storeNameField.requestFocus();
 		}else{
 			String sql = "INSERT INTO stores(storeName) VALUES(?)";
 			try {
@@ -508,8 +519,10 @@ public class EditAccountController extends Controller{
 		b = (int)Math.round(profileBackgroundPicker.getValue().getBlue() * 255.0);
 		String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
 
-		if(fname.isEmpty() || fname.isBlank()){
-			//TODO properly implement field verification for user addition
+		if(!firstNameField.isValid()) {
+			firstNameField.requestFocus();
+		}else if(!lastNameField.isValid()) {
+			lastNameField.requestFocus();
 		}else{
 			String sql = "INSERT INTO accounts(username,first_name,last_name,role,profileBG,profileText) VALUES(?,?,?,?,?,?)";
 			try {
@@ -546,8 +559,8 @@ public class EditAccountController extends Controller{
 
 	public void editStore(Store store){
 		String name = storeNameField.getText();
-		if(name.isEmpty() || name.isBlank()){
-
+		if(!storeNameField.isValid()) {
+			storeNameField.requestFocus();
 		}else{
 			String sql = "UPDATE stores SET storeName = ? WHERE storeID = ?";
 			try {
@@ -589,8 +602,11 @@ public class EditAccountController extends Controller{
 		g = (int)Math.round(profileBackgroundPicker.getValue().getGreen() * 255.0);
 		b = (int)Math.round(profileBackgroundPicker.getValue().getBlue() * 255.0);
 		String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
-		if(fname.isEmpty() || fname.isBlank()){
 
+		if(!firstNameField.isValid()) {
+			firstNameField.requestFocus();
+		}else if(!lastNameField.isValid()) {
+			lastNameField.requestFocus();
 		}else{
 			String sql = "UPDATE accounts SET first_name = ?,last_name = ?,role = ?, profileBG = ?, profileText = ?,inactiveDate = ? WHERE username = ?";
 			try {
