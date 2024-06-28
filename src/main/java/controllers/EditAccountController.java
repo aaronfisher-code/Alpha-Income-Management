@@ -531,7 +531,14 @@ public class EditAccountController extends Controller{
 			dialog.setContentText("Username already exists. Please choose a different username.");
 			dialog.getDialogPane().getButtonTypes().add(type);
 			dialog.showAndWait();
-		} else {
+		} else if (storeSelector.getSelectionModel().getSelection().isEmpty()) {
+			Dialog<String> dialog = new Dialog<>();
+			dialog.setTitle("Error");
+			ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
+			dialog.setContentText("Please select at least one store for the user to work at");
+			dialog.getDialogPane().getButtonTypes().add(type);
+			dialog.showAndWait();
+		}else{
 			String sql = "INSERT INTO accounts(username,first_name,last_name,role,profileBG,profileText) VALUES(?,?,?,?,?,?)";
 			try {
 				preparedStatement = con.prepareStatement(sql);
@@ -612,6 +619,13 @@ public class EditAccountController extends Controller{
 			firstNameField.requestFocus();
 		}else if(!lastNameField.isValid()) {
 			lastNameField.requestFocus();
+		} else if (storeSelector.getSelectionModel().getSelection().isEmpty()) {
+			Dialog<String> dialog = new Dialog<>();
+			dialog.setTitle("Error");
+			ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
+			dialog.setContentText("Please select at least one store for the user to work at");
+			dialog.getDialogPane().getButtonTypes().add(type);
+			dialog.showAndWait();
 		}else{
 			String sql = "UPDATE accounts SET first_name = ?,last_name = ?,role = ?, profileBG = ?, profileText = ?,inactiveDate = ? WHERE username = ?";
 			try {
