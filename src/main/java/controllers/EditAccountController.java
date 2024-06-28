@@ -505,25 +505,33 @@ public class EditAccountController extends Controller{
 
 	}
 
-	public void addUser(){
+	public void addUser() {
 		String username = usernameField.getText();
 		String fname = firstNameField.getText();
 		String lname = lastNameField.getText();
 		String role = roleField.getText();
-		int r = (int)Math.round(profileTextPicker.getValue().getRed() * 255.0);
-		int g = (int)Math.round(profileTextPicker.getValue().getGreen() * 255.0);
-		int b = (int)Math.round(profileTextPicker.getValue().getBlue() * 255.0);
-		String profileText = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
-		r = (int)Math.round(profileBackgroundPicker.getValue().getRed() * 255.0);
-		g = (int)Math.round(profileBackgroundPicker.getValue().getGreen() * 255.0);
-		b = (int)Math.round(profileBackgroundPicker.getValue().getBlue() * 255.0);
-		String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
+		int r = (int) Math.round(profileTextPicker.getValue().getRed() * 255.0);
+		int g = (int) Math.round(profileTextPicker.getValue().getGreen() * 255.0);
+		int b = (int) Math.round(profileTextPicker.getValue().getBlue() * 255.0);
+		String profileText = String.format("#%02x%02x%02x", r, g, b).toUpperCase();
+		r = (int) Math.round(profileBackgroundPicker.getValue().getRed() * 255.0);
+		g = (int) Math.round(profileBackgroundPicker.getValue().getGreen() * 255.0);
+		b = (int) Math.round(profileBackgroundPicker.getValue().getBlue() * 255.0);
+		String profileBG = String.format("#%02x%02x%02x", r, g, b).toUpperCase();
 
-		if(!firstNameField.isValid()) {
+		if (!firstNameField.isValid()) {
 			firstNameField.requestFocus();
-		}else if(!lastNameField.isValid()) {
+		} else if (!lastNameField.isValid()) {
 			lastNameField.requestFocus();
-		}else{
+		} else if (doesUsernameExist(username)) {
+			// Show an error dialog that the username already exists
+			Dialog<String> dialog = new Dialog<>();
+			dialog.setTitle("Error");
+			ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
+			dialog.setContentText("Username already exists. Please choose a different username.");
+			dialog.getDialogPane().getButtonTypes().add(type);
+			dialog.showAndWait();
+		} else {
 			String sql = "INSERT INTO accounts(username,first_name,last_name,role,profileBG,profileText) VALUES(?,?,?,?,?,?)";
 			try {
 				preparedStatement = con.prepareStatement(sql);
@@ -534,27 +542,24 @@ public class EditAccountController extends Controller{
 				preparedStatement.setString(5, profileBG);
 				preparedStatement.setString(6, profileText);
 				preparedStatement.executeUpdate();
-				for(Store s:storeSelector.getSelectionModel().getSelection().values()){
+				for (Store s : storeSelector.getSelectionModel().getSelection().values()) {
 					sql = "INSERT INTO employments(username,storeID) VALUES(?,?)";
 					preparedStatement = con.prepareStatement(sql);
 					preparedStatement.setString(1, username);
 					preparedStatement.setInt(2, s.getStoreID());
 					preparedStatement.executeUpdate();
 				}
-				Dialog<String> dialog = new Dialog<String>();
+				Dialog<String> dialog = new Dialog<>();
 				dialog.setTitle("Success");
 				ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-				dialog.setContentText("User was succesfully added to database");
+				dialog.setContentText("User was successfully added to the database");
 				dialog.getDialogPane().getButtonTypes().add(type);
 				dialog.showAndWait();
 				usersView();
 			} catch (SQLException ex) {
 				System.err.println(ex.getMessage());
 			}
-
 		}
-
-
 	}
 
 	public void editStore(Store store){
@@ -748,27 +753,19 @@ public class EditAccountController extends Controller{
 		}
 	}
 
-	public boolean searchAccount(String userquery) {
-		String usrname = userquery;
-		if(usrname.isEmpty()) {
-			return false;
-		} else {
-			//query
-			String sql = "SELECT * FROM accounts Where username = ?";
-			try {
-				preparedStatement = con.prepareStatement(sql);
-				preparedStatement.setString(1, usrname);
-				resultSet = preparedStatement.executeQuery();
-				if (resultSet == null || !resultSet.next()) {
-					return false;
-				} else {
-					return true;
-				}
-			} catch (SQLException ex) {
-				System.err.println(ex.getMessage());
-				return false;
+	public boolean doesUsernameExist(String username) {
+		String sql = "SELECT COUNT(*) FROM accounts WHERE username = ?";
+		try {
+			preparedStatement = con.prepareStatement(sql);
+			preparedStatement.setString(1, username);
+			resultSet = preparedStatement.executeQuery();
+			if (resultSet.next()) {
+				return resultSet.getInt(1) > 0;
 			}
+		} catch (SQLException ex) {
+			System.err.println(ex.getMessage());
 		}
+		return false;
 	}
 
 	
