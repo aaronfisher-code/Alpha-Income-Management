@@ -917,7 +917,6 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		File file = fileChooser.showSaveDialog(main.getStg());
 		if (file != null) {
 			try (PrintWriter pw = new PrintWriter(file)) {
-				//TODO: Catch file not found error if this file is in use already
 				pw.println("*ContactName,EmailAddress,POAddressLine1,POAddressLine2,POAddressLine3,POAddressLine4,POCity,PORegion,POPostalCode,POCountry,*InvoiceNumber,*InvoiceDate,*DueDate,InventoryItemCode,Description,*Quantity,*UnitAmount,*AccountCode,*TaxType,TrackingName1,TrackingOption1,TrackingName2,TrackingOption2");
 
 				YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
