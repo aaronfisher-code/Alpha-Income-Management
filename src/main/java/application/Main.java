@@ -14,6 +14,7 @@ import javafx.stage.StageStyle;
 import models.Store;
 import models.User;
 import utils.DBConnector;
+import utils.LogRedirector;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,16 +37,20 @@ public class Main extends Application {
 	private String version;
 
 	@Override
-	public void start(Stage primaryStage) throws Exception{
-		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_Thin.otf"),16);
-		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_ExtraLight.otf"),16);
-		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_Light.otf"),16);
-		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_Regular.otf"),16);
-		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_Medium.otf"),16);
-		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_SemiBold.otf"),16);
-		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_Bold.otf"),16);
-		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_ExtraBold.otf"),16);
-		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_Black.otf"),16);
+	public void start(Stage primaryStage) throws Exception {
+//		LogRedirector.redirectOutputToFile("app.log");
+		System.out.println("Application starting...");
+
+		// Existing initialization code...
+		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_Thin.otf"), 16);
+		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_ExtraLight.otf"), 16);
+		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_Light.otf"), 16);
+		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_Regular.otf"), 16);
+		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_Medium.otf"), 16);
+		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_SemiBold.otf"), 16);
+		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_Bold.otf"), 16);
+		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_ExtraBold.otf"), 16);
+		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_Black.otf"), 16);
 		setCurrentDate(LocalDate.now());
 		stg = primaryStage;
 		System.setProperty("prism.lcdtext", "false");
@@ -61,17 +66,18 @@ public class Main extends Application {
 		assert in != null;
 		in.close();
 		version = prop.getProperty("VERSION");
-		primaryStage.setTitle("Alpha Income Management "+ version);
-		bs = new BorderlessScene(primaryStage,StageStyle.TRANSPARENT,root);
+		primaryStage.setTitle("Alpha Income Management " + version);
+		bs = new BorderlessScene(primaryStage, StageStyle.TRANSPARENT, root);
 		bs.removeDefaultCSS();
 		bs.setFill(Color.TRANSPARENT);
 		primaryStage.setScene(bs);
 		primaryStage.getIcons().add(icon);
 		primaryStage.show();
 		bs.maximizeStage();
-//		stg.setMinWidth(600);
+		// stg.setMinWidth(600);
 		bs.setResizable(true);
 		c.fill();
+		System.out.println("Application started successfully.");
 	}
 	
 	public void changeScene(String fxml) throws IOException {
