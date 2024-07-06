@@ -3,9 +3,7 @@ package controllers;
 import application.Main;
 import io.github.palexdev.materialfx.controls.MFXButton;
 import io.github.palexdev.materialfx.controls.MFXCheckbox;
-import io.github.palexdev.materialfx.controls.MFXDatePicker;
 import io.github.palexdev.materialfx.controls.MFXTextField;
-import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -22,13 +20,12 @@ import utils.ValidatorUtils;
 
 import java.io.IOException;
 import java.sql.*;
-import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.time.format.TextStyle;
+import java.util.Arrays;
 import java.util.Locale;
 
 public class BASCheckerController extends DateSelectController{
@@ -39,10 +36,6 @@ public class BASCheckerController extends DateSelectController{
 	private StackPane monthSelector;
 	@FXML
 	private MFXTextField monthSelectorField;
-	@FXML
-	private FlowPane datePickerPane;
-	@FXML
-	private StackPane backgroundPane;
 	@FXML
 	private GridPane incomeCheckTable;
 	@FXML
@@ -114,20 +107,14 @@ public class BASCheckerController extends DateSelectController{
 
 	@Override
 	public void fill() {
-		ValidatorUtils.setupRegexValidation(cash2,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
-		ValidatorUtils.setupRegexValidation(eftpos2,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
-		ValidatorUtils.setupRegexValidation(amex2,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
-		ValidatorUtils.setupRegexValidation(googleSquare2,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
-		ValidatorUtils.setupRegexValidation(cheque2,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
-		ValidatorUtils.setupRegexValidation(medicare2,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
-		ValidatorUtils.setupRegexValidation(total2,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
-		ValidatorUtils.setupRegexValidation(medicareBAS,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
-		saveButton.setOnAction(actionEvent -> save());
+        for (MFXTextField mfxTextField : Arrays.asList(cash2, eftpos2, amex2, googleSquare2, cheque2, medicare2, total2, medicareBAS)) {
+            ValidatorUtils.setupRegexValidation(mfxTextField,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
+        }
+        saveButton.setOnAction(actionEvent -> save());
 
 		for (Node node : incomeCheckTable.getChildren()) {
-			if (node instanceof MFXTextField) {
-				MFXTextField textField = (MFXTextField) node;
-				textField.setOnKeyPressed(event -> {
+			if (node instanceof MFXTextField textField) {
+                textField.setOnKeyPressed(event -> {
 					int currentRow = GridPane.getRowIndex(textField);
 					int newRow = currentRow;
 					if(event.getCode().equals(KeyCode.ENTER)){
@@ -170,7 +157,7 @@ public class BASCheckerController extends DateSelectController{
 		LocalDate startOfNextMonth = startOfMonth.plusMonths(1);
 		String sql = null;
 		try {
-			sql = "SELECT * FROM eoddatapoints WHERE eoddatapoints.storeID = ? AND date >= ? AND date <= ?";
+			sql = "SELECT * FROM eoddatapoints WHERE eoddatapoints.storeID = ? AND date >= ? AND date < ?";
 			preparedStatement = con.prepareStatement(sql);
 			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
 			preparedStatement.setDate(2, Date.valueOf(startOfMonth));
