@@ -45,7 +45,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 	private StackPane backgroundPane;
 
 	@FXML
-	private MFXTextField numDaysField,numOpenDaysField,numPartialDaysField,dailyRentField,totalAvgField,monthlyRentField,dailyOutgoingsField,monthlyLoanField;
+	private MFXTextField numDaysField,numOpenDaysField,numPartialDaysField,dailyRentField,totalAvgField,monthlyRentField,dailyOutgoingsField,monthlyLoanField,monthlyWagesField;
 
 	@FXML
 	private MFXTextField cpaIncomeXero, cpaIncomeSpreadsheet,cpaIncomeVariance,lanternPayIncomeXero,lanternPayIncomeSpreadsheet,lanternPayIncomeVariance,otherIncomeXero,otherIncomeSpreadsheet,otherIncomeVariance,atoGSTrefundXero;
@@ -80,6 +80,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 		ValidatorUtils.setupRegexValidation(monthlyRentField,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR, "$", saveButton);
 		ValidatorUtils.setupRegexValidation(dailyOutgoingsField,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR, "$", saveButton);
 		ValidatorUtils.setupRegexValidation(monthlyLoanField,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR, "$", saveButton);
+		ValidatorUtils.setupRegexValidation(monthlyWagesField,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR, "$", saveButton);
 		ValidatorUtils.setupRegexValidation(cpaIncomeXero,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR, "$", saveButton);
 		ValidatorUtils.setupRegexValidation(lanternPayIncomeXero,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR, "$", saveButton);
 		ValidatorUtils.setupRegexValidation(otherIncomeXero,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR, "$", saveButton);
@@ -116,6 +117,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 				dailyOutgoingsField.setText("");
 				totalAvgField.setText("");
 				monthlyLoanField.setText("");
+				monthlyWagesField.setText("");
 
 				//End of month figures
 				cpaIncomeXero.setText("");
@@ -130,6 +132,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 				dailyOutgoingsField.setText(String.format("%.2f", resultSet.getDouble("dailyOutgoings")));
 				totalAvgField.setText(String.format("%.2f", resultSet.getDouble("dailyOutgoings")+(monthlyRent/daysInMonth)));
 				monthlyLoanField.setText(String.format("%.2f", resultSet.getDouble("monthlyLoan")));
+				monthlyWagesField.setText(String.format("%.2f", resultSet.getDouble("monthlyWages")));
 
 				//End of month figures
 				cpaIncomeXero.setText(String.format("%.2f", resultSet.getDouble("6CPAIncome")));
@@ -233,6 +236,13 @@ public class BudgetAndExpensesController extends DateSelectController{
 				monthlyLoanField.setText(String.format("%.2f", Double.parseDouble(monthlyLoanField.getText())));
 			}
 		}
+		if(monthlyWagesField.isValid()) {
+			if (monthlyWagesField.getText().equals(""))
+				monthlyWagesField.setText("0.00");
+			else {
+				monthlyWagesField.setText(String.format("%.2f", Double.parseDouble(monthlyWagesField.getText())));
+			}
+		}
 		if(cpaIncomeXero.isValid()) {
 			if (cpaIncomeXero.getText().equals(""))
 				cpaIncomeXero.setText("0.00");
@@ -270,13 +280,13 @@ public class BudgetAndExpensesController extends DateSelectController{
 	public void save(){
 		updateTotals();
 		//Validate all fields
-		if(!monthlyRentField.isValid()||!dailyOutgoingsField.isValid()||!monthlyLoanField.isValid()||!cpaIncomeXero.isValid()||!lanternPayIncomeXero.isValid()||!otherIncomeXero.isValid()||!atoGSTrefundXero.isValid()){
+		if(!monthlyRentField.isValid()||!dailyOutgoingsField.isValid()||!monthlyLoanField.isValid()||!cpaIncomeXero.isValid()||!lanternPayIncomeXero.isValid()||!otherIncomeXero.isValid()||!atoGSTrefundXero.isValid()||!monthlyWagesField.isValid()){
 			errorLabel.setText("Please ensure all fields are valid");
 			errorLabel.setVisible(true);
 			return;
 		}
 		Date date = Date.valueOf(LocalDate.of(main.getCurrentDate().getYear(),main.getCurrentDate().getMonth(),1));
-		String sql = "INSERT INTO budgetAndExpenses (date,storeID,monthlyRent,dailyOutgoings,monthlyLoan,6CPAIncome,LanternPayIncome,OtherIncome,ATO_GST_BAS_refund) VALUES (?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE monthlyRent=?,dailyOutgoings=?,monthlyLoan=?,6CPAIncome=?,LanternPayIncome=?,OtherIncome=?,ATO_GST_BAS_refund=?";
+		String sql = "INSERT INTO budgetAndExpenses (date,storeID,monthlyRent,dailyOutgoings,monthlyLoan,6CPAIncome,LanternPayIncome,OtherIncome,ATO_GST_BAS_refund,monthlyWages) VALUES (?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE monthlyRent=?,dailyOutgoings=?,monthlyLoan=?,6CPAIncome=?,LanternPayIncome=?,OtherIncome=?,ATO_GST_BAS_refund=?,monthlyWages=?";
 		try{
 			preparedStatement = con.prepareStatement(sql);
 			preparedStatement.setDate(1,date);
@@ -289,19 +299,21 @@ public class BudgetAndExpensesController extends DateSelectController{
 			preparedStatement.setDouble(8,Double.parseDouble(otherIncomeXero.getText()));
 			preparedStatement.setDouble(9,Double.parseDouble(atoGSTrefundXero.getText()));
 			preparedStatement.setDouble(10,Double.parseDouble(monthlyRentField.getText()));
-			preparedStatement.setDouble(11,Double.parseDouble(dailyOutgoingsField.getText()));
-			preparedStatement.setDouble(12,Double.parseDouble(monthlyLoanField.getText()));
-			preparedStatement.setDouble(13,Double.parseDouble(cpaIncomeXero.getText()));
-			preparedStatement.setDouble(14,Double.parseDouble(lanternPayIncomeXero.getText()));
-			preparedStatement.setDouble(15,Double.parseDouble(otherIncomeXero.getText()));
-			preparedStatement.setDouble(16,Double.parseDouble(atoGSTrefundXero.getText()));
+			preparedStatement.setDouble(11,Double.parseDouble(monthlyRentField.getText()));
+			preparedStatement.setDouble(12,Double.parseDouble(dailyOutgoingsField.getText()));
+			preparedStatement.setDouble(13,Double.parseDouble(monthlyLoanField.getText()));
+			preparedStatement.setDouble(14,Double.parseDouble(cpaIncomeXero.getText()));
+			preparedStatement.setDouble(15,Double.parseDouble(lanternPayIncomeXero.getText()));
+			preparedStatement.setDouble(16,Double.parseDouble(otherIncomeXero.getText()));
+			preparedStatement.setDouble(17,Double.parseDouble(atoGSTrefundXero.getText()));
+			preparedStatement.setDouble(18,Double.parseDouble(monthlyWagesField.getText()));
 			preparedStatement.executeUpdate();
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("h:mm:ss a");
 		errorLabel.setVisible(true);
-		errorLabel.setText("Last saved at "+LocalTime.now().format(formatter));
+		errorLabel.setText("Successfully saved at "+LocalTime.now().format(formatter));
 		errorLabel.setStyle("-fx-text-fill: black");
 	}
 
