@@ -20,7 +20,7 @@
 <?import javafx.scene.paint.Color?>
 <?import javafx.scene.text.Font?>
 
-<StackPane fx:id="backgroundPane" prefHeight="724.0" prefWidth="1080.0" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.BudgetAndExpensesController">
+<StackPane fx:id="backgroundPane" prefHeight="724.0" prefWidth="1080.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.BudgetAndExpensesController">
    <children>
       <BorderPane prefWidth="955.0" style="-fx-background-color: TRANSPARENT;">
          <padding>
@@ -291,14 +291,14 @@
                            </padding>
                         </Label>
                         <MFXTextField fx:id="cpaIncomeXero" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                        <MFXTextField fx:id="cpaIncomeSpreadsheet" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" GridPane.columnIndex="2" GridPane.rowIndex="1" />
-                        <MFXTextField fx:id="cpaIncomeVariance" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" GridPane.columnIndex="3" GridPane.rowIndex="1" />
+                        <MFXTextField fx:id="cpaIncomeSpreadsheet" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+                        <MFXTextField fx:id="cpaIncomeVariance" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="3" GridPane.rowIndex="1" />
                         <MFXTextField fx:id="lanternPayIncomeXero" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="1" GridPane.rowIndex="2" />
-                        <MFXTextField fx:id="lanternPayIncomeSpreadsheet" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" GridPane.columnIndex="2" GridPane.rowIndex="2" />
-                        <MFXTextField fx:id="lanternPayIncomeVariance" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" GridPane.columnIndex="3" GridPane.rowIndex="2" />
+                        <MFXTextField fx:id="lanternPayIncomeSpreadsheet" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="2" GridPane.rowIndex="2" />
+                        <MFXTextField fx:id="lanternPayIncomeVariance" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="3" GridPane.rowIndex="2" />
                         <MFXTextField fx:id="otherIncomeXero" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="1" GridPane.rowIndex="3" />
-                        <MFXTextField fx:id="otherIncomeSpreadsheet" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" GridPane.columnIndex="2" GridPane.rowIndex="3" />
-                        <MFXTextField fx:id="otherIncomeVariance" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" GridPane.columnIndex="3" GridPane.rowIndex="3" />
+                        <MFXTextField fx:id="otherIncomeSpreadsheet" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="2" GridPane.rowIndex="3" />
+                        <MFXTextField fx:id="otherIncomeVariance" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="3" GridPane.rowIndex="3" />
                         <MFXTextField fx:id="atoGSTrefundXero" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="1" GridPane.rowIndex="4" />
                      </children>
                      <padding>
