@@ -294,7 +294,9 @@ public class MonthlySummaryController extends DateSelectController{
 		int daysInMonth = yearMonthObject.lengthOfMonth();
 		ObservableList<TillReportDataPoint> currentTillReportDataPoints = FXCollections.observableArrayList();
 		ObservableList<EODDataPoint> currentEODDataPoints = FXCollections.observableArrayList();
-		String sql = null;
+		double monthlyRent = 0;
+		double dailyOutgoings = 0;
+		String sql;
 		try {
 			sql = "SELECT * FROM tillReportDatapoints where storeID = ? AND MONTH(assignedDate) = ? AND YEAR(assignedDate) = ?";
 			preparedStatement = con.prepareStatement(sql);
@@ -315,15 +317,30 @@ public class MonthlySummaryController extends DateSelectController{
 			while (resultSet.next()) {
 				currentEODDataPoints.add(new EODDataPoint(resultSet));
 			}
+			sql = "SELECT * FROM budgetandexpenses WHERE storeID = ? AND MONTH(date) = ? AND YEAR(date) = ?";
+			preparedStatement = con.prepareStatement(sql);
+			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
+			preparedStatement.setInt(2, main.getCurrentDate().getMonthValue());
+			preparedStatement.setInt(3, main.getCurrentDate().getYear());
+			resultSet = preparedStatement.executeQuery();
+			if (resultSet == null || !resultSet.next()) {
+				monthlyRent = 0;
+				dailyOutgoings = 0;
+			}else{
+				monthlyRent = resultSet.getDouble("monthlyRent");
+				dailyOutgoings = resultSet.getDouble("dailyOutgoings");
+			}
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
 		}
 
 		RosterUtils rosterUtils = new RosterUtils(con,main,yearMonthObject);
+		double totalOpenDuration = rosterUtils.getOpenDuration();
 		for(int i = 1; i<daysInMonth+1; i++){
 			LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(),i);
-			monthlySummaryPoints.add(new MonthlySummaryDataPoint(d,currentTillReportDataPoints,currentEODDataPoints,monthlySummaryPoints,rosterUtils));
+			monthlySummaryPoints.add(new MonthlySummaryDataPoint(d,currentTillReportDataPoints,currentEODDataPoints,monthlySummaryPoints,rosterUtils,monthlyRent,dailyOutgoings,totalOpenDuration));
 		}
+
 		summaryTable.setItems(monthlySummaryPoints);
 		totalsTable.getItems().clear();
 		totalsTable.getItems().add(new MonthlySummaryDataPoint(monthlySummaryPoints, true));

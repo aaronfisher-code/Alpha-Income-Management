@@ -181,6 +181,14 @@ public class RosterUtils {
         return openDays;
     }
 
+    public double getOpenDuration(){
+        double openDuration = 0;
+        for(LocalDate day = yearMonth.atDay(1); day.isBefore(yearMonth.atEndOfMonth().plusDays(1)); day = day.plusDays(1)){
+            openDuration+=getDayDuration(day);
+        }
+        return openDuration;
+    }
+
     public int getPartialDays(){
         int partialDays = 0;
         for(LocalDate day = yearMonth.atDay(1); day.isBefore(yearMonth.atEndOfMonth().plusDays(1)); day = day.plusDays(1)){

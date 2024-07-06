@@ -56,7 +56,7 @@ public class MonthlySummaryDataPoint {
 	private double grossProfitDollars;
 	private double govtRecovery;
 	private double totalGovtContribution;
-	public MonthlySummaryDataPoint(LocalDate dayOfMonth, ObservableList<TillReportDataPoint> currentTillReportDataPoints, ObservableList<EODDataPoint> currentEODDataPoints, ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints, RosterUtils rosterUtils){
+	public MonthlySummaryDataPoint(LocalDate dayOfMonth, ObservableList<TillReportDataPoint> currentTillReportDataPoints, ObservableList<EODDataPoint> currentEODDataPoints, ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints, RosterUtils rosterUtils, double monthlyRent, double dailyOutgoing, double openDuration){
 		date = dayOfMonth;
 		this.dayDuration = rosterUtils.getDayDuration(date);
 		double totalTakings = 0;
@@ -102,10 +102,8 @@ public class MonthlySummaryDataPoint {
 		gpDollars = grossProfitDollars+govtRecovery-totalGovtContribution;
 		gpPercentage = gpDollars/totalIncome;
 
-		if(rosterUtils.getOpenDays()==0)
-			rentAndOutgoings = 0;
-		else
-			rentAndOutgoings = 0/rosterUtils.getOpenDays(); //TODO: Get this from equivalent of budget and expenses
+		rentAndOutgoings = ((monthlyRent/openDuration)*this.dayDuration) + (((dailyOutgoing*rosterUtils.getTotalDays())/openDuration)*this.dayDuration);
+
 		wages = 0; //TODO: Get this from wage calculator
 		zReportProfit = gpDollars-rentAndOutgoings-wages;
 		runningZProfit = 0;
