@@ -296,6 +296,7 @@ public class MonthlySummaryController extends DateSelectController{
 		ObservableList<EODDataPoint> currentEODDataPoints = FXCollections.observableArrayList();
 		double monthlyRent = 0;
 		double dailyOutgoings = 0;
+		double monthlyWages = 0;
 		String sql;
 		try {
 			sql = "SELECT * FROM tillReportDatapoints where storeID = ? AND MONTH(assignedDate) = ? AND YEAR(assignedDate) = ?";
@@ -326,9 +327,11 @@ public class MonthlySummaryController extends DateSelectController{
 			if (resultSet == null || !resultSet.next()) {
 				monthlyRent = 0;
 				dailyOutgoings = 0;
+				monthlyWages = 0;
 			}else{
 				monthlyRent = resultSet.getDouble("monthlyRent");
 				dailyOutgoings = resultSet.getDouble("dailyOutgoings");
+				monthlyWages = resultSet.getDouble("monthlyWages");
 			}
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
@@ -338,7 +341,7 @@ public class MonthlySummaryController extends DateSelectController{
 		double totalOpenDuration = rosterUtils.getOpenDuration();
 		for(int i = 1; i<daysInMonth+1; i++){
 			LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(),i);
-			monthlySummaryPoints.add(new MonthlySummaryDataPoint(d,currentTillReportDataPoints,currentEODDataPoints,monthlySummaryPoints,rosterUtils,monthlyRent,dailyOutgoings,totalOpenDuration));
+			monthlySummaryPoints.add(new MonthlySummaryDataPoint(d,currentTillReportDataPoints,currentEODDataPoints,monthlySummaryPoints,rosterUtils,monthlyRent,dailyOutgoings,totalOpenDuration,monthlyWages));
 		}
 
 		summaryTable.setItems(monthlySummaryPoints);

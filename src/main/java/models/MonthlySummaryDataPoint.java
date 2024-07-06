@@ -56,7 +56,7 @@ public class MonthlySummaryDataPoint {
 	private double grossProfitDollars;
 	private double govtRecovery;
 	private double totalGovtContribution;
-	public MonthlySummaryDataPoint(LocalDate dayOfMonth, ObservableList<TillReportDataPoint> currentTillReportDataPoints, ObservableList<EODDataPoint> currentEODDataPoints, ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints, RosterUtils rosterUtils, double monthlyRent, double dailyOutgoing, double openDuration){
+	public MonthlySummaryDataPoint(LocalDate dayOfMonth, ObservableList<TillReportDataPoint> currentTillReportDataPoints, ObservableList<EODDataPoint> currentEODDataPoints, ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints, RosterUtils rosterUtils, double monthlyRent, double dailyOutgoing, double openDuration, double monthlyWages){
 		date = dayOfMonth;
 		this.dayDuration = rosterUtils.getDayDuration(date);
 		double totalTakings = 0;
@@ -104,7 +104,7 @@ public class MonthlySummaryDataPoint {
 
 		rentAndOutgoings = ((monthlyRent/openDuration)*this.dayDuration) + (((dailyOutgoing*rosterUtils.getTotalDays())/openDuration)*this.dayDuration);
 
-		wages = 0; //TODO: Get this from wage calculator
+		wages = ((monthlyWages/openDuration)*this.dayDuration);
 		zReportProfit = gpDollars-rentAndOutgoings-wages;
 		runningZProfit = 0;
 		runningTillBalance = 0;

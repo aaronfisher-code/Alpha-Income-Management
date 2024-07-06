@@ -260,7 +260,7 @@ public class BASCheckerController extends DateSelectController{
 		RosterUtils rosterUtils = new RosterUtils(con,main,yearMonthObject);
 		for(int i = 1; i<daysInMonth+1; i++){
 			LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(),i);
-			monthlySummaryPoints.add(new MonthlySummaryDataPoint(d,currentTillDataPoints,currentEODDataPoints,monthlySummaryPoints,rosterUtils,0,0,0));
+			monthlySummaryPoints.add(new MonthlySummaryDataPoint(d,currentTillDataPoints,currentEODDataPoints,monthlySummaryPoints,rosterUtils,0,0,0,0));
 		}
 		MonthlySummaryDataPoint totalList = new MonthlySummaryDataPoint(monthlySummaryPoints, true);
 		spreadsheetCheck2.setText(String.format("%.2f",totalList.getTotalIncome()));
