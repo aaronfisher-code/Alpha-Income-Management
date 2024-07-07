@@ -262,7 +262,7 @@ public class BASCheckerController extends DateSelectController{
 			LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(),i);
 			monthlySummaryPoints.add(new MonthlySummaryDataPoint(d,currentTillDataPoints,currentEODDataPoints,monthlySummaryPoints,rosterUtils,0,0,0,0));
 		}
-		MonthlySummaryDataPoint totalList = new MonthlySummaryDataPoint(monthlySummaryPoints, true);
+		MonthlySummaryDataPoint totalList = new MonthlySummaryDataPoint(monthlySummaryPoints, true, rosterUtils.getOpenDuration());
 		spreadsheetCheck2.setText(String.format("%.2f",totalList.getTotalIncome()));
 		spreadsheetCheck3.setText(String.format("%.2f", Double.parseDouble(spreadsheetCheck2.getText())-Double.parseDouble(spreadsheetCheck1.getText())));
 

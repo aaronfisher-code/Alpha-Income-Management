@@ -116,7 +116,7 @@ public class MonthlySummaryDataPoint {
 		}
 	}
 
-	public MonthlySummaryDataPoint(ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints, boolean totals){
+	public MonthlySummaryDataPoint(ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints, boolean totals, double openDuration){
 		if(totals){
 			dateValue = "Total";
 			dateDurationValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getDayDuration).sum());
@@ -140,18 +140,18 @@ public class MonthlySummaryDataPoint {
 			runningTillBalanceValue = "-";
 		}else{
 			dateValue = "Average";
-			dateDurationValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getDayDuration).average().getAsDouble());
-			noOfScriptsValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getNoOfScripts).average().getAsDouble());
-			noOfCustomersValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getNoOfCustomers).average().getAsDouble());
-			noOfItemsValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getNoOfItems).average().getAsDouble());
-			noOfOTCItemsValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getNoOfOTCItems).average().getAsDouble());
-			itemsPerCustomerValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getItemsPerCustomer).average().getAsDouble());
-			otcPerCustomerValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getOtcPerCustomer).average().getAsDouble());
-			dollarPerCustomerValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getDollarPerCustomer).average().getAsDouble());
-			otcDollarPerCustomerValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getOtcDollarPerCustomer).average().getAsDouble());
-			totalIncome = monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTotalIncome).average().getAsDouble();
-			totalIncomeValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTotalIncome).average().getAsDouble());
-			gpDollarsValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getGpDollars).average().getAsDouble());
+			dateDurationValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getDayDuration).sum()/openDuration);
+			noOfScriptsValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getNoOfScripts).sum()/openDuration);
+			noOfCustomersValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getNoOfCustomers).sum()/openDuration);
+			noOfItemsValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getNoOfItems).sum()/openDuration);
+			noOfOTCItemsValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getNoOfOTCItems).sum()/openDuration);
+			itemsPerCustomerValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getItemsPerCustomer).sum()/openDuration);
+			otcPerCustomerValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getOtcPerCustomer).sum()/openDuration);
+			dollarPerCustomerValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getDollarPerCustomer).sum()/openDuration);
+			otcDollarPerCustomerValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getOtcDollarPerCustomer).sum()/openDuration);
+			totalIncome = monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTotalIncome).sum()/openDuration;
+			totalIncomeValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTotalIncome).sum()/openDuration);
+			gpDollarsValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getGpDollars).sum()/openDuration);
 			OptionalDouble optional = monthlySummaryPoints.stream()
 					.filter(Objects::nonNull) // Ignore null MonthlySummaryDataPoint objects
 					.map(MonthlySummaryDataPoint::getGpPercentage)
@@ -164,11 +164,11 @@ public class MonthlySummaryDataPoint {
 			} else {
 				gpPercentageValue = "-";
 			}
-			rentAndOutgoingsValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getRentAndOutgoings).average().getAsDouble());
-			wagesValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getWages).average().getAsDouble());
-			zReportProfitValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getZReportProfit).average().getAsDouble());
+			rentAndOutgoingsValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getRentAndOutgoings).sum()/openDuration);
+			wagesValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getWages).sum()/openDuration);
+			zReportProfitValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getZReportProfit).sum()/openDuration);
 			runningZProfitValue = "-";
-			tillBalanceValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTillBalance).average().getAsDouble());
+			tillBalanceValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTillBalance).sum()/openDuration);
 			runningTillBalanceValue = "-";
 		}
 	}

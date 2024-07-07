@@ -11,6 +11,8 @@ import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.*;
 import models.*;
 import org.controlsfx.control.PopOver;
@@ -18,6 +20,7 @@ import utils.GUIUtils;
 import utils.RosterUtils;
 import utils.TableUtils;
 
+import javax.swing.*;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -26,6 +29,7 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
+import java.util.ArrayList;
 import java.util.Locale;
 
 public class MonthlySummaryController extends DateSelectController{
@@ -130,6 +134,12 @@ public class MonthlySummaryController extends DateSelectController{
     private Main main;
 
 	private ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints = FXCollections.observableArrayList();
+	private ObservableList<TillReportDataPoint> currentTillReportDataPoints = FXCollections.observableArrayList();
+	private ObservableList<EODDataPoint> currentEODDataPoints = FXCollections.observableArrayList();
+	private YearMonth yearMonthObject;
+	private int daysInMonth;
+	RosterUtils rosterUtils = null;
+
 	
 	 @FXML
 	private void initialize() {}
@@ -277,10 +287,6 @@ public class MonthlySummaryController extends DateSelectController{
 		return result;
 	}
 
-	public void exportFiles(){}
-
-	public void importFiles(){}
-
 	public void monthForward() {setDate(main.getCurrentDate().plusMonths(1));
 	}
 
@@ -290,10 +296,9 @@ public class MonthlySummaryController extends DateSelectController{
 
 	public void fillTable(){
 		monthlySummaryPoints = FXCollections.observableArrayList();
-		YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
-		int daysInMonth = yearMonthObject.lengthOfMonth();
-		ObservableList<TillReportDataPoint> currentTillReportDataPoints = FXCollections.observableArrayList();
-		ObservableList<EODDataPoint> currentEODDataPoints = FXCollections.observableArrayList();
+		yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
+		daysInMonth = yearMonthObject.lengthOfMonth();
+		rosterUtils = new RosterUtils(con,main,yearMonthObject);
 		double monthlyRent = 0;
 		double dailyOutgoings = 0;
 		double monthlyWages = 0;
@@ -337,7 +342,7 @@ public class MonthlySummaryController extends DateSelectController{
 			throwables.printStackTrace();
 		}
 
-		RosterUtils rosterUtils = new RosterUtils(con,main,yearMonthObject);
+
 		double totalOpenDuration = rosterUtils.getOpenDuration();
 		for(int i = 1; i<daysInMonth+1; i++){
 			LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(),i);
@@ -346,8 +351,8 @@ public class MonthlySummaryController extends DateSelectController{
 
 		summaryTable.setItems(monthlySummaryPoints);
 		totalsTable.getItems().clear();
-		totalsTable.getItems().add(new MonthlySummaryDataPoint(monthlySummaryPoints, true));
-		totalsTable.getItems().add(new MonthlySummaryDataPoint(monthlySummaryPoints, false));
+		totalsTable.getItems().add(new MonthlySummaryDataPoint(monthlySummaryPoints, true, rosterUtils.getOpenDays()));
+		totalsTable.getItems().add(new MonthlySummaryDataPoint(monthlySummaryPoints, false, rosterUtils.getOpenDays()));
 		Platform.runLater(() -> GUIUtils.customResize(summaryTable,runningTillBalanceCol,(Label) runningTillBalanceCol.getGraphic()));
 	}
 
@@ -392,6 +397,257 @@ public class MonthlySummaryController extends DateSelectController{
 		fieldText += main.getCurrentDate().getYear();
 		monthSelectorField.setText(fieldText);
 		fillTable();
+	}
+
+	public void exportData(){
+		String sql;
+		BASCheckerDataPoint currentBASCheckerDataPoint = null;
+		try{
+			sql = "SELECT * FROM baschecker WHERE storeID = ? AND MONTH(date) = ? AND YEAR(date) = ?";
+			preparedStatement = con.prepareStatement(sql);
+			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
+			preparedStatement.setInt(2, main.getCurrentDate().getMonthValue());
+			preparedStatement.setInt(3, main.getCurrentDate().getYear());
+			resultSet = preparedStatement.executeQuery();
+			if (resultSet == null || !resultSet.next()) {
+				currentBASCheckerDataPoint = null;
+			}else{
+				currentBASCheckerDataPoint = new BASCheckerDataPoint(resultSet);
+			}
+			double cashTotal = 0;
+			double eftposTotal = 0;
+			double amexTotal = 0;
+			double googleSquareTotal = 0;
+			double chequesTotal = 0;
+			double medicareTotal = 0;
+			double gstTotal = 0;
+			double runningTillBalance = 0;
+			for(EODDataPoint eod:currentEODDataPoints){
+				cashTotal+=eod.getCashAmount();
+				eftposTotal+=eod.getEftposAmount();
+				amexTotal+=eod.getAmexAmount();
+				googleSquareTotal+=eod.getGoogleSquareAmount();
+				chequesTotal+=eod.getChequeAmount();
+				runningTillBalance+=eod.getTillBalance();
+			}
+			double totalSales = 0;
+			double gp = 0;
+			for(int i=1;i<daysInMonth+1;i++) {
+				LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(), i);
+				boolean foundMedicare = false;
+				boolean foundGST = false;
+				boolean foundSales = false;
+				boolean foundGP = false;
+				for (TillReportDataPoint tdp : currentTillReportDataPoints) {
+					if (tdp.getAssignedDate().equals(d) && tdp.getKey().equals("Govt Recovery")) {
+						medicareTotal += tdp.getAmount();
+						foundMedicare = true;
+					}
+					if (tdp.getAssignedDate().equals(d) && tdp.getKey().equals("Total GST Collected")) {
+						gstTotal += tdp.getAmount();
+						foundGST = true;
+					}
+					if(tdp.getAssignedDate().equals(d)&&tdp.getKey().equals("Total Sales")){
+						totalSales += tdp.getAmount();
+						foundSales = true;
+					}
+					if(tdp.getAssignedDate().equals(d)&&tdp.getKey().equals("Gross Profit ($)")){
+						gp += tdp.getAmount();
+						foundGP = true;
+					}
+					if(foundMedicare&&foundGST&&foundSales&&foundGP){
+						break;
+					}
+				}
+			}
+			double cpaIncome = 0;
+			double lanternPayIncome = 0;
+			double otherIncome = 0;
+			double basRefund = 0;
+			double monthlyLoan = 0;
+			sql = "SELECT * FROM budgetandexpenses WHERE storeID = ? AND MONTH(date) = ? AND YEAR(date) = ?";
+			preparedStatement = con.prepareStatement(sql);
+			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
+			preparedStatement.setInt(2, main.getCurrentDate().getMonthValue());
+			preparedStatement.setInt(3, main.getCurrentDate().getYear());
+			resultSet = preparedStatement.executeQuery();
+			if (resultSet == null || !resultSet.next()) {
+				cpaIncome = 0;
+				lanternPayIncome = 0;
+				otherIncome = 0;
+				basRefund = 0;
+				monthlyLoan = 0;
+			}else{
+				cpaIncome = resultSet.getDouble("6CPAIncome");
+				lanternPayIncome = resultSet.getDouble("LanternPayIncome");
+				otherIncome = resultSet.getDouble("OtherIncome");
+				basRefund = resultSet.getDouble("ATO_GST_BAS_refund");
+				monthlyLoan = resultSet.getDouble("monthlyLoan");
+			}
+			ObservableList<AccountPayment> currentAccountPaymentDataPoints = FXCollections.observableArrayList();
+			sql = "SELECT * FROM accountPayments JOIN accountPaymentContacts a on a.idaccountPaymentContacts = accountPayments.contactID WHERE accountPayments.storeID = ? AND MONTH(invoiceDate) = ? AND YEAR(invoiceDate) = ?";
+			preparedStatement = con.prepareStatement(sql);
+			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
+			preparedStatement.setInt(2, yearMonthObject.getMonthValue());
+			preparedStatement.setInt(3, yearMonthObject.getYear());
+			resultSet = preparedStatement.executeQuery();
+			while (resultSet.next()) {
+				currentAccountPaymentDataPoints.add(new AccountPayment(resultSet));
+			}
+			ObservableList<AccountPaymentContactDataPoint> currentContactTotals = FXCollections.observableArrayList();
+			boolean contactFound;
+			for(AccountPayment a:currentAccountPaymentDataPoints){
+				contactFound = false;
+				for(AccountPaymentContactDataPoint c: currentContactTotals){
+					if(a.getContactName().equals(c.getContactName())){
+						c.setTotalValue(c.getTotalValue()+a.getUnitAmount());
+						contactFound = true;
+					}
+				}
+				if(!contactFound){
+					AccountPaymentContactDataPoint acdp = getContactfromName(a.getContactName());
+					acdp.setTotalValue(a.getUnitAmount());
+					currentContactTotals.add(acdp);
+				}
+			}
+			ObservableList<Invoice> currentInvoices = FXCollections.observableArrayList();
+			sql = "SELECT * FROM invoices JOIN invoicesuppliers a on a.idinvoiceSuppliers = invoices.supplierID JOIN invoicedatapoints i on invoices.invoiceNo = i.invoiceNo WHERE invoices.storeID = ? AND MONTH(invoiceDate) = ? AND YEAR(invoiceDate) = ?";
+			preparedStatement = con.prepareStatement(sql);
+			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
+			preparedStatement.setInt(2, yearMonthObject.getMonthValue());
+			preparedStatement.setInt(3, yearMonthObject.getYear());
+			resultSet = preparedStatement.executeQuery();
+			while (resultSet.next()) {
+				currentInvoices.add(new Invoice(resultSet));
+			}
+			double totalCOGS = 0;
+			for(Invoice i:currentInvoices){
+				totalCOGS+=i.getUnitAmount();
+			}
+
+
+			StringBuilder outString = new StringBuilder();
+//			outString.append("KPI\tTotal Turnover\tAverage Turnover\tTotal GP ($)\tAverage GP ($)\tAverage GP (%)\tActual T/over (incl other income)\tActual Average T/over (incl other income)\tActual GP ($) (incl other income)\tActual Average GP (incl other income)\tActual GP (%) (incl other income)\tTotal Customer #\tAverage Customer #\tTotal Script #\tAverage Script #\t$ / customer\tItems / customer\tOTC $ / Customer\tOTC items / Customer\tStock hold @ end of month\t# scripts on file\t# sms patients\tTotal Expenses\tAverage Expenses\t% wages\t% outgoings\t6CPA Income\tLatern Pay Income\tPharmaPrograms\tOther Income\tBAS - GST refund\tTotal Profit (Excl Loan+ GST refund)\tTotal Profit (Incl Loan + GST refund)\tCOGS from invoices (Match Xero)\tGP (banked income - Invoiced COGs + Stock not sold)\tProfit (as per Xero)\r\n");
+			//Empty first cell
+			outString.append("\t");
+			//Total Turnover
+			double totalIncome = Double.parseDouble(totalsTable.getItems().get(0).getTotalIncomeValue().replace("$", "").replace(",", ""));
+			double medicareBAS = currentBASCheckerDataPoint.getBasDailyScript();
+			double medicareSpreadsheet = medicareTotal;
+			double medicareIncome = medicareBAS - medicareSpreadsheet;
+			outString.append(totalIncome+medicareIncome).append("\t");
+			//Average Turnover
+			outString.append((totalIncome+medicareIncome)/rosterUtils.getOpenDays()).append("\t");
+			//Total GP ($)
+			double totalGP = Double.parseDouble(totalsTable.getItems().get(0).getGpDollarsValue().replace("$", "").replace(",", ""));
+			outString.append(totalGP+medicareIncome).append("\t");
+			//Average GP ($)
+			outString.append((totalGP+medicareIncome)/rosterUtils.getOpenDays()).append("\t");
+			//Average GP (%)
+			outString.append(totalsTable.getItems().get(1).getGpPercentageValue()).append("\t");
+			//Actual T/over (incl other income)
+			double pharmaProgramsIncome = currentContactTotals.filtered(a->a.getContactName().equals("PharmaPrograms")).get(0).getTotalValue();
+			outString.append(totalIncome+medicareIncome+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome).append("\t");
+			//Actual Average T/over (incl other income)
+			outString.append((totalIncome+medicareIncome+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome)/rosterUtils.getOpenDays()).append("\t");
+			//Actual GP ($) (incl other income)
+			outString.append((totalGP+medicareIncome)+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome).append("\t");
+			//Actual Average GP (incl other income)
+			outString.append(((totalGP+medicareIncome)+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome)/rosterUtils.getOpenDays()).append("\t");
+			//Actual GP (%) (incl other income)
+			outString.append(((totalGP+medicareIncome)+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome)/(totalIncome+medicareIncome+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome)).append("\t");
+			//Total Customer #
+			outString.append(totalsTable.getItems().get(0).getNoOfCustomersValue()).append("\t");
+			//Average Customer #
+			outString.append(totalsTable.getItems().get(1).getNoOfCustomersValue()).append("\t");
+			//Total Script #
+			outString.append(totalsTable.getItems().get(0).getNoOfScriptsValue()).append("\t");
+			//Average Script #
+			outString.append(totalsTable.getItems().get(1).getNoOfScriptsValue()).append("\t");
+			//$/customer
+			outString.append(totalsTable.getItems().get(1).getDollarPerCustomerValue()).append("\t");
+			//Items/customer
+			outString.append(totalsTable.getItems().get(1).getItemsPerCustomerValue()).append("\t");
+			//OTC $/Customer
+			outString.append(totalsTable.getItems().get(1).getOtcDollarPerCustomerValue()).append("\t");
+			//OTC items/Customer
+			outString.append(totalsTable.getItems().get(1).getOtcPerCustomerValue()).append("\t");
+			//Stock on hand @ end of month
+			double initialStockOnHand = currentEODDataPoints.get(0).getStockOnHandAmount();
+			double endStockOnHand = 0;
+			double scriptsOnFile = 0;
+			double smsPatients = 0;
+			for(EODDataPoint eod:currentEODDataPoints){
+				if(eod.getStockOnHandAmount()!=0){
+					endStockOnHand = eod.getStockOnHandAmount();
+				}
+				if(eod.getScriptsOnFile()!=0){
+					scriptsOnFile = eod.getScriptsOnFile();
+				}
+				if(eod.getSmsPatients()!=0){
+					smsPatients = eod.getSmsPatients();
+				}
+			}
+			outString.append(endStockOnHand).append("\t");
+			//Scripts on file
+			outString.append(scriptsOnFile).append("\t");
+			//SMS patients
+			outString.append(smsPatients).append("\t");
+			//Total Expenses
+			double totalExpenses = Double.parseDouble(totalsTable.getItems().get(0).getRentAndOutgoingsValue().replace("$", "").replace(",", ""))+Double.parseDouble(totalsTable.getItems().get(0).getWagesValue().replace("$", "").replace(",", ""));
+			outString.append(totalExpenses).append("\t");
+			//Average Expenses
+			outString.append(totalExpenses/rosterUtils.getOpenDays()).append("\t");
+			//% wages
+			outString.append(Double.parseDouble(totalsTable.getItems().get(0).getWagesValue().replace("$", "").replace(",", ""))/totalIncome).append("\t");
+			//% outgoings
+			outString.append(Double.parseDouble(totalsTable.getItems().get(0).getRentAndOutgoingsValue().replace("$", "").replace(",", ""))/totalIncome).append("\t");
+			//6CPA Income
+			outString.append(cpaIncome).append("\t");
+			//Latern Pay Income
+			outString.append(lanternPayIncome).append("\t");
+			//Pharma Programs
+			outString.append(currentContactTotals.filtered(a->a.getContactName().equals("PharmaPrograms")).get(0).getTotalValue()).append("\t");
+			//Other Income
+			outString.append(otherIncome).append("\t");
+			//BAS - GST refund
+			outString.append(basRefund).append("\t");
+			//Total Profit (Excl Loan+ GST refund)
+			outString.append((totalGP+medicareIncome)+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome-totalExpenses).append("\t");
+			//Total Profit (Incl Loan + GST refund)
+			outString.append((totalGP+medicareIncome)+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome-totalExpenses-monthlyLoan+basRefund).append("\t");
+			//COGS from invoices (Match Xero)
+			outString.append(totalCOGS).append("\t");
+			//GP (banked income - Invoiced COGs + Stock not sold)
+			outString.append((totalIncome+medicareIncome+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome-totalCOGS)+(endStockOnHand-initialStockOnHand)).append("\t");
+			//Profit (as per Xero)
+			outString.append((totalIncome+medicareIncome+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome-totalCOGS)+(endStockOnHand-initialStockOnHand)-totalExpenses).append("\r\n");
+
+			ClipboardContent content = new ClipboardContent();
+			content.putString(outString.toString());
+			Clipboard.getSystemClipboard().setContent(content);
+			JOptionPane.showMessageDialog(null, "Data copied to clipboard!");
+
+		} catch (SQLException e) {
+		throw new RuntimeException(e);
+		}
+	}
+
+	public AccountPaymentContactDataPoint getContactfromName(String name){
+		String sql = null;
+		try {
+			sql = "SELECT * FROM accountPaymentContacts  WHERE contactName = ? AND storeID = ?";
+			preparedStatement = con.prepareStatement(sql);
+			preparedStatement.setString(1,name);
+			preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
+			resultSet = preparedStatement.executeQuery();
+			while (resultSet.next()) {
+				return new AccountPaymentContactDataPoint(resultSet);
+			}
+		} catch (SQLException throwables) {
+			throwables.printStackTrace();
+		}
+		return null;
 	}
 }
 

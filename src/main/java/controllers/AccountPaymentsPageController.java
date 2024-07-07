@@ -326,7 +326,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 		Platform.runLater(() -> GUIUtils.customResize(accountPaymentTable,descriptionCol));
 	}
 
-	public void exportToXero() throws FileNotFoundException {
+	public void exportToXero() {
 		FileChooser fileChooser = new FileChooser();
 		fileChooser.setTitle("Choose export save location");
 		fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
@@ -336,10 +336,9 @@ public class AccountPaymentsPageController extends DateSelectController{
 				pw.println("Contact,,,,,,,,,,Invoice number,Invoice date ,Due Date,,Description,Quantity,Unit amount,Account code,GST free,");
 
 				YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
-				int daysInMonth = yearMonthObject.lengthOfMonth();
 
-				ObservableList<AccountPayment> currentAccountPaymentDataPoints = FXCollections.observableArrayList();
-				String sql = null;
+                ObservableList<AccountPayment> currentAccountPaymentDataPoints = FXCollections.observableArrayList();
+				String sql;
 				try {
 					sql = "SELECT * FROM accountPayments JOIN accountPaymentContacts a on a.idaccountPaymentContacts = accountPayments.contactID WHERE accountPayments.storeID = ? AND MONTH(invoiceDate) = ? AND YEAR(invoiceDate) = ?";
 					preparedStatement = con.prepareStatement(sql);
@@ -364,7 +363,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 					pw.print(a.getAccountCode()+",");
 					pw.println(a.getTaxRate());
 				}
-				dialogPane.showInformation("Success", "Information exported succesfully");
+				dialogPane.showInformation("Success", "Information exported successfully");
 			} catch (FileNotFoundException e){
 				dialogPane.showError("Error", "This file could not be accessed, please ensure its not open in another program");
 			}
