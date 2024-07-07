@@ -29,7 +29,6 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
-import java.util.ArrayList;
 import java.util.Locale;
 
 public class MonthlySummaryController extends DateSelectController{
@@ -38,11 +37,7 @@ public class MonthlySummaryController extends DateSelectController{
 	private StackPane monthSelector;
 	@FXML
 	private MFXTextField monthSelectorField;
-	@FXML
-	private FlowPane datePickerPane;
-	@FXML
-	private StackPane backgroundPane;
-	@FXML
+    @FXML
 	private TableView<MonthlySummaryDataPoint> summaryTable;
 	@FXML
 	private TableColumn<?, ?> customersCol;
@@ -133,9 +128,8 @@ public class MonthlySummaryController extends DateSelectController{
     ResultSet resultSet = null;
     private Main main;
 
-	private ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints = FXCollections.observableArrayList();
-	private ObservableList<TillReportDataPoint> currentTillReportDataPoints = FXCollections.observableArrayList();
-	private ObservableList<EODDataPoint> currentEODDataPoints = FXCollections.observableArrayList();
+    private final ObservableList<TillReportDataPoint> currentTillReportDataPoints = FXCollections.observableArrayList();
+	private final ObservableList<EODDataPoint> currentEODDataPoints = FXCollections.observableArrayList();
 	private YearMonth yearMonthObject;
 	private int daysInMonth;
 	RosterUtils rosterUtils = null;
@@ -182,7 +176,7 @@ public class MonthlySummaryController extends DateSelectController{
 		summaryTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
 		summaryTable.setFixedCellSize(25.0);
 		VBox.setVgrow(summaryTable, Priority.ALWAYS);
-		for(TableColumn tc: summaryTable.getColumns()){
+		for(TableColumn<?, ?> tc: summaryTable.getColumns()){
 			if(tc.getGraphic()!=null){
 				Label l = (Label) tc.getGraphic();
 				tc.setPrefWidth(TableUtils.getColumnWidth(l)+30);
@@ -192,28 +186,6 @@ public class MonthlySummaryController extends DateSelectController{
 			}
 
 		}
-
-		totalsDateCol.setCellValueFactory(new PropertyValueFactory<>("dateString"));
-		//Add center alignment to date column
-
-		totalsDurationCol.setCellValueFactory(new PropertyValueFactory<>("dayDuration"));
-		totalsCustomersCol.setCellValueFactory(new PropertyValueFactory<>("noOfCustomersString"));
-		totalsItemsCol.setCellValueFactory(new PropertyValueFactory<>("noOfItemsString"));
-		totalsScriptsCol.setCellValueFactory(new PropertyValueFactory<>("noOfScriptsString"));
-		totalsDollarPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("dollarPerCustomerString"));
-		totalsItemsPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("itemsPerCustomerString"));
-		totalsOtcDollarPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("otcDollarPerCustomerString"));
-		totalsOtcItemsCol.setCellValueFactory(new PropertyValueFactory<>("noOfOTCItemsString"));
-		totalsOtcPerCustomerCol.setCellValueFactory(new PropertyValueFactory<>("otcPerCustomerString"));
-		totalsTotalIncomeCol.setCellValueFactory(new PropertyValueFactory<>("totalIncomeString"));
-		totalsGpDollarCol.setCellValueFactory(new PropertyValueFactory<>("gpDollarsString"));
-		totalsGpPercentCol.setCellValueFactory(new PropertyValueFactory<>("gpPercentageString"));
-		totalsWagesCol.setCellValueFactory(new PropertyValueFactory<>("wagesString"));
-		totalsRentAndOutgoingsCol.setCellValueFactory(new PropertyValueFactory<>("rentAndOutgoingsString"));
-		totalsRunningZProfitCol.setCellValueFactory(new PropertyValueFactory<>("runningZProfitString"));
-		totalsZReportProfitCol.setCellValueFactory(new PropertyValueFactory<>("zReportProfitString"));
-		totalsTillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("tillBalanceString"));
-		totalsRunningTillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("runningTillBalanceString"));
 
 		totalsDateCol.setCellValueFactory(new PropertyValueFactory<>("dateValue"));
 		totalsDurationCol.setCellValueFactory(new PropertyValueFactory<>("dateDurationValue"));
@@ -275,10 +247,8 @@ public class MonthlySummaryController extends DateSelectController{
 		ScrollBar result = null;
 
 		for (Node node : table.lookupAll(".scroll-bar")) {
-			if (node instanceof ScrollBar) {
-				ScrollBar bar = (ScrollBar) node;
-
-				if (bar.getOrientation().equals(Orientation.HORIZONTAL)) {
+			if (node instanceof ScrollBar bar) {
+                if (bar.getOrientation().equals(Orientation.HORIZONTAL)) {
 					result = bar;
 				}
 			}
@@ -295,7 +265,7 @@ public class MonthlySummaryController extends DateSelectController{
 	}
 
 	public void fillTable(){
-		monthlySummaryPoints = FXCollections.observableArrayList();
+        ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints = FXCollections.observableArrayList();
 		yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
 		daysInMonth = yearMonthObject.lengthOfMonth();
 		rosterUtils = new RosterUtils(con,main,yearMonthObject);
@@ -346,7 +316,7 @@ public class MonthlySummaryController extends DateSelectController{
 		double totalOpenDuration = rosterUtils.getOpenDuration();
 		for(int i = 1; i<daysInMonth+1; i++){
 			LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(),i);
-			monthlySummaryPoints.add(new MonthlySummaryDataPoint(d,currentTillReportDataPoints,currentEODDataPoints,monthlySummaryPoints,rosterUtils,monthlyRent,dailyOutgoings,totalOpenDuration,monthlyWages));
+			monthlySummaryPoints.add(new MonthlySummaryDataPoint(d,currentTillReportDataPoints,currentEODDataPoints, monthlySummaryPoints,rosterUtils,monthlyRent,dailyOutgoings,totalOpenDuration,monthlyWages));
 		}
 
 		summaryTable.setItems(monthlySummaryPoints);
@@ -410,61 +380,28 @@ public class MonthlySummaryController extends DateSelectController{
 			preparedStatement.setInt(3, main.getCurrentDate().getYear());
 			resultSet = preparedStatement.executeQuery();
 			if (resultSet == null || !resultSet.next()) {
-				currentBASCheckerDataPoint = null;
-			}else{
+            }else{
 				currentBASCheckerDataPoint = new BASCheckerDataPoint(resultSet);
 			}
-			double cashTotal = 0;
-			double eftposTotal = 0;
-			double amexTotal = 0;
-			double googleSquareTotal = 0;
-			double chequesTotal = 0;
 			double medicareTotal = 0;
-			double gstTotal = 0;
-			double runningTillBalance = 0;
-			for(EODDataPoint eod:currentEODDataPoints){
-				cashTotal+=eod.getCashAmount();
-				eftposTotal+=eod.getEftposAmount();
-				amexTotal+=eod.getAmexAmount();
-				googleSquareTotal+=eod.getGoogleSquareAmount();
-				chequesTotal+=eod.getChequeAmount();
-				runningTillBalance+=eod.getTillBalance();
-			}
-			double totalSales = 0;
-			double gp = 0;
 			for(int i=1;i<daysInMonth+1;i++) {
 				LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(), i);
 				boolean foundMedicare = false;
-				boolean foundGST = false;
-				boolean foundSales = false;
-				boolean foundGP = false;
 				for (TillReportDataPoint tdp : currentTillReportDataPoints) {
 					if (tdp.getAssignedDate().equals(d) && tdp.getKey().equals("Govt Recovery")) {
 						medicareTotal += tdp.getAmount();
 						foundMedicare = true;
 					}
-					if (tdp.getAssignedDate().equals(d) && tdp.getKey().equals("Total GST Collected")) {
-						gstTotal += tdp.getAmount();
-						foundGST = true;
-					}
-					if(tdp.getAssignedDate().equals(d)&&tdp.getKey().equals("Total Sales")){
-						totalSales += tdp.getAmount();
-						foundSales = true;
-					}
-					if(tdp.getAssignedDate().equals(d)&&tdp.getKey().equals("Gross Profit ($)")){
-						gp += tdp.getAmount();
-						foundGP = true;
-					}
-					if(foundMedicare&&foundGST&&foundSales&&foundGP){
+					if(foundMedicare){
 						break;
 					}
 				}
 			}
-			double cpaIncome = 0;
-			double lanternPayIncome = 0;
-			double otherIncome = 0;
-			double basRefund = 0;
-			double monthlyLoan = 0;
+			double cpaIncome;
+			double lanternPayIncome;
+			double otherIncome;
+			double basRefund;
+			double monthlyLoan;
 			sql = "SELECT * FROM budgetandexpenses WHERE storeID = ? AND MONTH(date) = ? AND YEAR(date) = ?";
 			preparedStatement = con.prepareStatement(sql);
 			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
@@ -634,7 +571,7 @@ public class MonthlySummaryController extends DateSelectController{
 	}
 
 	public AccountPaymentContactDataPoint getContactfromName(String name){
-		String sql = null;
+		String sql;
 		try {
 			sql = "SELECT * FROM accountPaymentContacts  WHERE contactName = ? AND storeID = ?";
 			preparedStatement = con.prepareStatement(sql);

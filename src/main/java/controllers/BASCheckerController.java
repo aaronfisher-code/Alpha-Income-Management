@@ -175,8 +175,8 @@ public class BASCheckerController extends DateSelectController{
 			while (resultSet.next()) {
 				currentTillDataPoints.add(new TillReportDataPoint(resultSet));
 			}
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
+		} catch (SQLException throwable) {
+			throwable.printStackTrace();
 		}
 
 		double cashTotal = 0;
