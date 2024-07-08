@@ -26,6 +26,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
@@ -472,27 +473,27 @@ public class MonthlySummaryController extends DateSelectController{
 			double medicareBAS = currentBASCheckerDataPoint.getBasDailyScript();
 			double medicareSpreadsheet = medicareTotal;
 			double medicareIncome = medicareBAS - medicareSpreadsheet;
-			outString.append(totalIncome+medicareIncome).append("\t");
+			outString.append(NumberFormat.getCurrencyInstance().format(totalIncome+medicareIncome)).append("\t");
 			//Average Turnover
-			outString.append((totalIncome+medicareIncome)/rosterUtils.getOpenDays()).append("\t");
+			outString.append(NumberFormat.getCurrencyInstance().format((totalIncome+medicareIncome)/rosterUtils.getOpenDays())).append("\t");
 			//Total GP ($)
 			double totalGP = Double.parseDouble(totalsTable.getItems().get(0).getGpDollarsValue().replace("$", "").replace(",", ""));
-			outString.append(totalGP+medicareIncome).append("\t");
+			outString.append(NumberFormat.getCurrencyInstance().format(totalGP+medicareIncome)).append("\t");
 			//Average GP ($)
-			outString.append((totalGP+medicareIncome)/rosterUtils.getOpenDays()).append("\t");
+			outString.append(NumberFormat.getCurrencyInstance().format((totalGP+medicareIncome)/rosterUtils.getOpenDays())).append("\t");
 			//Average GP (%)
 			outString.append(totalsTable.getItems().get(1).getGpPercentageValue()).append("\t");
 			//Actual T/over (incl other income)
 			double pharmaProgramsIncome = currentContactTotals.filtered(a->a.getContactName().equals("PharmaPrograms")).get(0).getTotalValue();
-			outString.append(totalIncome+medicareIncome+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome).append("\t");
+			outString.append(NumberFormat.getCurrencyInstance().format(totalIncome+medicareIncome+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome)).append("\t");
 			//Actual Average T/over (incl other income)
-			outString.append((totalIncome+medicareIncome+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome)/rosterUtils.getOpenDays()).append("\t");
+			outString.append(NumberFormat.getCurrencyInstance().format((totalIncome+medicareIncome+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome)/rosterUtils.getOpenDays())).append("\t");
 			//Actual GP ($) (incl other income)
-			outString.append((totalGP+medicareIncome)+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome).append("\t");
+			outString.append(NumberFormat.getCurrencyInstance().format((totalGP+medicareIncome)+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome)).append("\t");
 			//Actual Average GP (incl other income)
-			outString.append(((totalGP+medicareIncome)+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome)/rosterUtils.getOpenDays()).append("\t");
+			outString.append(NumberFormat.getCurrencyInstance().format(((totalGP+medicareIncome)+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome)/rosterUtils.getOpenDays())).append("\t");
 			//Actual GP (%) (incl other income)
-			outString.append(((totalGP+medicareIncome)+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome)/(totalIncome+medicareIncome+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome)).append("\t");
+			outString.append(String.format("%.2f", 100*((totalGP+medicareIncome)+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome)/(totalIncome+medicareIncome+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome)) + "%").append("\t");
 			//Total Customer #
 			outString.append(totalsTable.getItems().get(0).getNoOfCustomersValue()).append("\t");
 			//Average Customer #
@@ -532,33 +533,33 @@ public class MonthlySummaryController extends DateSelectController{
 			outString.append(smsPatients).append("\t");
 			//Total Expenses
 			double totalExpenses = Double.parseDouble(totalsTable.getItems().get(0).getRentAndOutgoingsValue().replace("$", "").replace(",", ""))+Double.parseDouble(totalsTable.getItems().get(0).getWagesValue().replace("$", "").replace(",", ""));
-			outString.append(totalExpenses).append("\t");
+			outString.append(NumberFormat.getCurrencyInstance().format(totalExpenses)).append("\t");
 			//Average Expenses
-			outString.append(totalExpenses/rosterUtils.getOpenDays()).append("\t");
+			outString.append(NumberFormat.getCurrencyInstance().format(totalExpenses/rosterUtils.getOpenDays())).append("\t");
 			//% wages
-			outString.append(Double.parseDouble(totalsTable.getItems().get(0).getWagesValue().replace("$", "").replace(",", ""))/totalIncome).append("\t");
+			outString.append(String.format("%.2f", 100*Double.parseDouble(totalsTable.getItems().get(0).getWagesValue().replace("$", "").replace(",", ""))/totalIncome)+"%").append("\t");
 			//% outgoings
-			outString.append(Double.parseDouble(totalsTable.getItems().get(0).getRentAndOutgoingsValue().replace("$", "").replace(",", ""))/totalIncome).append("\t");
+			outString.append(String.format("%.2f", 100*Double.parseDouble(totalsTable.getItems().get(0).getRentAndOutgoingsValue().replace("$", "").replace(",", ""))/totalIncome)+"%").append("\t");
 			//6CPA Income
-			outString.append(cpaIncome).append("\t");
+			outString.append(NumberFormat.getCurrencyInstance().format(cpaIncome)).append("\t");
 			//Latern Pay Income
-			outString.append(lanternPayIncome).append("\t");
+			outString.append(NumberFormat.getCurrencyInstance().format(lanternPayIncome)).append("\t");
 			//Pharma Programs
-			outString.append(currentContactTotals.filtered(a->a.getContactName().equals("PharmaPrograms")).get(0).getTotalValue()).append("\t");
+			outString.append(NumberFormat.getCurrencyInstance().format(currentContactTotals.filtered(a->a.getContactName().equals("PharmaPrograms")).get(0).getTotalValue())).append("\t");
 			//Other Income
-			outString.append(otherIncome).append("\t");
+			outString.append(NumberFormat.getCurrencyInstance().format(otherIncome)).append("\t");
 			//BAS - GST refund
-			outString.append(basRefund).append("\t");
+			outString.append(NumberFormat.getCurrencyInstance().format(basRefund)).append("\t");
 			//Total Profit (Excl Loan+ GST refund)
-			outString.append((totalGP+medicareIncome)+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome-totalExpenses).append("\t");
+			outString.append(NumberFormat.getCurrencyInstance().format((totalGP+medicareIncome)+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome-totalExpenses)).append("\t");
 			//Total Profit (Incl Loan + GST refund)
-			outString.append((totalGP+medicareIncome)+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome-totalExpenses-monthlyLoan+basRefund).append("\t");
+			outString.append(NumberFormat.getCurrencyInstance().format((totalGP+medicareIncome)+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome-totalExpenses-monthlyLoan+basRefund)).append("\t");
 			//COGS from invoices (Match Xero)
-			outString.append(totalCOGS).append("\t");
+			outString.append(NumberFormat.getCurrencyInstance().format(totalCOGS)).append("\t");
 			//GP (banked income - Invoiced COGs + Stock not sold)
-			outString.append((totalIncome+medicareIncome+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome-totalCOGS)+(endStockOnHand-initialStockOnHand)).append("\t");
+			outString.append(NumberFormat.getCurrencyInstance().format((totalIncome+medicareIncome+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome-totalCOGS)+(endStockOnHand-initialStockOnHand))).append("\t");
 			//Profit (as per Xero)
-			outString.append((totalIncome+medicareIncome+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome-totalCOGS)+(endStockOnHand-initialStockOnHand)-totalExpenses).append("\r\n");
+			outString.append(NumberFormat.getCurrencyInstance().format((totalIncome+medicareIncome+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome-totalCOGS)+(endStockOnHand-initialStockOnHand)-totalExpenses)).append("\r\n");
 
 			ClipboardContent content = new ClipboardContent();
 			content.putString(outString.toString());
