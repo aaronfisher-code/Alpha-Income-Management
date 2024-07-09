@@ -1,9 +1,6 @@
 package controllers;
 
-import Strategies.GPDollarStrategy;
-import Strategies.LineGraphTargetStrategy;
-import Strategies.NumberOfScriptsStrategy;
-import Strategies.OTCDollarPerCustomerStrategy;
+import Strategies.*;
 import application.Main;
 import components.layouts.BootstrapColumn;
 import components.layouts.BootstrapPane;
@@ -90,7 +87,7 @@ public class TargetGraphsPageController extends Controller{
 		BootstrapColumn graph1 = new BootstrapColumn(loadGraph(new NumberOfScriptsStrategy(startDate, endDate, this)));
 		BootstrapColumn graph2 = new BootstrapColumn(loadGraph(new OTCDollarPerCustomerStrategy(startDate, endDate, this)));
 		BootstrapColumn graph3 = new BootstrapColumn(loadGraph(new GPDollarStrategy(startDate, endDate, this)));
-		BootstrapColumn graph4 = new BootstrapColumn(loadGraph(new NumberOfScriptsStrategy(startDate, endDate, this)));
+		BootstrapColumn graph4 = new BootstrapColumn(loadGraph(new ScriptsOnFileStrategy(startDate, endDate, this)));
 		graph1.setBreakpointColumnWidth(Breakpoint.XSMALL, 12);
 		graph1.setBreakpointColumnWidth(Breakpoint.SMALL, 12);
 		graph1.setBreakpointColumnWidth(Breakpoint.LARGE, 6);

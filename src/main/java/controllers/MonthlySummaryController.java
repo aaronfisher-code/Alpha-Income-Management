@@ -30,7 +30,9 @@ import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
+import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 public class MonthlySummaryController extends DateSelectController{
 
@@ -470,7 +472,10 @@ public class MonthlySummaryController extends DateSelectController{
 			outString.append("\t");
 			//Total Turnover
 			double totalIncome = Double.parseDouble(totalsTable.getItems().get(0).getTotalIncomeValue().replace("$", "").replace(",", ""));
-			double medicareBAS = currentBASCheckerDataPoint.getBasDailyScript();
+			double medicareBAS = 0;
+			if(currentBASCheckerDataPoint!=null){
+				medicareBAS = currentBASCheckerDataPoint.getBasDailyScript();
+			}
 			double medicareSpreadsheet = medicareTotal;
 			double medicareIncome = medicareBAS - medicareSpreadsheet;
 			outString.append(NumberFormat.getCurrencyInstance().format(totalIncome+medicareIncome)).append("\t");
@@ -484,7 +489,13 @@ public class MonthlySummaryController extends DateSelectController{
 			//Average GP (%)
 			outString.append(totalsTable.getItems().get(1).getGpPercentageValue()).append("\t");
 			//Actual T/over (incl other income)
-			double pharmaProgramsIncome = currentContactTotals.filtered(a->a.getContactName().equals("PharmaPrograms")).get(0).getTotalValue();
+			List<AccountPaymentContactDataPoint> filteredList = currentContactTotals.stream()
+					.filter(a -> a.getContactName().equals("PharmaPrograms"))
+					.toList();
+			double pharmaProgramsIncome = 0.0;
+			if (!filteredList.isEmpty()) {
+				pharmaProgramsIncome = filteredList.get(0).getTotalValue();
+			}
 			outString.append(NumberFormat.getCurrencyInstance().format(totalIncome+medicareIncome+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome)).append("\t");
 			//Actual Average T/over (incl other income)
 			outString.append(NumberFormat.getCurrencyInstance().format((totalIncome+medicareIncome+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome)/rosterUtils.getOpenDays())).append("\t");
@@ -545,7 +556,7 @@ public class MonthlySummaryController extends DateSelectController{
 			//Latern Pay Income
 			outString.append(NumberFormat.getCurrencyInstance().format(lanternPayIncome)).append("\t");
 			//Pharma Programs
-			outString.append(NumberFormat.getCurrencyInstance().format(currentContactTotals.filtered(a->a.getContactName().equals("PharmaPrograms")).get(0).getTotalValue())).append("\t");
+			outString.append(NumberFormat.getCurrencyInstance().format(pharmaProgramsIncome)).append("\t");
 			//Other Income
 			outString.append(NumberFormat.getCurrencyInstance().format(otherIncome)).append("\t");
 			//BAS - GST refund
