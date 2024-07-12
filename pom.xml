@@ -6,7 +6,16 @@
 
     <groupId>com.rainbowhealthpharmacy</groupId>
     <artifactId>Alpha-Income</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.0</version>
+    <name>Alpha-Income</name>
+    <description>An all in one solution for managing pharmacy income</description>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <javafx.version>22.0.1</javafx.version>
+        <jpackageInputDirectory>${project.build.directory}/jpackage-input</jpackageInputDirectory>
+        <maven.build.timestamp.format>yy.MM.ddHH.mmss</maven.build.timestamp.format>
+    </properties>
 
     <repositories>
         <repository>
@@ -22,8 +31,18 @@
     <dependencies>
         <dependency>
             <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
             <artifactId>javafx-fxml</artifactId>
-            <version>17.0.2-ea+2</version>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-base</artifactId>
+            <version>${javafx.version}</version>
         </dependency>
         <dependency>
             <groupId>com.jfoenix</groupId>
@@ -46,34 +65,32 @@
             <version>8.0.28</version>
         </dependency>
         <dependency>
-            <groupId>io.github.typhon0</groupId>
-            <artifactId>AnimateFX</artifactId>
-            <version>1.2.1</version>
-        </dependency>
-        <dependency>
             <groupId>org.controlsfx</groupId>
             <artifactId>controlsfx</artifactId>
             <version>11.1.1</version>
         </dependency>
         <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-base</artifactId>
-            <version>17.0.2-ea+2</version>
-        </dependency>
-        <dependency>
             <groupId>io.github.palexdev</groupId>
             <artifactId>materialfx</artifactId>
             <version>11.13.5</version>
-        </dependency>
-        <dependency>
-            <groupId>io.github.palexdev</groupId>
-            <artifactId>virtualizedfx</artifactId>
-            <version>11.2.4</version>
-        </dependency>
-        <dependency>
-            <groupId>net.raumzeitfalle.fx</groupId>
-            <artifactId>undecorator</artifactId>
-            <version>0.1.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>javafx-controls</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>javafx-graphics</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>javafx-base</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>javafx-fxml</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.github.goxr3plus</groupId>
@@ -86,19 +103,9 @@
             <version>17.1.1</version>
         </dependency>
         <dependency>
-            <groupId>de.codecentric.centerdevice</groupId>
-            <artifactId>javafxsvg</artifactId>
-            <version>1.3.0</version>
-        </dependency>
-        <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
             <version>5.2.0</version>
-        </dependency>
-        <dependency>
-            <groupId>se.alipsa</groupId>
-            <artifactId>fx-yearmonth-picker</artifactId>
-            <version>1.0.2</version>
         </dependency>
         <dependency>
             <groupId>eu.iamgio</groupId>
@@ -110,58 +117,193 @@
             <artifactId>jbcrypt</artifactId>
             <version>0.4</version>
         </dependency>
-
-
-
-
-
-
-
-
     </dependencies>
-
-
-    <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
-    </properties>
 
     <build>
         <plugins>
             <plugin>
-
-                <!-- Building an executable jar -->
-
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.1.0</version>
+                <version>3.3.0</version>
                 <configuration>
+                    <outputDirectory>${jpackageInputDirectory}</outputDirectory>
                     <archive>
                         <manifest>
-
-                            <!-- give full qualified name of your main class-->
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
                             <mainClass>application.Main</mainClass>
-
                         </manifest>
                     </archive>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.4</version>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.6.0</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
                         <goals>
-                            <goal>shade</goal>
+                            <goal>copy-dependencies</goal>
                         </goals>
                         <configuration>
-                            <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-                                    <resource>META-INF/services/java.sql.Driver</resource>
-                                </transformer>
-                            </transformers>
+                            <outputDirectory>
+                                ${jpackageInputDirectory}/lib
+                            </outputDirectory>
+                            <excludeGroupIds>
+                                org.openjfx
+                            </excludeGroupIds>
+                            <includeScope>
+                                runtime
+                            </includeScope>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>auto-clean</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                        <configuration>
+                            <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                            <filesets>
+                                <fileset>
+                                    <directory>${project.build.directory}/jpackage</directory>
+                                </fileset>
+                            </filesets>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>22</source>
+                    <target>22</target>
+                    <parameters>true</parameters>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.github.akman</groupId>
+                <artifactId>jpackage-maven-plugin</artifactId>
+                <version>0.1.5</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jpackage</goal>
+                        </goals>
+                        <configuration>
+                            <name>Alpha-Income</name>
+                            <appversion>${project.version}</appversion>
+                            <copyright>Unrestricted freeware</copyright>
+                            <description>Alpha Income Management</description>
+                            <vendor>Rainbow Health Pharmacy</vendor>
+                            <icon>${project.basedir}/src/main/resources/images/icon.ico</icon>
+                            <modulepath>
+                                <dependencysets>
+                                    <dependencyset>
+                                        <includeoutput>false</includeoutput>
+                                        <excludeautomatic>true</excludeautomatic>
+                                        <includes>
+                                            <include>glob:**/*.jar</include>
+                                        </includes>
+                                    </dependencyset>
+                                </dependencysets>
+                            </modulepath>
+                            <addmodules>
+                                <addmodule>jdk.crypto.cryptoki</addmodule>
+                                <addmodule>jdk.crypto.ec</addmodule>
+                                <addmodule>java.sql</addmodule>
+                                <addmodule>java.naming</addmodule>
+                                <addmodule>java.net.http</addmodule>
+                                <addmodule>java.instrument</addmodule>
+                                <addmodule>javafx.controls</addmodule>
+                                <addmodule>javafx.fxml</addmodule>
+                            </addmodules>
+                            <input>${jpackageInputDirectory}</input>
+                            <mainjar>Alpha-Income-${project.version}.jar</mainjar>
+                            <mainclass>application.Main</mainclass>
+                            <winmenu>true</winmenu>
+                            <winperuserinstall>true</winperuserinstall>
+                            <winshortcut>true</winshortcut>
+                            <type>MSI</type>
+                            <verbose>false</verbose>
+                            <javaoptions>-Xms256m -Xmx1024m -Dprism.order=es2 -Dprism.lcdtext=true</javaoptions>
+                        </configuration>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.ow2.asm</groupId>
+                        <artifactId>asm</artifactId>
+                        <version>9.5</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <!-- Execution to modify the jpackage.opts file using PowerShell -->
+                    <execution>
+                        <id>modify-jpackage-opts</id>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <echo message="Modifying jpackage.opts file..."/>
+                                <exec executable="powershell" outputproperty="modified.content" failonerror="true">
+                                    <arg value="-Command"/>
+                                    <arg value="
+                            $inputPath = '${project.build.directory}\jpackage.opts'
+                            if (Test-Path $inputPath) {
+                                $content = Get-Content $inputPath -Raw
+                                $content = $content -replace '(?m)^([^=]+=[^\r\n]*)$', '`$1'
+                                $content = $content -replace '\r?\n', ' '
+                                $content
+                            } else {
+                                Write-Error 'Input file not found: $inputPath'
+                                exit 1
+                            }
+                        "/>
+                                </exec>
+                                <echo file="${project.build.directory}\jpackage-modified.opts" message="${modified.content}"/>
+                                <echo message="Modified jpackage.opts content:"/>
+                                <echo message="${modified.content}"/>
+                            </target>
+                        </configuration>
+                    </execution>
+                    <!-- Execution to run jpackage with the modified opts file -->
+                    <execution>
+                        <id>run-jpackage</id>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <echo message="Executing jpackage command..."/>
+                                <exec executable="cmd" failonerror="true" outputproperty="exec.output" errorproperty="exec.error">
+                                    <arg value="/c"/>
+                                    <arg value="&quot;C:\Program Files\Java\jdk-22.0.1\bin\jpackage.exe&quot; @${project.build.directory}\jpackage-modified.opts"/>
+                                </exec>
+                                <echo message="jpackage output:"/>
+                                <echo message="${exec.output}"/>
+                                <echo message="jpackage error output (if any):"/>
+                                <echo message="${exec.error}"/>
+                            </target>
                         </configuration>
                     </execution>
                 </executions>
