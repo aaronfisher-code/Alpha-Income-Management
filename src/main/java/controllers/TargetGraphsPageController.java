@@ -1,6 +1,6 @@
 package controllers;
 
-import Strategies.*;
+import strategies.*;
 import application.Main;
 import components.layouts.BootstrapColumn;
 import components.layouts.BootstrapPane;

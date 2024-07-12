@@ -1,4 +1,4 @@
-package Strategies;
+package strategies;
 
 import application.Main;
 import controllers.TargetGraphsPageController;

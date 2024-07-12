@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.time.LocalDate;
+import java.util.Objects;
 import java.util.Properties;
 
 
@@ -31,9 +32,8 @@ public class Main extends Application {
 	private Connection con;
 	public Controller c;
 	private static BorderlessScene bs;
-	private Image icon = new Image(getClass().getResourceAsStream("/images/alpha logo.png"));
+	private final Image icon = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/images/alpha logo.png")));
 	private LocalDate currentDate;
-
 	private String version;
 
 	@Override
@@ -77,7 +77,7 @@ public class Main extends Application {
 		// stg.setMinWidth(600);
 		bs.setResizable(true);
 		c.fill();
-		System.out.println("Application started successfully.");
+		System.out.println("Application started successfully. Running version " + version);
 	}
 	
 	public void changeScene(String fxml) throws IOException {
