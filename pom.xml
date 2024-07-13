@@ -6,14 +6,14 @@
 
     <groupId>com.rainbowhealthpharmacy</groupId>
     <artifactId>Alpha-Income</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.0</version>
     <name>Alpha-Income</name>
     <description>An all in one solution for managing pharmacy income</description>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <javafx.version>22.0.1</javafx.version>
-        <jpackageInputDirectory>${project.build.directory}/jpackage</jpackageInputDirectory>
+        <jpackageInputDirectory>${project.build.directory}/jpackage-input</jpackageInputDirectory>
         <maven.build.timestamp.format>yy.MM.ddHH.mmss</maven.build.timestamp.format>
     </properties>
 
@@ -120,21 +120,13 @@
     </dependencies>
 
     <build>
-        <resources>
-            <resource>
-                <directory>src/main/resources</directory>
-                <filtering>true</filtering>
-                <includes>
-                    <include>application.properties</include>
-                </includes>
-            </resource>
-        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.3.0</version>
                 <configuration>
+                    <outputDirectory>${jpackageInputDirectory}</outputDirectory>
                     <archive>
                         <manifest>
                             <addClasspath>true</addClasspath>
@@ -200,31 +192,6 @@
                 </configuration>
             </plugin>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-resources-plugin</artifactId>
-                <version>3.3.1</version>
-                <executions>
-                    <execution>
-                        <id>copy-jar-to-jpackage</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>copy-resources</goal>
-                        </goals>
-                        <configuration>
-                            <outputDirectory>${jpackageInputDirectory}</outputDirectory>
-                            <resources>
-                                <resource>
-                                    <directory>${project.build.directory}</directory>
-                                    <includes>
-                                        <include>${project.build.finalName}.jar</include>
-                                    </includes>
-                                </resource>
-                            </resources>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
                 <groupId>com.github.akman</groupId>
                 <artifactId>jpackage-maven-plugin</artifactId>
                 <version>0.1.5</version>
@@ -241,8 +208,6 @@
                             <description>Alpha Income Management</description>
                             <vendor>Rainbow Health Pharmacy</vendor>
                             <icon>${project.basedir}/src/main/resources/images/icon.ico</icon>
-                            <input>${project.build.directory}/jpackage</input>
-                            <dest>${project.build.directory}</dest>
                             <modulepath>
                                 <dependencysets>
                                     <dependencyset>
@@ -264,13 +229,14 @@
                                 <addmodule>javafx.controls</addmodule>
                                 <addmodule>javafx.fxml</addmodule>
                             </addmodules>
+                            <input>${jpackageInputDirectory}</input>
                             <mainjar>Alpha-Income-${project.version}.jar</mainjar>
                             <mainclass>application.Main</mainclass>
                             <winmenu>true</winmenu>
                             <winperuserinstall>true</winperuserinstall>
                             <winshortcut>true</winshortcut>
                             <type>MSI</type>
-                            <verbose>true</verbose>
+                            <verbose>false</verbose>
                             <javaoptions>-Xms256m -Xmx1024m -Dprism.order=es2 -Dprism.lcdtext=true</javaoptions>
                         </configuration>
                     </execution>
@@ -283,6 +249,67 @@
                     </dependency>
                 </dependencies>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <!-- Execution to modify the jpackage.opts file using PowerShell -->
+                    <execution>
+                        <id>modify-jpackage-opts</id>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <echo message="Modifying jpackage.opts file..."/>
+                                <exec executable="powershell" outputproperty="modified.content" failonerror="true">
+                                    <arg value="-Command"/>
+                                    <arg value="
+                            $inputPath = '${project.build.directory}\jpackage.opts'
+                            if (Test-Path $inputPath) {
+                                $content = Get-Content $inputPath -Raw
+                                $content = $content -replace '(?m)^([^=]+=[^\r\n]*)$', '`$1'
+                                $content = $content -replace '\r?\n', ' '
+                                $content
+                            } else {
+                                Write-Error 'Input file not found: $inputPath'
+                                exit 1
+                            }
+                        "/>
+                                </exec>
+                                <echo file="${project.build.directory}\jpackage-modified.opts" message="${modified.content}"/>
+                                <echo message="Modified jpackage.opts content:"/>
+                                <echo message="${modified.content}"/>
+                            </target>
+                        </configuration>
+                    </execution>
+                    <!-- Execution to run jpackage with the modified opts file -->
+                    <execution>
+                        <id>run-jpackage</id>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <echo message="Executing jpackage command..."/>
+                                <exec executable="cmd" failonerror="true" outputproperty="exec.output" errorproperty="exec.error">
+                                    <arg value="/c"/>
+                                    <arg value="&quot;C:\Program Files\Java\jdk-22.0.1\bin\jpackage.exe&quot; @${project.build.directory}\jpackage-modified.opts"/>
+                                </exec>
+                                <echo message="jpackage output:"/>
+                                <echo message="${exec.output}"/>
+                                <echo message="jpackage error output (if any):"/>
+                                <echo message="${exec.error}"/>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
+
+    
 </project>
