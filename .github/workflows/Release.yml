@@ -37,6 +37,7 @@ jobs:
           echo $new_version > new_version.txt
           mvn versions:set -DnewVersion=$new_version
           echo "::set-output name=new_version::$new_version"
+        shell: bash
 
       - name: Build with Maven
         run: mvn clean package
@@ -58,7 +59,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./target/jpackage/Alpha-Income.msi
+          asset_path: ./target/jpackage/Alpha-Income-${{ steps.increment_version.outputs.new_version }}.msi
           asset_name: Alpha-Income-${{ steps.increment_version.outputs.new_version }}.msi
           asset_content_type: application/x-msi
 
@@ -69,3 +70,4 @@ jobs:
           git add pom.xml
           git commit -m "Increment version to ${{ steps.increment_version.outputs.new_version }}"
           git push
+        shell: bash
