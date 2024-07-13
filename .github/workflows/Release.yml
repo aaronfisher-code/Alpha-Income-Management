@@ -23,7 +23,7 @@ jobs:
           java-version: '22'
 
       - name: Install Wix Toolset
-        run: choco install wix --version=3.11.2
+        run: choco install wixtoolset --version=3.14.1
 
       - name: Increment version if auto
         id: increment_version
