@@ -4,6 +4,7 @@ package application;
 import com.goxr3plus.fxborderlessscene.borderless.BorderlessScene;
 import controllers.Controller;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.image.Image;
@@ -32,16 +33,19 @@ public class Main extends Application {
 	private Connection con;
 	public Controller c;
 	private static BorderlessScene bs;
-	private final Image icon = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/images/alpha logo.png")));
+	private Image icon;
 	private LocalDate currentDate;
 	private String version;
+	private SplashScreen splashScreen;
 
 	@Override
-	public void start(Stage primaryStage) throws Exception {
+	public void init() throws Exception {
 		LogRedirector.redirectOutputToFile("app.log");
-		System.out.println("Application starting...");
+		System.out.println("Application initializing...");
 
-		// Existing initialization code...
+		splashScreen = new SplashScreen();
+		Platform.runLater(() -> splashScreen.showSplash());
+
 		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_Thin.otf"), 16);
 		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_ExtraLight.otf"), 16);
 		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_Light.otf"), 16);
@@ -51,21 +55,48 @@ public class Main extends Application {
 		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_Bold.otf"), 16);
 		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_ExtraBold.otf"), 16);
 		Font.loadFont(getClass().getResourceAsStream("/fonts/Montserrat/Montserrat_Black.otf"), 16);
+
+		try (InputStream iconStream = getClass().getResourceAsStream("/images/alpha logo.png")) {
+			if (iconStream != null) {
+				icon = new Image(iconStream);
+			} else {
+				System.err.println("Icon image not found!");
+			}
+		}
 		setCurrentDate(LocalDate.now());
+
+		Properties prop = new Properties();
+		try (InputStream in = getClass().getClassLoader().getResourceAsStream("application.properties")) {
+			prop.load(in);
+			version = prop.getProperty("VERSION");
+		}
+	}
+
+	@Override
+	public void start(Stage primaryStage) {
+		// Use Platform.runLater to create and show the main window after a delay
+		Platform.runLater(() -> {
+			try {
+				showMainStage(primaryStage);
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally {
+				// Close the splash screen
+				splashScreen.closeSplash();
+			}
+		});
+	}
+
+	private void showMainStage(Stage primaryStage) throws Exception {
+		System.out.println("Main application stage loading...");
 		stg = primaryStage;
-		System.setProperty("prism.lcdtext", "false");
 		FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/LogIn.fxml"));
 		Parent root = loader.load();
 		c = loader.getController();
 		c.setMain(this);
 		con = DBConnector.conDB();
 		c.setConnection(con);
-		Properties prop = new Properties();
-		InputStream in = DBConnector.class.getClassLoader().getResourceAsStream("application.properties");
-		prop.load(in);
-		assert in != null;
-		in.close();
-		version = prop.getProperty("VERSION");
+
 		primaryStage.setTitle("Alpha Income Management " + version);
 		bs = new BorderlessScene(primaryStage, StageStyle.TRANSPARENT, root);
 		bs.removeDefaultCSS();
@@ -74,7 +105,6 @@ public class Main extends Application {
 		primaryStage.getIcons().add(icon);
 		primaryStage.show();
 		bs.maximizeStage();
-		// stg.setMinWidth(600);
 		bs.setResizable(true);
 		c.fill();
 		System.out.println("Application started successfully. Running version " + version);
