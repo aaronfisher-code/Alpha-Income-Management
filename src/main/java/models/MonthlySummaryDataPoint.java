@@ -7,6 +7,7 @@ import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.OptionalDouble;
 
@@ -129,14 +130,14 @@ public class MonthlySummaryDataPoint {
 			dollarPerCustomerValue = "-";
 			otcDollarPerCustomerValue = "-";
 			totalIncome = monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTotalIncome).sum();
-			totalIncomeValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTotalIncome).sum());
-			gpDollarsValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getGpDollars).sum());
+			totalIncomeValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTotalIncome).sum());
+			gpDollarsValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getGpDollars).sum());
 			gpPercentageValue = "-";
-			rentAndOutgoingsValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getRentAndOutgoings).sum());
-			wagesValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getWages).sum());
-			zReportProfitValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getZReportProfit).sum());
+			rentAndOutgoingsValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getRentAndOutgoings).sum());
+			wagesValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getWages).sum());
+			zReportProfitValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getZReportProfit).sum());
 			runningZProfitValue = "-";
-			tillBalanceValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTillBalance).sum());
+			tillBalanceValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTillBalance).sum());
 			runningTillBalanceValue = "-";
 		}else{
 			dateValue = "Average";
@@ -147,11 +148,11 @@ public class MonthlySummaryDataPoint {
 			noOfOTCItemsValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getNoOfOTCItems).sum()/openDuration);
 			itemsPerCustomerValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getItemsPerCustomer).sum()/openDuration);
 			otcPerCustomerValue = String.format("%.2f", monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getOtcPerCustomer).sum()/openDuration);
-			dollarPerCustomerValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getDollarPerCustomer).sum()/openDuration);
-			otcDollarPerCustomerValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getOtcDollarPerCustomer).sum()/openDuration);
+			dollarPerCustomerValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getDollarPerCustomer).sum()/openDuration);
+			otcDollarPerCustomerValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getOtcDollarPerCustomer).sum()/openDuration);
 			totalIncome = monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTotalIncome).sum()/openDuration;
-			totalIncomeValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTotalIncome).sum()/openDuration);
-			gpDollarsValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getGpDollars).sum()/openDuration);
+			totalIncomeValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTotalIncome).sum()/openDuration);
+			gpDollarsValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getGpDollars).sum()/openDuration);
 			OptionalDouble optional = monthlySummaryPoints.stream()
 					.filter(Objects::nonNull) // Ignore null MonthlySummaryDataPoint objects
 					.map(MonthlySummaryDataPoint::getGpPercentage)
@@ -164,11 +165,11 @@ public class MonthlySummaryDataPoint {
 			} else {
 				gpPercentageValue = "-";
 			}
-			rentAndOutgoingsValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getRentAndOutgoings).sum()/openDuration);
-			wagesValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getWages).sum()/openDuration);
-			zReportProfitValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getZReportProfit).sum()/openDuration);
+			rentAndOutgoingsValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getRentAndOutgoings).sum()/openDuration);
+			wagesValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getWages).sum()/openDuration);
+			zReportProfitValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getZReportProfit).sum()/openDuration);
 			runningZProfitValue = "-";
-			tillBalanceValue = NumberFormat.getCurrencyInstance().format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTillBalance).sum()/openDuration);
+			tillBalanceValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTillBalance).sum()/openDuration);
 			runningTillBalanceValue = "-";
 		}
 	}
@@ -271,7 +272,7 @@ public class MonthlySummaryDataPoint {
 	}
 
 	public String getDollarPerCustomerString() {
-		return (dollarPerCustomer == 0)?"": NumberFormat.getCurrencyInstance().format(dollarPerCustomer);
+		return (dollarPerCustomer == 0)?"": NumberFormat.getCurrencyInstance(Locale.US).format(dollarPerCustomer);
 	}
 
 	public void setDollarPerCustomer(double dollarPerCustomer) {
@@ -283,7 +284,7 @@ public class MonthlySummaryDataPoint {
 	}
 
 	public String getOtcDollarPerCustomerString() {
-		return (otcDollarPerCustomer == 0)?"": NumberFormat.getCurrencyInstance().format(otcDollarPerCustomer);
+		return (otcDollarPerCustomer == 0)?"": NumberFormat.getCurrencyInstance(Locale.US).format(otcDollarPerCustomer);
 	}
 
 	public void setOtcDollarPerCustomer(double otcDollarPerCustomer) {
@@ -295,7 +296,7 @@ public class MonthlySummaryDataPoint {
 	}
 
 	public String getTotalIncomeString() {
-		return (totalIncome == 0)?"": NumberFormat.getCurrencyInstance().format(totalIncome);
+		return (totalIncome == 0)?"": NumberFormat.getCurrencyInstance(Locale.US).format(totalIncome);
 	}
 
 	public void setTotalIncome(double totalIncome) {
@@ -307,7 +308,7 @@ public class MonthlySummaryDataPoint {
 	}
 
 	public String getGpDollarsString() {
-		return (gpDollars == 0)?"": NumberFormat.getCurrencyInstance().format(gpDollars);
+		return (gpDollars == 0)?"": NumberFormat.getCurrencyInstance(Locale.US).format(gpDollars);
 	}
 
 	public void setGpDollars(double gpDollars) {
@@ -331,7 +332,7 @@ public class MonthlySummaryDataPoint {
 	}
 
 	public String getRentAndOutgoingsString() {
-		return (rentAndOutgoings == 0)?"": NumberFormat.getCurrencyInstance().format(rentAndOutgoings);
+		return (rentAndOutgoings == 0)?"": NumberFormat.getCurrencyInstance(Locale.US).format(rentAndOutgoings);
 	}
 
 	public void setRentAndOutgoings(double rentAndOutgoings) {
@@ -343,7 +344,7 @@ public class MonthlySummaryDataPoint {
 	}
 
 	public String getWagesString() {
-		return (wages == 0)?"": NumberFormat.getCurrencyInstance().format(wages);
+		return (wages == 0)?"": NumberFormat.getCurrencyInstance(Locale.US).format(wages);
 	}
 
 	public void setWages(double wages) {
@@ -355,7 +356,7 @@ public class MonthlySummaryDataPoint {
 	}
 
 	public String getZReportProfitString() {
-		return (zReportProfit == 0)?"": NumberFormat.getCurrencyInstance().format(zReportProfit);
+		return (zReportProfit == 0)?"": NumberFormat.getCurrencyInstance(Locale.US).format(zReportProfit);
 	}
 
 	public void setZReportProfit(double zReportProfit) {
@@ -367,7 +368,7 @@ public class MonthlySummaryDataPoint {
 	}
 
 	public String getRunningZProfitString() {
-		return (runningZProfit == 0)?"": NumberFormat.getCurrencyInstance().format(runningZProfit);
+		return (runningZProfit == 0)?"": NumberFormat.getCurrencyInstance(Locale.US).format(runningZProfit);
 	}
 
 	public void setRunningZProfit(double runningZProfit) {
@@ -379,7 +380,7 @@ public class MonthlySummaryDataPoint {
 	}
 
 	public String getTillBalanceString() {
-		return (tillBalance == 0)?"": NumberFormat.getCurrencyInstance().format(tillBalance);
+		return (tillBalance == 0)?"": NumberFormat.getCurrencyInstance(Locale.US).format(tillBalance);
 	}
 
 	public void setTillBalance(double tillBalance) {
@@ -391,7 +392,7 @@ public class MonthlySummaryDataPoint {
 	}
 
 	public String getRunningTillBalanceString() {
-		return (runningTillBalance == 0)?"": NumberFormat.getCurrencyInstance().format(runningTillBalance);
+		return (runningTillBalance == 0)?"": NumberFormat.getCurrencyInstance(Locale.US).format(runningTillBalance);
 	}
 
 	public void setRunningTillBalance(double runningTillBalance) {

@@ -251,12 +251,12 @@ public class InvoiceEntryController extends DateSelectController implements acti
 					preparedStatement.setString(1, invoiceNoField.getText());
 					resultSet = preparedStatement.executeQuery();
 					if(resultSet.next()) {
-						expectedUnitAmountLabel.setText(NumberFormat.getCurrencyInstance().format(resultSet.getDouble("amount")));
+						expectedUnitAmountLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(resultSet.getDouble("amount")));
 						invoiceNoValidationLabel.setText("");
 						invoiceNoValidationLabel.setStyle("-fx-text-fill: red;");
 						invoiceNoValidationLabel.setVisible(false);
 						if(amountField.isValid()){
-							varianceLabel.setText(NumberFormat.getCurrencyInstance().format(Double.parseDouble(expectedUnitAmountLabel.getText().replace("$","")) - Double.parseDouble(amountField.getText())));
+							varianceLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(Double.parseDouble(expectedUnitAmountLabel.getText().replace("$","")) - Double.parseDouble(amountField.getText())));
 						}
 					}else{
 						expectedUnitAmountLabel.setText("N/A");
@@ -276,7 +276,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 				if(expectedUnitAmountLabel.getText().equals("N/A"))
 					varianceLabel.setText("N/A");
 				else
-					varianceLabel.setText(NumberFormat.getCurrencyInstance().format(Double.parseDouble(expectedUnitAmountLabel.getText().replace("$","")) - Double.parseDouble(amountField.getText())));
+					varianceLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(Double.parseDouble(expectedUnitAmountLabel.getText().replace("$","")) - Double.parseDouble(amountField.getText())));
 			}
 		});
 	}

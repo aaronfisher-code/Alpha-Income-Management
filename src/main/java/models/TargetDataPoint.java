@@ -3,6 +3,7 @@ package models;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 public class TargetDataPoint {
     private LocalDate date;
@@ -29,14 +30,14 @@ public class TargetDataPoint {
     public String getActual() {
         if(actual.equals(""))
             return "";
-        return NumberFormat.getCurrencyInstance().format(Double.parseDouble(actual));
+        return NumberFormat.getCurrencyInstance(Locale.US).format(Double.parseDouble(actual));
     }
 
     public String getTarget1() {
-        return NumberFormat.getCurrencyInstance().format(Double.parseDouble(target1));
+        return NumberFormat.getCurrencyInstance(Locale.US).format(Double.parseDouble(target1));
     }
 
     public String getTarget2() {
-        return NumberFormat.getCurrencyInstance().format(Double.parseDouble(target2));
+        return NumberFormat.getCurrencyInstance(Locale.US).format(Double.parseDouble(target2));
     }
 }

@@ -7,6 +7,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.NumberFormat;
 import java.time.LocalDate;
+import java.util.Locale;
 
 public class AccountPaymentContactDataPoint {
 
@@ -48,7 +49,7 @@ public class AccountPaymentContactDataPoint {
 
 	public void setTotalValue(double totalValue) {this.totalValue = totalValue;}
 
-	public String getTotalValueString(){return NumberFormat.getCurrencyInstance().format(totalValue);}
+	public String getTotalValueString(){return NumberFormat.getCurrencyInstance(Locale.US).format(totalValue);}
 
 	public MFXButton getDeleteButton() {return deleteButton;}
 

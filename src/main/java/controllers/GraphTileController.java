@@ -28,6 +28,7 @@ import java.sql.ResultSet;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.util.Comparator;
+import java.util.Locale;
 import java.util.stream.Stream;
 
 public class GraphTileController extends Controller{
@@ -84,13 +85,13 @@ public class GraphTileController extends Controller{
 
 		if(target1Variance>0){
 			if(strategy.isDollarFormat()){
-				target1VarianceLabel.setText(NumberFormat.getCurrencyInstance().format(target1Variance) + " left until you hit Target 1!");
+				target1VarianceLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(target1Variance) + " left until you hit Target 1!");
 			}else{
 				target1VarianceLabel.setText(String.format("%.0f", target1Variance) + " left until you hit Target 1!");
 			}
 		}else{
 			if(strategy.isDollarFormat()){
-				target1VarianceLabel.setText(NumberFormat.getCurrencyInstance().format(-target1Variance) + " over Target 1!");
+				target1VarianceLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(-target1Variance) + " over Target 1!");
 			}else{
 				target1VarianceLabel.setText(String.format("%.0f", -target1Variance) + " over Target 1!");
 			}
@@ -98,14 +99,14 @@ public class GraphTileController extends Controller{
 
 		if(target2Variance>0){
 			if(strategy.isDollarFormat()){
-				target2VarianceLabel.setText(NumberFormat.getCurrencyInstance().format(target2Variance) + " left until you hit Target 2!");
+				target2VarianceLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(target2Variance) + " left until you hit Target 2!");
 			}else{
 				//format to 0 decimal places
 				target2VarianceLabel.setText(String.format("%.0f", target2Variance) + " left until you hit Target 2!");
 			}
 		}else{
 			if(strategy.isDollarFormat()){
-				target2VarianceLabel.setText(NumberFormat.getCurrencyInstance().format(-target2Variance) + " over Target 2!");
+				target2VarianceLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(-target2Variance) + " over Target 2!");
 			}else{
 				target2VarianceLabel.setText(String.format("%.0f", -target2Variance) + " over Target 2!");
 			}

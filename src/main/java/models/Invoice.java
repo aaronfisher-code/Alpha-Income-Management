@@ -6,6 +6,7 @@ import java.sql.ResultSetMetaData;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 public class Invoice {
 
@@ -133,7 +134,7 @@ public class Invoice {
 	}
 
 	public String getUnitAmountString() {
-		return (!invoiceExists) ? "" : NumberFormat.getCurrencyInstance().format(unitAmount);
+		return (!invoiceExists) ? "" : NumberFormat.getCurrencyInstance(Locale.US).format(unitAmount);
 	}
 
 	public void setUnitAmount(double unitAmount) {
@@ -145,7 +146,7 @@ public class Invoice {
 	}
 
 	public String getImportedInvoiceAmountString() {
-		return (!importExists) ? "" : NumberFormat.getCurrencyInstance().format(importedInvoiceAmount);
+		return (!importExists) ? "" : NumberFormat.getCurrencyInstance(Locale.US).format(importedInvoiceAmount);
 	}
 
 	public void setImportedInvoiceAmount(double importedInvoiceAmount) {
@@ -157,7 +158,7 @@ public class Invoice {
 	}
 
 	public String getVarianceString() {
-		return (!importExists) ? "" : NumberFormat.getCurrencyInstance().format(variance);
+		return (!importExists) ? "" : NumberFormat.getCurrencyInstance(Locale.US).format(variance);
 	}
 
 	public void setVariance(double variance) {
@@ -169,7 +170,7 @@ public class Invoice {
 	}
 
 	public String getCreditsString() {
-		return NumberFormat.getCurrencyInstance().format(credits);
+		return NumberFormat.getCurrencyInstance(Locale.US).format(credits);
 	}
 
 	public void setCredits(double credits) {
@@ -181,7 +182,7 @@ public class Invoice {
 	}
 
 	public String getTotalAfterCreditsString() {
-		return NumberFormat.getCurrencyInstance().format(totalAfterCredits);
+		return NumberFormat.getCurrencyInstance(Locale.US).format(totalAfterCredits);
 	}
 
 	public void setTotalAfterCredits(double totalAfterCredits) {

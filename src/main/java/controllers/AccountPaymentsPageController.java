@@ -313,7 +313,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 		double supplierTotal=0;
 		for(AccountPaymentContactDataPoint acdp:currentContactTotals)
 			supplierTotal+=acdp.getTotalValue();
-		supplierTotalLabel.setText(NumberFormat.getCurrencyInstance().format(supplierTotal));
+		supplierTotalLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(supplierTotal));
 		addDoubleClickfunction();
 		accountPaymentTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
 		accountPaymentTable.setMaxWidth(Double.MAX_VALUE);

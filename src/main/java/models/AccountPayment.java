@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 public class AccountPayment {
 	private String contactName;
@@ -72,5 +73,5 @@ public class AccountPayment {
 	public void setAccountCode(String accountCode) {this.accountCode = accountCode;}
 	public String getTaxRate() {return taxRate;}
 	public void setTaxRate(String taxRate) {this.taxRate = taxRate;}
-	public String getUnitAmountString(){return NumberFormat.getCurrencyInstance().format(unitAmount);}
+	public String getUnitAmountString(){return NumberFormat.getCurrencyInstance(Locale.US).format(unitAmount);}
 }

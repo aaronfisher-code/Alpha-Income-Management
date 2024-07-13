@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 public class Credit {
 
@@ -77,7 +78,7 @@ public class Credit {
         return creditAmount;
     }
 
-    public String getCreditAmountString(){return (NumberFormat.getCurrencyInstance().format(creditAmount));}
+    public String getCreditAmountString(){return (NumberFormat.getCurrencyInstance(Locale.US).format(creditAmount));}
 
     public void setCreditAmount(double creditAmount) {
         this.creditAmount = creditAmount;

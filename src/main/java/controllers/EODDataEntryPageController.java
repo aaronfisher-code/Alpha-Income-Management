@@ -197,8 +197,8 @@ public class EODDataEntryPageController extends DateSelectController{
 		 if(googleSquareField.isValid()) tillBalanceTotal += Double.valueOf(googleSquareField.getText());
 		 if(chequeField.isValid()) tillBalanceTotal += Double.valueOf(chequeField.getText());
 		tillBalanceTotal-=currentTotalTakings;
-		tillBalanceLabel.setText(NumberFormat.getCurrencyInstance().format(tillBalanceTotal));
-		runningTillBalanceLabel.setText(NumberFormat.getCurrencyInstance().format(currentRunningTillBalance+tillBalanceTotal));
+		tillBalanceLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(tillBalanceTotal));
+		runningTillBalanceLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(currentRunningTillBalance+tillBalanceTotal));
 	}
 
 	private void addDoubleClickfunction(){
@@ -543,9 +543,9 @@ public class EODDataEntryPageController extends DateSelectController{
 						totalTakings = Double.parseDouble(searchTillData(currentTillDataPoints,d,"Total Takings","amount"));
 					}catch(NumberFormatException ignored){}
 					double tillBalance = e.getCashAmount()+e.getEftposAmount()+e.getAmexAmount()+e.getGoogleSquareAmount()+e.getChequeAmount() - totalTakings;
-					pw.print(NumberFormat.getCurrencyInstance().format(tillBalance)+",");
+					pw.print(NumberFormat.getCurrencyInstance(Locale.US).format(tillBalance)+",");
 					runningTillBalance+=tillBalance;
-					pw.print(NumberFormat.getCurrencyInstance().format(runningTillBalance)+",");
+					pw.print(NumberFormat.getCurrencyInstance(Locale.US).format(runningTillBalance)+",");
 					pw.println(e.getNotes());
 
 					pw.print("Eftpos Income,"+i+",");

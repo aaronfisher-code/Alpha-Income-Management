@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 public class EODDataPoint {
 
@@ -81,26 +82,26 @@ public class EODDataPoint {
 	}
 	public void setDate(LocalDate date) {this.date = date;}
 	public double getCashAmount() {return cashAmount;}
-	public String getCashAmountString(){return (cashAmount == 0)?"":NumberFormat.getCurrencyInstance().format(cashAmount);}
+	public String getCashAmountString(){return (cashAmount == 0)?"":NumberFormat.getCurrencyInstance(Locale.US).format(cashAmount);}
 
 	public void setCashAmount(double cashAmount) {this.cashAmount = cashAmount;}
 	public double getEftposAmount() {return eftposAmount;}
-	public String getEftposAmountString(){return (eftposAmount == 0)?"":NumberFormat.getCurrencyInstance().format(eftposAmount);}
+	public String getEftposAmountString(){return (eftposAmount == 0)?"":NumberFormat.getCurrencyInstance(Locale.US).format(eftposAmount);}
 	public void setEftposAmount(double eftposAmount) {this.eftposAmount = eftposAmount;}
 	public double getAmexAmount() {return amexAmount;}
-	public String getAmexAmountString(){return (amexAmount == 0)?"":NumberFormat.getCurrencyInstance().format(amexAmount);}
+	public String getAmexAmountString(){return (amexAmount == 0)?"":NumberFormat.getCurrencyInstance(Locale.US).format(amexAmount);}
 	public void setAmexAmount(double amexAmount) {this.amexAmount = amexAmount;}
 	public double getGoogleSquareAmount() {return googleSquareAmount;}
-	public String getGoogleSquareAmountString(){return (googleSquareAmount == 0)?"":NumberFormat.getCurrencyInstance().format(googleSquareAmount);}
+	public String getGoogleSquareAmountString(){return (googleSquareAmount == 0)?"":NumberFormat.getCurrencyInstance(Locale.US).format(googleSquareAmount);}
 	public void setGoogleSquareAmount(double googleSquareAmount) {this.googleSquareAmount = googleSquareAmount;}
 	public double getChequeAmount() {return chequeAmount;}
-	public String getChequeAmountString(){return (chequeAmount == 0)?"":NumberFormat.getCurrencyInstance().format(chequeAmount);}
+	public String getChequeAmountString(){return (chequeAmount == 0)?"":NumberFormat.getCurrencyInstance(Locale.US).format(chequeAmount);}
 	public void setChequeAmount(double chequeAmount) {this.chequeAmount = chequeAmount;}
 	public int getMedschecks() {return medschecks;}
 	public String getMedschecksString() {return (medschecks==0)?"":String.valueOf(medschecks);}
 	public void setMedschecks(int medschecks) {this.medschecks = medschecks;}
 	public double getStockOnHandAmount() {return stockOnHandAmount;}
-	public String getStockOnHandAmountString() {return (stockOnHandAmount==0)?"":NumberFormat.getCurrencyInstance().format(stockOnHandAmount);}
+	public String getStockOnHandAmountString() {return (stockOnHandAmount==0)?"":NumberFormat.getCurrencyInstance(Locale.US).format(stockOnHandAmount);}
 	public void setStockOnHandAmount(double stockOnHandAmount) {this.stockOnHandAmount = stockOnHandAmount;}
 	public int getScriptsOnFile() {return scriptsOnFile;}
 	public String getScriptsOnFileString() {return (scriptsOnFile==0)?"":String.valueOf(scriptsOnFile);}
@@ -109,10 +110,10 @@ public class EODDataPoint {
 	public String getSmsPatientsString() {return (smsPatients==0)?"":String.valueOf(smsPatients);}
 	public void setSmsPatients(int smsPatients) {this.smsPatients = smsPatients;}
 	public double getTillBalance() {return tillBalance;}
-	public String getTillBalanceString(){return NumberFormat.getCurrencyInstance().format(tillBalance);}
+	public String getTillBalanceString(){return NumberFormat.getCurrencyInstance(Locale.US).format(tillBalance);}
 	public void setTillBalance(double tillBalance) {this.tillBalance = tillBalance;}
 	public double getRunningTillBalance() {return runningTillBalance;}
-	public String getRunningTillBalanceString(){return NumberFormat.getCurrencyInstance().format(runningTillBalance);}
+	public String getRunningTillBalanceString(){return NumberFormat.getCurrencyInstance(Locale.US).format(runningTillBalance);}
 	public void setRunningTillBalance(double runningTillBalance) {this.runningTillBalance = runningTillBalance;}
 	public String getNotes() {return notes;}
 	public void setNotes(String notes) {this.notes = notes;}
