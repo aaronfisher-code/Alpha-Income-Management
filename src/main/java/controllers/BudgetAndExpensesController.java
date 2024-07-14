@@ -2,22 +2,13 @@ package controllers;
 
 import application.Main;
 import io.github.palexdev.materialfx.controls.MFXButton;
-import io.github.palexdev.materialfx.controls.MFXCheckbox;
 import io.github.palexdev.materialfx.controls.MFXTextField;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
-import models.BASCheckerDataPoint;
-import models.EODDataPoint;
-import models.TillReportDataPoint;
 import org.controlsfx.control.PopOver;
 import utils.RosterUtils;
 import utils.ValidatorUtils;
@@ -29,6 +20,7 @@ import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
+import java.util.Arrays;
 import java.util.Locale;
 
 public class BudgetAndExpensesController extends DateSelectController{
@@ -77,15 +69,18 @@ public class BudgetAndExpensesController extends DateSelectController{
 
 	@Override
 	public void fill() {
-		ValidatorUtils.setupRegexValidation(monthlyRentField,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR, "$", saveButton);
-		ValidatorUtils.setupRegexValidation(dailyOutgoingsField,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR, "$", saveButton);
-		ValidatorUtils.setupRegexValidation(monthlyLoanField,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR, "$", saveButton);
-		ValidatorUtils.setupRegexValidation(monthlyWagesField,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR, "$", saveButton);
-		ValidatorUtils.setupRegexValidation(cpaIncomeXero,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR, "$", saveButton);
-		ValidatorUtils.setupRegexValidation(lanternPayIncomeXero,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR, "$", saveButton);
-		ValidatorUtils.setupRegexValidation(otherIncomeXero,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR, "$", saveButton);
-		ValidatorUtils.setupRegexValidation(atoGSTrefundXero,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR, "$", saveButton);
-		saveButton.setOnAction(actionEvent -> save());
+		for (MFXTextField mfxTextField : Arrays.asList(monthlyRentField, dailyOutgoingsField, monthlyLoanField, monthlyWagesField, cpaIncomeXero, lanternPayIncomeXero, otherIncomeXero, atoGSTrefundXero)) {
+			if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Budget - Edit"))) {
+				ValidatorUtils.setupRegexValidation(mfxTextField,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
+			}else{
+				mfxTextField.setDisable(true);
+			}
+		}
+		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Budget - Edit"))) {
+			saveButton.setOnAction(_ -> save());
+		}else{
+			saveButton.setDisable(true);
+		}
 		setDate(main.getCurrentDate());
 	}
 

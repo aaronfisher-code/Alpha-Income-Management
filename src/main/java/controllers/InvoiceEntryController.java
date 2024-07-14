@@ -4,6 +4,7 @@ import application.Main;
 import com.dlsc.gemsfx.DialogPane;
 import com.dlsc.gemsfx.FilterView;
 import com.jfoenix.controls.JFXButton;
+import com.jfoenix.controls.JFXNodesList;
 import components.ActionableFilterComboBox;
 import components.CustomDateStringConverter;
 import interfaces.actionableComboBox;
@@ -89,6 +90,10 @@ public class InvoiceEntryController extends DateSelectController implements acti
 	private Button creditDeleteButton;
 	@FXML
 	private JFXButton plusButton;
+	@FXML
+	private JFXNodesList addList;
+	@FXML
+	private Button importDataButton,exportDataButton;
 
 	private TableView<Invoice> invoicesTable = new TableView<>();
 	private TableView<Credit> creditsTable = new TableView<>();
@@ -161,6 +166,14 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		invoiceDateField.setConverterSupplier(() -> new CustomDateStringConverter("dd/MM/yyyy"));
 		dueDateField.setConverterSupplier(() -> new CustomDateStringConverter("dd/MM/yyyy"));
 		creditDateField.setConverterSupplier(() -> new CustomDateStringConverter("dd/MM/yyyy"));
+		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Invoicing - Edit"))) {
+			addList.setVisible(true);
+			importDataButton.setDisable(false);
+		}else{
+			addList.setVisible(false);
+			importDataButton.setDisable(true);
+		}
+		exportDataButton.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Invoicing - Export")));
 		invoicesView();
 	}
 
@@ -363,29 +376,33 @@ public class InvoiceEntryController extends DateSelectController implements acti
 	}
 
 	private void addInvoiceDoubleClickfunction(){
-		invoicesTable.setRowFactory( tv -> {
-			TableRow<Invoice> row = new TableRow<>();
-			row.setOnMouseClicked(event -> {
-				if (event.getClickCount() == 2 && (! row.isEmpty()) ) {
-					Invoice rowData = row.getItem();
-					openInvoicePopover(rowData);
-				}
+		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Invoicing - Edit"))) {
+			invoicesTable.setRowFactory(tv -> {
+				TableRow<Invoice> row = new TableRow<>();
+				row.setOnMouseClicked(event -> {
+					if (event.getClickCount() == 2 && (!row.isEmpty())) {
+						Invoice rowData = row.getItem();
+						openInvoicePopover(rowData);
+					}
+				});
+				return row;
 			});
-			return row ;
-		});
+		}
 	}
 
 	private void addCreditDoubleClickfunction(){
-		creditsTable.setRowFactory( tv -> {
-			TableRow<Credit> row = new TableRow<>();
-			row.setOnMouseClicked(event -> {
-				if (event.getClickCount() == 2 && (! row.isEmpty()) ) {
-					Credit rowData = row.getItem();
-					openCreditPopover(rowData);
-				}
+		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Invoicing - Edit"))) {
+			creditsTable.setRowFactory(tv -> {
+				TableRow<Credit> row = new TableRow<>();
+				row.setOnMouseClicked(event -> {
+					if (event.getClickCount() == 2 && (!row.isEmpty())) {
+						Credit rowData = row.getItem();
+						openCreditPopover(rowData);
+					}
+				});
+				return row;
 			});
-			return row ;
-		});
+		}
 	}
 
 

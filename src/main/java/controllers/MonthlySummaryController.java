@@ -121,6 +121,8 @@ public class MonthlySummaryController extends DateSelectController{
 	private TableColumn<?, ?> totalsZReportProfitCol;
 	@FXML
 	private TableColumn<MonthlySummaryDataPoint,String> totalsRunningTillBalanceCol;
+	@FXML
+	private Button exportDataButton;
 
 
 
@@ -152,6 +154,11 @@ public class MonthlySummaryController extends DateSelectController{
 
 	@Override
 	public void fill() {
+		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Monthly Summary - Export"))) {
+			exportDataButton.setVisible(true);
+		}else{
+			exportDataButton.setVisible(false);
+		}
 //		itemsPerCustomerCol.getStyleClass().add("yellowColumn");
 		summaryTable.setSelectionModel(null);
 		dateCol.setCellValueFactory(new PropertyValueFactory<>("dateString"));

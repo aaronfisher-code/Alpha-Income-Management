@@ -255,7 +255,7 @@
                <right>
                   <HBox alignment="CENTER" BorderPane.alignment="CENTER">
                      <children>
-                        <Button fx:id="ExportDataButton" graphicTextGap="10.0" mnemonicParsing="false" onAction="#exportData" prefHeight="35.0" prefWidth="150.0" style="-fx-background-color: #F3F2F7; -fx-border-color: #6e6b7b; -fx-border-radius: 5;" styleClass="controlButton" text="Export" textFill="#6e6b7b">
+                        <Button fx:id="exportDataButton" graphicTextGap="10.0" mnemonicParsing="false" onAction="#exportData" prefHeight="35.0" prefWidth="150.0" style="-fx-background-color: #F3F2F7; -fx-border-color: #6e6b7b; -fx-border-radius: 5;" styleClass="controlButton" text="Export" textFill="#6e6b7b">
                            <cursor>
                               <Cursor fx:constant="HAND" />
                            </cursor>

@@ -108,9 +108,17 @@ public class BASCheckerController extends DateSelectController{
 	@Override
 	public void fill() {
         for (MFXTextField mfxTextField : Arrays.asList(cash2, eftpos2, amex2, googleSquare2, cheque2, medicare2, total2, medicareBAS)) {
-            ValidatorUtils.setupRegexValidation(mfxTextField,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
+			if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("BAS - Edit"))) {
+            	ValidatorUtils.setupRegexValidation(mfxTextField,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
+			}else{
+				mfxTextField.setDisable(true);
+			}
         }
-        saveButton.setOnAction(actionEvent -> save());
+		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("BAS - Edit"))) {
+			saveButton.setOnAction(_ -> save());
+		}else{
+			saveButton.setDisable(true);
+		}
 
 		for (Node node : incomeCheckTable.getChildren()) {
 			if (node instanceof MFXTextField textField) {
