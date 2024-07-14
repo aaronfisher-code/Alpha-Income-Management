@@ -95,7 +95,7 @@ public class MainMenuController extends Controller {
         buttonPermissions.put(eodDataEntryButton, "EOD - View");
         buttonPermissions.put(accountPaymentsButton, "Account Payments - View");
         buttonPermissions.put(rosterButton, "Roster - View");
-        buttonPermissions.put(accountsButton, "Users - View");
+        buttonPermissions.put(accountsButton, "Manage Employees - View");
         buttonPermissions.put(invoiceTrackingButton, "Invoicing - View");
         buttonPermissions.put(basCheckerButton, "BAS - View");
         buttonPermissions.put(budgetExpensesButton, "Budget - View");

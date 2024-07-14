@@ -114,6 +114,11 @@ public class EditAccountController extends Controller{
 	public void fill() {usersView();}
 
 	public void usersView(){
+		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Users - Edit"))) {
+			addList.setVisible(true);
+		}else{
+			addList.setVisible(false);
+		}
 		 //Change inactive user text depending on if its selected or not
 		inactiveUserToggle.selectedProperty().addListener(actionEvent -> {
 			if (inactiveUserToggle.isSelected()) {
@@ -180,25 +185,32 @@ public class EditAccountController extends Controller{
 	}
 
 	private void addUserDoubleClickfunction(){
-		for (Map.Entry<Integer, MFXTableRow<User>> entry:accountsTable.getCells().entrySet()) {
-			entry.getValue().setOnMouseClicked(event -> {
-				if(event.getClickCount()==2)openUserPopover(entry.getValue().getData());
-			});
-			if(entry.getValue().getData().getInactiveDate()!=null){
-				entry.getValue().getStyleClass().add("disabledMFXTableRow");
-			}
-			for (MFXTableRowCell<User, ?> cell:entry.getValue().getCells()) {
-				cell.setOnMouseClicked(event -> {
-					if(event.getClickCount()==2){
-						MFXTableRow<User> parentRow = (MFXTableRow<User>) cell.getParent();
-						openUserPopover(parentRow.getData());
-					}
+		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Users - Edit"))) {
+			for (Map.Entry<Integer, MFXTableRow<User>> entry : accountsTable.getCells().entrySet()) {
+				entry.getValue().setOnMouseClicked(event -> {
+					if (event.getClickCount() == 2) openUserPopover(entry.getValue().getData());
 				});
+				if (entry.getValue().getData().getInactiveDate() != null) {
+					entry.getValue().getStyleClass().add("disabledMFXTableRow");
+				}
+				for (MFXTableRowCell<User, ?> cell : entry.getValue().getCells()) {
+					cell.setOnMouseClicked(event -> {
+						if (event.getClickCount() == 2) {
+							MFXTableRow<User> parentRow = (MFXTableRow<User>) cell.getParent();
+							openUserPopover(parentRow.getData());
+						}
+					});
+				}
 			}
 		}
 	}
 
 	public void storesView(){
+		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Stores - Edit"))) {
+			addList.setVisible(true);
+		}else{
+			addList.setVisible(false);
+		}
 		formatTabSelect(storesButton);
 		formatTabDeselect(usersButton);
 		addButton.setOnAction(e -> openStorePopover());
@@ -246,17 +258,19 @@ public class EditAccountController extends Controller{
 	}
 
 	private void addStoreDoubleClickFunction(){
-		for (Map.Entry<Integer, MFXTableRow<Store>> entry:storesTable.getCells().entrySet()) {
-			entry.getValue().setOnMouseClicked(event -> {
-				if(event.getClickCount()==2)openStorePopover(entry.getValue().getData());
-			});
-			for (MFXTableRowCell<Store, ?> cell:entry.getValue().getCells()) {
-				cell.setOnMouseClicked(event -> {
-					if(event.getClickCount()==2){
-						MFXTableRow<Store> parentRow = (MFXTableRow<Store>) cell.getParent();
-						openStorePopover(parentRow.getData());
-					}
+		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Stores - Edit"))) {
+			for (Map.Entry<Integer, MFXTableRow<Store>> entry : storesTable.getCells().entrySet()) {
+				entry.getValue().setOnMouseClicked(event -> {
+					if (event.getClickCount() == 2) openStorePopover(entry.getValue().getData());
 				});
+				for (MFXTableRowCell<Store, ?> cell : entry.getValue().getCells()) {
+					cell.setOnMouseClicked(event -> {
+						if (event.getClickCount() == 2) {
+							MFXTableRow<Store> parentRow = (MFXTableRow<Store>) cell.getParent();
+							openStorePopover(parentRow.getData());
+						}
+					});
+				}
 			}
 		}
 	}
