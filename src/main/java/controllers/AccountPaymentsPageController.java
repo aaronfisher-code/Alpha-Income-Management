@@ -3,6 +3,7 @@ package controllers;
 import application.Main;
 import com.dlsc.gemsfx.DialogPane;
 import com.dlsc.gemsfx.DialogPane.Dialog;
+import com.jfoenix.controls.JFXNodesList;
 import components.ActionableFilterComboBox;
 import components.CustomDateStringConverter;
 import io.github.palexdev.materialfx.controls.*;
@@ -89,6 +90,10 @@ public class AccountPaymentsPageController extends DateSelectController{
 	private Label paymentPopoverTitle,supplierTotalLabel;
 	@FXML
 	private MFXComboBox<String> taxRateField;
+	@FXML
+	private JFXNodesList addList;
+	@FXML
+	private Button xeroExportButton;
 
 	private TableColumn<AccountPayment,String> contactCol;
 	private TableColumn<AccountPayment,String> invNumberCol;
@@ -178,7 +183,12 @@ public class AccountPaymentsPageController extends DateSelectController{
 			tc.setPrefWidth(TableUtils.getColumnWidth(tc)+30);
 		}
 		Platform.runLater(() -> GUIUtils.customResize(accountPaymentTable,descriptionCol));
-		Platform.runLater(() -> addDoubleClickfunction());
+		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Account Payments - Edit"))){
+			Platform.runLater(() -> addDoubleClickfunction());
+		}else{
+			addList.setVisible(false);
+		}
+		xeroExportButton.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Account Payments - Export")));
 
 		//Init Totals Table
 		contactNameCol = new MFXTableColumn<>("CONTACT",false, Comparator.comparing(AccountPaymentContactDataPoint::getContactName));
@@ -314,7 +324,9 @@ public class AccountPaymentsPageController extends DateSelectController{
 		for(AccountPaymentContactDataPoint acdp:currentContactTotals)
 			supplierTotal+=acdp.getTotalValue();
 		supplierTotalLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(supplierTotal));
-		addDoubleClickfunction();
+		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Account Payments - Edit"))) {
+			addDoubleClickfunction();
+		}
 		accountPaymentTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
 		accountPaymentTable.setMaxWidth(Double.MAX_VALUE);
 		accountPaymentTable.setMaxHeight(Double.MAX_VALUE);

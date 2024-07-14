@@ -31,7 +31,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane prefHeight="674.0" prefWidth="1289.0" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.AccountPaymentsPageController">
+<StackPane prefHeight="674.0" prefWidth="1289.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.AccountPaymentsPageController">
    <children>
       <BorderPane prefHeight="200.0" prefWidth="200.0">
          <top>
@@ -40,7 +40,7 @@
                   <Insets bottom="12.0" left="10.0" right="10.0" top="10.0" />
                </padding>
                <right>
-                  <Button graphicTextGap="10.0" mnemonicParsing="false" onAction="#exportToXero" prefHeight="35.0" prefWidth="227.0" style="-fx-background-color: #F3F2F7; -fx-border-color: #6e6b7b; -fx-border-radius: 5;" styleClass="controlButton" text="Export in Xero Format" textFill="#6e6b7b" BorderPane.alignment="CENTER">
+                  <Button graphicTextGap="10.0" mnemonicParsing="false" onAction="#exportToXero" prefHeight="35.0" prefWidth="227.0" style="-fx-background-color: #F3F2F7; -fx-border-color: #6e6b7b; -fx-border-radius: 5;" styleClass="controlButton" text="Export in Xero Format" textFill="#6e6b7b" BorderPane.alignment="CENTER" fx:id="xeroExportButton">
                      <cursor>
                         <Cursor fx:constant="HAND" />
                      </cursor>
