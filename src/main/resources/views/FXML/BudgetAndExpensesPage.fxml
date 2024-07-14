@@ -195,7 +195,7 @@
                                     <Font name="System Bold" size="12.0" />
                                  </font>
                               </Label>
-                              <Label text="Daily outgoings (previously detirmined)           " GridPane.columnIndex="1" GridPane.rowIndex="6">
+                              <Label text="Daily outgoings (previously determined)           " GridPane.columnIndex="1" GridPane.rowIndex="6">
                                  <padding>
                                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                  </padding>
