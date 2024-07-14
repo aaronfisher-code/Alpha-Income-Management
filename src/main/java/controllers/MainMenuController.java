@@ -31,6 +31,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 
 
 public class MainMenuController extends Controller {
@@ -41,7 +43,7 @@ public class MainMenuController extends Controller {
     private VBox sidebar,buttonPane;
     @FXML
     private Button targetGraphButton,eodDataEntryButton,accountPaymentsButton,rosterButton,accountsButton,
-            invoiceTrackingButton,expiryTrackerButton,basCheckerButton,budgetExpensesButton,monthlySummaryButton,settingsButton;
+            invoiceTrackingButton,basCheckerButton,budgetExpensesButton,monthlySummaryButton,settingsButton;
     @FXML
     private BorderPane contentPane,topPane;
     @FXML
@@ -86,12 +88,26 @@ public class MainMenuController extends Controller {
         } catch (SQLException ex) {
             System.err.println(ex.getMessage());
         }
-        storeSearchCombo.setOnAction(actionEvent -> {
-            main.setCurrentStore((Store) storeSearchCombo.getSelectedItem());
-
-        });
+        storeSearchCombo.setOnAction(_ -> main.setCurrentStore((Store) storeSearchCombo.getSelectedItem()));
         storeSearchCombo.selectFirst();
 
+        Map<Button, String> buttonPermissions = new HashMap<>();
+        buttonPermissions.put(eodDataEntryButton, "EOD - View");
+        buttonPermissions.put(accountPaymentsButton, "Account Payments - View");
+        buttonPermissions.put(rosterButton, "Roster - View");
+        buttonPermissions.put(accountsButton, "Users - View");
+        buttonPermissions.put(invoiceTrackingButton, "Invoicing - View");
+        buttonPermissions.put(basCheckerButton, "BAS - View");
+        buttonPermissions.put(budgetExpensesButton, "Budget - View");
+        buttonPermissions.put(monthlySummaryButton, "Monthly Summary - View");
+        buttonPermissions.forEach((button, _) -> button.setDisable(true));
+        main.getCurrentUser().getPermissions().forEach(p -> {
+            buttonPermissions.forEach((button, permission) -> {
+                if (p.getPermissionName().equals(permission)) {
+                    button.setDisable(false);
+                }
+            });
+        });
 
         for(Node b:buttonPane.getChildren()){
             if(b.getAccessibleRole() == AccessibleRole.BUTTON){
@@ -272,7 +288,6 @@ public class MainMenuController extends Controller {
     public void loadRosterPage(){changePage(rosterButton,"/views/FXML/RosterPage.fxml");}
     public void loadAccountsPage(){changePage(accountsButton,"/views/FXML/AccountEdit.fxml");}
     public void loadInvoiceTracking(){changePage(invoiceTrackingButton,"/views/FXML/InvoiceEntry.fxml");}
-    public void loadExpiryTracker(){changePage(expiryTrackerButton,"/views/FXML/AccountEdit.fxml");}
     public void loadBASChecker(){changePage(basCheckerButton,"/views/FXML/BASCheckerPage.fxml");}
     public void loadBudgetExpenses(){changePage(budgetExpensesButton,"/views/FXML/BudgetAndExpensesPage.fxml");}
     public void loadMonthlySummary(){changePage(monthlySummaryButton,"/views/FXML/MonthlySummary.fxml");}

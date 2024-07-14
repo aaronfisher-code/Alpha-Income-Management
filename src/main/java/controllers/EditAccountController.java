@@ -16,6 +16,7 @@ import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import models.Permission;
 import models.Store;
 import models.User;
 import models.Employment;
@@ -37,7 +38,7 @@ public class EditAccountController extends Controller{
 	private BorderPane usersButton,storesButton;
 
 	@FXML
-	private VBox controlBox,editStorePopover,editUserPopover,userEntryContainer;
+	private VBox controlBox,editStorePopover,editUserPopover,editPermissionsPopover;
 
 	@FXML
 	private JFXNodesList addList;
@@ -70,6 +71,9 @@ public class EditAccountController extends Controller{
 	private MFXCheckListView<Store> storeSelector;
 
 	@FXML
+	private MFXCheckListView<Permission> permissionsSelector;
+
+	@FXML
 	private MFXButton saveStoreButton,passwordResetButton,staffPermissionsButton,saveUserButton;
 
 	private MFXTableView<User> accountsTable = new MFXTableView<User>();
@@ -92,6 +96,7 @@ public class EditAccountController extends Controller{
 
 	private ObservableList<User> allUsers = FXCollections.observableArrayList();
 	private ObservableList<Store> allStores = FXCollections.observableArrayList();
+	private ObservableList<Permission> allPermissions = FXCollections.observableArrayList();
 	
 	 @FXML
 	private void initialize() throws IOException {}
@@ -289,6 +294,21 @@ public class EditAccountController extends Controller{
 		}
 		storeSelector.setItems(allStores);
 
+		permissionsSelector.getSelectionModel().clearSelection();
+		//Refresh permissions list for permissions selector
+		allPermissions = FXCollections.observableArrayList();
+		sql = "SELECT * FROM permissions";
+		try {
+			preparedStatement = con.prepareStatement(sql);
+			resultSet = preparedStatement.executeQuery();
+			while (resultSet.next()) {
+				allPermissions.add(new Permission(resultSet));
+			}
+		} catch (SQLException throwables) {
+			throwables.printStackTrace();
+		}
+		permissionsSelector.setItems(allPermissions);
+
 		//Add live updates to person card preview
 		firstNameField.textProperty().addListener((observable, oldValue, newValue) -> {
 					employeeName.setText(newValue + "." + (lastNameField.getText().isEmpty()?"":lastNameField.getText(0,1)));
@@ -402,6 +422,33 @@ public class EditAccountController extends Controller{
 			throwables.printStackTrace();
 		}
 
+		permissionsSelector.getSelectionModel().clearSelection();
+		//Refresh permissions list for permissions selector
+		allPermissions = FXCollections.observableArrayList();
+		try {
+			sql = "SELECT * FROM permissions";
+			preparedStatement = con.prepareStatement(sql);
+			resultSet = preparedStatement.executeQuery();
+			while (resultSet.next()) {
+				allPermissions.add(new Permission(resultSet));
+			}
+			permissionsSelector.setItems(allPermissions);
+
+			sql = "SELECT * FROM userpermissions WHERE userID = ?";
+			preparedStatement = con.prepareStatement(sql);
+			preparedStatement.setString(1, user.getUsername());
+			resultSet = preparedStatement.executeQuery();
+			while (resultSet.next()) {
+				for(Permission p:allPermissions){
+					if(p.getPermissionID()==resultSet.getInt("permissionID")){
+						permissionsSelector.getSelectionModel().selectItem(p);
+					}
+				}
+			}
+		} catch (SQLException throwables) {
+			throwables.printStackTrace();
+		}
+
 		//Add live updates to person card preview
 		firstNameField.textProperty().addListener((observable, oldValue, newValue) -> {
 					employeeName.setText(newValue + "." + (lastNameField.getText().isEmpty()?"":lastNameField.getText(0,1)));
@@ -455,6 +502,19 @@ public class EditAccountController extends Controller{
 		deleteStoreButton.setVisible(false);
 		AnimationUtils.slideIn(editStorePopover,0);
 	}
+
+	public void openPermissionsPopover(){
+		contentDarken.setVisible(true);
+		contentDarken.setOnMouseClicked(event -> closePermissionsPopover());
+		AnimationUtils.slideIn(editPermissionsPopover,0);
+	}
+
+	public void closePermissionsPopover(){
+		AnimationUtils.slideIn(editPermissionsPopover,425);
+		contentDarken.setOnMouseClicked(event -> closeUserPopover());
+		storeNameValidationLabel.setVisible(false);
+	}
+
 
 	public void openStorePopover(Store store){
 		editStorePopoverTitle.setText("Edit store");
@@ -556,6 +616,13 @@ public class EditAccountController extends Controller{
 					preparedStatement.setInt(2, s.getStoreID());
 					preparedStatement.executeUpdate();
 				}
+				for (Permission p : permissionsSelector.getSelectionModel().getSelection().values()) {
+					sql = "INSERT INTO userpermissions(userID,permissionID) VALUES(?,?)";
+					preparedStatement = con.prepareStatement(sql);
+					preparedStatement.setString(1, username);
+					preparedStatement.setInt(2, p.getPermissionID());
+					preparedStatement.executeUpdate();
+				}
 				Dialog<String> dialog = new Dialog<>();
 				dialog.setTitle("Success");
 				ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
@@ -648,6 +715,17 @@ public class EditAccountController extends Controller{
 					preparedStatement = con.prepareStatement(sql);
 					preparedStatement.setString(1, user.getUsername());
 					preparedStatement.setInt(2, s.getStoreID());
+					preparedStatement.executeUpdate();
+				}
+				sql = "DELETE from userpermissions WHERE userID = ?";
+				preparedStatement = con.prepareStatement(sql);
+				preparedStatement.setString(1, user.getUsername());
+				preparedStatement.executeUpdate();
+				for(Permission p:permissionsSelector.getSelectionModel().getSelection().values()){
+					sql = "INSERT INTO userpermissions(userID,permissionID) VALUES(?,?)";
+					preparedStatement = con.prepareStatement(sql);
+					preparedStatement.setString(1, user.getUsername());
+					preparedStatement.setInt(2, p.getPermissionID());
 					preparedStatement.executeUpdate();
 				}
 			} catch (SQLException ex) {
@@ -781,6 +859,4 @@ public class EditAccountController extends Controller{
 		}
 		return false;
 	}
-
-	
 }

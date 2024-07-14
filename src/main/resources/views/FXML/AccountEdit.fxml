@@ -324,7 +324,7 @@
                               <SVGPath content="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z&#10;M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z&#10;" />
                            </graphic>
                         </MFXButton>
-                        <MFXButton fx:id="staffPermissionsButton" alignment="CENTER" contentDisplay="RIGHT" depthLevel="LEVEL1" graphicTextGap="8.0" maxWidth="1.7976931348623157E308" minHeight="36.0" nodeOrientation="LEFT_TO_RIGHT" style="-fx-border-color: #D3D3D3; -fx-border-radius: 5;" text="Modify Staff Permissions">
+                        <MFXButton fx:id="staffPermissionsButton" alignment="CENTER" contentDisplay="RIGHT" depthLevel="LEVEL1" graphicTextGap="8.0" maxWidth="1.7976931348623157E308" minHeight="36.0" nodeOrientation="LEFT_TO_RIGHT" onAction="#openPermissionsPopover" style="-fx-border-color: #D3D3D3; -fx-border-radius: 5;" text="Modify Staff Permissions">
                            <graphic>
                               <SVGPath content="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z&#10;" scaleX="0.75" scaleY="0.75" />
                            </graphic>
@@ -347,6 +347,46 @@
                   <Insets left="5.0" right="5.0" />
                </VBox.margin>
             </MFXScrollPane>
+         </children>
+      </VBox>
+      <VBox fx:id="editPermissionsPopover" alignment="TOP_RIGHT" maxWidth="425.0" minWidth="425.0" prefWidth="425.0" spacing="10.0" style="-fx-background-color: #FFFFFF;" translateX="425.0" StackPane.alignment="TOP_RIGHT">
+         <children>
+            <BorderPane style="-fx-background-color: #F8F8F8;">
+               <VBox.margin>
+                  <Insets />
+               </VBox.margin>
+               <padding>
+                  <Insets bottom="10.0" left="10.0" top="10.0" />
+               </padding>
+               <left>
+                  <HBox alignment="CENTER_RIGHT" BorderPane.alignment="CENTER">
+                     <children>
+                        <Button layoutX="10.0" layoutY="10.0" maxHeight="46.4" maxWidth="46.4" minHeight="46.4" minWidth="46.4" mnemonicParsing="false" onAction="#closePermissionsPopover" prefHeight="46.4" prefWidth="46.4" style="-fx-background-color: #F8F8F8;">
+                           <graphic>
+                              <SVGPath content="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0" fill="#6e6b7b" />
+                           </graphic>
+                        </Button>
+                        <Label fx:id="editUserPopoverTitle1" maxWidth="1.7976931348623157E308" styleClass="popOverTitle" text="Edit permissions" textFill="#6e6b7b">
+                           <font>
+                              <Font size="17.0" />
+                           </font>
+                        </Label>
+                     </children>
+                  </HBox>
+               </left>
+            </BorderPane>
+            <VBox fx:id="userEntryContainer1" maxWidth="1.7976931348623157E308" style="-fx-background-color: #FFFFFF;" VBox.vgrow="ALWAYS">
+               <children>
+                  <Label text="Select user permissions:" />
+                  <MFXCheckListView fx:id="permissionsSelector" depthLevel="LEVEL0" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="135.0" prefWidth="416.0" style="-fx-border-color: #D3D3D3;" VBox.vgrow="ALWAYS" />
+               </children>
+               <padding>
+                  <Insets left="5.0" right="5.0" />
+               </padding>
+               <VBox.margin>
+                  <Insets bottom="20.0" />
+               </VBox.margin>
+            </VBox>
          </children>
       </VBox>
    </children>

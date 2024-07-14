@@ -10,6 +10,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.SVGPath;
 import javafx.scene.text.Text;
+import models.Permission;
 import models.User;
 
 import java.io.IOException;
@@ -17,6 +18,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 
 import application.Main;
 import org.mindrot.jbcrypt.BCrypt;
@@ -117,6 +119,7 @@ public class LogController extends Controller {
         if (status.equals("Success")) {
             try {
                 main.setCurrentUser(new User(resultSet));
+                main.getCurrentUser().setPermissions(getUserPermissions(main.getCurrentUser()));
                 main.changeScene("/views/FXML/MainMenu.fxml");
             } catch (IOException ex) {
                 System.err.println("Failed login");
@@ -150,6 +153,7 @@ public class LogController extends Controller {
         if (status.equals("Success")) {
             try {
                 main.setCurrentUser(user);
+                main.getCurrentUser().setPermissions(getUserPermissions(main.getCurrentUser()));
                 main.changeScene("/views/FXML/MainMenu.fxml");
             } catch (IOException ex) {
                 System.err.println("Failed login");
@@ -170,5 +174,21 @@ public class LogController extends Controller {
         SVGPath icon = (SVGPath) b.getGraphic();
         icon.setFill(Paint.valueOf(strokeHex));
         icon.setStroke(Paint.valueOf(strokeHex));
+    }
+
+    public ArrayList<Permission> getUserPermissions(User user) {
+        String sql = "SELECT * FROM permissions WHERE permissionID IN (SELECT permissionID FROM userpermissions WHERE userID = ?)";
+        ArrayList<Permission> permissions = new ArrayList<>();
+        try {
+            preparedStatement = con.prepareStatement(sql);
+            preparedStatement.setString(1, user.getUsername());
+            resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()) {
+                permissions.add(new Permission(resultSet));
+            }
+        } catch (SQLException ex) {
+            System.err.println(ex.getMessage());
+        }
+        return permissions;
     }
 }

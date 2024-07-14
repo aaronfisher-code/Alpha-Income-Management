@@ -24,6 +24,8 @@ public class User {
 
 	private ArrayList<Employment> employments;
 
+	private ArrayList<Permission> permissions;
+
 	public User(ResultSet resultSet) {
 		try {
 			if(resultSet.getString("username")!=null)
@@ -102,6 +104,10 @@ public class User {
 	public ArrayList<Employment> getEmployments() {return employments;}
 
 	public void setEmployments(ArrayList<Employment> employments) {this.employments = employments;}
+
+	public ArrayList<Permission> getPermissions() {return permissions;}
+
+	public void setPermissions(ArrayList<Permission> permissions) {this.permissions = permissions;}
 
 	public String toString(){
 		return getFirst_name()+" "+getLast_name();
