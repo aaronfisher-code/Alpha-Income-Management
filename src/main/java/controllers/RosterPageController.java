@@ -69,7 +69,7 @@ public class RosterPageController extends Controller {
     @FXML
     private MFXTextField startTimeField,endTimeField,repeatValue,thirtyMinBreaks,tenMinBreaks;
     @FXML
-    private Button openStartTimePicker,openEndTimePicker,deleteButton;
+    private Button openStartTimePicker,openEndTimePicker,deleteButton,manageLeaveButton,exportDataButton;
     @FXML
     private MFXFilterComboBox employeeSelect;
     @FXML
@@ -127,9 +127,23 @@ public class RosterPageController extends Controller {
             throwables.printStackTrace();
         }
 
-        for(User u:currentUsers){
-            employeeSelect.getItems().add(u);
+        if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))){
+            for(User u:currentUsers){
+                employeeSelect.getItems().add(u);
+            }
+        }else if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts"))){
+            for(User u:currentUsers){
+                if(u.getUsername().equals(main.getCurrentUser().getUsername())){
+                    employeeSelect.getItems().add(u);
+                }
+            }
+        }else{
+            addList.setVisible(false);
         }
+
+
+        manageLeaveButton.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Manage Leave")));
+        exportDataButton.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Export")));
 
         //TODO fix dateTime parsing from strings on till computer
         openStartTimePicker.setOnAction(actionEvent -> {
@@ -246,7 +260,10 @@ public class RosterPageController extends Controller {
                         if(shiftIsModified)
                             sc.showDifference(s,updatedShift);
                         Shift finalS = updatedShift;
-                        shiftCard.setOnMouseClicked(event -> openPopover(finalS,sc.getDate()));
+                        if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && finalS.getUsername().equals(main.getCurrentUser().getUsername()))||
+                                main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))){
+                            shiftCard.setOnMouseClicked(event -> openPopover(finalS,sc.getDate()));
+                        }
                         shiftContainer.getChildren().add(shiftCard);
                     } catch (Exception ex) {
                         System.err.println(ex.getMessage());
@@ -275,7 +292,10 @@ public class RosterPageController extends Controller {
                         }
                     }
                     sc.setDate(date.minusDays(weekDay - dayOfWeek));
-                    shiftCard.setOnMouseClicked(event -> openPopover(m,sc.getDate()));
+                    if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && m.getUsername().equals(main.getCurrentUser().getUsername()))||
+                            main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))){
+                        shiftCard.setOnMouseClicked(event -> openPopover(m,sc.getDate()));
+                    }
                     shiftContainer.getChildren().add(shiftCard);
                 } catch (Exception ex) {
                     System.err.println(ex.getMessage());

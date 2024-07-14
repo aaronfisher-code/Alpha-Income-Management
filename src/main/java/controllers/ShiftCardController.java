@@ -5,6 +5,7 @@ import javafx.animation.Animation;
 import javafx.animation.Transition;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Cursor;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
@@ -65,6 +66,12 @@ public class ShiftCardController extends Controller{
 
 	@Override
 	public void fill() {
+		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && shift.getUsername().equals(main.getCurrentUser().getUsername()))||
+				main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))) {
+			backgroundPane.setCursor(Cursor.HAND);
+		}else{
+			backgroundPane.setCursor(Cursor.DEFAULT);
+		}
 		employeeName.setText(shift.getFirst_name() + ". " + shift.getLast_name().charAt(0));
 		employeeRole.setText(shift.getRole());
 		employeeIcon.setText(String.valueOf(shift.getFirst_name().charAt(0)));
@@ -104,21 +111,27 @@ public class ShiftCardController extends Controller{
 	}
 
 	public void hoverOn(){
+		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && shift.getUsername().equals(main.getCurrentUser().getUsername()))||
+				main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))) {
 //		backgroundPane.setStyle("-fx-background-color: #dee9ff; -fx-background-radius: 5;");
-		DropShadow d = new DropShadow(BlurType.THREE_PASS_BOX, Color.web("#000000",0.8),5.56,0.0,0.0,2.0);
-		d.setHeight(24);
-		d.setWidth(24);
-		backgroundPane.setEffect(d);
-		slide(100L,-2,backgroundPane);
+			DropShadow d = new DropShadow(BlurType.THREE_PASS_BOX, Color.web("#000000", 0.8), 5.56, 0.0, 0.0, 2.0);
+			d.setHeight(24);
+			d.setWidth(24);
+			backgroundPane.setEffect(d);
+			slide(100L, -2, backgroundPane);
+		}
 	}
 
 	public void hoverOff(){
+		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && shift.getUsername().equals(main.getCurrentUser().getUsername()))||
+				main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))) {
 //		backgroundPane.setStyle("-fx-background-color: #FFFFFF; -fx-background-radius: 5;");
-		DropShadow d = new DropShadow(BlurType.THREE_PASS_BOX, Color.web("#000000",0.1),10,0.0,0.0,4.0);
-		d.setHeight(24);
-		d.setWidth(24);
-		backgroundPane.setEffect(d);
-		slide(100L,0,backgroundPane);
+			DropShadow d = new DropShadow(BlurType.THREE_PASS_BOX, Color.web("#000000", 0.1), 10, 0.0, 0.0, 4.0);
+			d.setHeight(24);
+			d.setWidth(24);
+			backgroundPane.setEffect(d);
+			slide(100L, 0, backgroundPane);
+		}
 	}
 
 	public void slide(double duration, double targetMargin, StackPane targetButton){

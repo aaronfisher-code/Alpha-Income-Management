@@ -83,7 +83,9 @@ public class RosterDayCardController extends Controller {
         if(!selected)
             parent.setDatePkr(date);
         else {
-            editDay();
+            if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit public holidays"))){
+                editDay();
+            }
         }
     }
 

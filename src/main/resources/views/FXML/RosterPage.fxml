@@ -79,7 +79,7 @@
                <right>
                   <FlowPane alignment="CENTER_RIGHT" hgap="5.0" maxWidth="1.7976931348623157E308" nodeOrientation="LEFT_TO_RIGHT" prefWrapLength="313.0" snapToPixel="false" vgap="5.0" BorderPane.alignment="CENTER_RIGHT">
                      <children>
-                        <Button fx:id="ExportDataButton" graphicTextGap="10.0" mnemonicParsing="false" onAction="#exportData" prefHeight="35.0" prefWidth="150.0" style="-fx-background-color: #F3F2F7; -fx-border-color: #6e6b7b; -fx-border-radius: 5;" styleClass="controlButton" text="Export" textFill="#6e6b7b">
+                        <Button fx:id="exportDataButton" graphicTextGap="10.0" mnemonicParsing="false" onAction="#exportData" prefHeight="35.0" prefWidth="150.0" style="-fx-background-color: #F3F2F7; -fx-border-color: #6e6b7b; -fx-border-radius: 5;" styleClass="controlButton" text="Export" textFill="#6e6b7b">
                            <cursor>
                               <Cursor fx:constant="HAND" />
                            </cursor>
@@ -90,7 +90,7 @@
                               <Insets right="8.0" />
                            </FlowPane.margin>
                         </Button>
-                        <Button fx:id="AddLeaveButton" mnemonicParsing="false" onAction="#addNewLeave" prefHeight="35.0" prefWidth="150.0" style="-fx-background-color: #0F60FF; -fx-border-radius: 5; -fx-background-radius: 5;" styleClass="controlButton" text="Manage Staff Leave" textFill="WHITE">
+                        <Button fx:id="manageLeaveButton" mnemonicParsing="false" onAction="#addNewLeave" prefHeight="35.0" prefWidth="150.0" style="-fx-background-color: #0F60FF; -fx-border-radius: 5; -fx-background-radius: 5;" styleClass="controlButton" text="Manage Staff Leave" textFill="WHITE">
                            <font>
                               <Font name="System Bold" size="12.0" />
                            </font>
