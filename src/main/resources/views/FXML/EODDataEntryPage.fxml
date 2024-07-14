@@ -25,7 +25,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane prefHeight="1187.0" prefWidth="1289.0" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EODDataEntryPageController">
+<StackPane prefHeight="1187.0" prefWidth="1289.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EODDataEntryPageController">
    <children>
       <BorderPane prefHeight="200.0" prefWidth="200.0" style="-fx-border-radius: 10; -fx-background-radius: 10; -fx-background-color: TRANSPARENT;">
          <top>
@@ -136,7 +136,7 @@
                               <Font size="20.0" />
                            </font>
                         </Label>
-                        <Label layoutX="10.0" layoutY="10.0" styleClass="tableSubHeader" text="Double click on a row to edit">
+                        <Label fx:id="subheading" layoutX="10.0" layoutY="10.0" styleClass="tableSubHeader" text="Double click on a row to edit">
                            <font>
                               <Font size="13.0" />
                            </font>

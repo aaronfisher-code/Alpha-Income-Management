@@ -57,7 +57,7 @@ public class EODDataEntryPageController extends DateSelectController{
 	@FXML
 	private Region contentDarken;
 	@FXML
-	private Label popoverLabel,tillBalanceLabel,runningTillBalanceLabel;
+	private Label popoverLabel,tillBalanceLabel,runningTillBalanceLabel,subheading;
 	@FXML
 	private MFXTextField cashField,eftposField,amexField,googleSquareField,chequeField;
 	@FXML
@@ -73,7 +73,7 @@ public class EODDataEntryPageController extends DateSelectController{
 	@FXML
 	private MFXScrollPane popOverScroll;
 	@FXML
-	private Button importDataButton;
+	private Button importDataButton,xeroExportButton;
 
 	private TableColumn<EODDataPoint,LocalDate> dateCol;
 	private TableColumn<EODDataPoint,Double> cashAmountCol;
@@ -186,7 +186,12 @@ public class EODDataEntryPageController extends DateSelectController{
 		googleSquareField.textProperty().addListener(observable -> updatePopoverTillBalance());
 		chequeField.textProperty().addListener(observable -> updatePopoverTillBalance());
 		Platform.runLater(() -> GUIUtils.customResize(eodDataTable,notesCol));
-		Platform.runLater(() -> addDoubleClickfunction());
+		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("EOD - Edit"))){
+			Platform.runLater(() -> addDoubleClickfunction());
+		}else{
+			subheading.setVisible(false);
+		}
+        xeroExportButton.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("EOD - Export")));
 	}
 
 	private void updatePopoverTillBalance() {
@@ -346,7 +351,11 @@ public class EODDataEntryPageController extends DateSelectController{
 			runningTillBalance = e.getRunningTillBalance();
 		}
 		eodDataTable.setItems(eodDataPoints);
-		addDoubleClickfunction();
+		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("EOD - Edit"))){
+			addDoubleClickfunction();
+		}else{
+			subheading.setVisible(false);
+		}
 	}
 
 	public void openEODPopover(EODDataPoint e){
