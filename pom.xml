@@ -237,7 +237,7 @@
                             <winshortcut>true</winshortcut>
                             <type>MSI</type>
                             <verbose>true</verbose>
-                            <javaoptions>-Xms256m -Xmx1024m -Dprism.order=es2,d3d,sw -Dprism.lcdtext=true</javaoptions>
+                            <javaoptions>-Xms256m -Xmx1024m -Dprism.order=es2,d3d,sw -Dprism.lcdtext=false</javaoptions>
                         </configuration>
                     </execution>
                 </executions>
