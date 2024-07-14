@@ -1,7 +1,7 @@
-/*.mygridStyle Line {*/
-/*    -fx-stroke: #D3D3D3 !important;*/
-/*    -fx-stroke-width: 1px;*/
-/*}*/
+.mygridStyle Line {
+    -fx-stroke: #b1b1b1 !important;
+    -fx-stroke-width: 1px !important;
+}
 
 .headerCell{
     -fx-background-color: #F3F2F7;
