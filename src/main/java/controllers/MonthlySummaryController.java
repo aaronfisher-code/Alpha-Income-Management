@@ -278,7 +278,7 @@ public class MonthlySummaryController extends DateSelectController{
         ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints = FXCollections.observableArrayList();
 		yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
 		daysInMonth = yearMonthObject.lengthOfMonth();
-		rosterUtils = new RosterUtils(con,main,yearMonthObject);
+		rosterUtils = new RosterUtils(main,yearMonthObject);
 		double monthlyRent = 0;
 		double dailyOutgoings = 0;
 		double monthlyWages = 0;
@@ -350,7 +350,6 @@ public class MonthlySummaryController extends DateSelectController{
 			}
 			MonthYearSelectorContentController rdc = loader.getController();
 			rdc.setMain(main);
-			rdc.setConnection(con);
 			rdc.setParent(this);
 			rdc.fill();
 

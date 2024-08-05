@@ -6,11 +6,14 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.chart.XYChart;
 import models.TillReportDataPoint;
+import services.TargetService;
+import services.TillReportService;
 import utils.RosterUtils;
 
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 public class NumberOfScriptsStrategy implements LineGraphTargetStrategy {
 
@@ -29,50 +32,35 @@ public class NumberOfScriptsStrategy implements LineGraphTargetStrategy {
 
     public TargetGraphsPageController parent;
 
-    public Connection con;
-
-    public PreparedStatement preparedStatement;
-
     public Main main;
-
-    public ResultSet resultSet;
-    private ObservableList<TillReportDataPoint> currentTillReportDataPoints = FXCollections.observableArrayList();
     private RosterUtils rosterUtils;
+    private TillReportService tillReportService;
+    private TargetService targetService;
+    private List<TillReportDataPoint> currentTillReportDataPoints;
 
     public NumberOfScriptsStrategy(LocalDate startDate, LocalDate endDate, TargetGraphsPageController parent) {
         this.length = (int) ChronoUnit.DAYS.between(startDate, endDate);
         this.startDate = startDate;
         this.endDate = endDate;
         this.parent = parent;
-        this.con = parent.getConnection();
-        this.preparedStatement = parent.getPreparedStatement();
         this.main = parent.getMain();
-        this.resultSet = parent.getResultSet();
-        this.rosterUtils = new RosterUtils(con, main, startDate, endDate);
+        this.rosterUtils = new RosterUtils(main, startDate, endDate);
+        this.tillReportService = new TillReportService();
+        this.targetService = new TargetService();
 
-        String sql;
         try {
-            sql = "SELECT * FROM tillreportdatapoints where storeID = ? AND assignedDate>=? AND assignedDate<=? AND `key` = ?";
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-            preparedStatement.setDate(2, Date.valueOf(startDate));
-            preparedStatement.setDate(3, Date.valueOf(endDate));
-            preparedStatement.setString(4, "Script Count");
-            resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                currentTillReportDataPoints.add(new TillReportDataPoint(resultSet));
-            }
-            sql = "SELECT * FROM targets where storeID = ? AND targetName = ?";
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-            preparedStatement.setString(2, "Script Count");
-            resultSet = preparedStatement.executeQuery();
-            if (resultSet.next()) {
-                target1 = resultSet.getDouble("target1");
-                target2 = resultSet.getDouble("target2");
-            }
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            double[] targets = targetService.getTargets(main.getCurrentStore().getStoreID(), "Script Count");
+            this.target1 = targets[0];
+            this.target2 = targets[1];
+
+            this.currentTillReportDataPoints = tillReportService.getTillReportDataPoints(
+                    main.getCurrentStore().getStoreID(),
+                    startDate,
+                    endDate,
+                    "Script Count"
+            );
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 

@@ -482,7 +482,6 @@ public class InvoiceEntryController extends DateSelectController implements acti
 			}
 			MonthYearSelectorContentController rdc = loader.getController();
 			rdc.setMain(main);
-			rdc.setConnection(con);
 			rdc.setParent(this);
 			rdc.fill();
 

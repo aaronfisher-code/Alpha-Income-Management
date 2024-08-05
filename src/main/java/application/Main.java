@@ -40,7 +40,7 @@ public class Main extends Application {
 
 	@Override
 	public void init() throws Exception {
-		LogRedirector.redirectOutputToFile("app.log");
+//		LogRedirector.redirectOutputToFile("app.log");
 		System.out.println("Application initializing...");
 
 		splashScreen = new SplashScreen();
@@ -95,7 +95,6 @@ public class Main extends Application {
 		c = loader.getController();
 		c.setMain(this);
 		con = DBConnector.conDB();
-		c.setConnection(con);
 
 		primaryStage.setTitle("Alpha Income Management " + version);
 		bs = new BorderlessScene(primaryStage, StageStyle.TRANSPARENT, root);
@@ -115,7 +114,6 @@ public class Main extends Application {
 		Parent root = loader.load();
 		c = loader.getController();
 		c.setMain(this);
-		c.setConnection(con);
 		stg.close();
 		stg = new Stage();
 		stg.setTitle("Alpha Income Management "+ version);

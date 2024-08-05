@@ -1,5 +1,6 @@
 package controllers;
 
+import com.dlsc.gemsfx.DialogPane;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
@@ -10,18 +11,13 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.SVGPath;
 import javafx.scene.text.Text;
-import models.Permission;
 import models.User;
+import services.UserService;
 
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 
 import application.Main;
-import org.mindrot.jbcrypt.BCrypt;
 
 public class LogController extends Controller {
 
@@ -29,23 +25,22 @@ public class LogController extends Controller {
     @FXML private Text subtitle;
     @FXML private TextField username;
     @FXML private PasswordField password, confirmPassword;
-    @FXML private Button login, create_acc;
+    @FXML private Button login;
     @FXML private Button maximize, minimize, close;
     @FXML private StackPane backgroundPane;
     @FXML private HBox windowControls;
+    @FXML private DialogPane dialogPane;
 
-    private Connection con = null;
-    PreparedStatement preparedStatement = null;
-    ResultSet resultSet = null;
     private Main main = null;
+    private UserService userService;
 
     public void setMain(Main main) {
         this.main = main;
     }
 
-    @Override
-    public void setConnection(Connection c) {
-        this.con = c;
+    @FXML
+    private void initialize() {
+        userService = new UserService();
     }
 
     @Override
@@ -53,19 +48,19 @@ public class LogController extends Controller {
 
         this.main.getBs().setMoveControl(backgroundPane);
 
-        close.setOnAction(a -> this.main.getStg().close());
-        close.setOnMouseEntered(a -> colourWindowButton(close, "#c42b1c", "#FFFFFF"));
-        close.setOnMouseExited(a -> colourWindowButton(close, "#FFFFFF", "#000000"));
+        close.setOnAction(_ -> this.main.getStg().close());
+        close.setOnMouseEntered(_ -> colourWindowButton(close, "#c42b1c", "#FFFFFF"));
+        close.setOnMouseExited(_ -> colourWindowButton(close, "#FFFFFF", "#000000"));
 
-        minimize.setOnAction(a -> this.main.getStg().setIconified(true));
-        minimize.setOnMouseEntered(a -> colourWindowButton(minimize, "#f5f5f5", "#000000"));
-        minimize.setOnMouseExited(a -> colourWindowButton(minimize, "#FFFFFF", "#000000"));
+        minimize.setOnAction(_ -> this.main.getStg().setIconified(true));
+        minimize.setOnMouseEntered(_ -> colourWindowButton(minimize, "#f5f5f5", "#000000"));
+        minimize.setOnMouseExited(_ -> colourWindowButton(minimize, "#FFFFFF", "#000000"));
 
-        maximize.setOnAction(a -> this.main.getBs().maximizeStage());
-        maximize.setOnMouseEntered(a -> colourWindowButton(maximize, "#f5f5f5", "#000000"));
-        maximize.setOnMouseExited(a -> colourWindowButton(maximize, "#FFFFFF", "#000000"));
+        maximize.setOnAction(_ -> this.main.getBs().maximizeStage());
+        maximize.setOnMouseEntered(_ -> colourWindowButton(maximize, "#f5f5f5", "#000000"));
+        maximize.setOnMouseExited(_ -> colourWindowButton(maximize, "#FFFFFF", "#000000"));
 
-        this.main.getBs().maximizedProperty().addListener(e -> {
+        this.main.getBs().maximizedProperty().addListener(_ -> {
             if (this.main.getBs().isMaximized()) {
                 SVGPath newIcon = (SVGPath) maximize.getGraphic();
                 newIcon.setContent("M13 0H6a2 2 0 0 0-2 2 2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2 2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm0 13V4a2 2 0 0 0-2-2H5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1zM3 4a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4z\n");
@@ -83,46 +78,40 @@ public class LogController extends Controller {
     }
 
     public void userLogin() {
-        String status = "Success";
-        String usrname = username.getText();
-        String pswd = password.getText();
-        if (usrname.isEmpty()) {
+        String status;
+        String username = this.username.getText();
+        String password = this.password.getText();
+        if (username.isEmpty()) {
             logInError.setText("Please enter a valid username");
             status = "Error";
         } else {
-            // query
-            String sql = "SELECT * FROM accounts WHERE username = ?";
             try {
-                preparedStatement = con.prepareStatement(sql);
-                preparedStatement.setString(1, usrname);
-                resultSet = preparedStatement.executeQuery();
-                if (resultSet == null || !resultSet.next()) {
+                User user = userService.getUserByUsername(username);
+                if (user == null) {
                     logInError.setText("Unrecognized username");
                     status = "Error";
+                } else if (user.getPassword() == null) {
+                    status = "PasswordReset";
+                    setNewPasswordView(user);
+                } else if (userService.verifyPassword(user, password)) {
+                    status = "Success";
                 } else {
-                    User user = new User(resultSet);
-                    if (user.getPassword() == null) {
-                        status = "PasswordReset";
-                        setNewPasswordView(user);
-                    } else if (BCrypt.checkpw(password.getText(), user.getPassword())) {
-                        status = "Success";
-                    } else {
-                        status = "Error";
-                    }
+                    status = "Error";
                 }
             } catch (SQLException ex) {
-                System.err.println(ex.getMessage());
+                dialogPane.showError("Failed to login", ex.getMessage());
                 status = "Exception";
             }
         }
 
         if (status.equals("Success")) {
             try {
-                main.setCurrentUser(new User(resultSet));
-                main.getCurrentUser().setPermissions(getUserPermissions(main.getCurrentUser()));
+                User currentUser = userService.getUserByUsername(username);
+                currentUser.setPermissions(userService.getUserPermissions(username));
+                main.setCurrentUser(currentUser);
                 main.changeScene("/views/FXML/MainMenu.fxml");
-            } catch (IOException ex) {
-                System.err.println("Failed login");
+            } catch (IOException | SQLException ex) {
+                dialogPane.showError("Failed to login", ex.getMessage());
                 System.err.println(ex.getMessage());
             }
         } else {
@@ -131,20 +120,16 @@ public class LogController extends Controller {
     }
 
     public void userLoginWithPassword(User user) {
-        String status = "Success";
+        String status;
         if (!password.getText().equals(confirmPassword.getText())) {
             logInError.setText("Passwords don't match");
             status = "Error";
         } else {
-            String sql = "UPDATE accounts SET password = ? WHERE username = ?";
             try {
-                preparedStatement = con.prepareStatement(sql);
-                String hashedPassword = BCrypt.hashpw(password.getText(), BCrypt.gensalt());
-                preparedStatement.setString(1, hashedPassword);
-                preparedStatement.setString(2, user.getUsername());
-                preparedStatement.executeUpdate();
+                userService.updateUserPassword(user.getUsername(), password.getText());
                 status = "Success";
             } catch (SQLException ex) {
+                dialogPane.showError("Failed to login", ex.getMessage());
                 System.err.println(ex.getMessage());
                 status = "Exception";
             }
@@ -152,11 +137,11 @@ public class LogController extends Controller {
 
         if (status.equals("Success")) {
             try {
+                user.setPermissions(userService.getUserPermissions(user.getUsername()));
                 main.setCurrentUser(user);
-                main.getCurrentUser().setPermissions(getUserPermissions(main.getCurrentUser()));
                 main.changeScene("/views/FXML/MainMenu.fxml");
-            } catch (IOException ex) {
-                System.err.println("Failed login");
+            } catch (IOException | SQLException ex) {
+                dialogPane.showError("Failed to login", ex.getMessage());
                 System.err.println(ex.getMessage());
             }
         }
@@ -165,7 +150,7 @@ public class LogController extends Controller {
     public void setNewPasswordView(User user) {
         confirmPasswordLabel.setVisible(true);
         confirmPassword.setVisible(true);
-        login.setOnAction(actionEvent -> userLoginWithPassword(user));
+        login.setOnAction(_ -> userLoginWithPassword(user));
         subtitle.setText("Please set a new password for this account before signing in");
     }
 
@@ -174,21 +159,5 @@ public class LogController extends Controller {
         SVGPath icon = (SVGPath) b.getGraphic();
         icon.setFill(Paint.valueOf(strokeHex));
         icon.setStroke(Paint.valueOf(strokeHex));
-    }
-
-    public ArrayList<Permission> getUserPermissions(User user) {
-        String sql = "SELECT * FROM permissions WHERE permissionID IN (SELECT permissionID FROM userpermissions WHERE userID = ?)";
-        ArrayList<Permission> permissions = new ArrayList<>();
-        try {
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setString(1, user.getUsername());
-            resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                permissions.add(new Permission(resultSet));
-            }
-        } catch (SQLException ex) {
-            System.err.println(ex.getMessage());
-        }
-        return permissions;
     }
 }

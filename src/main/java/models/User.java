@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.List;
 
 public class User {
 	private String username;
@@ -22,9 +23,9 @@ public class User {
 
 	private LocalDate inactiveDate;
 
-	private ArrayList<Employment> employments;
+	private List<Employment> employments;
 
-	private ArrayList<Permission> permissions;
+	private List<Permission> permissions;
 
 	public User(ResultSet resultSet) {
 		try {
@@ -101,13 +102,13 @@ public class User {
 
 	public void setInactiveDate(LocalDate inactiveDate) { this.inactiveDate = inactiveDate; }
 
-	public ArrayList<Employment> getEmployments() {return employments;}
+	public List<Employment> getEmployments() {return employments;}
 
-	public void setEmployments(ArrayList<Employment> employments) {this.employments = employments;}
+	public void setEmployments(List<Employment> employments) {this.employments = employments;}
 
-	public ArrayList<Permission> getPermissions() {return permissions;}
+	public List<Permission> getPermissions() {return permissions;}
 
-	public void setPermissions(ArrayList<Permission> permissions) {this.permissions = permissions;}
+	public void setPermissions(List<Permission> permissions) {this.permissions = permissions;}
 
 	public String toString(){
 		return getFirst_name()+" "+getLast_name();

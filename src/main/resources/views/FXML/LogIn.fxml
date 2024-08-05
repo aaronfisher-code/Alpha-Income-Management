@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.dlsc.gemsfx.DialogPane?>
 <?import java.net.URL?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.Cursor?>
@@ -16,7 +17,7 @@
 <?import javafx.scene.text.Font?>
 <?import javafx.scene.text.Text?>
 
-<StackPane fx:id="backgroundPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="800.0" prefWidth="1275.0" style="-fx-background-radius: 30; -fx-border-color: TRANSPARENT; -fx-background-color: TRANSPARENT; -fx-border-radius: 30;" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.LogController">
+<StackPane fx:id="backgroundPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="800.0" prefWidth="1275.0" style="-fx-background-radius: 30; -fx-border-color: TRANSPARENT; -fx-background-color: TRANSPARENT; -fx-border-radius: 30;" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.LogController">
    <children>
       <VBox id="loginbg" prefHeight="200.0" prefWidth="100.0" styleClass="loginbg" stylesheets="@../CSS/application.css" StackPane.alignment="TOP_RIGHT">
          <StackPane.margin>
@@ -174,6 +175,7 @@
             </Button>
          </children>
       </HBox>
+      <DialogPane fx:id="dialogPane" />
    </children>
    <stylesheets>
       <URL value="@../CSS/application.css" />

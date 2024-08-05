@@ -10,6 +10,7 @@ import java.util.Locale;
 public class AccountPayment {
 	private String contactName;
 	private int contactID;
+	private int storeID;
 	private String invoiceNumber;
 	private LocalDate invDate;
 	private LocalDate dueDate;
@@ -24,6 +25,7 @@ public class AccountPayment {
 		try {
 			this.contactName = resultSet.getString("contactName");
 			this.contactID = resultSet.getInt("contactID");
+			this.storeID = resultSet.getInt("storeID");
 			this.invoiceNumber = resultSet.getString("invoiceNo");
 			this.invDate = resultSet.getDate("invoiceDate").toLocalDate();
 			this.dueDate = resultSet.getDate("dueDate").toLocalDate();
@@ -36,10 +38,28 @@ public class AccountPayment {
 			e.printStackTrace();
 		}
 	}
+
+	public AccountPayment(String contactName, int contactID, int storeID, String invoiceNumber, LocalDate invDate, LocalDate dueDate, String description, double quantity, double unitAmount, boolean accountAdjusted, String accountCode, String taxRate) {
+		this.contactName = contactName;
+		this.contactID = contactID;
+		this.storeID = storeID;
+		this.invoiceNumber = invoiceNumber;
+		this.invDate = invDate;
+		this.dueDate = dueDate;
+		this.description = description;
+		this.quantity = quantity;
+		this.unitAmount = unitAmount;
+		this.accountAdjusted = accountAdjusted;
+		this.accountCode = accountCode;
+		this.taxRate = taxRate;
+	}
+
 	public String getContactName() {return contactName;}
 	public void setContactName(String contactName) {this.contactName = contactName;}
 	public int getContactID() {return contactID;}
 	public void setContactID(int contactID) {this.contactID = contactID;}
+	public int getStoreID() {return storeID;}
+	public void setStoreID(int storeID) {this.storeID = storeID;}
 	public String getInvoiceNumber() {return invoiceNumber;}
 	public String getInvoiceNumberString() {return invoiceNumber==null?"":invoiceNumber;}
 	public void setInvoiceNumber(String invoiceNumber) {this.invoiceNumber = invoiceNumber;}

@@ -465,7 +465,6 @@ public class LeaveManagementController extends DateSelectController {
             }
             MonthYearSelectorContentController rdc = loader.getController();
             rdc.setMain(main);
-            rdc.setConnection(con);
             rdc.setParent(this);
             rdc.fill();
 

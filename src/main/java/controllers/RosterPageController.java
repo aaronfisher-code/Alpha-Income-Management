@@ -244,7 +244,6 @@ public class RosterPageController extends Controller {
                         StackPane shiftCard = loader.load();
                         ShiftCardController sc = loader.getController();
                         sc.setMain(main);
-                        sc.setConnection(con);
                         sc.setShift(updatedShift);
                         sc.setParent(this);
                         sc.fill();
@@ -279,7 +278,6 @@ public class RosterPageController extends Controller {
                     StackPane shiftCard = loader.load();
                     ShiftCardController sc = loader.getController();
                     sc.setMain(main);
-                    sc.setConnection(con);
                     sc.setShift(m);
                     sc.setParent(this);
                     sc.fill();

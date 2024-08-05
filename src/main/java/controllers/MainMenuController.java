@@ -24,12 +24,10 @@ import javafx.scene.shape.SVGPath;
 import javafx.util.Duration;
 import models.Store;
 import org.controlsfx.control.PopOver;
+import services.UserService;
 import utils.AnimationUtils;
 
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
@@ -57,19 +55,18 @@ public class MainMenuController extends Controller {
     @FXML
     private Region contentDarken;
 
-    private Connection con = null;
-    PreparedStatement preparedStatement = null;
-    ResultSet resultSet = null;
     private Main main;
     private PopOver currentUserPopover;
     private Controller currentPageController;
+    private UserService userService = new UserService();
 
     public void setMain(Main main) {
         this.main = main;
     }
 
-    public void setConnection(Connection c) {
-        this.con = c;
+    @FXML
+    private void initialize() {
+        userService = new UserService();
     }
 
     public void fill() {
@@ -77,17 +74,15 @@ public class MainMenuController extends Controller {
         userLabel.setText(String.valueOf(main.getCurrentUser().getFirst_name().charAt(0)));
         userLabel.setStyle("-fx-background-color: " + main.getCurrentUser().getBgColour() + ";");
         userLabel.setTextFill(Paint.valueOf(main.getCurrentUser().getTextColour()));
-        String sql = "SELECT * FROM employments JOIN stores a on a.storeID = employments.storeID where username = ?";
+
         try {
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setString(1, main.getCurrentUser().getUsername());
-            resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                storeSearchCombo.getItems().add(new Store(resultSet));
+            for (Store store : userService.getStoresForUser(main.getCurrentUser().getUsername())) {
+                storeSearchCombo.getItems().add(store);
             }
         } catch (SQLException ex) {
-            System.err.println(ex.getMessage());
+            System.err.println("Error loading stores: " + ex.getMessage());
         }
+
         storeSearchCombo.setOnAction(_ -> main.setCurrentStore((Store) storeSearchCombo.getSelectedItem()));
         storeSearchCombo.selectFirst();
 
@@ -113,29 +108,29 @@ public class MainMenuController extends Controller {
             if(b.getAccessibleRole() == AccessibleRole.BUTTON){
                 Button a = (Button) b;
                 a.addEventHandler(MouseEvent.MOUSE_ENTERED,
-                        e -> slide(150L, 20, a));
+                        _ -> slide(150L, 20, a));
 
                 a.addEventHandler(MouseEvent.MOUSE_EXITED,
-                        e -> slide(150L, 15, a));
+                        _ -> slide(150L, 15, a));
             }
 
-        };
+        }
 
         this.main.getBs().setMoveControl(topPane);
 
-        close.setOnAction(a -> this.main.getStg().close());
-        close.setOnMouseEntered(a-> colourWindowButton(close,"#c42b1c","#FFFFFF"));
-        close.setOnMouseExited(a-> colourWindowButton(close,"#FFFFFF","#000000"));
+        close.setOnAction(_ -> this.main.getStg().close());
+        close.setOnMouseEntered(_ -> colourWindowButton(close,"#c42b1c","#FFFFFF"));
+        close.setOnMouseExited(_ -> colourWindowButton(close,"#FFFFFF","#000000"));
 
-        minimize.setOnAction(a -> this.main.getStg().setIconified(true));
-        minimize.setOnMouseEntered(a-> colourWindowButton(minimize,"#f5f5f5","#000000"));
-        minimize.setOnMouseExited(a-> colourWindowButton(minimize,"#FFFFFF","#000000"));
+        minimize.setOnAction(_ -> this.main.getStg().setIconified(true));
+        minimize.setOnMouseEntered(_ -> colourWindowButton(minimize,"#f5f5f5","#000000"));
+        minimize.setOnMouseExited(_ -> colourWindowButton(minimize,"#FFFFFF","#000000"));
 
-        maximize.setOnAction(a -> this.main.getBs().maximizeStage());
-        maximize.setOnMouseEntered(a-> colourWindowButton(maximize,"#f5f5f5","#000000"));
-        maximize.setOnMouseExited(a-> colourWindowButton(maximize,"#FFFFFF","#000000"));
+        maximize.setOnAction(_ -> this.main.getBs().maximizeStage());
+        maximize.setOnMouseEntered(_ -> colourWindowButton(maximize,"#f5f5f5","#000000"));
+        maximize.setOnMouseExited(_ -> colourWindowButton(maximize,"#FFFFFF","#000000"));
 
-        this.main.getBs().maximizedProperty().addListener(e->
+        this.main.getBs().maximizedProperty().addListener(_ ->
         {
             if(this.main.getBs().isMaximized()){
                 SVGPath newIcon = (SVGPath) maximize.getGraphic();
@@ -196,7 +191,7 @@ public class MainMenuController extends Controller {
             {
                 setCycleDuration(Duration.millis(duration));
             }
-            double previousPadding = targetButton.getPadding().getLeft();
+            final double previousPadding = targetButton.getPadding().getLeft();
 
             @Override
             protected void interpolate(double progress) {
@@ -251,7 +246,6 @@ public class MainMenuController extends Controller {
             }
             UserContentMenuController rdc = loader.getController();
             rdc.setMain(main);
-            rdc.setConnection(con);
             rdc.setParent(this);
             rdc.fill();
 
@@ -296,7 +290,7 @@ public class MainMenuController extends Controller {
 
 
     public void changePage(Button b, String fxml){
-        storeSearchCombo.setOnAction(event -> {
+        storeSearchCombo.setOnAction(_ -> {
             main.setCurrentStore((Store) storeSearchCombo.getSelectedItem());
             changePage(b,fxml);
         });
@@ -310,13 +304,12 @@ public class MainMenuController extends Controller {
         }
         currentPageController = loader.getController();
         currentPageController.setMain(main);
-        currentPageController.setConnection(con);
         contentPane.setCenter(pageContent);
         currentPageController.fill();
     }
 
     public void changePage(String fxml){
-        storeSearchCombo.setOnAction(event -> {
+        storeSearchCombo.setOnAction(_ -> {
             main.setCurrentStore((Store) storeSearchCombo.getSelectedItem());
             changePage(fxml);
         });
@@ -329,7 +322,6 @@ public class MainMenuController extends Controller {
         }
         currentPageController = loader.getController();
         currentPageController.setMain(main);
-        currentPageController.setConnection(con);
         contentPane.setCenter(pageContent);
         currentPageController.fill();
     }

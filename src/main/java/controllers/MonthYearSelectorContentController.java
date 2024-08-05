@@ -43,11 +43,6 @@ public class MonthYearSelectorContentController extends Controller {
         this.parent = m;
     }
 
-    public void setConnection(Connection c) {
-        this.con = c;
-    }
-
-
     @Override
     public void fill() {
         yearValue.setText(String.valueOf(main.getCurrentDate().getYear()));

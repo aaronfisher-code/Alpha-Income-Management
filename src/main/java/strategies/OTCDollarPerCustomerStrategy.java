@@ -48,7 +48,7 @@ public class OTCDollarPerCustomerStrategy implements LineGraphTargetStrategy {
         this.preparedStatement = parent.getPreparedStatement();
         this.main = parent.getMain();
         this.resultSet = parent.getResultSet();
-        this.rosterUtils = new RosterUtils(con, main, startDate, endDate);
+        this.rosterUtils = new RosterUtils(main, startDate, endDate);
 
         String sql;
         try {

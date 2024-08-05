@@ -21,6 +21,8 @@ import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import models.*;
 import org.controlsfx.control.PopOver;
+import services.AccountPaymentContactService;
+import services.AccountPaymentService;
 import utils.AnimationUtils;
 import utils.GUIUtils;
 import utils.TableUtils;
@@ -35,23 +37,20 @@ import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Locale;
-import java.util.Map;
 
 import static com.dlsc.gemsfx.DialogPane.Type.*;
 
 public class AccountPaymentsPageController extends DateSelectController{
 
-    private Connection con = null;
-    PreparedStatement preparedStatement = null;
-    ResultSet resultSet = null;
     private Main main;
     private MainMenuController parent;
     private User selectedUser;
 	private MFXDatePicker datePkr;
 	private PopOver currentDatePopover;
+	private AccountPaymentService accountPaymentService;
+	private AccountPaymentContactService accountPaymentContactService;
 
 	@FXML
 	private FlowPane datePickerPane;
@@ -108,15 +107,14 @@ public class AccountPaymentsPageController extends DateSelectController{
 	private Dialog<Object> dialog;
 	
 	 @FXML
-	private void initialize() throws IOException {}
+	private void initialize() {
+		accountPaymentService = new AccountPaymentService();
+		accountPaymentContactService = new AccountPaymentContactService();
+	 }
 
 	@Override
 	public void setMain(Main main) {
 		this.main = main;
-	}
-	
-	public void setConnection(Connection c) {
-		this.con = c;
 	}
 
 	public void setParent(MainMenuController p){this.parent = p;}
@@ -126,14 +124,14 @@ public class AccountPaymentsPageController extends DateSelectController{
 		accountTotalsTable.autosizeColumnsOnInitialization();
 
 		MFXButton addContactButton = new MFXButton("Create New");
-		addContactButton.setOnAction(actionEvent -> {
+		addContactButton.setOnAction(_ -> {
 			dialog = new Dialog(dialogPane, BLANK);
 			dialog.setPadding(false);
 			dialog.setContent(createAddNewContactDialog());
 			dialogPane.showDialog(dialog);
 		});
 		MFXButton manageContactsButton = new MFXButton("Manage Contacts");
-		manageContactsButton.setOnAction(actionEvent -> {
+		manageContactsButton.setOnAction(_ -> {
 			dialog = new Dialog(dialogPane, BLANK);
 			dialog.setPadding(false);
 			dialog.setContent(createManageContactsDialog());
@@ -193,8 +191,8 @@ public class AccountPaymentsPageController extends DateSelectController{
 		//Init Totals Table
 		contactNameCol = new MFXTableColumn<>("CONTACT",false, Comparator.comparing(AccountPaymentContactDataPoint::getContactName));
 		totalCol = new MFXTableColumn<>("TOTAL",false, Comparator.comparing(AccountPaymentContactDataPoint::getTotalValue));
-		contactNameCol.setRowCellFactory(accountPaymentContactDataPoint -> new MFXTableRowCell<>(AccountPaymentContactDataPoint::getContactName));
-		totalCol.setRowCellFactory(accountPaymentContactDataPoint -> new MFXTableRowCell<>(AccountPaymentContactDataPoint::getTotalValueString));
+		contactNameCol.setRowCellFactory(_ -> new MFXTableRowCell<>(AccountPaymentContactDataPoint::getContactName));
+		totalCol.setRowCellFactory(_ -> new MFXTableRowCell<>(AccountPaymentContactDataPoint::getTotalValueString));
 		accountTotalsTable.getTableColumns().addAll(
 				contactNameCol,
 				totalCol
@@ -242,7 +240,6 @@ public class AccountPaymentsPageController extends DateSelectController{
 		}
 		AddNewContactDialogController dialogController = loader.getController();
 		dialogController.setParent(this);
-		dialogController.setConnection(this.con);
 		dialogController.setMain(this.main);
 		return newContactDialog;
 	}
@@ -257,25 +254,24 @@ public class AccountPaymentsPageController extends DateSelectController{
 		}
 		ManageContactsDialogController dialogController = loader.getController();
 		dialogController.setParent(this);
-		dialogController.setConnection(this.con);
 		dialogController.setMain(this.main);
 		dialogController.fill();
 		return manageContactsDialog;
 	}
 
 	public void fillContactList(){
-		ObservableList<AccountPaymentContactDataPoint> contacts = FXCollections.observableArrayList();
-		String sql;
-		try {
-			sql = "SELECT * FROM accountPaymentContacts where storeID = ?";
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				contacts.add(new AccountPaymentContactDataPoint(resultSet));
-			}
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
+        ObservableList<AccountPaymentContactDataPoint> contacts = null;
+        try {
+            contacts = FXCollections.observableArrayList(
+                    accountPaymentContactService.getAllAccountPaymentContacts(main.getCurrentStore().getStoreID())
+            );
+        } catch (SQLException e) {
+            dialogPane.showError("Error", "An error occurred while trying to retrieve account payment contact information", e.getMessage());
+        }
+        if (contacts.isEmpty()) {
+			afx.getItems().add(new AccountPaymentContactDataPoint(0, "*Please add new suppliers below", 0));
+		} else {
+			afx.setItems(contacts);
 		}
 		if(contacts.size()==0){
 			afx.getItems().add(new AccountPaymentContactDataPoint(0,"*Please add new suppliers below",0));
@@ -286,24 +282,18 @@ public class AccountPaymentsPageController extends DateSelectController{
 
 	public void fillTable(){
 		YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
-		int daysInMonth = yearMonthObject.lengthOfMonth();
-		ObservableList<AccountPayment> currentAccountPaymentDataPoints = FXCollections.observableArrayList();
-		String sql = null;
-		try {
-			sql = "SELECT * FROM accountPayments JOIN accountPaymentContacts a on a.idaccountPaymentContacts = accountPayments.contactID WHERE accountPayments.storeID = ? AND MONTH(invoiceDate) = ? AND YEAR(invoiceDate) = ?";
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-			preparedStatement.setInt(2, yearMonthObject.getMonthValue());
-			preparedStatement.setInt(3, yearMonthObject.getYear());
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				currentAccountPaymentDataPoints.add(new AccountPayment(resultSet));
-			}
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
-		}
+        ObservableList<AccountPayment> currentAccountPaymentDataPoints;
+        try {
+            currentAccountPaymentDataPoints = FXCollections.observableArrayList(
+                    accountPaymentService.getAccountPaymentsForMonth(main.getCurrentStore().getStoreID(), yearMonthObject)
+            );
+        } catch (SQLException e) {
+            dialogPane.showError("Error", "An error occurred while trying to retrieve account payment information", e.getMessage());
+			return;
+        }
+        accountPaymentTable.setItems(currentAccountPaymentDataPoints);
 		ObservableList<AccountPaymentContactDataPoint> currentContactTotals = FXCollections.observableArrayList();
-		boolean contactFound = false;
+		boolean contactFound;
 		for(AccountPayment a:currentAccountPaymentDataPoints){
 			contactFound = false;
 			for(AccountPaymentContactDataPoint c: currentContactTotals){
@@ -313,8 +303,13 @@ public class AccountPaymentsPageController extends DateSelectController{
 				}
 			}
 			if(!contactFound){
-				AccountPaymentContactDataPoint acdp = getContactfromName(a.getContactName());
-				acdp.setTotalValue(a.getUnitAmount());
+                AccountPaymentContactDataPoint acdp = null;
+                try {
+                    acdp = accountPaymentContactService.getContactByName(a.getContactName(),main.getCurrentStore().getStoreID());
+                } catch (SQLException e) {
+                    dialogPane.showError("Error", "An error occurred while trying to retrieve account payment contact information", e.getMessage());
+                }
+                acdp.setTotalValue(a.getUnitAmount());
 				currentContactTotals.add(acdp);
 			}
 		}
@@ -346,25 +341,10 @@ public class AccountPaymentsPageController extends DateSelectController{
 		if (file != null) {
 			try (PrintWriter pw = new PrintWriter(file)) {
 				pw.println("Contact,,,,,,,,,,Invoice number,Invoice date ,Due Date,,Description,Quantity,Unit amount,Account code,GST free,");
-
 				YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
-
-                ObservableList<AccountPayment> currentAccountPaymentDataPoints = FXCollections.observableArrayList();
-				String sql;
-				try {
-					sql = "SELECT * FROM accountPayments JOIN accountPaymentContacts a on a.idaccountPaymentContacts = accountPayments.contactID WHERE accountPayments.storeID = ? AND MONTH(invoiceDate) = ? AND YEAR(invoiceDate) = ?";
-					preparedStatement = con.prepareStatement(sql);
-					preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-					preparedStatement.setInt(2, yearMonthObject.getMonthValue());
-					preparedStatement.setInt(3, yearMonthObject.getYear());
-					resultSet = preparedStatement.executeQuery();
-					while (resultSet.next()) {
-						currentAccountPaymentDataPoints.add(new AccountPayment(resultSet));
-					}
-				} catch (SQLException throwables) {
-					throwables.printStackTrace();
-				}
-
+				ObservableList<AccountPayment> currentAccountPaymentDataPoints = FXCollections.observableArrayList(
+						accountPaymentService.getAccountPaymentsForMonth(main.getCurrentStore().getStoreID(), yearMonthObject)
+				);
 				for(AccountPayment a: currentAccountPaymentDataPoints){
 					pw.print(a.getContactName()+",,,,,,,,,,");
 					pw.print(a.getInvoiceNumber()+",");
@@ -378,12 +358,14 @@ public class AccountPaymentsPageController extends DateSelectController{
 				dialogPane.showInformation("Success", "Information exported successfully");
 			} catch (FileNotFoundException e){
 				dialogPane.showError("Error", "This file could not be accessed, please ensure its not open in another program");
-			}
-		}
+			} catch (SQLException e) {
+				dialogPane.showError("Error", "An error occurred while trying to retrieve account payment information", e.getMessage());
+            }
+        }
 	}
 
 	public void openPopover(){
-		saveButton.setOnAction(actionEvent -> addPayment());
+		saveButton.setOnAction(_ -> addPayment());
 		paymentPopoverTitle.setText("Add new account payment");
 		deleteButton.setVisible(false);
 		contentDarken.setVisible(true);
@@ -411,37 +393,24 @@ public class AccountPaymentsPageController extends DateSelectController{
 	}
 
 	public void openPopover(AccountPayment ap){
-		saveButton.setOnAction(actionEvent -> editPayment(ap));
+		saveButton.setOnAction(_ -> editPayment(ap));
 		paymentPopoverTitle.setText("Edit account payment");
 		deleteButton.setVisible(true);
-		deleteButton.setOnAction(actionEvent -> deletePayment(ap));
+		deleteButton.setOnAction(_ -> deletePayment(ap));
 		contentDarken.setVisible(true);
 		AnimationUtils.slideIn(addPaymentPopover,0);
-		afx.setValue(getContactfromName(ap.getContactName()));
-		invoiceNoField.setText(ap.getInvoiceNumber());
+        try {
+            afx.setValue(accountPaymentContactService.getContactByName(ap.getContactName(),main.getCurrentStore().getStoreID()));
+        } catch (SQLException e) {
+            dialogPane.showError("Error","An error occurred while trying to retrieve the contact information",e.getMessage());
+        }
+        invoiceNoField.setText(ap.getInvoiceNumber());
 		invoiceDateField.setValue(ap.getInvDate());
 		dueDateField.setValue(ap.getDueDate());
 		descriptionField.setText(ap.getDescription());
 		amountField.setText(String.valueOf(ap.getUnitAmount()));
 		accountAdjustedBox.setSelected(ap.isAccountAdjusted());
 		Platform.runLater(() -> afx.requestFocus());
-	}
-
-	public AccountPaymentContactDataPoint getContactfromName(String name){
-		String sql = null;
-		try {
-			sql = "SELECT * FROM accountPaymentContacts  WHERE contactName = ? AND storeID = ?";
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setString(1,name);
-			preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				return new AccountPaymentContactDataPoint(resultSet);
-			}
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
-		}
-		return null;
 	}
 
 	public void monthForward() {
@@ -464,11 +433,10 @@ public class AccountPaymentsPageController extends DateSelectController{
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			MonthYearSelectorContentController rdc = loader.getController();
-			rdc.setMain(main);
-			rdc.setConnection(con);
-			rdc.setParent(this);
-			rdc.fill();
+			MonthYearSelectorContentController myscc = loader.getController();
+			myscc.setMain(main);
+			myscc.setParent(this);
+			myscc.fill();
 
 			monthSelectorMenu.setOpacity(1);
 			monthSelectorMenu.setContentNode(monthSelectorMenuContent);
@@ -518,23 +486,13 @@ public class AccountPaymentsPageController extends DateSelectController{
 			String description = descriptionField.getText();
 			Double unitAmount = Double.valueOf(amountField.getText());
 			String taxRate = taxRateField.getText();
-			String sql = "INSERT INTO accountPayments(contactID,storeID,invoiceNo,invoiceDate,dueDate,description,unitAmount,accountAdjusted,taxRate) VALUES(?,?,?,?,?,?,?,?,?)";
-			try {
-				preparedStatement = con.prepareStatement(sql);
-				preparedStatement.setInt(1, contact.getContactID());
-				preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
-				preparedStatement.setString(3, invoiceNo);
-				preparedStatement.setDate(4, Date.valueOf(invoiceDate));
-				preparedStatement.setDate(5, Date.valueOf(dueDate));
-				preparedStatement.setString(6, description);
-				preparedStatement.setDouble(7, unitAmount);
-				preparedStatement.setBoolean(8, accountAdjustedBox.isSelected());
-				preparedStatement.setString(9, taxRate);
-				preparedStatement.executeUpdate();
-			} catch (SQLException ex) {
-				System.err.println(ex.getMessage());
-			}
-			closePopover();
+			AccountPayment newPayment = new AccountPayment(contact.getContactName(),contact.getContactID(),main.getCurrentStore().getStoreID(),invoiceNo,invoiceDate,dueDate,description,1,unitAmount,accountAdjustedBox.isSelected(),contact.getAccountCode(),taxRate);
+            try {
+                accountPaymentService.addAccountPayment(newPayment);
+            } catch (SQLException e) {
+				dialogPane.showError("Error","An error occurred while trying to add the payment",e.getMessage());
+            }
+            closePopover();
 			fillTable();
 			dialogPane.showInformation("Success","Payment was succesfully added");
 		}
@@ -560,29 +518,27 @@ public class AccountPaymentsPageController extends DateSelectController{
 			Double unitAmount = Double.valueOf(amountField.getText());
 			String taxRate = taxRateField.getText();
 
-			String sql = "UPDATE accountPayments SET contactID = ?,storeID = ?,invoiceNo = ?, invoiceDate = ?, dueDate = ?,description = ?,unitAmount = ?,accountAdjusted = ?,taxRate = ? WHERE storeID = ? AND invoiceNo = ?";
-			try {
-				preparedStatement = con.prepareStatement(sql);
-				preparedStatement.setInt(1, contact.getContactID());
-				preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
-				preparedStatement.setString(3, invoiceNo);
-				preparedStatement.setDate(4, Date.valueOf(invoiceDate));
-				preparedStatement.setDate(5, Date.valueOf(dueDate));
-				preparedStatement.setString(6, description);
-				preparedStatement.setDouble(7, unitAmount);
-				preparedStatement.setBoolean(8, accountAdjustedBox.isSelected());
-				preparedStatement.setString(9, taxRate);
-				preparedStatement.setInt(10, main.getCurrentStore().getStoreID());
-				preparedStatement.setString(11, accountPayment.getInvoiceNumber());
-				preparedStatement.executeUpdate();
-			} catch (SQLException ex) {
-				System.err.println(ex.getMessage());
-			}
-			closePopover();
+			accountPayment.setContactName(contact.getContactName());
+			accountPayment.setContactID(contact.getContactID());
+			accountPayment.setInvoiceNumber(invoiceNo);
+			accountPayment.setInvDate(invoiceDate);
+			accountPayment.setDueDate(dueDate);
+			accountPayment.setDescription(description);
+			accountPayment.setUnitAmount(unitAmount);
+			accountPayment.setAccountAdjusted(accountAdjustedBox.isSelected());
+			accountPayment.setAccountCode(contact.getAccountCode());
+			accountPayment.setTaxRate(taxRate);
+
+            try {
+                accountPaymentService.updateAccountPayment(accountPayment);
+            } catch (SQLException e) {
+                dialogPane.showError("Error","An error occurred while trying to edit the payment",e.getMessage());
+            }
+
+            closePopover();
 			fillTable();
 			dialogPane.showInformation("Success","Payment was succesfully edited");
 		}
-
 	}
 
 	public void deletePayment(AccountPayment accountPayment){
@@ -590,16 +546,12 @@ public class AccountPaymentsPageController extends DateSelectController{
 				 "This action will permanently delete this Account payment from all systems,\n" +
 				 "Are you sure you still want to delete this Account payment?").thenAccept(buttonType -> {
 			 if (buttonType.equals(ButtonType.OK)) {
-				 String sql = "DELETE from accountPayments WHERE invoiceNo = ? AND storeID = ?";
-				 try {
-					 preparedStatement = con.prepareStatement(sql);
-					 preparedStatement.setString(1, accountPayment.getInvoiceNumber());
-					 preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
-					 preparedStatement.executeUpdate();
-				 } catch (SQLException ex) {
-					 System.err.println(ex.getMessage());
-				 }
-				 closePopover();
+                 try {
+                     accountPaymentService.deleteAccountPayment(accountPayment.getStoreID(), accountPayment.getInvoiceNumber());
+                 } catch (SQLException e) {
+					 dialogPane.showError("Error","An error occurred while trying to delete the payment",e.getMessage());
+                 }
+                 closePopover();
 				 fillTable();
 				 dialogPane.showInformation("Success","Payment was succesfully deleted");
 			 }

@@ -47,9 +47,6 @@ public class ShiftCardController extends Controller{
 		this.main = newMain;
 	}
 
-	@Override
-	public void setConnection(Connection conDB) {}
-
 	public void setShift(Shift newShift) {
 		this.shift = newShift;
 	}

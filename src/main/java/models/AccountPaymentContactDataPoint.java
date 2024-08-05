@@ -45,6 +45,10 @@ public class AccountPaymentContactDataPoint {
 
 	public void setContactName(String contactName) {this.contactName = contactName;}
 
+	public int getStoreID() {return storeID;}
+
+	public void setStoreID(int storeID) {this.storeID = storeID;}
+
 	public double getTotalValue() {return totalValue;}
 
 	public void setTotalValue(double totalValue) {this.totalValue = totalValue;}
