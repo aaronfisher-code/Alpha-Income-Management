@@ -49,7 +49,7 @@ public class AccountPaymentService {
         }
     }
 
-    public void updateAccountPayment(AccountPayment payment) throws SQLException  {
+    public void updateAccountPayment(String originalInvoiceNo,AccountPayment payment) throws SQLException  {
         String sql = "UPDATE accountPayments SET contactID = ?,storeID = ?,invoiceNo = ?, invoiceDate = ?, dueDate = ?,description = ?,unitAmount = ?,accountAdjusted = ?,taxRate = ? WHERE storeID = ? AND invoiceNo = ?";
 
         try (Connection connection = DatabaseConnectionManager.getConnection();
@@ -64,7 +64,7 @@ public class AccountPaymentService {
             preparedStatement.setBoolean(8, payment.isAccountAdjusted());
             preparedStatement.setString(9, payment.getTaxRate());
             preparedStatement.setInt(10, payment.getStoreID());
-            preparedStatement.setString(11, payment.getInvoiceNumber());
+            preparedStatement.setString(11, originalInvoiceNo);
 
             preparedStatement.executeUpdate();
         }

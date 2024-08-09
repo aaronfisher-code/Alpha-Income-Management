@@ -67,4 +67,13 @@ public class AccountPaymentContactDataPoint {
 	public String toString() {
 		return contactName;
 	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (obj instanceof AccountPaymentContactDataPoint) {
+			AccountPaymentContactDataPoint other = (AccountPaymentContactDataPoint) obj;
+			return this.contactID == other.contactID;
+		}
+		return false;
+	}
 }
