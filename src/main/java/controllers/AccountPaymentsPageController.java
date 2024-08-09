@@ -243,6 +243,7 @@ public class AccountPaymentsPageController extends DateSelectController{
             );
         } catch (SQLException e) {
             dialogPane.showError("Error", "An error occurred while trying to retrieve account payment contact information", e.getMessage());
+			e.printStackTrace();
         }
         assert contacts != null;
         if (contacts.isEmpty()) {
@@ -266,6 +267,7 @@ public class AccountPaymentsPageController extends DateSelectController{
             );
         } catch (SQLException e) {
             dialogPane.showError("Error", "An error occurred while trying to retrieve account payment information", e.getMessage());
+			e.printStackTrace();
 			return;
         }
         accountPaymentTable.setItems(currentAccountPaymentDataPoints);
@@ -285,6 +287,7 @@ public class AccountPaymentsPageController extends DateSelectController{
                     acdp = accountPaymentContactService.getContactByName(a.getContactName(),main.getCurrentStore().getStoreID());
                 } catch (SQLException e) {
                     dialogPane.showError("Error", "An error occurred while trying to retrieve account payment contact information", e.getMessage());
+					e.printStackTrace();
                 }
                 assert acdp != null;
                 acdp.setTotalValue(a.getUnitAmount());
@@ -336,8 +339,10 @@ public class AccountPaymentsPageController extends DateSelectController{
 				dialogPane.showInformation("Success", "Information exported successfully");
 			} catch (FileNotFoundException e){
 				dialogPane.showError("Error", "This file could not be accessed, please ensure its not open in another program");
+				e.printStackTrace();
 			} catch (SQLException e) {
 				dialogPane.showError("Error", "An error occurred while trying to retrieve account payment information", e.getMessage());
+				e.printStackTrace();
             }
         }
 	}
@@ -386,6 +391,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 			}
         } catch (SQLException e) {
             dialogPane.showError("Error","An error occurred while trying to retrieve the contact information",e.getMessage());
+			e.printStackTrace();
         }
         invoiceNoField.setText(ap.getInvoiceNumber());
 		invoiceDateField.setValue(ap.getInvDate());
@@ -468,6 +474,7 @@ public class AccountPaymentsPageController extends DateSelectController{
                 accountPaymentService.addAccountPayment(newPayment);
             } catch (SQLException e) {
 				dialogPane.showError("Error","An error occurred while trying to add the payment",e.getMessage());
+				e.printStackTrace();
             }
             closePopover();
 			fillTable();
@@ -522,6 +529,7 @@ public class AccountPaymentsPageController extends DateSelectController{
                 accountPaymentService.updateAccountPayment(originalInvoiceNo,accountPayment);
             } catch (SQLException e) {
                 dialogPane.showError("Error","An error occurred while trying to edit the payment",e.getMessage());
+				e.printStackTrace();
             }
 
             closePopover();
@@ -539,6 +547,7 @@ public class AccountPaymentsPageController extends DateSelectController{
                      accountPaymentService.deleteAccountPayment(accountPayment.getStoreID(), accountPayment.getInvoiceNumber());
                  } catch (SQLException e) {
 					 dialogPane.showError("Error","An error occurred while trying to delete the payment",e.getMessage());
+					 e.printStackTrace();
                  }
                  closePopover();
 				 fillTable();
