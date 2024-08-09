@@ -36,9 +36,6 @@ public class ShiftCardController extends Controller{
 	private Main main;
 	private Shift shift;
 	private LocalDate shiftCardDate;
-	private RosterPageController parent;
-	PreparedStatement preparedStatement= null;
-	ResultSet resultSet = null;
 
 	public ShiftCardController() {}
 
@@ -56,10 +53,6 @@ public class ShiftCardController extends Controller{
 	}
 
 	public LocalDate getDate(){return this.shiftCardDate;}
-
-	public void setParent(RosterPageController parent){
-		this.parent = parent;
-	}
 
 	@Override
 	public void fill() {
@@ -110,7 +103,6 @@ public class ShiftCardController extends Controller{
 	public void hoverOn(){
 		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && shift.getUsername().equals(main.getCurrentUser().getUsername()))||
 				main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))) {
-//		backgroundPane.setStyle("-fx-background-color: #dee9ff; -fx-background-radius: 5;");
 			DropShadow d = new DropShadow(BlurType.THREE_PASS_BOX, Color.web("#000000", 0.8), 5.56, 0.0, 0.0, 2.0);
 			d.setHeight(24);
 			d.setWidth(24);
@@ -122,7 +114,6 @@ public class ShiftCardController extends Controller{
 	public void hoverOff(){
 		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && shift.getUsername().equals(main.getCurrentUser().getUsername()))||
 				main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))) {
-//		backgroundPane.setStyle("-fx-background-color: #FFFFFF; -fx-background-radius: 5;");
 			DropShadow d = new DropShadow(BlurType.THREE_PASS_BOX, Color.web("#000000", 0.1), 10, 0.0, 0.0, 4.0);
 			d.setHeight(24);
 			d.setWidth(24);
@@ -136,7 +127,7 @@ public class ShiftCardController extends Controller{
 			{
 				setCycleDuration(Duration.millis(duration));
 			}
-			double previousMargin = targetButton.getTranslateY();
+			final double previousMargin = targetButton.getTranslateY();
 
 			@Override
 			protected void interpolate(double progress) {

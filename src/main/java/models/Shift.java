@@ -7,6 +7,7 @@ import java.time.LocalTime;
 
 public class Shift {
 	private int shiftID;
+	private int storeID;
 	private String username;
     private LocalTime shiftStartTime;
 	private LocalTime shiftEndTime;
@@ -25,6 +26,8 @@ public class Shift {
 	private String profileText;
 	private LocalDate originalDate = null;
 
+	public Shift(){}
+
 	public Shift(ResultSet resultSet) {
 		try {
 			this.shiftID = resultSet.getInt("shift_id");
@@ -39,6 +42,7 @@ public class Shift {
 			this.tenMinBreaks = resultSet.getInt("tenMinBreaks");
 			this.repeating = resultSet.getInt("repeating") == 1;
 			this.daysPerRepeat = resultSet.getInt("daysPerRepeat");
+			this.storeID = resultSet.getInt("storeID");
 			try{
 				if(resultSet.getString("password") != null && !resultSet.getString("password").isEmpty())
 					this.password = resultSet.getString("password");
@@ -190,4 +194,12 @@ public class Shift {
 	public LocalDate getOriginalDate() {return originalDate;}
 
 	public void setOriginalDate(LocalDate originalDate) {this.originalDate = originalDate;}
+
+	public int getStoreID() {
+		return storeID;
+	}
+
+	public void setStoreID(int storeID) {
+		this.storeID = storeID;
+	}
 }

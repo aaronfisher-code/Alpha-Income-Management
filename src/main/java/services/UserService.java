@@ -27,6 +27,21 @@ public class UserService {
         return null;
     }
 
+    public List<User> getAllUserEmployments(int storeID) throws SQLException {
+        List<User> users = new ArrayList<>();
+        String sql = "SELECT * FROM accounts JOIN employments e on accounts.username = e.username WHERE storeID = ? AND inactiveDate IS NULL ";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)){
+            preparedStatement.setInt(1, storeID);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    users.add(new User(resultSet));
+                }
+            }
+        }
+        return users;
+    }
+
     public boolean verifyPassword(User user, String password) {
         return BCrypt.checkpw(password, user.getPassword());
     }

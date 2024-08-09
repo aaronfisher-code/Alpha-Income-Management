@@ -2,6 +2,7 @@ package services;
 
 import models.Shift;
 import models.LeaveRequest;
+import models.SpecialDateObj;
 import utils.DatabaseConnectionManager;
 
 import java.sql.*;
@@ -77,5 +78,168 @@ public class RosterService {
             }
         }
         return leaveRequests;
+    }
+
+    public void addShift(Shift shift) throws SQLException {
+        String sql = "INSERT INTO shifts(storeID, username, shiftStartTime, shiftEndTime, shiftStartDate, thirtyMinBreaks, tenMinBreaks, repeating, daysPerRepeat) VALUES(?,?,?,?,?,?,?,?,?)";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setInt(1, shift.getStoreID());
+            preparedStatement.setString(2, shift.getUsername());
+            preparedStatement.setTime(3, Time.valueOf(shift.getShiftStartTime()));
+            preparedStatement.setTime(4, Time.valueOf(shift.getShiftEndTime()));
+            preparedStatement.setDate(5, Date.valueOf(shift.getShiftStartDate()));
+            preparedStatement.setInt(6, shift.getThirtyMinBreaks());
+            preparedStatement.setInt(7, shift.getTenMinBreaks());
+            preparedStatement.setBoolean(8, shift.isRepeating());
+            preparedStatement.setInt(9, shift.getDaysPerRepeat());
+            preparedStatement.executeUpdate();
+        }
+    }
+
+    public void updateShift(Shift shift) throws SQLException {
+        String sql = "UPDATE shifts SET username=?, shiftStartTime=?, shiftEndTime=?, shiftStartDate=?, thirtyMinBreaks=?, tenMinBreaks=?, repeating=?, daysPerRepeat=? WHERE shift_id=?";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, shift.getUsername());
+            preparedStatement.setTime(2, Time.valueOf(shift.getShiftStartTime()));
+            preparedStatement.setTime(3, Time.valueOf(shift.getShiftEndTime()));
+            preparedStatement.setDate(4, Date.valueOf(shift.getShiftStartDate()));
+            preparedStatement.setInt(5, shift.getThirtyMinBreaks());
+            preparedStatement.setInt(6, shift.getTenMinBreaks());
+            preparedStatement.setBoolean(7, shift.isRepeating());
+            preparedStatement.setInt(8, shift.getDaysPerRepeat());
+            preparedStatement.setInt(9, shift.getShiftID());
+            preparedStatement.executeUpdate();
+        }
+    }
+
+    public void deleteShift(int shiftId) throws SQLException {
+        String sql = "DELETE FROM shifts WHERE shift_id = ?";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setInt(1, shiftId);
+            preparedStatement.executeUpdate();
+        }
+    }
+
+    public void addShiftModification(Shift modification) throws SQLException {
+        String sql = "INSERT INTO shiftModifications(storeID, username, shiftStartTime, shiftEndTime, shiftStartDate, thirtyMinBreaks, tenMinBreaks, repeating, daysPerRepeat, shift_id, originalDate) VALUES(?,?,?,?,?,?,?,?,?,?,?)";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setInt(1, modification.getStoreID());
+            preparedStatement.setString(2, modification.getUsername());
+            preparedStatement.setTime(3, Time.valueOf(modification.getShiftStartTime()));
+            preparedStatement.setTime(4, Time.valueOf(modification.getShiftEndTime()));
+            preparedStatement.setDate(5, modification.getShiftStartDate() != null ? Date.valueOf(modification.getShiftStartDate()) : null);
+            preparedStatement.setInt(6, modification.getThirtyMinBreaks());
+            preparedStatement.setInt(7, modification.getTenMinBreaks());
+            preparedStatement.setBoolean(8, modification.isRepeating());
+            preparedStatement.setInt(9, modification.getDaysPerRepeat());
+            preparedStatement.setInt(10, modification.getShiftID());
+            preparedStatement.setDate(11, Date.valueOf(modification.getOriginalDate()));
+            preparedStatement.executeUpdate();
+        }
+    }
+
+    public void deleteShiftModifications(int shiftId) throws SQLException {
+        String sql = "DELETE FROM shiftmodifications WHERE shift_id = ?";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setInt(1, shiftId);
+            preparedStatement.executeUpdate();
+        }
+    }
+
+    public void deleteShiftModifications(int shiftId, LocalDate cutoffDate) throws SQLException {
+        String sql = "DELETE FROM shiftmodifications WHERE shift_id = ? AND originalDate > ?";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setInt(1, shiftId);
+            preparedStatement.setDate(2, Date.valueOf(cutoffDate));
+            preparedStatement.executeUpdate();
+        }
+    }
+
+    public void updateShiftEndDate(int shiftId, LocalDate endDate) throws SQLException {
+        String sql = "UPDATE shifts SET shiftEndDate = ? WHERE shift_id = ?";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setDate(1, Date.valueOf(endDate));
+            preparedStatement.setInt(2, shiftId);
+            preparedStatement.executeUpdate();
+        }
+    }
+
+    public void addLeaveRequest(LeaveRequest leaveRequest) throws SQLException {
+        String sql = "INSERT INTO leaverequests (employeeID, storeID, leaveType, leaveStartDate, leaveEndDate, reason) VALUES (?,?,?,?,?,?)";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, leaveRequest.getEmployeeID());
+            preparedStatement.setInt(2, leaveRequest.getStoreID());
+            preparedStatement.setString(3, leaveRequest.getLeaveType());
+            preparedStatement.setTimestamp(4, Timestamp.valueOf(leaveRequest.getFromDate()));
+            preparedStatement.setTimestamp(5, Timestamp.valueOf(leaveRequest.getToDate()));
+            preparedStatement.setString(6, leaveRequest.getLeaveReason());
+            preparedStatement.executeUpdate();
+        }
+    }
+
+    public void updateLeaveRequest(LeaveRequest leaveRequest) throws SQLException {
+        String sql = "UPDATE leaverequests SET leaveType = ?, leaveStartDate = ?, leaveEndDate = ?, reason = ? WHERE leaveID = ?";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, leaveRequest.getLeaveType());
+            preparedStatement.setTimestamp(2, Timestamp.valueOf(leaveRequest.getFromDate()));
+            preparedStatement.setTimestamp(3, Timestamp.valueOf(leaveRequest.getToDate()));
+            preparedStatement.setString(4, leaveRequest.getLeaveReason());
+            preparedStatement.setInt(5, leaveRequest.getLeaveID());
+            preparedStatement.executeUpdate();
+        }
+    }
+
+    public void deleteLeaveRequest(int leaveId) throws SQLException {
+        String sql = "DELETE FROM leaverequests WHERE leaveID = ?";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setInt(1, leaveId);
+            preparedStatement.executeUpdate();
+        }
+    }
+
+    public SpecialDateObj getSpecialDateInfo(LocalDate date) throws SQLException {
+        String sql = "SELECT * FROM specialDates Where eventDate = ?";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, date.toString());
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return new SpecialDateObj(resultSet);
+                }
+            }
+        }
+        return null;
+    }
+
+    public void addSpecialDate(SpecialDateObj specialDateObj) throws SQLException {
+        String sql = "INSERT INTO specialDates(storeStatus, note, eventDate) VALUES(?,?,?)";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, specialDateObj.getStoreStatus());
+            preparedStatement.setString(2, specialDateObj.getNote());
+            preparedStatement.setString(3, specialDateObj.getEventDate().toString());
+            preparedStatement.executeUpdate();
+        }
+    }
+
+    public void updateSpecialDate(SpecialDateObj specialDateObj) throws SQLException {
+        String sql = "UPDATE specialDates SET storeStatus = ?, note = ? WHERE eventDate = ?";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, specialDateObj.getStoreStatus());
+            preparedStatement.setString(2, specialDateObj.getNote());
+            preparedStatement.setString(3, specialDateObj.getEventDate().toString());
+            preparedStatement.executeUpdate();
+        }
     }
 }
