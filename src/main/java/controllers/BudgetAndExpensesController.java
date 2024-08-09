@@ -89,7 +89,12 @@ public class BudgetAndExpensesController extends DateSelectController{
 		errorLabel.setVisible(false);
 		errorLabel.setStyle("-fx-text-fill: red");
 		YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
-		RosterUtils rosterUtils = new RosterUtils(main,yearMonthObject);
+		RosterUtils rosterUtils = null;
+		try{
+			rosterUtils = new RosterUtils(main,yearMonthObject);
+		}catch (SQLException e){
+			e.printStackTrace();
+		}
 		int daysInMonth = rosterUtils.getTotalDays();
 		int openDays = rosterUtils.getOpenDays();
 		int partialDays = rosterUtils.getPartialDays();

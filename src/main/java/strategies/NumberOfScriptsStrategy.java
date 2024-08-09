@@ -2,8 +2,6 @@ package strategies;
 
 import application.Main;
 import controllers.TargetGraphsPageController;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.scene.chart.XYChart;
 import models.TillReportDataPoint;
 import services.TargetService;
@@ -44,23 +42,23 @@ public class NumberOfScriptsStrategy implements LineGraphTargetStrategy {
         this.endDate = endDate;
         this.parent = parent;
         this.main = parent.getMain();
-        this.rosterUtils = new RosterUtils(main, startDate, endDate);
         this.tillReportService = new TillReportService();
         this.targetService = new TargetService();
 
         try {
+            this.rosterUtils = new RosterUtils(main, startDate, endDate);
             double[] targets = targetService.getTargets(main.getCurrentStore().getStoreID(), "Script Count");
             this.target1 = targets[0];
             this.target2 = targets[1];
 
-            this.currentTillReportDataPoints = tillReportService.getTillReportDataPoints(
+            this.currentTillReportDataPoints = tillReportService.getTillReportDataPointsByKey(
                     main.getCurrentStore().getStoreID(),
                     startDate,
                     endDate,
                     "Script Count"
             );
         } catch (SQLException e) {
-            e.printStackTrace();
+            parent.throwError(e);
         }
     }
 

@@ -278,7 +278,12 @@ public class MonthlySummaryController extends DateSelectController{
         ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints = FXCollections.observableArrayList();
 		yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
 		daysInMonth = yearMonthObject.lengthOfMonth();
-		rosterUtils = new RosterUtils(main,yearMonthObject);
+		try{
+			rosterUtils = new RosterUtils(main,yearMonthObject);
+		}catch (SQLException e){
+			e.printStackTrace();
+		}
+
 		double monthlyRent = 0;
 		double dailyOutgoings = 0;
 		double monthlyWages = 0;

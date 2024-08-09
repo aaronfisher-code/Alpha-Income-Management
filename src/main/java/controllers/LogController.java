@@ -100,6 +100,7 @@ public class LogController extends Controller {
                 }
             } catch (SQLException ex) {
                 dialogPane.showError("Failed to login", ex.getMessage());
+                ex.printStackTrace();
                 status = "Exception";
             }
         }
@@ -112,7 +113,7 @@ public class LogController extends Controller {
                 main.changeScene("/views/FXML/MainMenu.fxml");
             } catch (IOException | SQLException ex) {
                 dialogPane.showError("Failed to login", ex.getMessage());
-                System.err.println(ex.getMessage());
+                ex.printStackTrace();
             }
         } else {
             logInError.setText("Login error, please ensure your username and password are correct");
@@ -130,7 +131,7 @@ public class LogController extends Controller {
                 status = "Success";
             } catch (SQLException ex) {
                 dialogPane.showError("Failed to login", ex.getMessage());
-                System.err.println(ex.getMessage());
+                ex.printStackTrace();
                 status = "Exception";
             }
         }
@@ -142,7 +143,7 @@ public class LogController extends Controller {
                 main.changeScene("/views/FXML/MainMenu.fxml");
             } catch (IOException | SQLException ex) {
                 dialogPane.showError("Failed to login", ex.getMessage());
-                System.err.println(ex.getMessage());
+                ex.printStackTrace();
             }
         }
     }

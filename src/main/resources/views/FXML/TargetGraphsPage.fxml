@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.dlsc.gemsfx.DialogPane?>
 <?import com.jfoenix.controls.JFXButton?>
 <?import com.jfoenix.controls.JFXNodesList?>
 <?import io.github.palexdev.materialfx.controls.MFXScrollPane?>
@@ -20,7 +21,7 @@
 
 <!--<?import io.github.palexdev.materialfx.controls.MFXDatePicker?>-->
 
-<StackPane maxWidth="1.7976931348623157E308" onMouseEntered="#adjustHeight" prefHeight="800.0" prefWidth="1200.0" style="-fx-background-color: TRANSPARENT;" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.TargetGraphsPageController">
+<StackPane maxWidth="1.7976931348623157E308" onMouseEntered="#adjustHeight" prefHeight="800.0" prefWidth="1200.0" style="-fx-background-color: TRANSPARENT;" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.TargetGraphsPageController">
    <stylesheets>
       <URL value="@../CSS/application.css" />
       <URL value="@../CSS/TargetGraphPage.css" />
@@ -116,5 +117,6 @@
             <Insets bottom="50.0" right="50.0" />
          </StackPane.margin>
       </JFXNodesList>
+      <DialogPane fx:id="dialogPane" />
    </children>
 </StackPane>

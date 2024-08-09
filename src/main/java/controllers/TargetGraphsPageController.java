@@ -1,5 +1,6 @@
 package controllers;
 
+import com.dlsc.gemsfx.DialogPane;
 import strategies.*;
 import application.Main;
 import components.layouts.BootstrapColumn;
@@ -30,10 +31,9 @@ public class TargetGraphsPageController extends Controller{
 	private MFXScrollPane graphScrollPane;
 	@FXML
 	private BorderPane wtdButton,mtdButton,ytdButton,backgroundPane;
+	@FXML
+	private DialogPane dialogPane;
 
-    private Connection con = null;
-    PreparedStatement preparedStatement = null;
-    ResultSet resultSet = null;
     private Main main;
     private User selectedUser;
     private BootstrapPane outerPane;
@@ -41,7 +41,7 @@ public class TargetGraphsPageController extends Controller{
 	private BootstrapPane gaugePane;
 	
 	 @FXML
-	private void initialize() throws IOException {
+	private void initialize() {
 		 graphScrollPane.heightProperty().addListener((observable, oldValue, newValue) -> {
 			 graphPane.setPrefHeight((Double) newValue);
 		 });
@@ -53,16 +53,6 @@ public class TargetGraphsPageController extends Controller{
 	}
 
 	public Main getMain() {return main;}
-	
-	public void setConnection(Connection c) {
-		this.con = c;
-	}
-
-	public Connection getConnection() {return con;}
-
-	public PreparedStatement getPreparedStatement() {return preparedStatement;}
-
-	public ResultSet getResultSet() {return resultSet;}
 
 	@Override
 	public void fill() {
@@ -161,7 +151,6 @@ public class TargetGraphsPageController extends Controller{
 		}
 		GraphTileController gtc = loader.getController();
 		gtc.setMain(main);
-		gtc.setConnection(con);
 		gtc.setParent(this);
 		gtc.setStrategy(strategy);
 		gtc.fill();
@@ -179,7 +168,6 @@ public class TargetGraphsPageController extends Controller{
 		}
 		GaugeTileController gtc = loader.getController();
 		gtc.setMain(main);
-		gtc.setConnection(con);
 		gtc.setParent(this);
 		gtc.fill();
 		VBox.setVgrow(gaugeTile, Priority.ALWAYS);
@@ -241,6 +229,11 @@ public class TargetGraphsPageController extends Controller{
 
 	public void adjustHeight(){
 	 	graphPane.setPrefHeight(graphScrollPane.getHeight());
+	}
+
+	public void throwError (Exception e){
+		dialogPane.showError("Error", e.getMessage());
+		e.printStackTrace();
 	}
 
 

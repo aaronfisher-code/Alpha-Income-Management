@@ -30,7 +30,6 @@ public class Main extends Application {
 	private static Stage stg;
 	private User currentUser;
 	private Store currentStore;
-	private Connection con;
 	public Controller c;
 	private static BorderlessScene bs;
 	private Image icon;
@@ -94,7 +93,6 @@ public class Main extends Application {
 		Parent root = loader.load();
 		c = loader.getController();
 		c.setMain(this);
-		con = DBConnector.conDB();
 
 		primaryStage.setTitle("Alpha Income Management " + version);
 		bs = new BorderlessScene(primaryStage, StageStyle.TRANSPARENT, root);

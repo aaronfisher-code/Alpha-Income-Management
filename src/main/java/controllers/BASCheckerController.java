@@ -265,8 +265,14 @@ public class BASCheckerController extends DateSelectController{
 
 		spreadsheetCheck1.setText(String.format("%.2f", cashTotal+eftposTotal+amexTotal+googleSquareTotal+chequesTotal+medicareTotal));
 		ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints = FXCollections.observableArrayList();
-		RosterUtils rosterUtils = new RosterUtils(main,yearMonthObject);
-		for(int i = 1; i<daysInMonth+1; i++){
+		RosterUtils rosterUtils;
+		try{
+			rosterUtils = new RosterUtils(main,yearMonthObject);
+		} catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+        for(int i = 1; i<daysInMonth+1; i++){
 			LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(),i);
 			monthlySummaryPoints.add(new MonthlySummaryDataPoint(d,currentTillDataPoints,currentEODDataPoints,monthlySummaryPoints,rosterUtils,0,0,0,0));
 		}
