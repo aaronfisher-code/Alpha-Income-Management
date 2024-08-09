@@ -91,7 +91,6 @@ public class EODDataEntryPageController extends DateSelectController{
 			double deltaY = scrollEvent.getDeltaY() * SPEED;
 			popOverScroll.setVvalue(popOverScroll.getVvalue() - deltaY);
 		});
-		
 
 		ValidatorUtils.setupRegexValidation(cashField,cashValidationLabel,ValidatorUtils.CASH_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
 		ValidatorUtils.setupRegexValidation(eftposField,eftposValidationLabel,ValidatorUtils.CASH_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
@@ -479,11 +478,14 @@ public class EODDataEntryPageController extends DateSelectController{
 					pw.print(",");//Clinical interventions
 					pw.print(e.getMedschecks()+",");
 					double totalTakings = 0;
-					try{
-						totalTakings = Double.parseDouble(searchTillData(currentTillDataPoints,d,"Total Takings","amount"));
-					}catch(NumberFormatException ex){
-						dialogPane.showError("Failed to get total takings", "Total takings for "+d+" could not be found");
-						ex.printStackTrace();
+					try {
+						String recoveryStr = searchTillData(currentTillDataPoints,d,"Total Takings","amount");
+						if (!recoveryStr.trim().isEmpty()) {
+							totalTakings = Double.parseDouble(recoveryStr);
+						}
+					} catch (NumberFormatException ex) {
+						dialogPane.showError("Failed to get total takings for " + d, ex.getMessage());
+						System.err.println("Error parsing Govt Recovery value: " + ex.getMessage());
 					}
 					double tillBalance = e.getCashAmount()+e.getEftposAmount()+e.getAmexAmount()+e.getGoogleSquareAmount()+e.getChequeAmount() - totalTakings;
 					pw.print(NumberFormat.getCurrencyInstance(Locale.US).format(tillBalance)+",");
@@ -539,13 +541,15 @@ public class EODDataEntryPageController extends DateSelectController{
 					pw.print((e.getChequeAmount()>0)?formattedDate+",,":",,");
 					pw.println("Cheques Income,1,"+e.getChequeAmount()+",,,200,GST Free Income");
 					double govtRecovery = 0;
-					try{
-						govtRecovery = Double.parseDouble(searchTillData(currentTillDataPoints,d,"Govt Recovery","amount"));
-					}catch(NumberFormatException ex){
-						dialogPane.showError("Failed to get govt recovery", "Govt recovery for "+d+" could not be found");
-						ex.printStackTrace();
+					try {
+						String recoveryStr = searchTillData(currentTillDataPoints, d, "Govt Recovery", "amount");
+						if (!recoveryStr.trim().isEmpty()) {
+							govtRecovery = Double.parseDouble(recoveryStr);
+						}
+					} catch (NumberFormatException ex) {
+						dialogPane.showError("Failed to get govt recovery for " + d, ex.getMessage());
+						System.err.println("Error parsing Govt Recovery value: " + ex.getMessage());
 					}
-
 					pw.print("Medicare PBS (Ex GST),"+i+",");
 					pw.print(govtRecovery+",,,,,,,,");
 					dateTimeFormatter = DateTimeFormatter.ofPattern("ddMMyyyy");
