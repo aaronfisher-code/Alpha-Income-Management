@@ -389,7 +389,15 @@ public class RosterPageController extends Controller {
             repeatUnit.setDisable(false);
             repeatLabel.setDisable(false);
             repeatValue.setText(String.valueOf(s.getDaysPerRepeat()));
+            repeatUnit.selectFirst();
             repeatUnit.setValue("Days");
+        }else{
+            repeatingShiftToggle.setSelected(false);
+            repeatValue.setDisable(true);
+            repeatUnit.setDisable(true);
+            repeatLabel.setDisable(true);
+            repeatValue.setText("");
+            repeatUnit.setValue(null);
         }
 
         saveButton.setOnAction(_ -> {
@@ -466,7 +474,7 @@ public class RosterPageController extends Controller {
             return;
         }
 
-        User selectedUser = (User) employeeSelect.getValue();
+        User selectedUser = employeeSelect.getValue();
         LocalDate shiftDate = manualStartDate == null ? startDate.getValue() : manualStartDate;
         if (deleteShift) {
             shiftDate = null;
@@ -610,7 +618,7 @@ public class RosterPageController extends Controller {
             if (!thirtyMinBreaks.getText().isEmpty()) {thirtyMin = Integer.parseInt(thirtyMinBreaks.getText());}
             if (!tenMinBreaks.getText().isEmpty()) {tenMin = Integer.parseInt(tenMinBreaks.getText());}
             if(repeatingShiftToggle.isSelected()){
-                int multiplier = ((repeatUnit.getValue().equals("Weeks")) ? 7 : 1);
+                int multiplier = ((repeatUnit.getSelectedItem().equals("Weeks")) ? 7 : 1);
                 daysPerRepeat = Integer.parseInt(repeatValue.getText()) * multiplier;
             }
 
