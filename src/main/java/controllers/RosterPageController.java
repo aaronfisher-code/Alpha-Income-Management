@@ -22,6 +22,7 @@ import models.LeaveRequest;
 import models.Shift;
 import models.User;
 import org.controlsfx.control.PopOver;
+import services.LeaveService;
 import services.RosterService;
 import services.UserService;
 import utils.AnimationUtils;
@@ -88,11 +89,13 @@ public class RosterPageController extends Controller {
     private DialogPane.Dialog<Object> dialog;
     private UserService userService;
     private RosterService rosterService;
+    private LeaveService leaveService;
 
     @FXML
     private void initialize() {
         userService = new UserService();
         rosterService = new RosterService();
+        leaveService = new LeaveService();
     }
 
     public void setMain(Main main) {
@@ -314,7 +317,7 @@ public class RosterPageController extends Controller {
         try {
             allShifts = rosterService.getShifts(main.getCurrentStore().getStoreID(),weekStart,weekEnd);
             allModifications = rosterService.getShiftModifications(main.getCurrentStore().getStoreID(),weekStart,weekEnd);
-            allLeaveRequests = rosterService.getLeaveRequests(main.getCurrentStore().getStoreID(),weekStart,weekEnd);
+            allLeaveRequests = leaveService.getLeaveRequests(main.getCurrentStore().getStoreID(),weekStart,weekEnd);
         } catch (SQLException ex) {
             dialogPane.showError("Error","An error occurred while fetching shifts", ex.getMessage());
             ex.printStackTrace();

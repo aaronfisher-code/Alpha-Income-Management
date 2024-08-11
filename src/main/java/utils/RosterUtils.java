@@ -1,6 +1,7 @@
 package utils;
 import models.Shift;
 import models.LeaveRequest;
+import services.LeaveService;
 import services.RosterService;
 import application.Main;
 
@@ -14,6 +15,7 @@ public class RosterUtils {
 
     private Main main;
     private RosterService rosterService;
+    private LeaveService leaveService;
     private YearMonth yearMonth;
 
     private List<Shift> allShifts = new ArrayList<>();
@@ -25,6 +27,7 @@ public class RosterUtils {
     public RosterUtils(Main main, LocalDate startDate, LocalDate endDate) throws SQLException {
         this.main = main;
         this.rosterService = new RosterService();
+        this.leaveService = new LeaveService();
 
         fillDayDurations(startDate, endDate);
     }
@@ -42,7 +45,7 @@ public class RosterUtils {
     private void fillDayDurations(LocalDate startDate, LocalDate endDate) throws SQLException {
         allShifts = rosterService.getShifts(main.getCurrentStore().getStoreID(), startDate, endDate);
         allModifications = rosterService.getShiftModifications(main.getCurrentStore().getStoreID(), startDate, endDate);
-        allLeaveRequests = rosterService.getLeaveRequests(main.getCurrentStore().getStoreID(), startDate, endDate);
+        allLeaveRequests = leaveService.getLeaveRequests(main.getCurrentStore().getStoreID(), startDate, endDate);
 
         for (LocalDate day = startDate; day.isBefore(endDate.plusDays(1)); day = day.plusDays(1)) {
             dayDurationMap.put(day, loadDayDuration(day));

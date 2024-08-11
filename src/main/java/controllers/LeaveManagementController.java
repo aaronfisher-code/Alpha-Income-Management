@@ -4,27 +4,21 @@ package controllers;
 import application.Main;
 import com.dlsc.gemsfx.DialogPane;
 import com.dlsc.gemsfx.FilterView;
-import com.jfoenix.controls.JFXNodesList;
 import components.CustomDateStringConverter;
 import io.github.palexdev.materialfx.controls.*;
-import io.github.palexdev.materialfx.controls.base.MFXCombo;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
-import javafx.scene.Node;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
 import models.*;
 import org.controlsfx.control.PopOver;
+import services.LeaveService;
+import services.UserService;
 import utils.AnimationUtils;
 import utils.GUIUtils;
 import utils.TableUtils;
@@ -37,13 +31,9 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.time.format.TextStyle;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
-
-import static com.dlsc.gemsfx.DialogPane.Type.BLANK;
-import static java.time.temporal.ChronoUnit.DAYS;
 
 
 public class LeaveManagementController extends DateSelectController {
@@ -70,13 +60,13 @@ public class LeaveManagementController extends DateSelectController {
     private Label popoverLabel;
 
     @FXML
-    private Button deleteButton, closeButton;
+    private Button deleteButton;
 
     @FXML
     private Region contentDarken;
 
     @FXML
-    private MFXFilterComboBox employeeSelect;
+    private MFXFilterComboBox<User> employeeSelect;
 
     @FXML
     private MFXComboBox<String> leaveTypeCombo;
@@ -104,57 +94,41 @@ public class LeaveManagementController extends DateSelectController {
 
     private FilterView<LeaveRequest> leaveRequestFilterView;
 
-
-    private Connection con = null;
-    PreparedStatement preparedStatement = null;
-    ResultSet resultSet = null;
     private Main main;
-    private DialogPane.Dialog<Object> dialog;
-
     private LocalTime startTime,endTime;
+    private UserService userService;
+    private LeaveService leaveService;
 
-    private ObservableList<LeaveRequest> leaveRequests = FXCollections.observableArrayList();
+    @FXML
+    private void initialize() {
+        userService = new UserService();
+        leaveService = new LeaveService();
+    }
 
     public void setMain(Main main) {
         this.main = main;
     }
 
-    public void setConnection(Connection c) {
-        this.con = c;
-    }
-
-    public DialogPane.Dialog<Object> getDialog() {
-        return dialog;
-    }
-
     public void fill() {
-        ObservableList<User> currentUsers = FXCollections.observableArrayList();
-        String sql = "SELECT * FROM accounts JOIN employments e on accounts.username = e.username WHERE storeID = ? AND inactiveDate IS NULL ";
         try {
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-            resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                currentUsers.add(new User(resultSet));
+            List<User> currentUsers = userService.getAllUserEmployments(main.getCurrentStore().getStoreID());
+            for(User u:currentUsers){
+                employeeSelect.getItems().add(u);
             }
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
-        }
-
-        for(User u:currentUsers){
-            employeeSelect.getItems().add(u);
+        } catch (SQLException ex) {
+            dialogPane.showError("Error", "An error occurred while trying to fetch employees",ex.getMessage());
+            ex.printStackTrace();
         }
 
         leaveTypeCombo.getItems().addAll("Sick Leave", "Annual Leave", "Unpaid Leave", "Maternity Leave", "Paternity Leave", "Bereavement Leave", "Other");
 
-
-        openStartTimePicker.setOnAction(actionEvent -> {
+        openStartTimePicker.setOnAction(_ -> {
             if(!startTimeField.getText().isEmpty()){startTime = LocalTime.parse(startTimeField.getText().toLowerCase(), DateTimeFormatter.ofPattern("h:mm a"));}
             else {startTime = LocalTime.MIDNIGHT;}
             openTimePicker(startTimeField,startTime);
         });
 
-        openEndTimePicker.setOnAction(actionEvent -> {
+        openEndTimePicker.setOnAction(_ -> {
             if(!endTimeField.getText().isEmpty()) {endTime = LocalTime.parse(endTimeField.getText().toLowerCase(), DateTimeFormatter.ofPattern("h:mm a"));}
             else{endTime = LocalTime.MIDNIGHT;}
             openTimePicker(endTimeField,endTime);
@@ -164,7 +138,7 @@ public class LeaveManagementController extends DateSelectController {
         leaveRequestFilterView = new FilterView<>();
         leaveRequestFilterView.setTitle("Leave Requests this month");
         leaveRequestFilterView.setTextFilterProvider(text -> leaveRequest -> leaveRequest.getEmployeeName().toLowerCase().contains(text) || leaveRequest.getLeaveType().toLowerCase().contains(text));
-        leaveRequests = leaveRequestFilterView.getFilteredItems();
+        ObservableList<LeaveRequest> leaveRequests = leaveRequestFilterView.getFilteredItems();
 
         employeeNameCol.setCellValueFactory(new PropertyValueFactory<>("employeeName"));
         employeeRoleCol.setCellValueFactory(new PropertyValueFactory<>("employeeRole"));
@@ -181,11 +155,11 @@ public class LeaveManagementController extends DateSelectController {
         leaveTable.setFixedCellSize(25.0);
         VBox.setVgrow(leaveTable, Priority.ALWAYS);
         leaveTable.setItems(leaveRequests);
-        for(TableColumn tc: leaveTable.getColumns()){
+        for(TableColumn<LeaveRequest,?> tc: leaveTable.getColumns()){
             tc.setPrefWidth(TableUtils.getColumnWidth(tc)+30);
         }
         Platform.runLater(() -> GUIUtils.customResize(leaveTable,reasonCol));
-        Platform.runLater(() -> addDoubleClickfunction());
+        Platform.runLater(this::addDoubleClickFunction);
         ValidatorUtils.setupRegexValidation(employeeSelect,employeeSelectValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveButton);
         ValidatorUtils.setupRegexValidation(leaveTypeCombo,leaveTypeValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveButton);
         ValidatorUtils.setupRegexValidation(startDate,startDateValidationLabel,ValidatorUtils.DATE_REGEX,ValidatorUtils.DATE_ERROR,null,saveButton);
@@ -197,8 +171,8 @@ public class LeaveManagementController extends DateSelectController {
         setDate(main.getCurrentDate());
     }
 
-    private void addDoubleClickfunction(){
-        leaveTable.setRowFactory( tv -> {
+    private void addDoubleClickFunction(){
+        leaveTable.setRowFactory(_ -> {
             TableRow<LeaveRequest> row = new TableRow<>();
             row.setOnMouseClicked(event -> {
                 if (event.getClickCount() == 2 && (! row.isEmpty()) ) {
@@ -211,26 +185,18 @@ public class LeaveManagementController extends DateSelectController {
     }
 
     public void fillTable(){
-        ObservableList<LeaveRequest> currentLeaveRequests = FXCollections.observableArrayList();
+        List<LeaveRequest> currentLeaveRequests = FXCollections.observableArrayList();
         YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
         LocalDate endOfMonth = yearMonthObject.atEndOfMonth();
         LocalDate startOfMonth = yearMonthObject.atDay(1);
-        String sql;
         try {
-            sql = "SELECT * FROM leaveRequests JOIN accounts a on a.username = leaverequests.employeeID where storeID = ? AND leaveStartDate <= ? AND leaveEndDate >= ?";
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-            preparedStatement.setDate(2, Date.valueOf(endOfMonth));
-            preparedStatement.setDate(3, Date.valueOf(startOfMonth));
-            resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                currentLeaveRequests.add(new LeaveRequest(resultSet));
-            }
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            currentLeaveRequests = leaveService.getLeaveRequests(main.getCurrentStore().getStoreID(), startOfMonth, endOfMonth);
+        } catch (SQLException ex) {
+            dialogPane.showError("Error", "An error occurred while trying to fetch leave requests",ex.getMessage());
+            ex.printStackTrace();
         }
         leaveRequestFilterView.getItems().setAll(currentLeaveRequests);
-        addDoubleClickfunction();
+        addDoubleClickFunction();
     }
 
     public void openPopover(){
@@ -245,7 +211,7 @@ public class LeaveManagementController extends DateSelectController {
         endDate.setValue(null);
         endTimeField.setText("");
         reasonField.setText("");
-        saveButton.setOnAction(actionEvent -> addLeaveRequest());
+        saveButton.setOnAction(_ -> addLeaveRequest());
     }
 
     public void openPopover(LeaveRequest leaveRequest){
@@ -253,15 +219,11 @@ public class LeaveManagementController extends DateSelectController {
         deleteButton.setVisible(true);
         contentDarken.setVisible(true);
         AnimationUtils.slideIn(editLeavePopover,0);
-        String sql = "SELECT * FROM accounts WHERE username = ?";
         try {
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setString(1, leaveRequest.getEmployeeID());
-            resultSet = preparedStatement.executeQuery();
-            if(resultSet.next())
-                employeeSelect.setValue(new User(resultSet));
+            employeeSelect.setValue(userService.getUserByUsername(leaveRequest.getEmployeeID()));
         } catch (SQLException ex) {
-            System.err.println(ex.getMessage());
+            dialogPane.showError("Error", "An error occurred while trying to find this employee",ex.getMessage());
+            ex.printStackTrace();
         }
         leaveTypeCombo.setValue(leaveRequest.getLeaveType());
         startDate.setValue(leaveRequest.getFromDate().toLocalDate());
@@ -269,8 +231,8 @@ public class LeaveManagementController extends DateSelectController {
         endDate.setValue(leaveRequest.getToDate().toLocalDate());
         endTimeField.setText(leaveRequest.getToDate().format(DateTimeFormatter.ofPattern("h:mm a", Locale.US)));
         reasonField.setText(leaveRequest.getLeaveReason());
-        saveButton.setOnAction(actionEvent -> editLeaveRequest(leaveRequest));
-        deleteButton.setOnAction(actionEvent -> deleteLeaveRequest(leaveRequest));
+        saveButton.setOnAction(_ -> editLeaveRequest(leaveRequest));
+        deleteButton.setOnAction(_ -> deleteLeaveRequest(leaveRequest));
     }
 
     public void closePopover(){
@@ -300,29 +262,24 @@ public class LeaveManagementController extends DateSelectController {
                 startDate.requestFocus();
             } else {
                 startDateValidationLabel.setVisible(false);
-                User employee = (User) employeeSelect.getValue();
-                String leaveType = leaveTypeCombo.getValue();
-                LocalDate fromDate = startDate.getValue();
-                LocalDate toDate = endDate.getValue();
                 LocalTime startTime = LocalTime.parse(startTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
                 LocalTime endTime = LocalTime.parse(endTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
-                String reason = reasonField.getText();
-                String sql = "INSERT INTO leaverequests (employeeID, storeID, leaveType, leaveStartDate, leaveEndDate, reason) VALUES (?,?,?,?,?,?)";
                 try {
-                    preparedStatement = con.prepareStatement(sql);
-                    preparedStatement.setString(1, employee.getUsername());
-                    preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
-                    preparedStatement.setString(3, leaveType);
-                    preparedStatement.setTimestamp(4, Timestamp.valueOf(fromDate.atTime(startTime)));
-                    preparedStatement.setTimestamp(5, Timestamp.valueOf(toDate.atTime(endTime)));
-                    preparedStatement.setString(6, reason);
-                    preparedStatement.executeUpdate();
+                    LeaveRequest leaveRequest = new LeaveRequest();
+                    leaveRequest.setEmployeeID(employeeSelect.getValue().getUsername());
+                    leaveRequest.setStoreID(main.getCurrentStore().getStoreID());
+                    leaveRequest.setLeaveType(leaveTypeCombo.getValue());
+                    leaveRequest.setFromDate(startDate.getValue().atTime(startTime));
+                    leaveRequest.setToDate(endDate.getValue().atTime(endTime));
+                    leaveRequest.setLeaveReason(reasonField.getText());
+                    leaveService.addLeaveRequest(leaveRequest);
                 } catch (SQLException ex) {
-                    System.err.println(ex.getMessage());
+                    dialogPane.showError("Error", "An error occurred while trying to add the leave request",ex.getMessage());
+                    ex.printStackTrace();
                 }
                 closePopover();
                 fillTable();
-                dialogPane.showInformation("Success", "Leave request succesfully added");
+                dialogPane.showInformation("Success", "Leave request successfully added");
             }
         }
     }
@@ -343,29 +300,22 @@ public class LeaveManagementController extends DateSelectController {
                 startDate.requestFocus();
             } else {
                 startDateValidationLabel.setVisible(false);
-                User employee = (User) employeeSelect.getValue();
-                String leaveType = leaveTypeCombo.getValue();
-                LocalDate fromDate = startDate.getValue();
-                LocalDate toDate = endDate.getValue();
                 LocalTime startTime = LocalTime.parse(startTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
                 LocalTime endTime = LocalTime.parse(endTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
-                String reason = reasonField.getText();
-                String sql = "UPDATE leaverequests SET employeeID = ?, leaveType = ?, leaveStartDate = ?, leaveEndDate = ?, reason = ? WHERE leaveID = ?";
                 try {
-                    preparedStatement = con.prepareStatement(sql);
-                    preparedStatement.setString(1, employee.getUsername());
-                    preparedStatement.setString(2, leaveType);
-                    preparedStatement.setTimestamp(3, Timestamp.valueOf(fromDate.atTime(startTime)));
-                    preparedStatement.setTimestamp(4, Timestamp.valueOf(toDate.atTime(endTime)));
-                    preparedStatement.setString(5, reason);
-                    preparedStatement.setInt(6, leaveRequest.getLeaveID());
-                    preparedStatement.executeUpdate();
+                    leaveRequest.setEmployeeID(employeeSelect.getValue().getUsername());
+                    leaveRequest.setLeaveType(leaveTypeCombo.getValue());
+                    leaveRequest.setFromDate(startDate.getValue().atTime(startTime));
+                    leaveRequest.setToDate(endDate.getValue().atTime(endTime));
+                    leaveRequest.setLeaveReason(reasonField.getText());
+                    leaveService.updateLeaveRequest(leaveRequest);
                 } catch (SQLException ex) {
-                    System.err.println(ex.getMessage());
+                    dialogPane.showError("Error", "An error occurred while trying to update the leave request",ex.getMessage());
+                    ex.printStackTrace();
                 }
                 closePopover();
                 fillTable();
-                dialogPane.showInformation("Success", "Leave request succesfully edited");
+                dialogPane.showInformation("Success", "Leave request successfully edited");
             }
         }
     }
@@ -375,17 +325,15 @@ public class LeaveManagementController extends DateSelectController {
                 "This action will permanently delete this Leave Request from all systems,\n" +
                         "Are you sure you still want to delete this Leave Request?").thenAccept(buttonType -> {
             if (buttonType.equals(ButtonType.OK)) {
-                String sql = "DELETE FROM leaverequests WHERE leaveID = ?";
                 try {
-                    preparedStatement = con.prepareStatement(sql);
-                    preparedStatement.setInt(1, leaveRequest.getLeaveID());
-                    preparedStatement.executeUpdate();
+                    leaveService.deleteLeaveRequest(leaveRequest.getLeaveID());
                 } catch (SQLException ex) {
-                    System.err.println(ex.getMessage());
+                    dialogPane.showError("Error", "An error occurred while trying to delete the leave request",ex.getMessage());
+                    ex.printStackTrace();
                 }
                 closePopover();
                 fillTable();
-                dialogPane.showInformation("Success","Leave request succesfully deleted");
+                dialogPane.showInformation("Success","Leave request successfully deleted");
             }
         });
     }
@@ -399,12 +347,12 @@ public class LeaveManagementController extends DateSelectController {
             VBox timePickerContent = null;
             try {
                 timePickerContent = loader.load();
-            } catch (IOException e) {
-                e.printStackTrace();
+            } catch (IOException ex) {
+                dialogPane.showError("Error", "An error occurred while trying to load the time picker",ex.getMessage());
+                ex.printStackTrace();
             }
             TimePickerContentController rdc = loader.getController();
             rdc.setMain(main);
-            rdc.setConnection(con);
             rdc.fill();
             rdc.setCurrentTime(time);
 
@@ -420,7 +368,7 @@ public class LeaveManagementController extends DateSelectController {
             timePickerMenu.setArrowIndent(0);
             timePickerMenu.show(parent);
             currentTimePopover =timePickerMenu;
-            timePickerMenu.setOnHidden(event -> {
+            timePickerMenu.setOnHidden(_ -> {
                 rdc.updateTime();
                 parent.setText(rdc.getTimeString());
             });
@@ -460,8 +408,9 @@ public class LeaveManagementController extends DateSelectController {
             VBox monthSelectorMenuContent = null;
             try {
                 monthSelectorMenuContent = loader.load();
-            } catch (IOException e) {
-                e.printStackTrace();
+            } catch (IOException ex) {
+                dialogPane.showError("Error", "An error occurred while trying to load the month selector",ex.getMessage());
+                ex.printStackTrace();
             }
             MonthYearSelectorContentController rdc = loader.getController();
             rdc.setMain(main);

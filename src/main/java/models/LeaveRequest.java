@@ -2,8 +2,6 @@ package models;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.text.NumberFormat;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -41,6 +39,9 @@ public class LeaveRequest {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+	}
+
+	public LeaveRequest() {
 	}
 
 	public String getEmployeeName(){
