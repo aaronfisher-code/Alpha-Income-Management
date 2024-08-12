@@ -20,6 +20,13 @@ public class Store {
 		}
 	}
 
+	public Store() {
+	}
+
+	public Store(String storeName){
+		this.storeName = storeName;
+	}
+
 	public int getStoreID() {
 		return storeID;
 	}

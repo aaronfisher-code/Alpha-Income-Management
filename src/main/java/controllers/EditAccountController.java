@@ -20,19 +20,19 @@ import models.Permission;
 import models.Store;
 import models.User;
 import models.Employment;
+import services.PermissionService;
+import services.StoreService;
+import services.UserService;
 import utils.AnimationUtils;
 import utils.ValidatorUtils;
 
-import java.io.IOException;
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 
 public class EditAccountController extends Controller{
-
-	@FXML
-	private StackPane backgroundPane;
 
 	@FXML
 	private BorderPane usersButton,storesButton;
@@ -74,40 +74,35 @@ public class EditAccountController extends Controller{
 	private MFXCheckListView<Permission> permissionsSelector;
 
 	@FXML
-	private MFXButton saveStoreButton,passwordResetButton,staffPermissionsButton,saveUserButton;
+	private MFXButton saveStoreButton,passwordResetButton,saveUserButton;
 
-	private MFXTableView<User> accountsTable = new MFXTableView<User>();
+	private MFXTableView<User> accountsTable = new MFXTableView<>();
 	private MFXTableColumn<User> usernameCol;
 	private MFXTableColumn<User> firstNameCol;
 	private MFXTableColumn<User> lastNameCol;
 	private MFXTableColumn<User> roleCol;
 	private FilterView<User> userFilterView = new FilterView<>();
 
-	private MFXTableView<Store> storesTable = new MFXTableView<Store>();
+	private MFXTableView<Store> storesTable = new MFXTableView<>();
 	private MFXTableColumn<Store> storeNameCol;
 	private FilterView<Store> storeFilterView = new FilterView<>();
-	
-	
-    private Connection con = null;
-    PreparedStatement preparedStatement = null;
-    ResultSet resultSet = null;
-    private Main main;
-    private User selectedUser;
 
-	private ObservableList<User> allUsers = FXCollections.observableArrayList();
-	private ObservableList<Store> allStores = FXCollections.observableArrayList();
-	private ObservableList<Permission> allPermissions = FXCollections.observableArrayList();
+    private Main main;
+
+	private UserService userService;
+	private StoreService storeService;
+	private PermissionService permissionService;
 	
 	 @FXML
-	private void initialize() throws IOException {}
+	private void initialize() {
+		 userService = new UserService();
+		 storeService = new StoreService();
+		 permissionService = new PermissionService();
+	 }
 
 	@Override
 	public void setMain(Main main) {
 		this.main = main;
-	}
-	
-	public void setConnection(Connection c) {
-		this.con = c;
 	}
 
 	@Override
@@ -119,8 +114,8 @@ public class EditAccountController extends Controller{
 		}else{
 			addList.setVisible(false);
 		}
-		 //Change inactive user text depending on if its selected or not
-		inactiveUserToggle.selectedProperty().addListener(actionEvent -> {
+		 //Change inactive user text depending on if it's selected or not
+		inactiveUserToggle.selectedProperty().addListener(_ -> {
 			if (inactiveUserToggle.isSelected()) {
 				inactiveUserToggle.setText("Inactive");
 			} else {
@@ -129,23 +124,22 @@ public class EditAccountController extends Controller{
 		});
 		formatTabSelect(usersButton);
 		formatTabDeselect(storesButton);
-		addButton.setOnAction(e -> openUserPopover());
-
+		addButton.setOnAction(_ -> openUserPopover());
 
 		userFilterView = new FilterView<>();
 		userFilterView.setTitle("Current Users");
 		userFilterView.setSubtitle("Double click a user to edit");
 		userFilterView.setTextFilterProvider(text -> user -> user.getFirst_name().toLowerCase().contains(text) || user.getLast_name().toLowerCase().contains(text) || user.getRole().toLowerCase().contains(text));
-		allUsers = userFilterView.getFilteredItems();
+		ObservableList<User> allUsers = userFilterView.getFilteredItems();
 		usernameCol = new MFXTableColumn<>("STAFF ID",false, Comparator.comparing(User::getUsername));
 		firstNameCol = new MFXTableColumn<>("FIRST NAME",false, Comparator.comparing(User::getFirst_name));
 		lastNameCol = new MFXTableColumn<>("LAST NAME",false, Comparator.comparing(User::getLast_name));
 		roleCol = new MFXTableColumn<>("ROLE",false, Comparator.comparing(User::getRole));
-		usernameCol.setRowCellFactory(user -> new MFXTableRowCell<>(User::getUsername));
-		firstNameCol.setRowCellFactory(user -> new MFXTableRowCell<>(User::getFirst_name));
-		lastNameCol.setRowCellFactory(user -> new MFXTableRowCell<>(User::getLast_name));
-		roleCol.setRowCellFactory(user -> new MFXTableRowCell<>(User::getRole));
-		accountsTable = new MFXTableView<User>();
+		usernameCol.setRowCellFactory(_ -> new MFXTableRowCell<>(User::getUsername));
+		firstNameCol.setRowCellFactory(_ -> new MFXTableRowCell<>(User::getFirst_name));
+		lastNameCol.setRowCellFactory(_ -> new MFXTableRowCell<>(User::getLast_name));
+		roleCol.setRowCellFactory(_ -> new MFXTableRowCell<>(User::getRole));
+		accountsTable = new MFXTableView<>();
 		accountsTable.getTableColumns().addAll(usernameCol,firstNameCol,lastNameCol,roleCol);
 		accountsTable.getFilters().addAll(
 				new StringFilter<>("Username",User::getUsername),
@@ -154,14 +148,9 @@ public class EditAccountController extends Controller{
 				new StringFilter<>("Role",User::getRole)
 		);
 
-		String sql = null;
-		sql = "SELECT * FROM accounts";
 		try {
-			preparedStatement = con.prepareStatement(sql);
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				userFilterView.getItems().add(new User(resultSet));
-			}
+			allUsers = (ObservableList<User>) userService.getAllUsers();
+			accountsTable.setItems(allUsers);
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
 		}
@@ -175,8 +164,8 @@ public class EditAccountController extends Controller{
 		controlBox.getChildren().addAll(userFilterView,accountsTable);
 
 		VBox.setVgrow(accountsTable, Priority.ALWAYS);
-		accountsTable.virtualFlowInitializedProperty().addListener((observable, oldValue, newValue) -> {addUserDoubleClickfunction();});
-		userFilterView.filteredItemsProperty().addListener((observable, oldValue, newValue) -> {addUserDoubleClickfunction();});
+		accountsTable.virtualFlowInitializedProperty().addListener((_, _, _) -> {addUserDoubleClickfunction();});
+		userFilterView.filteredItemsProperty().addListener((_, _, _) -> {addUserDoubleClickfunction();});
 		accountsTable.setItems(allUsers);
 
 		ValidatorUtils.setupRegexValidation(usernameField,usernameValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveUserButton);
@@ -213,29 +202,24 @@ public class EditAccountController extends Controller{
 		}
 		formatTabSelect(storesButton);
 		formatTabDeselect(usersButton);
-		addButton.setOnAction(e -> openStorePopover());
+		addButton.setOnAction(_ -> openStorePopover());
 
 		storeFilterView = new FilterView<>();
 		storeFilterView.setTitle("Current Stores");
 		storeFilterView.setSubtitle("Double click a store to edit");
 		storeFilterView.setTextFilterProvider(text -> store -> store.getStoreName().toLowerCase().contains(text));
-		allStores = storeFilterView.getFilteredItems();
+		ObservableList<Store> allStores = storeFilterView.getFilteredItems();
 		storeNameCol = new MFXTableColumn<>("STORE NAME",false, Comparator.comparing(Store::getStoreName));
-		storeNameCol.setRowCellFactory(store -> new MFXTableRowCell<>(Store::getStoreName));
-		storesTable = new MFXTableView<Store>();
+		storeNameCol.setRowCellFactory(_ -> new MFXTableRowCell<>(Store::getStoreName));
+		storesTable = new MFXTableView<>();
 		storesTable.getTableColumns().addAll(storeNameCol);
 		storesTable.getFilters().addAll(
 				new StringFilter<>("Store Name",Store::getStoreName)
 		);
 
-		String sql = null;
-		sql = "SELECT * FROM stores";
 		try {
-			preparedStatement = con.prepareStatement(sql);
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				storeFilterView.getItems().add(new Store(resultSet));
-			}
+			allStores = (ObservableList<Store>) storeService.getAllStores();
+			storesTable.setItems(allStores);
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
 		}
@@ -249,8 +233,8 @@ public class EditAccountController extends Controller{
 		controlBox.getChildren().addAll(storeFilterView,storesTable);
 
 		VBox.setVgrow(storesTable, Priority.ALWAYS);
-		storesTable.virtualFlowInitializedProperty().addListener((observable, oldValue, newValue) -> {addStoreDoubleClickFunction();});
-		storeFilterView.filteredItemsProperty().addListener((observable, oldValue, newValue) -> {addStoreDoubleClickFunction();});
+		storesTable.virtualFlowInitializedProperty().addListener((_, _, _) -> {addStoreDoubleClickFunction();});
+		storeFilterView.filteredItemsProperty().addListener((_, _, _) -> {addStoreDoubleClickFunction();});
 		storesTable.setItems(allStores);
 
 		ValidatorUtils.setupRegexValidation(storeNameField,storeNameValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveStoreButton);
@@ -294,46 +278,33 @@ public class EditAccountController extends Controller{
 
 		storeSelector.getSelectionModel().clearSelection();
 		//Refresh Store list for store selector
-		allStores = FXCollections.observableArrayList();
-		String sql = null;
-		sql = "SELECT * FROM stores";
 		try {
-			preparedStatement = con.prepareStatement(sql);
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				allStores.add(new Store(resultSet));
-			}
+			List<Store> allStores = storeService.getAllStores();
+			storeSelector.setItems((ObservableList<Store>) allStores);
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
 		}
-		storeSelector.setItems(allStores);
 
 		permissionsSelector.getSelectionModel().clearSelection();
 		//Refresh permissions list for permissions selector
-		allPermissions = FXCollections.observableArrayList();
-		sql = "SELECT * FROM permissions";
 		try {
-			preparedStatement = con.prepareStatement(sql);
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				allPermissions.add(new Permission(resultSet));
-			}
+			List<Permission> allPermissions = permissionService.getAllPermissions();
+			permissionsSelector.setItems((ObservableList<Permission>) allPermissions);
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
 		}
-		permissionsSelector.setItems(allPermissions);
 
 		//Add live updates to person card preview
-		firstNameField.textProperty().addListener((observable, oldValue, newValue) -> {
+		firstNameField.textProperty().addListener((_, _, newValue) -> {
 					employeeName.setText(newValue + "." + (lastNameField.getText().isEmpty()?"":lastNameField.getText(0,1)));
 					employeeIcon.setText(newValue.isEmpty()?"":newValue.substring(0,1));
 				}
 		);
-		lastNameField.textProperty().addListener((observable, oldValue, newValue) ->
+		lastNameField.textProperty().addListener((_, _, newValue) ->
 				employeeName.setText(firstNameField.getText() + "." + (newValue.isEmpty()?"":newValue.substring(0,1))));
-		roleField.textProperty().addListener((observable, oldValue, newValue) ->
+		roleField.textProperty().addListener((_, _, newValue) ->
 				employeeRole.setText(newValue));
-		profileBackgroundPicker.valueProperty().addListener((observable, oldValue, newValue) -> {
+		profileBackgroundPicker.valueProperty().addListener((_, _, newValue) -> {
 					int r = (int)Math.round(newValue.getRed() * 255.0);
 					int g = (int)Math.round(newValue.getGreen() * 255.0);
 					int b = (int)Math.round(newValue.getBlue() * 255.0);
@@ -345,7 +316,7 @@ public class EditAccountController extends Controller{
 					employeeIcon.setStyle("-fx-background-color: " + profileBG + ";" + "-fx-text-fill: " + profileText + ";");
 				}
 		);
-		profileTextPicker.valueProperty().addListener((observable, oldValue, newValue) -> {
+		profileTextPicker.valueProperty().addListener((_, _, newValue) -> {
 					int r = (int)Math.round(newValue.getRed() * 255.0);
 					int g = (int)Math.round(newValue.getGreen() * 255.0);
 					int b = (int)Math.round(newValue.getBlue() * 255.0);
@@ -358,10 +329,9 @@ public class EditAccountController extends Controller{
 				}
 		);
 
-
 		contentDarken.setVisible(true);
-		contentDarken.setOnMouseClicked(event -> closeUserPopover());
-		saveUserButton.setOnAction(event -> addUser());
+		contentDarken.setOnMouseClicked(_ -> closeUserPopover());
+		saveUserButton.setOnAction(_ -> addUser());
 		AnimationUtils.slideIn(editUserPopover,0);
 	}
 
@@ -379,51 +349,31 @@ public class EditAccountController extends Controller{
 		profileBackgroundPicker.setValue(Color.valueOf(user.getBgColour()));
 		passwordResetButton.setVisible(true);
 
-		String sql = "SELECT username, password FROM accounts where username = ?";
 		try {
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setString(1, user.getUsername());
-			resultSet = preparedStatement.executeQuery();
-			while(resultSet.next()){
-				if(resultSet.getString("password")==null){
-					passwordResetButton.setDisable(true);
-					passwordResetButton.setText("Password reset requested");
-				}else{
-					passwordResetButton.setDisable(false);
-					passwordResetButton.setText("Request Password Reset");
-					passwordResetButton.setOnAction(actionEvent -> resetPassword(user));
-				}
+			if (!userService.isPasswordResetRequested(user.getUsername())) {
+				passwordResetButton.setDisable(true);
+				passwordResetButton.setText("Password reset requested");
+			} else {
+				passwordResetButton.setDisable(false);
+				passwordResetButton.setText("Request Password Reset");
+				passwordResetButton.setOnAction(_ -> resetPassword(user));
 			}
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
 
-		employeeName.setText(user.getFirst_name() + "." + user.getLast_name().substring(0,1));
+		employeeName.setText(user.getFirst_name() + "." + user.getLast_name().charAt(0));
 		employeeRole.setText(user.getRole());
 		employeeIcon.setText(user.getFirst_name().substring(0,1));
 		employeeIcon.setStyle("-fx-background-color: " + user.getBgColour()+ "; -fx-text-fill: " + user.getTextColour() + ";");
 
 		storeSelector.getSelectionModel().clearSelection();
 		//Refresh Store list for store selector
-		allStores = FXCollections.observableArrayList();
-		ObservableList<Employment> staffStores = FXCollections.observableArrayList();
 		try {
-			sql = "SELECT * FROM stores";
-			preparedStatement = con.prepareStatement(sql);
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				allStores.add(new Store(resultSet));
-			}
-			storeSelector.setItems(allStores);
+			List<Store> allStores = storeService.getAllStores();
+			storeSelector.setItems((ObservableList<Store>) allStores);
 
-			sql = "SELECT * FROM employments WHERE username = ?";
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setString(1, user.getUsername());
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				staffStores.add(new Employment(resultSet));
-			}
-
+			List<Employment> staffStores = userService.getEmploymentsForUser(user.getUsername());
 			for(Store s:allStores){
 				for(Employment e:staffStores){
 					if(s.getStoreID()==e.getStoreID()){
@@ -431,49 +381,35 @@ public class EditAccountController extends Controller{
 					}
 				}
 			}
-
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
 		}
 
 		permissionsSelector.getSelectionModel().clearSelection();
 		//Refresh permissions list for permissions selector
-		allPermissions = FXCollections.observableArrayList();
 		try {
-			sql = "SELECT * FROM permissions";
-			preparedStatement = con.prepareStatement(sql);
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				allPermissions.add(new Permission(resultSet));
-			}
-			permissionsSelector.setItems(allPermissions);
+			List<Permission> allPermissions = permissionService.getAllPermissions();
+			permissionsSelector.setItems((ObservableList<Permission>) allPermissions);
 
-			sql = "SELECT * FROM userpermissions WHERE userID = ?";
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setString(1, user.getUsername());
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				for(Permission p:allPermissions){
-					if(p.getPermissionID()==resultSet.getInt("permissionID")){
-						permissionsSelector.getSelectionModel().selectItem(p);
-					}
-				}
+			List<Permission> userPermissions = userService.getUserPermissions(user.getUsername());
+			for(Permission p:userPermissions){
+					permissionsSelector.getSelectionModel().selectItem(p);
 			}
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
 		}
 
 		//Add live updates to person card preview
-		firstNameField.textProperty().addListener((observable, oldValue, newValue) -> {
+		firstNameField.textProperty().addListener((_, _, newValue) -> {
 					employeeName.setText(newValue + "." + (lastNameField.getText().isEmpty()?"":lastNameField.getText(0,1)));
 					employeeIcon.setText(newValue.isEmpty()?"":newValue.substring(0,1));
 				}
 		);
-		lastNameField.textProperty().addListener((observable, oldValue, newValue) ->
+		lastNameField.textProperty().addListener((_, _, newValue) ->
 				employeeName.setText(firstNameField.getText() + "." + (newValue.isEmpty()?"":newValue.substring(0,1))));
-		roleField.textProperty().addListener((observable, oldValue, newValue) ->
+		roleField.textProperty().addListener((_, _, newValue) ->
 				employeeRole.setText(newValue));
-		profileBackgroundPicker.valueProperty().addListener((observable, oldValue, newValue) -> {
+		profileBackgroundPicker.valueProperty().addListener((_, _, newValue) -> {
 					int r = (int)Math.round(newValue.getRed() * 255.0);
 					int g = (int)Math.round(newValue.getGreen() * 255.0);
 					int b = (int)Math.round(newValue.getBlue() * 255.0);
@@ -485,7 +421,7 @@ public class EditAccountController extends Controller{
 					employeeIcon.setStyle("-fx-background-color: " + profileBG + ";" + "-fx-text-fill: " + profileText + ";");
 				}
 		);
-		profileTextPicker.valueProperty().addListener((observable, oldValue, newValue) -> {
+		profileTextPicker.valueProperty().addListener((_, _, newValue) -> {
 					int r = (int)Math.round(newValue.getRed() * 255.0);
 					int g = (int)Math.round(newValue.getGreen() * 255.0);
 					int b = (int)Math.round(newValue.getBlue() * 255.0);
@@ -497,12 +433,10 @@ public class EditAccountController extends Controller{
 					employeeIcon.setStyle("-fx-background-color: " + profileBG + ";" + "-fx-text-fill: " + profileText + ";");
 				}
 		);
-
-
 		contentDarken.setVisible(true);
-		contentDarken.setOnMouseClicked(event -> closeUserPopover());
-		saveUserButton.setOnAction(event -> editUser(user));
-		deleteUserButton.setOnAction(event -> deleteUser(user));
+		contentDarken.setOnMouseClicked(_ -> closeUserPopover());
+		saveUserButton.setOnAction(_ -> editUser(user));
+		deleteUserButton.setOnAction(_ -> deleteUser(user));
 		deleteUserButton.setVisible(true);
 		AnimationUtils.slideIn(editUserPopover,0);
 	}
@@ -511,32 +445,31 @@ public class EditAccountController extends Controller{
 		storeNameField.clear();
 		editStorePopoverTitle.setText("Add new store");
 		contentDarken.setVisible(true);
-		contentDarken.setOnMouseClicked(event -> closeStorePopover());
-		saveStoreButton.setOnAction(event -> addStore());
+		contentDarken.setOnMouseClicked(_ -> closeStorePopover());
+		saveStoreButton.setOnAction(_ -> addStore());
 		deleteStoreButton.setVisible(false);
 		AnimationUtils.slideIn(editStorePopover,0);
 	}
 
 	public void openPermissionsPopover(){
 		contentDarken.setVisible(true);
-		contentDarken.setOnMouseClicked(event -> closePermissionsPopover());
+		contentDarken.setOnMouseClicked(_ -> closePermissionsPopover());
 		AnimationUtils.slideIn(editPermissionsPopover,0);
 	}
 
 	public void closePermissionsPopover(){
 		AnimationUtils.slideIn(editPermissionsPopover,425);
-		contentDarken.setOnMouseClicked(event -> closeUserPopover());
+		contentDarken.setOnMouseClicked(_ -> closeUserPopover());
 		storeNameValidationLabel.setVisible(false);
 	}
-
 
 	public void openStorePopover(Store store){
 		editStorePopoverTitle.setText("Edit store");
 	 	storeNameField.setText(store.getStoreName());
 		contentDarken.setVisible(true);
-		contentDarken.setOnMouseClicked(event -> closeStorePopover());
-		saveStoreButton.setOnAction(event -> editStore(store));
-		deleteStoreButton.setOnAction(event -> deleteStore(store));
+		contentDarken.setOnMouseClicked(_ -> closeStorePopover());
+		saveStoreButton.setOnAction(_ -> editStore(store));
+		deleteStoreButton.setOnAction(_ -> deleteStore(store));
 		deleteStoreButton.setVisible(true);
 		AnimationUtils.slideIn(editStorePopover,0);
 	}
@@ -560,18 +493,16 @@ public class EditAccountController extends Controller{
 		if(!storeNameField.isValid()) {
 			storeNameField.requestFocus();
 		}else{
-			String sql = "INSERT INTO stores(storeName) VALUES(?)";
 			try {
-				preparedStatement = con.prepareStatement(sql);
-				preparedStatement.setString(1, name);
-				preparedStatement.executeUpdate();
+				Store store = new Store(name);
+				storeService.addStore(store);
 			} catch (SQLException ex) {
 				System.err.println(ex.getMessage());
 			}
-			Dialog<String> dialog = new Dialog<String>();
+			Dialog<String> dialog = new Dialog<>();
 			dialog.setTitle("Success");
 			ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-			dialog.setContentText("Store was succesfully added to database");
+			dialog.setContentText("Store was successfully added to database");
 			dialog.getDialogPane().getButtonTypes().add(type);
 			dialog.showAndWait();
 			storesView();
@@ -615,27 +546,19 @@ public class EditAccountController extends Controller{
 		}else{
 			String sql = "INSERT INTO accounts(username,first_name,last_name,role,profileBG,profileText) VALUES(?,?,?,?,?,?)";
 			try {
-				preparedStatement = con.prepareStatement(sql);
-				preparedStatement.setString(1, username);
-				preparedStatement.setString(2, fname);
-				preparedStatement.setString(3, lname);
-				preparedStatement.setString(4, role);
-				preparedStatement.setString(5, profileBG);
-				preparedStatement.setString(6, profileText);
-				preparedStatement.executeUpdate();
+				User newUser = new User();
+				newUser.setUsername(username);
+				newUser.setFirst_name(fname);
+				newUser.setLast_name(lname);
+				newUser.setRole(role);
+				newUser.setBgColour(profileBG);
+				newUser.setTextColour(profileText);
+				userService.addUser(newUser);
 				for (Store s : storeSelector.getSelectionModel().getSelection().values()) {
-					sql = "INSERT INTO employments(username,storeID) VALUES(?,?)";
-					preparedStatement = con.prepareStatement(sql);
-					preparedStatement.setString(1, username);
-					preparedStatement.setInt(2, s.getStoreID());
-					preparedStatement.executeUpdate();
+					userService.addEmployment(newUser, s);
 				}
 				for (Permission p : permissionsSelector.getSelectionModel().getSelection().values()) {
-					sql = "INSERT INTO userpermissions(userID,permissionID) VALUES(?,?)";
-					preparedStatement = con.prepareStatement(sql);
-					preparedStatement.setString(1, username);
-					preparedStatement.setInt(2, p.getPermissionID());
-					preparedStatement.executeUpdate();
+					userService.addUserPermission(newUser, p);
 				}
 				Dialog<String> dialog = new Dialog<>();
 				dialog.setTitle("Success");

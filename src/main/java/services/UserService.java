@@ -27,6 +27,19 @@ public class UserService {
         return null;
     }
 
+    public List<User> getAllUsers() throws SQLException {
+        List<User> users = new ArrayList<>();
+        String sql = "SELECT * FROM accounts";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(sql)) {
+            while (resultSet.next()) {
+                users.add(new User(resultSet));
+            }
+        }
+        return users;
+    }
+
     public List<User> getAllUserEmployments(int storeID) throws SQLException {
         List<User> users = new ArrayList<>();
         String sql = "SELECT * FROM accounts JOIN employments e on accounts.username = e.username WHERE storeID = ? AND inactiveDate IS NULL ";
@@ -42,6 +55,21 @@ public class UserService {
         return users;
     }
 
+    public List<Employment> getEmploymentsForUser(String username) throws SQLException {
+        List<Employment> employments = new ArrayList<>();
+        String sql = "SELECT * FROM employments WHERE username = ?";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, username);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    employments.add(new Employment(resultSet));
+                }
+            }
+        }
+        return employments;
+    }
+
     public boolean verifyPassword(User user, String password) {
         return BCrypt.checkpw(password, user.getPassword());
     }
@@ -55,6 +83,20 @@ public class UserService {
             preparedStatement.setString(2, username);
             preparedStatement.executeUpdate();
         }
+    }
+
+    public boolean isPasswordResetRequested(String username) throws SQLException {
+        String sql = "SELECT CASE WHEN password IS NOT NULL THEN 1 ELSE 0 END AS password_exists FROM accounts WHERE username = ?";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, username);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if(resultSet.next()) {
+                    return resultSet.getInt("password_exists") == 0;
+                }
+            }
+        }
+        return false;
     }
 
     public List<Permission> getUserPermissions(String username) throws SQLException {
@@ -86,5 +128,41 @@ public class UserService {
             }
         }
         return stores;
+    }
+
+    public void addUser(User user) throws SQLException {
+        String sql = "INSERT INTO accounts(username,first_name,last_name,role,profileBG,profileText) VALUES(?,?,?,?,?,?)";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, user.getUsername());
+            preparedStatement.setString(2, BCrypt.hashpw(user.getPassword(), BCrypt.gensalt()));
+            preparedStatement.setString(3, user.getFirst_name());
+            preparedStatement.setString(4, user.getLast_name());
+            preparedStatement.setString(5, user.getRole());
+            preparedStatement.setString(6, user.getBgColour());
+            preparedStatement.setString(7, user.getTextColour());
+            preparedStatement.executeUpdate();
+        }
+    }
+
+    public void addEmployment(User user, Store store) throws SQLException {
+        String sql = "INSERT INTO employments(username,storeID) VALUES(?,?)";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, user.getUsername());
+            preparedStatement.setInt(2, store.getStoreID());
+            preparedStatement.executeUpdate();
+            preparedStatement.executeUpdate();
+        }
+    }
+
+    public void addUserPermission(User user, Permission permission) throws SQLException {
+        String sql = "INSERT INTO userpermissions(userID,permissionID) VALUES(?,?)";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, user.getUsername());
+            preparedStatement.setInt(2, permission.getPermissionID());
+            preparedStatement.executeUpdate();
+        }
     }
 }
