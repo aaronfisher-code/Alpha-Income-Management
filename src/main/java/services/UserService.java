@@ -145,23 +145,40 @@ public class UserService {
         }
     }
 
-    public void addEmployment(User user, Store store) throws SQLException {
-        String sql = "INSERT INTO employments(username,storeID) VALUES(?,?)";
+    public void updateUser(User user) throws SQLException {
+        String sql = "UPDATE accounts SET first_name = ?,last_name = ?,role = ?, profileBG = ?, profileText = ?,inactiveDate = ? WHERE username = ?";
         try (Connection connection = DatabaseConnectionManager.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, user.getUsername());
-            preparedStatement.setInt(2, store.getStoreID());
-            preparedStatement.executeUpdate();
+            preparedStatement.setString(1, user.getFirst_name());
+            preparedStatement.setString(2, user.getLast_name());
+            preparedStatement.setString(3, user.getRole());
+            preparedStatement.setString(4, user.getBgColour());
+            preparedStatement.setString(5, user.getTextColour());
+            if(user.getInactiveDate()!=null)
+                preparedStatement.setDate(6, Date.valueOf(user.getInactiveDate()));
+            else
+                preparedStatement.setNull(6, Types.DATE);
+            preparedStatement.setString(7, user.getUsername());
             preparedStatement.executeUpdate();
         }
     }
 
-    public void addUserPermission(User user, Permission permission) throws SQLException {
-        String sql = "INSERT INTO userpermissions(userID,permissionID) VALUES(?,?)";
+    public void deleteUser(User user) throws SQLException {
+        String sql = "DELETE FROM accounts WHERE username = ?";
         try (Connection connection = DatabaseConnectionManager.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setString(1, user.getUsername());
-            preparedStatement.setInt(2, permission.getPermissionID());
+            preparedStatement.executeUpdate();
+        }
+    }
+
+    public void resetUserPassword(User user) throws SQLException{
+        String sql = "UPDATE accounts SET password = ? WHERE username = ?";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            String hashedPassword = BCrypt.hashpw("password", BCrypt.gensalt());
+            preparedStatement.setString(1, hashedPassword);
+            preparedStatement.setString(2, user.getUsername());
             preparedStatement.executeUpdate();
         }
     }

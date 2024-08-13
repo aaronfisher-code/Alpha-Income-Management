@@ -32,4 +32,23 @@ public class StoreService {
             preparedStatement.executeUpdate();
         }
     }
+
+    public void updateStore(Store store) throws SQLException {
+        String sql = "UPDATE stores SET storeName = ? WHERE storeID = ?";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             java.sql.PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, store.getStoreName());
+            preparedStatement.setInt(2, store.getStoreID());
+            preparedStatement.executeUpdate();
+        }
+    }
+
+    public void deleteStore(Store store) throws SQLException {
+        String sql = "DELETE FROM stores WHERE storeID = ?";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             java.sql.PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setInt(1, store.getStoreID());
+            preparedStatement.executeUpdate();
+        }
+    }
 }

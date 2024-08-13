@@ -20,9 +20,7 @@ import models.Permission;
 import models.Store;
 import models.User;
 import models.Employment;
-import services.PermissionService;
-import services.StoreService;
-import services.UserService;
+import services.*;
 import utils.AnimationUtils;
 import utils.ValidatorUtils;
 
@@ -92,12 +90,16 @@ public class EditAccountController extends Controller{
 	private UserService userService;
 	private StoreService storeService;
 	private PermissionService permissionService;
+	private EmploymentService employmentService;
+	private UserPermissionService userPermissionService;
 	
 	 @FXML
 	private void initialize() {
 		 userService = new UserService();
 		 storeService = new StoreService();
 		 permissionService = new PermissionService();
+		 employmentService = new EmploymentService();
+		 userPermissionService = new UserPermissionService();
 	 }
 
 	@Override
@@ -149,7 +151,8 @@ public class EditAccountController extends Controller{
 		);
 
 		try {
-			allUsers = (ObservableList<User>) userService.getAllUsers();
+			List<User> userList = userService.getAllUsers();
+			allUsers = FXCollections.observableArrayList(userList);
 			accountsTable.setItems(allUsers);
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
@@ -218,7 +221,8 @@ public class EditAccountController extends Controller{
 		);
 
 		try {
-			allStores = (ObservableList<Store>) storeService.getAllStores();
+			List<Store> storeList = storeService.getAllStores();
+			allStores = FXCollections.observableArrayList(storeList);
 			storesTable.setItems(allStores);
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
@@ -279,8 +283,9 @@ public class EditAccountController extends Controller{
 		storeSelector.getSelectionModel().clearSelection();
 		//Refresh Store list for store selector
 		try {
+
 			List<Store> allStores = storeService.getAllStores();
-			storeSelector.setItems((ObservableList<Store>) allStores);
+			storeSelector.setItems(FXCollections.observableArrayList(allStores));
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
 		}
@@ -289,7 +294,7 @@ public class EditAccountController extends Controller{
 		//Refresh permissions list for permissions selector
 		try {
 			List<Permission> allPermissions = permissionService.getAllPermissions();
-			permissionsSelector.setItems((ObservableList<Permission>) allPermissions);
+			permissionsSelector.setItems(FXCollections.observableArrayList(allPermissions));
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
 		}
@@ -371,7 +376,7 @@ public class EditAccountController extends Controller{
 		//Refresh Store list for store selector
 		try {
 			List<Store> allStores = storeService.getAllStores();
-			storeSelector.setItems((ObservableList<Store>) allStores);
+			storeSelector.setItems(FXCollections.observableArrayList(allStores));
 
 			List<Employment> staffStores = userService.getEmploymentsForUser(user.getUsername());
 			for(Store s:allStores){
@@ -389,11 +394,15 @@ public class EditAccountController extends Controller{
 		//Refresh permissions list for permissions selector
 		try {
 			List<Permission> allPermissions = permissionService.getAllPermissions();
-			permissionsSelector.setItems((ObservableList<Permission>) allPermissions);
+			permissionsSelector.setItems(FXCollections.observableArrayList(allPermissions));
 
 			List<Permission> userPermissions = userService.getUserPermissions(user.getUsername());
 			for(Permission p:userPermissions){
-					permissionsSelector.getSelectionModel().selectItem(p);
+				for(Permission p2:allPermissions){
+					if(p.getPermissionID()==p2.getPermissionID()){
+						permissionsSelector.getSelectionModel().selectItem(p2);
+					}
+				}
 			}
 		} catch (SQLException throwables) {
 			throwables.printStackTrace();
@@ -523,53 +532,52 @@ public class EditAccountController extends Controller{
 		g = (int) Math.round(profileBackgroundPicker.getValue().getGreen() * 255.0);
 		b = (int) Math.round(profileBackgroundPicker.getValue().getBlue() * 255.0);
 		String profileBG = String.format("#%02x%02x%02x", r, g, b).toUpperCase();
-
-		if (!firstNameField.isValid()) {
-			firstNameField.requestFocus();
-		} else if (!lastNameField.isValid()) {
-			lastNameField.requestFocus();
-		} else if (doesUsernameExist(username)) {
-			// Show an error dialog that the username already exists
-			Dialog<String> dialog = new Dialog<>();
-			dialog.setTitle("Error");
-			ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-			dialog.setContentText("Username already exists. Please choose a different username.");
-			dialog.getDialogPane().getButtonTypes().add(type);
-			dialog.showAndWait();
-		} else if (storeSelector.getSelectionModel().getSelection().isEmpty()) {
-			Dialog<String> dialog = new Dialog<>();
-			dialog.setTitle("Error");
-			ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-			dialog.setContentText("Please select at least one store for the user to work at");
-			dialog.getDialogPane().getButtonTypes().add(type);
-			dialog.showAndWait();
-		}else{
-			String sql = "INSERT INTO accounts(username,first_name,last_name,role,profileBG,profileText) VALUES(?,?,?,?,?,?)";
-			try {
-				User newUser = new User();
-				newUser.setUsername(username);
-				newUser.setFirst_name(fname);
-				newUser.setLast_name(lname);
-				newUser.setRole(role);
-				newUser.setBgColour(profileBG);
-				newUser.setTextColour(profileText);
-				userService.addUser(newUser);
-				for (Store s : storeSelector.getSelectionModel().getSelection().values()) {
-					userService.addEmployment(newUser, s);
-				}
-				for (Permission p : permissionsSelector.getSelectionModel().getSelection().values()) {
-					userService.addUserPermission(newUser, p);
-				}
+		try {
+			if (!firstNameField.isValid()) {
+				firstNameField.requestFocus();
+			} else if (!lastNameField.isValid()) {
+				lastNameField.requestFocus();
+			} else if (userService.getUserByUsername(username)!=null) {
+				// Show an error dialog that the username already exists
 				Dialog<String> dialog = new Dialog<>();
-				dialog.setTitle("Success");
+				dialog.setTitle("Error");
 				ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-				dialog.setContentText("User was successfully added to the database");
+				dialog.setContentText("Username already exists. Please choose a different username.");
 				dialog.getDialogPane().getButtonTypes().add(type);
 				dialog.showAndWait();
-				usersView();
-			} catch (SQLException ex) {
-				System.err.println(ex.getMessage());
+			} else if (storeSelector.getSelectionModel().getSelection().isEmpty()) {
+				Dialog<String> dialog = new Dialog<>();
+				dialog.setTitle("Error");
+				ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
+				dialog.setContentText("Please select at least one store for the user to work at");
+				dialog.getDialogPane().getButtonTypes().add(type);
+				dialog.showAndWait();
+			}else{
+
+					User newUser = new User();
+					newUser.setUsername(username);
+					newUser.setFirst_name(fname);
+					newUser.setLast_name(lname);
+					newUser.setRole(role);
+					newUser.setBgColour(profileBG);
+					newUser.setTextColour(profileText);
+					userService.addUser(newUser);
+					for (Store s : storeSelector.getSelectionModel().getSelection().values()) {
+						employmentService.addEmployment(newUser, s);
+					}
+					for (Permission p : permissionsSelector.getSelectionModel().getSelection().values()) {
+						userPermissionService.addUserPermission(newUser, p);
+					}
+					Dialog<String> dialog = new Dialog<>();
+					dialog.setTitle("Success");
+					ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
+					dialog.setContentText("User was successfully added to the database");
+					dialog.getDialogPane().getButtonTypes().add(type);
+					dialog.showAndWait();
+					usersView();
 			}
+		} catch (SQLException ex) {
+			System.err.println(ex.getMessage());
 		}
 	}
 
@@ -578,12 +586,10 @@ public class EditAccountController extends Controller{
 		if(!storeNameField.isValid()) {
 			storeNameField.requestFocus();
 		}else{
-			String sql = "UPDATE stores SET storeName = ? WHERE storeID = ?";
+
 			try {
-				preparedStatement = con.prepareStatement(sql);
-				preparedStatement.setString(1, name);
-				preparedStatement.setInt(2, store.getStoreID());
-				preparedStatement.executeUpdate();
+				store.setStoreName(name);
+				storeService.updateStore(store);
 			} catch (SQLException ex) {
 				System.err.println(ex.getMessage());
 			}
@@ -600,11 +606,11 @@ public class EditAccountController extends Controller{
 	}
 
 	public void editUser(User user){
-	 	Date inactiveDate = null;
+	 	LocalDate inactiveDate = null;
 	 	if(inactiveUserToggle.isSelected() && user.getInactiveDate()!=null){
-	 		inactiveDate = Date.valueOf(user.getInactiveDate());
+	 		inactiveDate = user.getInactiveDate();
 		}else if(inactiveUserToggle.isSelected() && user.getInactiveDate()==null){
-	 		inactiveDate = Date.valueOf(LocalDate.now());
+	 		inactiveDate = LocalDate.now();
 		}
 
 		String fname = firstNameField.getText();
@@ -631,39 +637,23 @@ public class EditAccountController extends Controller{
 			dialog.getDialogPane().getButtonTypes().add(type);
 			dialog.showAndWait();
 		}else{
-			String sql = "UPDATE accounts SET first_name = ?,last_name = ?,role = ?, profileBG = ?, profileText = ?,inactiveDate = ? WHERE username = ?";
 			try {
-				preparedStatement = con.prepareStatement(sql);
-				preparedStatement.setString(1, fname);
-				preparedStatement.setString(2, lname);
-				preparedStatement.setString(3, role);
-				preparedStatement.setString(4, profileBG);
-				preparedStatement.setString(5, profileText);
-				preparedStatement.setDate(6, inactiveDate);
-				preparedStatement.setString(7, user.getUsername());
-				preparedStatement.executeUpdate();
+				user.setFirst_name(fname);
+				user.setLast_name(lname);
+				user.setRole(role);
+				user.setBgColour(profileBG);
+				user.setTextColour(profileText);
+				user.setInactiveDate(inactiveDate);
+				userService.updateUser(user);
 
-				sql = "DELETE from employments WHERE username = ?";
-				preparedStatement = con.prepareStatement(sql);
-				preparedStatement.setString(1, user.getUsername());
-				preparedStatement.executeUpdate();
+				employmentService.deleteEmploymentsForUser(user);
 				for(Store s:storeSelector.getSelectionModel().getSelection().values()){
-					sql = "INSERT INTO employments(username,storeID) VALUES(?,?)";
-					preparedStatement = con.prepareStatement(sql);
-					preparedStatement.setString(1, user.getUsername());
-					preparedStatement.setInt(2, s.getStoreID());
-					preparedStatement.executeUpdate();
+					employmentService.addEmployment(user,s);
 				}
-				sql = "DELETE from userpermissions WHERE userID = ?";
-				preparedStatement = con.prepareStatement(sql);
-				preparedStatement.setString(1, user.getUsername());
-				preparedStatement.executeUpdate();
+
+				userPermissionService.deletePermissionsForUser(user);
 				for(Permission p:permissionsSelector.getSelectionModel().getSelection().values()){
-					sql = "INSERT INTO userpermissions(userID,permissionID) VALUES(?,?)";
-					preparedStatement = con.prepareStatement(sql);
-					preparedStatement.setString(1, user.getUsername());
-					preparedStatement.setInt(2, p.getPermissionID());
-					preparedStatement.executeUpdate();
+					userPermissionService.addUserPermission(user,p);
 				}
 			} catch (SQLException ex) {
 				System.err.println(ex.getMessage());
@@ -680,13 +670,9 @@ public class EditAccountController extends Controller{
 	}
 
 	public void resetPassword(User user){
-		String sql = "UPDATE accounts SET password = ? WHERE username = ?";
-		try {
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setString(1, null);
-			preparedStatement.setString(2, user.getUsername());
-			preparedStatement.executeUpdate();
-		} catch (SQLException ex) {
+		try{
+			userService.resetUserPassword(user);
+		}catch(SQLException ex){
 			System.err.println(ex.getMessage());
 		}
 		passwordResetButton.setText("Password reset requested");
@@ -702,11 +688,8 @@ public class EditAccountController extends Controller{
 		alert.getButtonTypes().setAll(okButton, noButton);
 		alert.showAndWait().ifPresent(type -> {
 			if (type == okButton) {
-				String sql = "DELETE from stores WHERE storeID = ?";
 				try {
-					preparedStatement = con.prepareStatement(sql);
-					preparedStatement.setInt(1, store.getStoreID());
-					preparedStatement.executeUpdate();
+					storeService.deleteStore(store);
 				} catch (SQLException ex) {
 					System.err.println(ex.getMessage());
 				}
@@ -735,11 +718,8 @@ public class EditAccountController extends Controller{
 		alert.getButtonTypes().setAll(okButton, noButton);
 		alert.showAndWait().ifPresent(type -> {
 			if (type == okButton) {
-				String sql = "DELETE from accounts WHERE username = ?";
 				try {
-					preparedStatement = con.prepareStatement(sql);
-					preparedStatement.setString(1, user.getUsername());
-					preparedStatement.executeUpdate();
+					userService.deleteUser(user);
 				} catch (SQLException ex) {
 					System.err.println(ex.getMessage());
 				}
@@ -751,9 +731,8 @@ public class EditAccountController extends Controller{
 				dialog.showAndWait();
 				closeUserPopover();
 				usersView();
-			} else if (type == noButton) {
 			}
-		});
+        });
 	}
 
 	public void formatTabSelect(BorderPane b){
@@ -780,20 +759,5 @@ public class EditAccountController extends Controller{
 				a.setStyle("");
 			}
 		}
-	}
-
-	public boolean doesUsernameExist(String username) {
-		String sql = "SELECT COUNT(*) FROM accounts WHERE username = ?";
-		try {
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setString(1, username);
-			resultSet = preparedStatement.executeQuery();
-			if (resultSet.next()) {
-				return resultSet.getInt(1) > 0;
-			}
-		} catch (SQLException ex) {
-			System.err.println(ex.getMessage());
-		}
-		return false;
 	}
 }
