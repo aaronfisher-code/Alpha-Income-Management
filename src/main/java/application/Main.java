@@ -86,7 +86,7 @@ public class Main extends Application {
 		});
 	}
 
-	private void showMainStage(Stage primaryStage) throws Exception {
+	private void showMainStage(Stage primaryStage) throws IOException {
 		System.out.println("Main application stage loading...");
 		stg = primaryStage;
 		FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/LogIn.fxml"));
