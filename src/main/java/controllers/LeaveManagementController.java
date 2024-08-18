@@ -205,7 +205,11 @@ public class LeaveManagementController extends DateSelectController {
         contentDarken.setVisible(true);
         AnimationUtils.slideIn(editLeavePopover,0);
         employeeSelect.setValue(null);
+        employeeSelect.setText("");
+        employeeSelect.clearSelection();
         leaveTypeCombo.setValue(null);
+        leaveTypeCombo.setText("");
+        leaveTypeCombo.clearSelection();
         startDate.setValue(null);
         startTimeField.setText("");
         endDate.setValue(null);

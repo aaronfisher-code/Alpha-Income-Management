@@ -191,6 +191,7 @@ public class RosterPageController extends Controller {
         ValidatorUtils.setupRegexValidation(tenMinBreaks,tenMinBreaksValidationLabel,ValidatorUtils.INT_REGEX,ValidatorUtils.INT_ERROR,null,saveButton);
         ValidatorUtils.setupRegexValidation(thirtyMinBreaks,thirtyMinBreaksValidationLabel,ValidatorUtils.INT_REGEX,ValidatorUtils.INT_ERROR,null,saveButton);
         ValidatorUtils.setupRegexValidation(repeatValue,repeatValueValidationLabel,ValidatorUtils.INT_REGEX,ValidatorUtils.INT_ERROR,null,saveButton);
+        ValidatorUtils.setupRegexValidation(repeatUnit,repeatValueValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveButton);
         startDate.setConverterSupplier(() -> new CustomDateStringConverter("dd/MM/yyyy"));
         datePkr.setConverterSupplier(() -> new CustomDateStringConverter("dd/MM/yyyy"));
         updatePage();
@@ -354,6 +355,7 @@ public class RosterPageController extends Controller {
         contentDarken.setVisible(true);
         AnimationUtils.slideIn(editShiftPopover,0);
         employeeSelect.setValue(null);
+        employeeSelect.clearSelection();
         startDate.setValue(null);
         startTimeField.setText("");
         endTimeField.setText("");
@@ -364,7 +366,9 @@ public class RosterPageController extends Controller {
         repeatUnit.setDisable(true);
         repeatLabel.setDisable(true);
         repeatValue.setText("");
+        repeatUnit.clearSelection();
         repeatUnit.setValue(null);
+        repeatUnit.setText("");
         saveButton.setOnAction(_ -> addShift(null,null,null,false));
     }
 
@@ -393,14 +397,13 @@ public class RosterPageController extends Controller {
             repeatLabel.setDisable(false);
             repeatValue.setText(String.valueOf(s.getDaysPerRepeat()));
             repeatUnit.selectFirst();
-            repeatUnit.setValue("Days");
         }else{
             repeatingShiftToggle.setSelected(false);
             repeatValue.setDisable(true);
             repeatUnit.setDisable(true);
             repeatLabel.setDisable(true);
             repeatValue.setText("");
-            repeatUnit.setValue(null);
+            repeatUnit.clearSelection();
         }
 
         saveButton.setOnAction(_ -> {
@@ -540,6 +543,11 @@ public class RosterPageController extends Controller {
             repeatValue.requestFocus();
             return false;
         }
+        if(repeatingShiftToggle.isSelected() && repeatUnit.getValue() == null) {
+            repeatUnit.validate();
+            repeatUnit.requestFocus();
+            return false;
+        }
 
         LocalTime startTime = LocalTime.parse(startTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
         LocalTime endTime = LocalTime.parse(endTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
@@ -605,13 +613,14 @@ public class RosterPageController extends Controller {
         else if(!thirtyMinBreaks.isValid()){thirtyMinBreaks.requestFocus();}
         else if(!tenMinBreaks.isValid()){tenMinBreaks.requestFocus();}
         else if(!repeatValue.isValid()){repeatValue.requestFocus();}
+        else if(repeatingShiftToggle.isSelected() && !repeatUnit.isValid()){repeatUnit.requestFocus();}
         else if(LocalTime.parse(startTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US )).isAfter(LocalTime.parse(endTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US )))){
             startTimeField.requestFocus();
             startTimeValidationLabel.setText("Start time must be before end time");
             startTimeValidationLabel.setVisible(true);
         }else {
             startTimeValidationLabel.setVisible(false);
-            String usrname = ((User) employeeSelect.getValue()).getUsername();
+            String usrname = employeeSelect.getValue().getUsername();
             LocalDate sDate = startDate.getValue();
             LocalTime sTime = LocalTime.parse(startTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
             LocalTime eTime = LocalTime.parse(endTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
