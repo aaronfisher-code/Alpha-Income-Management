@@ -251,11 +251,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 		} else {
 			afx.setItems(contacts);
 		}
-		if(contacts.isEmpty()){
-			afx.getItems().add(new AccountPaymentContactDataPoint(0,"*Please add new suppliers below",0));
-		}else{
-			afx.setItems(contacts);
-		}
+		afx.selectFirst();
 	}
 
 	public void fillTable(){
@@ -445,6 +441,10 @@ public class AccountPaymentsPageController extends DateSelectController{
 	}
 	public Dialog<Object> getDialog() {
 		return dialog;
+	}
+
+	public DialogPane getDialogPane() {
+		return dialogPane;
 	}
 
 	@Override

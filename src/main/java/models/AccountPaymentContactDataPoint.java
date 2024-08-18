@@ -37,6 +37,12 @@ public class AccountPaymentContactDataPoint {
 		this.storeID = storeID;
 	}
 
+	public AccountPaymentContactDataPoint(String contactName, int storeID, String accountCode) {
+		this.contactName = contactName;
+		this.storeID = storeID;
+		this.accountCode = accountCode;
+	}
+
 	public int getContactID() {return contactID;}
 
 	public void setContactID(int contactID) {this.contactID = contactID;}

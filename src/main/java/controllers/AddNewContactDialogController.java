@@ -4,6 +4,8 @@ import application.Main;
 import io.github.palexdev.materialfx.controls.MFXTextField;
 import com.dlsc.gemsfx.DialogPane.Dialog;
 import javafx.fxml.FXML;
+import models.AccountPaymentContactDataPoint;
+import services.AccountPaymentContactService;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -14,24 +16,20 @@ import java.time.LocalDate;
 
 public class AddNewContactDialogController{
 
-    private Connection con = null;
-    PreparedStatement preparedStatement = null;
-    ResultSet resultSet = null;
     private Main main;
 	private AccountPaymentsPageController parent;
+	private AccountPaymentContactService accountPaymentContactService;
 
 	@FXML
 	private MFXTextField newContactField,accountCodeField;
 
 	@FXML
-	private void initialize() throws IOException {}
+	private void initialize() {
+		accountPaymentContactService = new AccountPaymentContactService();
+	}
 
 	public void setMain(Main main) {
 		this.main = main;
-	}
-	
-	public void setConnection(Connection c) {
-		this.con = c;
 	}
 
 	public void setParent(AccountPaymentsPageController d) {this.parent = d;}
@@ -39,15 +37,11 @@ public class AddNewContactDialogController{
 	public void addContact(){
 	 	String contactName = newContactField.getText();
 		String accountCode = accountCodeField.getText();
-		String sql = "INSERT INTO accountPaymentContacts(contactName,storeID,accountCode) VALUES(?,?,?)";
 		try {
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setString(1, contactName);
-			preparedStatement.setInt(2,main.getCurrentStore().getStoreID());
-			preparedStatement.setString(3,accountCode);
-			preparedStatement.executeUpdate();
+			accountPaymentContactService.addAccountPaymentContact(new AccountPaymentContactDataPoint(contactName,main.getCurrentStore().getStoreID(),accountCode));
 		} catch (SQLException ex) {
-			System.err.println(ex.getMessage());
+			parent.getDialogPane().showError("Error adding contact",ex.getMessage());
+			ex.printStackTrace();
 		}
 		parent.getDialog().cancel();
 		parent.fillContactList();
@@ -56,5 +50,4 @@ public class AddNewContactDialogController{
 	public void closeDialog(){
 		parent.getDialog().cancel();
 	}
-
 }
