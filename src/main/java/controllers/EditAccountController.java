@@ -1,6 +1,7 @@
 package controllers;
 
 import application.Main;
+import com.dlsc.gemsfx.DialogPane;
 import com.dlsc.gemsfx.FilterView;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXNodesList;
@@ -73,6 +74,9 @@ public class EditAccountController extends Controller{
 
 	@FXML
 	private MFXButton saveStoreButton,passwordResetButton,saveUserButton;
+
+	@FXML
+	private DialogPane dialogPane;
 
 	private MFXTableView<User> accountsTable = new MFXTableView<>();
 	private MFXTableColumn<User> usernameCol;
@@ -154,8 +158,9 @@ public class EditAccountController extends Controller{
 			List<User> userList = userService.getAllUsers();
 			allUsers = FXCollections.observableArrayList(userList);
 			accountsTable.setItems(allUsers);
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
+		} catch (SQLException ex) {
+			dialogPane.showError("Error","An error occurred while fetching users", ex.getMessage());
+			ex.printStackTrace();
 		}
 		accountsTable.setFooterVisible(true);
 		accountsTable.autosizeColumnsOnInitialization();
@@ -198,11 +203,7 @@ public class EditAccountController extends Controller{
 	}
 
 	public void storesView(){
-		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Stores - Edit"))) {
-			addList.setVisible(true);
-		}else{
-			addList.setVisible(false);
-		}
+        addList.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Stores - Edit")));
 		formatTabSelect(storesButton);
 		formatTabDeselect(usersButton);
 		addButton.setOnAction(_ -> openStorePopover());
@@ -224,8 +225,9 @@ public class EditAccountController extends Controller{
 			List<Store> storeList = storeService.getAllStores();
 			allStores = FXCollections.observableArrayList(storeList);
 			storesTable.setItems(allStores);
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
+		} catch (SQLException ex) {
+			dialogPane.showError("Error","An error occurred while fetching stores", ex.getMessage());
+			ex.printStackTrace();
 		}
 		storesTable.setFooterVisible(true);
 		storesTable.autosizeColumnsOnInitialization();
@@ -283,11 +285,11 @@ public class EditAccountController extends Controller{
 		storeSelector.getSelectionModel().clearSelection();
 		//Refresh Store list for store selector
 		try {
-
 			List<Store> allStores = storeService.getAllStores();
 			storeSelector.setItems(FXCollections.observableArrayList(allStores));
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
+		} catch (SQLException ex) {
+			dialogPane.showError("Error","An error occurred while fetching stores", ex.getMessage());
+			ex.printStackTrace();
 		}
 
 		permissionsSelector.getSelectionModel().clearSelection();
@@ -295,8 +297,9 @@ public class EditAccountController extends Controller{
 		try {
 			List<Permission> allPermissions = permissionService.getAllPermissions();
 			permissionsSelector.setItems(FXCollections.observableArrayList(allPermissions));
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
+		} catch (SQLException ex) {
+			dialogPane.showError("Error","An error occurred while fetching permissions", ex.getMessage());
+			ex.printStackTrace();
 		}
 
 		//Add live updates to person card preview
@@ -363,8 +366,9 @@ public class EditAccountController extends Controller{
 				passwordResetButton.setText("Request Password Reset");
 				passwordResetButton.setOnAction(_ -> resetPassword(user));
 			}
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
+		} catch (SQLException ex) {
+			dialogPane.showError("Error","An error occurred while fetching user information", ex.getMessage());
+			ex.printStackTrace();
 		}
 
 		employeeName.setText(user.getFirst_name() + "." + user.getLast_name().charAt(0));
@@ -386,8 +390,9 @@ public class EditAccountController extends Controller{
 					}
 				}
 			}
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
+		} catch (SQLException ex) {
+			dialogPane.showError("Error","An error occurred while fetching employment information", ex.getMessage());
+			ex.printStackTrace();
 		}
 
 		permissionsSelector.getSelectionModel().clearSelection();
@@ -404,8 +409,9 @@ public class EditAccountController extends Controller{
 					}
 				}
 			}
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
+		} catch (SQLException ex) {
+			dialogPane.showError("Error","An error occurred while fetching permission information", ex.getMessage());
+			ex.printStackTrace();
 		}
 
 		//Add live updates to person card preview
@@ -506,17 +512,12 @@ public class EditAccountController extends Controller{
 				Store store = new Store(name);
 				storeService.addStore(store);
 			} catch (SQLException ex) {
-				System.err.println(ex.getMessage());
+				dialogPane.showError("Error","An error occurred while adding a store", ex.getMessage());
+				ex.printStackTrace();
 			}
-			Dialog<String> dialog = new Dialog<>();
-			dialog.setTitle("Success");
-			ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-			dialog.setContentText("Store was successfully added to database");
-			dialog.getDialogPane().getButtonTypes().add(type);
-			dialog.showAndWait();
+			dialogPane.showInformation("Success","Store was successfully added to the database");
 			storesView();
 		}
-
 	}
 
 	public void addUser() {
@@ -538,46 +539,30 @@ public class EditAccountController extends Controller{
 			} else if (!lastNameField.isValid()) {
 				lastNameField.requestFocus();
 			} else if (userService.getUserByUsername(username)!=null) {
-				// Show an error dialog that the username already exists
-				Dialog<String> dialog = new Dialog<>();
-				dialog.setTitle("Error");
-				ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-				dialog.setContentText("Username already exists. Please choose a different username.");
-				dialog.getDialogPane().getButtonTypes().add(type);
-				dialog.showAndWait();
+				dialogPane.showError("Error", "Username already exists, Please choose a different username");
 			} else if (storeSelector.getSelectionModel().getSelection().isEmpty()) {
-				Dialog<String> dialog = new Dialog<>();
-				dialog.setTitle("Error");
-				ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-				dialog.setContentText("Please select at least one store for the user to work at");
-				dialog.getDialogPane().getButtonTypes().add(type);
-				dialog.showAndWait();
+				dialogPane.showError("Error", "No store selected, Please select at least one store for the user to work at");
 			}else{
-
-					User newUser = new User();
-					newUser.setUsername(username);
-					newUser.setFirst_name(fname);
-					newUser.setLast_name(lname);
-					newUser.setRole(role);
-					newUser.setBgColour(profileBG);
-					newUser.setTextColour(profileText);
-					userService.addUser(newUser);
-					for (Store s : storeSelector.getSelectionModel().getSelection().values()) {
-						employmentService.addEmployment(newUser, s);
-					}
-					for (Permission p : permissionsSelector.getSelectionModel().getSelection().values()) {
-						userPermissionService.addUserPermission(newUser, p);
-					}
-					Dialog<String> dialog = new Dialog<>();
-					dialog.setTitle("Success");
-					ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-					dialog.setContentText("User was successfully added to the database");
-					dialog.getDialogPane().getButtonTypes().add(type);
-					dialog.showAndWait();
-					usersView();
+				User newUser = new User();
+				newUser.setUsername(username);
+				newUser.setFirst_name(fname);
+				newUser.setLast_name(lname);
+				newUser.setRole(role);
+				newUser.setBgColour(profileBG);
+				newUser.setTextColour(profileText);
+				userService.addUser(newUser);
+				for (Store s : storeSelector.getSelectionModel().getSelection().values()) {
+					employmentService.addEmployment(newUser, s);
+				}
+				for (Permission p : permissionsSelector.getSelectionModel().getSelection().values()) {
+					userPermissionService.addUserPermission(newUser, p);
+				}
+				dialogPane.showInformation("Success", "User was successfully added to the database");
+				usersView();
 			}
 		} catch (SQLException ex) {
-			System.err.println(ex.getMessage());
+			dialogPane.showError("Error","An error occurred while adding a user", ex.getMessage());
+			ex.printStackTrace();
 		}
 	}
 
@@ -586,19 +571,14 @@ public class EditAccountController extends Controller{
 		if(!storeNameField.isValid()) {
 			storeNameField.requestFocus();
 		}else{
-
 			try {
 				store.setStoreName(name);
 				storeService.updateStore(store);
 			} catch (SQLException ex) {
-				System.err.println(ex.getMessage());
+				dialogPane.showError("Error","An error occurred while updating the store", ex.getMessage());
+				ex.printStackTrace();
 			}
-			Dialog<String> dialog = new Dialog<>();
-			dialog.setTitle("Success");
-			ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-			dialog.setContentText("Store was succesfully updated");
-			dialog.getDialogPane().getButtonTypes().add(type);
-			dialog.showAndWait();
+			dialogPane.showInformation("Success","Store was succesfully updated");
 			closeStorePopover();
 			storesView();
 		}
@@ -612,7 +592,6 @@ public class EditAccountController extends Controller{
 		}else if(inactiveUserToggle.isSelected() && user.getInactiveDate()==null){
 	 		inactiveDate = LocalDate.now();
 		}
-
 		String fname = firstNameField.getText();
 		String lname = lastNameField.getText();
 		String role = roleField.getText();
@@ -624,18 +603,12 @@ public class EditAccountController extends Controller{
 		g = (int)Math.round(profileBackgroundPicker.getValue().getGreen() * 255.0);
 		b = (int)Math.round(profileBackgroundPicker.getValue().getBlue() * 255.0);
 		String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
-
 		if(!firstNameField.isValid()) {
 			firstNameField.requestFocus();
 		}else if(!lastNameField.isValid()) {
 			lastNameField.requestFocus();
 		} else if (storeSelector.getSelectionModel().getSelection().isEmpty()) {
-			Dialog<String> dialog = new Dialog<>();
-			dialog.setTitle("Error");
-			ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-			dialog.setContentText("Please select at least one store for the user to work at");
-			dialog.getDialogPane().getButtonTypes().add(type);
-			dialog.showAndWait();
+			dialogPane.showError("Error", "No store selected, Please select at least one store for the user to work at");
 		}else{
 			try {
 				user.setFirst_name(fname);
@@ -645,25 +618,19 @@ public class EditAccountController extends Controller{
 				user.setTextColour(profileText);
 				user.setInactiveDate(inactiveDate);
 				userService.updateUser(user);
-
 				employmentService.deleteEmploymentsForUser(user);
 				for(Store s:storeSelector.getSelectionModel().getSelection().values()){
 					employmentService.addEmployment(user,s);
 				}
-
 				userPermissionService.deletePermissionsForUser(user);
 				for(Permission p:permissionsSelector.getSelectionModel().getSelection().values()){
 					userPermissionService.addUserPermission(user,p);
 				}
 			} catch (SQLException ex) {
-				System.err.println(ex.getMessage());
+				dialogPane.showError("Error","An error occurred while updating the user", ex.getMessage());
+				ex.printStackTrace();
 			}
-			Dialog<String> dialog = new Dialog<>();
-			dialog.setTitle("Success");
-			ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-			dialog.setContentText("User was succesfully updated");
-			dialog.getDialogPane().getButtonTypes().add(type);
-			dialog.showAndWait();
+			dialogPane.showInformation("Success","User was succesfully updated");
 			closeUserPopover();
 			usersView();
 		}
@@ -673,7 +640,8 @@ public class EditAccountController extends Controller{
 		try{
 			userService.resetUserPassword(user);
 		}catch(SQLException ex){
-			System.err.println(ex.getMessage());
+			dialogPane.showError("Error","An error occurred while updating user password", ex.getMessage());
+			ex.printStackTrace();
 		}
 		passwordResetButton.setText("Password reset requested");
 		passwordResetButton.setDisable(true);
@@ -691,14 +659,10 @@ public class EditAccountController extends Controller{
 				try {
 					storeService.deleteStore(store);
 				} catch (SQLException ex) {
-					System.err.println(ex.getMessage());
+					dialogPane.showError("Error","An error occurred while deleting store", ex.getMessage());
+					ex.printStackTrace();
 				}
-				Dialog<String> dialog = new Dialog<>();
-				dialog.setTitle("Success");
-				type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-				dialog.setContentText("Store was succesfully deleted");
-				dialog.getDialogPane().getButtonTypes().add(type);
-				dialog.showAndWait();
+				dialogPane.showInformation("Success","Store was succesfully deleted");
 				closeStorePopover();
 				storesView();
 			} else if (type == noButton) {
@@ -721,14 +685,10 @@ public class EditAccountController extends Controller{
 				try {
 					userService.deleteUser(user);
 				} catch (SQLException ex) {
-					System.err.println(ex.getMessage());
+					dialogPane.showError("Error","An error occurred while deleting user", ex.getMessage());
+					ex.printStackTrace();
 				}
-				Dialog<String> dialog = new Dialog<>();
-				dialog.setTitle("Success");
-				type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-				dialog.setContentText("User was succesfully deleted");
-				dialog.getDialogPane().getButtonTypes().add(type);
-				dialog.showAndWait();
+				dialogPane.showInformation("Success","User was succesfully deleted");
 				closeUserPopover();
 				usersView();
 			}

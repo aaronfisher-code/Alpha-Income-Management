@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.dlsc.gemsfx.DialogPane?>
 <?import com.jfoenix.controls.JFXButton?>
 <?import com.jfoenix.controls.JFXNodesList?>
 <?import io.github.palexdev.materialfx.controls.MFXButton?>
@@ -389,6 +390,7 @@
             </VBox>
          </children>
       </VBox>
+      <DialogPane fx:id="dialogPane" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" />
    </children>
    <stylesheets>
       <URL value="@../CSS/application.css" />
