@@ -33,50 +33,21 @@ import java.util.Map;
 
 public class EditAccountController extends Controller{
 
-	@FXML
-	private BorderPane usersButton,storesButton;
-
-	@FXML
-	private VBox controlBox,editStorePopover,editUserPopover,editPermissionsPopover;
-
-	@FXML
-	private JFXNodesList addList;
-
-	@FXML
-	private JFXButton addButton;
-
-	@FXML
-	private Region contentDarken;
-
-	@FXML
-	private Button deleteStoreButton,deleteUserButton;
-
-	@FXML
-	private MFXTextField storeNameField;
-
-	@FXML
-	private Label editStorePopoverTitle,editUserPopoverTitle,employeeIcon,employeeName,employeeRole,storeNameValidationLabel,usernameValidationLabel,firstNameValidationLabel,lastNameValidationLabel;
-
-	@FXML
-	private MFXRectangleToggleNode inactiveUserToggle;
-
-	@FXML
-	private MFXTextField usernameField,firstNameField,lastNameField,roleField;
-
-	@FXML
-	private ColorPicker profileTextPicker,profileBackgroundPicker;
-
-	@FXML
-	private MFXCheckListView<Store> storeSelector;
-
-	@FXML
-	private MFXCheckListView<Permission> permissionsSelector;
-
-	@FXML
-	private MFXButton saveStoreButton,passwordResetButton,saveUserButton;
-
-	@FXML
-	private DialogPane dialogPane;
+	@FXML private BorderPane usersButton,storesButton;
+	@FXML private VBox controlBox,editStorePopover,editUserPopover,editPermissionsPopover;
+	@FXML private JFXNodesList addList;
+	@FXML private JFXButton addButton;
+	@FXML private Region contentDarken;
+	@FXML private Button deleteStoreButton,deleteUserButton;
+	@FXML private MFXTextField storeNameField;
+	@FXML private Label editStorePopoverTitle,editUserPopoverTitle,employeeIcon,employeeName,employeeRole,storeNameValidationLabel,usernameValidationLabel,firstNameValidationLabel,lastNameValidationLabel;
+	@FXML private MFXRectangleToggleNode inactiveUserToggle;
+	@FXML private MFXTextField usernameField,firstNameField,lastNameField,roleField;
+	@FXML private ColorPicker profileTextPicker,profileBackgroundPicker;
+	@FXML private MFXCheckListView<Store> storeSelector;
+	@FXML private MFXCheckListView<Permission> permissionsSelector;
+	@FXML private MFXButton saveStoreButton,passwordResetButton,saveUserButton;
+	@FXML private DialogPane dialogPane;
 
 	private MFXTableView<User> accountsTable = new MFXTableView<>();
 	private MFXTableColumn<User> usernameCol;
@@ -84,13 +55,11 @@ public class EditAccountController extends Controller{
 	private MFXTableColumn<User> lastNameCol;
 	private MFXTableColumn<User> roleCol;
 	private FilterView<User> userFilterView = new FilterView<>();
-
 	private MFXTableView<Store> storesTable = new MFXTableView<>();
 	private MFXTableColumn<Store> storeNameCol;
 	private FilterView<Store> storeFilterView = new FilterView<>();
 
     private Main main;
-
 	private UserService userService;
 	private StoreService storeService;
 	private PermissionService permissionService;
@@ -131,7 +100,6 @@ public class EditAccountController extends Controller{
 		formatTabSelect(usersButton);
 		formatTabDeselect(storesButton);
 		addButton.setOnAction(_ -> openUserPopover());
-
 		userFilterView = new FilterView<>();
 		userFilterView.setTitle("Current Users");
 		userFilterView.setSubtitle("Double click a user to edit");
@@ -153,7 +121,6 @@ public class EditAccountController extends Controller{
 				new StringFilter<>("Last Name",User::getLast_name),
 				new StringFilter<>("Role",User::getRole)
 		);
-
 		try {
 			List<User> userList = userService.getAllUsers();
 			allUsers = FXCollections.observableArrayList(userList);
@@ -166,16 +133,13 @@ public class EditAccountController extends Controller{
 		accountsTable.autosizeColumnsOnInitialization();
 		accountsTable.setMaxWidth(Double.MAX_VALUE);
 		accountsTable.setMaxHeight(Double.MAX_VALUE);
-		userFilterView.setPadding(new Insets(20,20,10,20));//top,right,bottom,left
-
+		userFilterView.setPadding(new Insets(20,20,10,20));//top,right,bottom,lef
 		controlBox.getChildren().removeAll(controlBox.getChildren());
 		controlBox.getChildren().addAll(userFilterView,accountsTable);
-
 		VBox.setVgrow(accountsTable, Priority.ALWAYS);
 		accountsTable.virtualFlowInitializedProperty().addListener((_, _, _) -> {addUserDoubleClickfunction();});
 		userFilterView.filteredItemsProperty().addListener((_, _, _) -> {addUserDoubleClickfunction();});
 		accountsTable.setItems(allUsers);
-
 		ValidatorUtils.setupRegexValidation(usernameField,usernameValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveUserButton);
 		ValidatorUtils.setupRegexValidation(firstNameField,firstNameValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveUserButton);
 		ValidatorUtils.setupRegexValidation(lastNameField,lastNameValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveUserButton);
@@ -207,7 +171,6 @@ public class EditAccountController extends Controller{
 		formatTabSelect(storesButton);
 		formatTabDeselect(usersButton);
 		addButton.setOnAction(_ -> openStorePopover());
-
 		storeFilterView = new FilterView<>();
 		storeFilterView.setTitle("Current Stores");
 		storeFilterView.setSubtitle("Double click a store to edit");
@@ -220,7 +183,6 @@ public class EditAccountController extends Controller{
 		storesTable.getFilters().addAll(
 				new StringFilter<>("Store Name",Store::getStoreName)
 		);
-
 		try {
 			List<Store> storeList = storeService.getAllStores();
 			allStores = FXCollections.observableArrayList(storeList);
@@ -234,17 +196,13 @@ public class EditAccountController extends Controller{
 		storesTable.setMaxWidth(Double.MAX_VALUE);
 		storesTable.setMaxHeight(Double.MAX_VALUE);
 		storeFilterView.setPadding(new Insets(20,20,10,20));//top,right,bottom,left
-
 		controlBox.getChildren().removeAll(controlBox.getChildren());
 		controlBox.getChildren().addAll(storeFilterView,storesTable);
-
 		VBox.setVgrow(storesTable, Priority.ALWAYS);
 		storesTable.virtualFlowInitializedProperty().addListener((_, _, _) -> {addStoreDoubleClickFunction();});
 		storeFilterView.filteredItemsProperty().addListener((_, _, _) -> {addStoreDoubleClickFunction();});
 		storesTable.setItems(allStores);
-
 		ValidatorUtils.setupRegexValidation(storeNameField,storeNameValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveStoreButton);
-
 	}
 
 	private void addStoreDoubleClickFunction(){
@@ -281,7 +239,6 @@ public class EditAccountController extends Controller{
 		employeeName.setText("");
 		employeeRole.setText("");
 		employeeIcon.setStyle("-fx-background-color: #FFFFFF; -fx-text-fill: #FFFFFF;");
-
 		storeSelector.getSelectionModel().clearSelection();
 		//Refresh Store list for store selector
 		try {
@@ -291,7 +248,6 @@ public class EditAccountController extends Controller{
 			dialogPane.showError("Error","An error occurred while fetching stores", ex.getMessage());
 			ex.printStackTrace();
 		}
-
 		permissionsSelector.getSelectionModel().clearSelection();
 		//Refresh permissions list for permissions selector
 		try {
@@ -301,7 +257,6 @@ public class EditAccountController extends Controller{
 			dialogPane.showError("Error","An error occurred while fetching permissions", ex.getMessage());
 			ex.printStackTrace();
 		}
-
 		//Add live updates to person card preview
 		firstNameField.textProperty().addListener((_, _, newValue) -> {
 					employeeName.setText(newValue + "." + (lastNameField.getText().isEmpty()?"":lastNameField.getText(0,1)));
@@ -336,7 +291,6 @@ public class EditAccountController extends Controller{
 					employeeIcon.setStyle("-fx-background-color: " + profileBG + ";" + "-fx-text-fill: " + profileText + ";");
 				}
 		);
-
 		contentDarken.setVisible(true);
 		contentDarken.setOnMouseClicked(_ -> closeUserPopover());
 		saveUserButton.setOnAction(_ -> addUser());
@@ -356,7 +310,6 @@ public class EditAccountController extends Controller{
 		profileTextPicker.setValue(Color.valueOf(user.getTextColour()));
 		profileBackgroundPicker.setValue(Color.valueOf(user.getBgColour()));
 		passwordResetButton.setVisible(true);
-
 		try {
 			if (!userService.isPasswordResetRequested(user.getUsername())) {
 				passwordResetButton.setDisable(true);
@@ -370,12 +323,10 @@ public class EditAccountController extends Controller{
 			dialogPane.showError("Error","An error occurred while fetching user information", ex.getMessage());
 			ex.printStackTrace();
 		}
-
 		employeeName.setText(user.getFirst_name() + "." + user.getLast_name().charAt(0));
 		employeeRole.setText(user.getRole());
 		employeeIcon.setText(user.getFirst_name().substring(0,1));
 		employeeIcon.setStyle("-fx-background-color: " + user.getBgColour()+ "; -fx-text-fill: " + user.getTextColour() + ";");
-
 		storeSelector.getSelectionModel().clearSelection();
 		//Refresh Store list for store selector
 		try {
@@ -394,7 +345,6 @@ public class EditAccountController extends Controller{
 			dialogPane.showError("Error","An error occurred while fetching employment information", ex.getMessage());
 			ex.printStackTrace();
 		}
-
 		permissionsSelector.getSelectionModel().clearSelection();
 		//Refresh permissions list for permissions selector
 		try {
@@ -413,7 +363,6 @@ public class EditAccountController extends Controller{
 			dialogPane.showError("Error","An error occurred while fetching permission information", ex.getMessage());
 			ex.printStackTrace();
 		}
-
 		//Add live updates to person card preview
 		firstNameField.textProperty().addListener((_, _, newValue) -> {
 					employeeName.setText(newValue + "." + (lastNameField.getText().isEmpty()?"":lastNameField.getText(0,1)));
@@ -582,7 +531,6 @@ public class EditAccountController extends Controller{
 			closeStorePopover();
 			storesView();
 		}
-
 	}
 
 	public void editUser(User user){
