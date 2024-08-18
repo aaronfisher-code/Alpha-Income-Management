@@ -4,6 +4,8 @@ import application.Main;
 import io.github.palexdev.materialfx.controls.MFXTextField;
 import javafx.fxml.FXML;
 import models.Invoice;
+import models.InvoiceSupplier;
+import services.InvoiceSupplierService;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -13,38 +15,31 @@ import java.sql.SQLException;
 
 public class AddNewSupplierDialogController {
 
-    private Connection con = null;
-    PreparedStatement preparedStatement = null;
-    ResultSet resultSet = null;
+	@FXML private MFXTextField newContactField;
     private Main main;
 	private InvoiceEntryController parent;
+	private InvoiceSupplierService invoiceSupplierService;
 
 	@FXML
-	private MFXTextField newContactField;
-
-	@FXML
-	private void initialize() throws IOException {}
+	private void initialize() {
+		invoiceSupplierService = new InvoiceSupplierService();
+	}
 
 	public void setMain(Main main) {
 		this.main = main;
-	}
-	
-	public void setConnection(Connection c) {
-		this.con = c;
 	}
 
 	public void setParent(InvoiceEntryController d) {this.parent = d;}
 
 	public void addContact(){
-	 	String supplierName = newContactField.getText();
-		String sql = "INSERT INTO invoiceSuppliers(supplierName,storeID) VALUES(?,?)";
 		try {
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setString(1, supplierName);
-			preparedStatement.setInt(2,main.getCurrentStore().getStoreID());
-			preparedStatement.executeUpdate();
+			InvoiceSupplier newInvoiceSupplier = new InvoiceSupplier();
+			newInvoiceSupplier.setSupplierName(newContactField.getText());
+			newInvoiceSupplier.setStoreID(main.getCurrentStore().getStoreID());
+			invoiceSupplierService.addInvoiceSupplier(newInvoiceSupplier);
 		} catch (SQLException ex) {
-			System.err.println(ex.getMessage());
+			parent.getDialogPane().showError("Error", "Error adding new supplier", ex.getMessage());
+			ex.printStackTrace();
 		}
 		parent.getDialog().cancel();
 		parent.fillContactList();
@@ -53,6 +48,4 @@ public class AddNewSupplierDialogController {
 	public void closeDialog(){
 		parent.getDialog().cancel();
 	}
-
-
 }

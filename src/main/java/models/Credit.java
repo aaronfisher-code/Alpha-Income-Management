@@ -37,6 +37,9 @@ public class Credit {
         }
     }
 
+    public Credit() {
+    }
+
     public int getSupplierID() {
         return supplierID;
     }
@@ -106,6 +109,14 @@ public class Credit {
 
     public void setSupplierName(String supplierName) {
         this.supplierName = supplierName;
+    }
+
+    public int getStoreID() {
+        return storeID;
+    }
+
+    public void setStoreID(int storeID) {
+        this.storeID = storeID;
     }
 
 }

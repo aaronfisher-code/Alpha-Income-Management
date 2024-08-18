@@ -26,10 +26,12 @@ import javafx.scene.control.Label;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
-import javafx.util.Callback;
 import models.*;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.controlsfx.control.PopOver;
+import services.CreditService;
+import services.InvoiceService;
+import services.InvoiceSupplierService;
 import utils.*;
 
 import java.io.*;
@@ -38,62 +40,34 @@ import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
-import java.util.Comparator;
 import java.util.Locale;
+import java.util.Objects;
 
 import static com.dlsc.gemsfx.DialogPane.Type.BLANK;
 
 public class InvoiceEntryController extends DateSelectController implements actionableComboBox{
 
-	private MFXDatePicker datePkr;
-	@FXML
-	private FlowPane datePickerPane;
-	@FXML
-	private StackPane monthSelector;
-	@FXML
-	private MFXTextField monthSelectorField;
-	@FXML
-	private StackPane backgroundPane;
-	@FXML
-	private VBox controlBox,addInvoicePopover,addCreditPopover;
-	@FXML
-	private BorderPane storesButton;
-	@FXML
-	private BorderPane invoicesButton,creditsButton;
-	@FXML
-	private Region contentDarken;
-	@FXML
-	private DialogPane dialogPane;
-	@FXML
-	private MFXTextField invoiceNoField,descriptionField,amountField,notesField;
-	@FXML
-	private MFXDatePicker invoiceDateField, dueDateField;
-	@FXML
-	private MFXButton saveButton;
-	@FXML
-	private Button deleteButton;
-	@FXML
-	private Label paymentPopoverTitle,expectedUnitAmountLabel,varianceLabel;
-	@FXML
-	private Label afxValidationLabel,invoiceNoValidationLabel,invoiceDateValidationLabel,dueDateValidationLabel,amountValidationLabel;
-	@FXML
-	private Label creditAFXValidationLabel,creditNoValidationLabel,refInvNoValidationLabel,creditDateValidationLabel,creditAmountValidationLabel;
-	@FXML
-	private Label creditPopoverTitle;
-	@FXML
-	private MFXTextField creditNoField,refInvNoField,creditAmountField,creditNotesField;
-	@FXML
-	private MFXDatePicker creditDateField;
-	@FXML
-	private MFXButton creditSaveButton;
-	@FXML
-	private Button creditDeleteButton;
-	@FXML
-	private JFXButton plusButton;
-	@FXML
-	private JFXNodesList addList;
-	@FXML
-	private Button importDataButton,exportDataButton;
+	@FXML private StackPane monthSelector;
+	@FXML private MFXTextField monthSelectorField;
+	@FXML private VBox controlBox,addInvoicePopover,addCreditPopover;
+	@FXML private BorderPane invoicesButton,creditsButton;
+	@FXML private Region contentDarken;
+	@FXML private DialogPane dialogPane;
+	@FXML private MFXTextField invoiceNoField,descriptionField,amountField,notesField;
+	@FXML private MFXDatePicker invoiceDateField, dueDateField;
+	@FXML private MFXButton saveButton;
+	@FXML private Button deleteButton;
+	@FXML private Label paymentPopoverTitle,expectedUnitAmountLabel,varianceLabel;
+	@FXML private Label afxValidationLabel,invoiceNoValidationLabel,invoiceDateValidationLabel,dueDateValidationLabel,amountValidationLabel;
+	@FXML private Label creditAFXValidationLabel,creditNoValidationLabel,refInvNoValidationLabel,creditDateValidationLabel,creditAmountValidationLabel;
+	@FXML private Label creditPopoverTitle;
+	@FXML private MFXTextField creditNoField,refInvNoField,creditAmountField,creditNotesField;
+	@FXML private MFXDatePicker creditDateField;
+	@FXML private MFXButton creditSaveButton;
+	@FXML private Button creditDeleteButton;
+	@FXML private JFXButton plusButton;
+	@FXML private JFXNodesList addList;
+	@FXML private Button importDataButton,exportDataButton;
 
 	private TableView<Invoice> invoicesTable = new TableView<>();
 	private TableView<Credit> creditsTable = new TableView<>();
@@ -107,9 +81,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 	private TableColumn<Invoice,Double> creditsCol;
 	private TableColumn<Invoice,Double> totalAfterCreditCol;
 	private TableColumn<Invoice,String> notesCol;
-
 	private TableColumn<Credit,String> creditNoCol;
-
 	private TableColumn<Credit,String> creditSupplierNameCol;
 	private TableColumn<Credit,String> referenceInvCol;
 	private TableColumn<Credit,LocalDate> creditDateCol;
@@ -120,27 +92,22 @@ public class InvoiceEntryController extends DateSelectController implements acti
 	private ActionableFilterComboBox invoiceAFX,creditAFX;
 	private DialogPane.Dialog<Object> dialog;
 
-
-	private Connection con = null;
-    PreparedStatement preparedStatement = null;
-    ResultSet resultSet = null;
     private Main main;
-    private Invoice selectedInvoice;
 	private PopOver currentDatePopover;
+	private InvoiceService invoiceService;
+	private InvoiceSupplierService invoiceSupplierService;
+	private CreditService creditService;
 
-	private ObservableList<Invoice> allInvoices = FXCollections.observableArrayList();
-	private ObservableList<Credit> allCredits = FXCollections.observableArrayList();
-
-	@FXML
-	private void initialize() throws IOException {}
+    @FXML
+	private void initialize() {
+		invoiceService = new InvoiceService();
+		invoiceSupplierService = new InvoiceSupplierService();
+		creditService = new CreditService();
+	}
 
 	@Override
 	public void setMain(Main main) {
 		this.main = main;
-	}
-
-	public void setConnection(Connection c) {
-		this.con = c;
 	}
 
 	@Override
@@ -180,13 +147,11 @@ public class InvoiceEntryController extends DateSelectController implements acti
 	public void invoicesView() {
 		formatTabSelect(invoicesButton);
 		formatTabDeselect(creditsButton);
-
 		controlBox.getChildren().clear();
 		invoiceFilterView = new FilterView<>();
 		invoiceFilterView.setTitle("Current Invoices");
 		invoiceFilterView.setTextFilterProvider(text -> invoice -> invoice.getInvoiceNo().toLowerCase().contains(text) || invoice.getSupplierName().toLowerCase().contains(text));
-		allInvoices = invoiceFilterView.getFilteredItems();
-
+        ObservableList<Invoice> allInvoices = invoiceFilterView.getFilteredItems();
 		supplierNameCol = new TableColumn<>("     SUPPLIER NAME     ");
 		invoiceNoCol = new TableColumn<>("INVOICE NUMBER");
 		invoiceDateCol = new TableColumn<>("INVOICE DATE");
@@ -197,8 +162,6 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		creditsCol = new TableColumn<>("CREDITS");
 		totalAfterCreditCol = new TableColumn<>("TOTAL AFTER\nCREDIT");
 		notesCol = new TableColumn<>("NOTES");
-
-
 		supplierNameCol.setCellValueFactory(new PropertyValueFactory<>("supplierName"));
 		invoiceNoCol.setCellValueFactory(new PropertyValueFactory<>("invoiceNo"));
 		invoiceDateCol.setCellValueFactory(new PropertyValueFactory<>("invoiceDateString"));
@@ -209,11 +172,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		creditsCol.setCellValueFactory(new PropertyValueFactory<>("creditsString"));
 		totalAfterCreditCol.setCellValueFactory(new PropertyValueFactory<>("totalAfterCreditsString"));
 		notesCol.setCellValueFactory(new PropertyValueFactory<>("notes"));
-
 		invoiceNoCol.setComparator((o1, o2) -> {
-			// Here you need to decide how you want to sort your strings.
-			// For example, you can sort numerically if both strings are parseable as integers, 
-			// or lexicographically otherwise. 
 			try {
 				int i1 = Integer.parseInt(o1);
 				int i2 = Integer.parseInt(o2);
@@ -222,9 +181,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 				return o1.compareTo(o2);
 			}
 		});
-
 		invoicesTable.getColumns().clear();
-
 		invoicesTable.getColumns().addAll(
 				supplierNameCol,
 				invoiceNoCol,
@@ -249,22 +206,18 @@ public class InvoiceEntryController extends DateSelectController implements acti
 			tc.setPrefWidth(TableUtils.getColumnWidth(tc)+30);
 		}
 		Platform.runLater(() -> GUIUtils.customResize(invoicesTable,notesCol));
-		Platform.runLater(() -> addInvoiceDoubleClickfunction());
+		Platform.runLater(this::addInvoiceDoubleClickFunction);
 		fillContactList();
 		fillInvoiceTable();
-		plusButton.setOnAction(actionEvent -> openInvoicePopover());
-		contentDarken.setOnMouseClicked(actionEvent -> closeInvoicePopover());
-
+		plusButton.setOnAction(_ -> openInvoicePopover());
+		contentDarken.setOnMouseClicked(_ -> closeInvoicePopover());
 		//Live update expected unit amount if invoice is recognised
-		invoiceNoField.delegateFocusedProperty().addListener((obs, oldVal, newVal) -> {
+		invoiceNoField.delegateFocusedProperty().addListener((_, _, _) -> {
 			if (invoiceNoField.isValid()) {
-				String sql = "SELECT * FROM invoicedatapoints  WHERE invoiceNo = ?";
 				try {
-					preparedStatement = con.prepareStatement(sql);
-					preparedStatement.setString(1, invoiceNoField.getText());
-					resultSet = preparedStatement.executeQuery();
-					if(resultSet.next()) {
-						expectedUnitAmountLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(resultSet.getDouble("amount")));
+					Invoice invoice = invoiceService.getInvoice(invoiceNoField.getText());
+					if(invoice!=null) {
+						expectedUnitAmountLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(invoice.getImportedInvoiceAmount()));
 						invoiceNoValidationLabel.setText("");
 						invoiceNoValidationLabel.setStyle("-fx-text-fill: red;");
 						invoiceNoValidationLabel.setVisible(false);
@@ -278,13 +231,13 @@ public class InvoiceEntryController extends DateSelectController implements acti
 						invoiceNoValidationLabel.setVisible(true);
 						varianceLabel.setText("N/A");
 					}
-				} catch (SQLException e) {
-					throw new RuntimeException(e);
+				} catch (SQLException ex) {
+					dialogPane.showError("Error","An error occurred while loading invoice information",ex.getMessage());
+					ex.printStackTrace();
 				}
 			}
 		});
-
-		amountField.delegateFocusedProperty().addListener((obs, oldVal, newVal) -> {
+		amountField.delegateFocusedProperty().addListener((_, _, _) -> {
 			if (amountField.isValid()) {
 				if(expectedUnitAmountLabel.getText().equals("N/A"))
 					varianceLabel.setText("N/A");
@@ -297,27 +250,23 @@ public class InvoiceEntryController extends DateSelectController implements acti
 	public void creditsView(){
 		formatTabSelect(creditsButton);
 		formatTabDeselect(invoicesButton);
-
 		controlBox.getChildren().clear();
 		creditFilterView = new FilterView<>();
 		creditFilterView.setTitle("Current Credits");
 		creditFilterView.setTextFilterProvider(text -> credit -> credit.getSupplierName().toLowerCase().contains(text) || credit.getCreditNo().toLowerCase().contains(text) || credit.getReferenceInvoiceNo().toLowerCase().contains(text));
-		allCredits = creditFilterView.getFilteredItems();
-
+        ObservableList<Credit> allCredits = creditFilterView.getFilteredItems();
 		creditSupplierNameCol = new TableColumn<>("     SUPPLIER NAME     ");
 		creditNoCol = new TableColumn<>("CREDIT NUMBER");
 		referenceInvCol = new TableColumn<>("REFERENCE INVOICE NUMBER");
 		creditDateCol = new TableColumn<>("CREDIT DATE");
 		creditAmountCol = new TableColumn<>("CREDIT AMOUNT");
 		creditNotesCol = new TableColumn<>("NOTES");
-
 		creditSupplierNameCol.setCellValueFactory(new PropertyValueFactory<>("supplierName"));
 		creditNoCol.setCellValueFactory(new PropertyValueFactory<>("creditNo"));
 		referenceInvCol.setCellValueFactory(new PropertyValueFactory<>("referenceInvoiceNo"));
 		creditDateCol.setCellValueFactory(new PropertyValueFactory<>("creditDateString"));
 		creditAmountCol.setCellValueFactory(new PropertyValueFactory<>("creditAmountString"));
 		creditNotesCol.setCellValueFactory(new PropertyValueFactory<>("notes"));
-
 		creditsTable.getColumns().clear();
 		creditsTable.getColumns().addAll(
 				creditSupplierNameCol,
@@ -327,7 +276,6 @@ public class InvoiceEntryController extends DateSelectController implements acti
 				creditAmountCol,
 				creditNotesCol
 		);
-
 		creditsTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
 		creditsTable.setMaxWidth(Double.MAX_VALUE);
 		creditsTable.setMaxHeight(Double.MAX_VALUE);
@@ -342,29 +290,28 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		fillContactList();
 		fillCreditTable();
 		Platform.runLater(() -> GUIUtils.customResize(creditsTable,creditNotesCol));
-		Platform.runLater(() -> addCreditDoubleClickfunction());
-		addCreditDoubleClickfunction();
-		plusButton.setOnAction(actionEvent -> openCreditPopover());
-		contentDarken.setOnMouseClicked(actionEvent -> closeCreditPopover());
+		Platform.runLater(this::addCreditDoubleClickFunction);
+		addCreditDoubleClickFunction();
+		plusButton.setOnAction(_ -> openCreditPopover());
+		contentDarken.setOnMouseClicked(_ -> closeCreditPopover());
 	}
 
 	public ActionableFilterComboBox createAFX(){
 		MFXButton addSupplierButton = new MFXButton("Create New");
-		addSupplierButton.setOnAction(actionEvent -> {
-			dialog = new DialogPane.Dialog(dialogPane, BLANK);
+		addSupplierButton.setOnAction(_ -> {
+			dialog = new DialogPane.Dialog<>(dialogPane, BLANK);
 			dialog.setPadding(false);
 			dialog.setContent(createAddNewSupplierDialog());
 			dialogPane.showDialog(dialog);
 		});
 		MFXButton manageSuppliersButton = new MFXButton("Manage Contacts");
-		manageSuppliersButton.setOnAction(actionEvent -> {
-			dialog = new DialogPane.Dialog(dialogPane, BLANK);
+		manageSuppliersButton.setOnAction(_ -> {
+			dialog = new DialogPane.Dialog<>(dialogPane, BLANK);
 			dialog.setPadding(false);
 			dialog.setContent(createManageSuppliersDialog());
 			dialogPane.showDialog(dialog);
 		});
 		ActionableFilterComboBox newAFX = new ActionableFilterComboBox(addSupplierButton, manageSuppliersButton);
-
 		newAFX.setFloatMode(FloatMode.ABOVE);
 		newAFX.setFloatingText("Contact name");
 		newAFX.setFloatingTextGap(5);
@@ -375,9 +322,9 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		return newAFX;
 	}
 
-	private void addInvoiceDoubleClickfunction(){
+	private void addInvoiceDoubleClickFunction(){
 		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Invoicing - Edit"))) {
-			invoicesTable.setRowFactory(tv -> {
+			invoicesTable.setRowFactory(_ -> {
 				TableRow<Invoice> row = new TableRow<>();
 				row.setOnMouseClicked(event -> {
 					if (event.getClickCount() == 2 && (!row.isEmpty())) {
@@ -390,9 +337,9 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		}
 	}
 
-	private void addCreditDoubleClickfunction(){
+	private void addCreditDoubleClickFunction(){
 		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Invoicing - Edit"))) {
-			creditsTable.setRowFactory(tv -> {
+			creditsTable.setRowFactory(_ -> {
 				TableRow<Credit> row = new TableRow<>();
 				row.setOnMouseClicked(event -> {
 					if (event.getClickCount() == 2 && (!row.isEmpty())) {
@@ -405,18 +352,17 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		}
 	}
 
-
 	private Node createAddNewSupplierDialog() {
 		FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/AddNewSupplierDialog.fxml"));
 		StackPane newContactDialog = null;
 		try {
 			newContactDialog = loader.load();
 		} catch (IOException e) {
+			dialogPane.showError("Error","An error occurred while loading the new supplier dialog",e.getMessage());
 			e.printStackTrace();
 		}
 		AddNewSupplierDialogController dialogController = loader.getController();
 		dialogController.setParent(this);
-		dialogController.setConnection(this.con);
 		dialogController.setMain(this.main);
 		return newContactDialog;
 	}
@@ -427,37 +373,34 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		try {
 			manageSuppliersDialog = loader.load();
 		} catch (IOException e) {
+			dialogPane.showError("Error","An error occurred while loading the manage suppliers dialog",e.getMessage());
 			e.printStackTrace();
 		}
 		ManageSuppliersDialogController dialogController = loader.getController();
 		dialogController.setParent(this);
-		dialogController.setConnection(this.con);
 		dialogController.setMain(this.main);
 		dialogController.fill();
 		return manageSuppliersDialog;
 	}
 
 	public void fillContactList(){
-		ObservableList<InvoiceSupplier> contacts = FXCollections.observableArrayList();
-		String sql = null;
+		ObservableList<InvoiceSupplier> contacts = null;
 		try {
-			sql = "SELECT * FROM invoiceSuppliers where storeID = ?";
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				contacts.add(new InvoiceSupplier(resultSet));
-			}
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
+			contacts = FXCollections.observableArrayList(invoiceSupplierService.getAllInvoiceSuppliers(main.getCurrentStore().getStoreID()));
+		} catch (SQLException ex) {
+			dialogPane.showError("Error","An error occurred while loading invoice suppliers",ex.getMessage());
+			ex.printStackTrace();
 		}
-		if(contacts.size()==0){
+        assert contacts != null;
+        if(contacts.isEmpty()){
 			invoiceAFX.getItems().add(new InvoiceSupplier(0,"*Please add new suppliers below",0));
 			creditAFX.getItems().add(new InvoiceSupplier(0,"*Please add new suppliers below",0));
 		}else{
 			invoiceAFX.setItems(contacts);
 			creditAFX.setItems(contacts);
 		}
+		invoiceAFX.clearSelection();
+		creditAFX.clearSelection();
 	}
 
 	public void monthForward() {
@@ -478,13 +421,13 @@ public class InvoiceEntryController extends DateSelectController implements acti
 			try {
 				monthSelectorMenuContent = loader.load();
 			} catch (IOException e) {
+				dialogPane.showError("Error","An error occurred while loading the month selector",e.getMessage());
 				e.printStackTrace();
 			}
 			MonthYearSelectorContentController rdc = loader.getController();
 			rdc.setMain(main);
 			rdc.setParent(this);
 			rdc.fill();
-
 			monthSelectorMenu.setOpacity(1);
 			monthSelectorMenu.setContentNode(monthSelectorMenuContent);
 			monthSelectorMenu.setArrowSize(0);
@@ -514,7 +457,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 	}
 
 	public void openInvoicePopover(){
-		saveButton.setOnAction(actionEvent -> addInvoice());
+		saveButton.setOnAction(_ -> addInvoice());
 		paymentPopoverTitle.setText("Add new Invoice");
 		deleteButton.setVisible(false);
 		contentDarken.setVisible(true);
@@ -534,13 +477,18 @@ public class InvoiceEntryController extends DateSelectController implements acti
 	}
 
 	public void openInvoicePopover(Invoice invoice){
-		saveButton.setOnAction(actionEvent -> editInvoice(invoice));
+		saveButton.setOnAction(_ -> editInvoice(invoice));
 		paymentPopoverTitle.setText("Edit Invoice");
 		deleteButton.setVisible(true);
-		deleteButton.setOnAction(actionEvent -> deleteInvoice(invoice));
+		deleteButton.setOnAction(_ -> deleteInvoice(invoice));
 		contentDarken.setVisible(true);
 		AnimationUtils.slideIn(addInvoicePopover,0);
-		invoiceAFX.setValue(getContactfromName(invoice.getSupplierName()));
+		try{
+			invoiceAFX.setValue(invoiceSupplierService.getInvoiceSupplierByName(invoice.getSupplierName(),main.getCurrentStore().getStoreID()));
+		}catch (SQLException ex) {
+			dialogPane.showError("Error","An error occurred while locating the invoice supplier",ex.getMessage());
+			ex.printStackTrace();
+		}
 		invoiceNoField.setText(invoice.getInvoiceNo());
 		invoiceDateField.setValue(invoice.getInvoiceDate());
 		dueDateField.setValue(invoice.getDueDate());
@@ -552,7 +500,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 	}
 
 	public void openCreditPopover(){
-		creditSaveButton.setOnAction(actionEvent -> addCredit());
+		creditSaveButton.setOnAction(_ -> addCredit());
 		creditPopoverTitle.setText("Add new Credit");
 		creditDeleteButton.setVisible(false);
 		contentDarken.setVisible(true);
@@ -568,36 +516,25 @@ public class InvoiceEntryController extends DateSelectController implements acti
 	}
 
 	public void openCreditPopover(Credit credit){
-		creditSaveButton.setOnAction(actionEvent -> editCredit(credit));
+		creditSaveButton.setOnAction(_ -> editCredit(credit));
 		creditPopoverTitle.setText("Edit Credit");
 		creditDeleteButton.setVisible(true);
-		creditDeleteButton.setOnAction(actionEvent -> deleteCredit(credit));
+		creditDeleteButton.setOnAction(_ -> deleteCredit(credit));
 		contentDarken.setVisible(true);
 		AnimationUtils.slideIn(addCreditPopover,0);
-		creditAFX.setValue(getContactfromName(credit.getSupplierName()));
+		try{
+			creditAFX.setValue(invoiceSupplierService.getInvoiceSupplierByName(credit.getSupplierName(),main.getCurrentStore().getStoreID()));
+		}catch (SQLException ex) {
+			dialogPane.showError("Error","An error occurred while locating the credit supplier",ex.getMessage());
+			ex.printStackTrace();
+		}
 		creditNoField.setText(credit.getCreditNo());
 		refInvNoField.setText(credit.getReferenceInvoiceNo());
 		creditDateField.setValue(credit.getCreditDate());
+		creditDateField.setText(credit.getCreditDateString());
 		creditAmountField.setText(String.valueOf(credit.getCreditAmount()));
 		creditNotesField.setText(credit.getNotes());
 		Platform.runLater(() -> creditAFX.requestFocus());
-	}
-
-	public InvoiceSupplier getContactfromName(String name){
-		String sql = null;
-		try {
-			sql = "SELECT * FROM invoicesuppliers  WHERE supplierName = ? AND storeID = ?";
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setString(1,name);
-			preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				return new InvoiceSupplier(resultSet);
-			}
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
-		}
-		return null;
 	}
 
 	public void closeInvoicePopover(){
@@ -619,18 +556,11 @@ public class InvoiceEntryController extends DateSelectController implements acti
 	}
 
 	public boolean invoiceDuplicateCheck(){
-		String sql = "SELECT * FROM invoices WHERE invoiceNo = ? AND storeID = ? AND supplierID = ?";
 		try {
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setString(1, invoiceNoField.getText());
-			preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
-			preparedStatement.setInt(3, ((InvoiceSupplier) invoiceAFX.getValue()).getContactID());
-			resultSet = preparedStatement.executeQuery();
-			if(resultSet.next()) {
-				return true;
-			}
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
+			return invoiceService.checkDuplicateInvoice(invoiceNoField.getText(),main.getCurrentStore().getStoreID(),((InvoiceSupplier) invoiceAFX.getValue()).getContactID());
+		} catch (SQLException ex) {
+			dialogPane.showError("Error","An error occurred while checking for duplicate invoices",ex.getMessage());
+			ex.printStackTrace();
 		}
 		return false;
 	}
@@ -645,29 +575,22 @@ public class InvoiceEntryController extends DateSelectController implements acti
 			invoiceNoField.requestFocus();
 			invoiceNoValidationLabel.setText("Invoice Already Exists");
 			invoiceNoValidationLabel.setVisible(true);
-		}
-		else{
+		}else{
 			InvoiceSupplier contact = (InvoiceSupplier) invoiceAFX.getSelectedItem();
-			String invoiceNo = invoiceNoField.getText();
-			LocalDate invoiceDate = invoiceDateField.getValue();
-			LocalDate dueDate = dueDateField.getValue();
-			String description = descriptionField.getText();
-			String notes = notesField.getText();
-			double unitAmount = Double.parseDouble(amountField.getText());
-			String sql = "INSERT INTO invoices(supplierID,invoiceNo,invoiceDate,dueDate,description,unitAmount,notes,storeID) VALUES(?,?,?,?,?,?,?,?)";
 			try {
-				preparedStatement = con.prepareStatement(sql);
-				preparedStatement.setInt(1, contact.getContactID());
-				preparedStatement.setString(2, invoiceNo);
-				preparedStatement.setDate(3, Date.valueOf(invoiceDate));
-				preparedStatement.setDate(4, Date.valueOf(dueDate));
-				preparedStatement.setString(5, description);
-				preparedStatement.setDouble(6, unitAmount);
-				preparedStatement.setString(7, notes);
-				preparedStatement.setInt(8, main.getCurrentStore().getStoreID());
-				preparedStatement.executeUpdate();
+				Invoice newInvoice = new Invoice();
+				newInvoice.setSupplierID(contact.getContactID());
+				newInvoice.setInvoiceNo(invoiceNoField.getText());
+				newInvoice.setInvoiceDate(invoiceDateField.getValue());
+				newInvoice.setDueDate(dueDateField.getValue());
+				newInvoice.setDescription(descriptionField.getText());
+				newInvoice.setUnitAmount(Double.parseDouble(amountField.getText()));
+				newInvoice.setNotes(notesField.getText());
+				newInvoice.setStoreID(main.getCurrentStore().getStoreID());
+				invoiceService.addInvoice(newInvoice);
 			} catch (SQLException ex) {
-				System.err.println(ex.getMessage());
+				dialogPane.showError("Error","An error occurred while adding the invoice",ex.getMessage());
+				ex.printStackTrace();
 			}
 			invoiceNoValidationLabel.setVisible(false);
 			invoiceNoField.clear();
@@ -681,31 +604,30 @@ public class InvoiceEntryController extends DateSelectController implements acti
 	}
 
 	public void editInvoice(Invoice invoice){
-		if(!invoiceAFX.isValid()){invoiceAFX.requestFocus();} else if(!invoiceNoField.isValid()){invoiceNoField.requestFocus();} else if(!invoiceDateField.isValid()){invoiceDateField.requestFocus();} else if(!dueDateField.isValid()){dueDateField.requestFocus();} else if(!amountField.isValid()){amountField.requestFocus();} else {
+		if(!invoiceAFX.isValid()){invoiceAFX.requestFocus();}
+		else if(!invoiceNoField.isValid()){invoiceNoField.requestFocus();}
+		else if(!invoiceDateField.isValid()){invoiceDateField.requestFocus();}
+		else if(!dueDateField.isValid()){dueDateField.requestFocus();}
+		else if(!amountField.isValid()){amountField.requestFocus();}
+		else if(!Objects.equals(invoiceNoField.getText(), invoice.getInvoiceNo()) &&invoiceDuplicateCheck()){
+			invoiceNoField.requestFocus();
+			invoiceNoValidationLabel.setText("Invoice Already Exists");
+			invoiceNoValidationLabel.setVisible(true);
+		}else{
 			InvoiceSupplier contact = (InvoiceSupplier) invoiceAFX.getValue();
-			String invoiceNo = invoiceNoField.getText();
-			LocalDate invoiceDate = invoiceDateField.getValue();
-			LocalDate dueDate = dueDateField.getValue();
-			String description = descriptionField.getText();
-			double unitAmount = Double.parseDouble(amountField.getText());
-			String notes = notesField.getText();
-
-			String sql = "UPDATE invoices SET supplierID = ?,storeID = ?,invoiceNo = ?, invoiceDate = ?, dueDate = ?,description = ?,unitAmount = ?,notes = ? WHERE invoiceNo = ? AND storeID = ?";
 			try {
-				preparedStatement = con.prepareStatement(sql);
-				preparedStatement.setInt(1, contact.getContactID());
-				preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
-				preparedStatement.setString(3, invoiceNo);
-				preparedStatement.setDate(4, Date.valueOf(invoiceDate));
-				preparedStatement.setDate(5, Date.valueOf(dueDate));
-				preparedStatement.setString(6, description);
-				preparedStatement.setDouble(7, unitAmount);
-				preparedStatement.setString(8, notes);
-				preparedStatement.setString(9, invoice.getInvoiceNo());
-				preparedStatement.setInt(10, main.getCurrentStore().getStoreID());
-				preparedStatement.executeUpdate();
+				String oldInvoiceNo = invoice.getInvoiceNo();
+				invoice.setSupplierID(contact.getContactID());
+				invoice.setInvoiceNo(invoiceNoField.getText());
+				invoice.setInvoiceDate(invoiceDateField.getValue());
+				invoice.setDueDate(dueDateField.getValue());
+				invoice.setDescription(descriptionField.getText());
+				invoice.setUnitAmount(Double.parseDouble(amountField.getText()));
+				invoice.setNotes(notesField.getText());
+				invoiceService.updateInvoice(invoice,oldInvoiceNo);
 			} catch (SQLException ex) {
-				System.err.println(ex.getMessage());
+				dialogPane.showError("Error","An error occurred while updating the invoice",ex.getMessage());
+				ex.printStackTrace();
 			}
 			closeInvoicePopover();
 			fillInvoiceTable();
@@ -718,45 +640,40 @@ public class InvoiceEntryController extends DateSelectController implements acti
 				"This action will permanently delete this Invoice from all systems,\n" +
 						"Are you sure you still want to delete this Invoice?").thenAccept(buttonType -> {
 			if (buttonType.equals(ButtonType.OK)) {
-				String sql = "DELETE from invoices WHERE invoiceNo=? AND storeID=?";
 				try {
-					preparedStatement = con.prepareStatement(sql);
-					preparedStatement.setString(1, invoice.getInvoiceNo());
-					preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
-					preparedStatement.executeUpdate();
+					invoiceService.deleteInvoice(invoice.getInvoiceNo(),main.getCurrentStore().getStoreID());
 				} catch (SQLException ex) {
-					System.err.println(ex.getMessage());
+					dialogPane.showError("Error","An error occurred while deleting the invoice",ex.getMessage());
+					ex.printStackTrace();
 				}
 				closeInvoicePopover();
 				fillInvoiceTable();
 				dialogPane.showInformation("Success","Invoice was successfully deleted");
 			}
 		});
-
 	}
 
 	public void addCredit() {
-		if (!creditAFX.isValid()) {creditAFX.requestFocus();} else if (!creditNoField.isValid()) {creditNoField.requestFocus();} else if (!refInvNoField.isValid()) {refInvNoField.requestFocus();} else if (!creditDateField.isValid()) {creditDateField.requestFocus();} else if (!creditAmountField.isValid()) {creditAmountField.requestFocus();} else {
+		if (!creditAFX.isValid()) {creditAFX.requestFocus();}
+		else if (!creditNoField.isValid()) {creditNoField.requestFocus();}
+		else if (!refInvNoField.isValid()) {refInvNoField.requestFocus();}
+		else if (!creditDateField.isValid()) {creditDateField.requestFocus();}
+		else if (!creditAmountField.isValid()) {creditAmountField.requestFocus();}
+		else {
 			InvoiceSupplier contact = (InvoiceSupplier) creditAFX.getSelectedItem();
-			String creditNo = creditNoField.getText();
-			String refInvNo = refInvNoField.getText();
-			LocalDate creditDate = creditDateField.getValue();
-			double creditAmount = Double.parseDouble(creditAmountField.getText());
-			String creditNotes = creditNotesField.getText();
-
-			String sql = "INSERT INTO credits(supplierID,creditNo,referenceInvoiceNo,creditDate,creditAmount,notes,storeID) VALUES(?,?,?,?,?,?,?)";
 			try {
-				preparedStatement = con.prepareStatement(sql);
-				preparedStatement.setInt(1, contact.getContactID());
-				preparedStatement.setString(2, creditNo);
-				preparedStatement.setString(3, refInvNo);
-				preparedStatement.setDate(4, Date.valueOf(creditDate));
-				preparedStatement.setDouble(5, creditAmount);
-				preparedStatement.setString(6, creditNotes);
-				preparedStatement.setInt(7, main.getCurrentStore().getStoreID());
-				preparedStatement.executeUpdate();
+				Credit newCredit = new Credit();
+				newCredit.setSupplierID(contact.getContactID());
+				newCredit.setCreditNo(creditNoField.getText());
+				newCredit.setReferenceInvoiceNo(refInvNoField.getText());
+				newCredit.setCreditDate(creditDateField.getValue());
+				newCredit.setCreditAmount(Double.parseDouble(creditAmountField.getText()));
+				newCredit.setNotes(creditNotesField.getText());
+				newCredit.setStoreID(main.getCurrentStore().getStoreID());
+				creditService.addCredit(newCredit);
 			} catch (SQLException ex) {
-				System.err.println(ex.getMessage());
+				dialogPane.showError("Error","An error occurred while adding the credit",ex.getMessage());
+				ex.printStackTrace();
 			}
 			creditNoField.clear();
 			refInvNoField.clear();
@@ -769,31 +686,28 @@ public class InvoiceEntryController extends DateSelectController implements acti
 	}
 
 	public void editCredit(Credit credit){
-		if (!creditAFX.isValid()) {creditAFX.requestFocus();} else if (!creditNoField.isValid()) {creditNoField.requestFocus();} else if (!refInvNoField.isValid()) {refInvNoField.requestFocus();} else if (!creditDateField.isValid()) {creditDateField.requestFocus();} else if (!creditAmountField.isValid()) {creditAmountField.requestFocus();} else {
+		if (!creditAFX.isValid()) {creditAFX.requestFocus();}
+		else if (!creditNoField.isValid()) {creditNoField.requestFocus();}
+		else if (!refInvNoField.isValid()) {refInvNoField.requestFocus();}
+		else if (!creditDateField.isValid()) {creditDateField.requestFocus();}
+		else if (!creditAmountField.isValid()) {creditAmountField.requestFocus();}
+		else {
 			InvoiceSupplier contact = (InvoiceSupplier) creditAFX.getValue();
-			String creditNo = creditNoField.getText();
-			String refInvNo = refInvNoField.getText();
-			LocalDate creditDate = creditDateField.getValue();
-			double creditAmount = Double.parseDouble(creditAmountField.getText());
-			String creditNotes = creditNotesField.getText();
-
-			String sql = "UPDATE credits SET supplierID = ?,creditNo = ?,referenceInvoiceNo = ?,creditDate = ?,creditAmount = ?,notes = ? WHERE idCredits = ?";
 			try {
-				preparedStatement = con.prepareStatement(sql);
-				preparedStatement.setInt(1, contact.getContactID());
-				preparedStatement.setString(2, creditNo);
-				preparedStatement.setString(3, refInvNo);
-				preparedStatement.setDate(4, Date.valueOf(creditDate));
-				preparedStatement.setDouble(5, creditAmount);
-				preparedStatement.setString(6, creditNotes);
-				preparedStatement.setInt(7, credit.getCreditID());
-				preparedStatement.executeUpdate();
+				credit.setSupplierID(contact.getContactID());
+				credit.setCreditNo(creditNoField.getText());
+				credit.setReferenceInvoiceNo(refInvNoField.getText());
+				credit.setCreditDate(creditDateField.getValue());
+				credit.setCreditAmount(Double.parseDouble(creditAmountField.getText()));
+				credit.setNotes(creditNotesField.getText());
+				creditService.updateCredit(credit);
 			} catch (SQLException ex) {
-				System.err.println(ex.getMessage());
+				dialogPane.showError("Error","An error occurred while updating the credit",ex.getMessage());
+				ex.printStackTrace();
 			}
 			closeCreditPopover();
 			fillCreditTable();
-			dialogPane.showInformation("Success", "Credit was succesfully edited");
+			dialogPane.showInformation("Success", "Credit was successfully edited");
 		}
 	}
 
@@ -802,60 +716,29 @@ public class InvoiceEntryController extends DateSelectController implements acti
 				"This action will permanently delete this Credit from all systems,\n" +
 						"Are you sure you still want to delete this Credit?").thenAccept(buttonType -> {
 			if (buttonType.equals(ButtonType.OK)) {
-				String sql = "DELETE from credits WHERE idCredits = ?";
 				try {
-					preparedStatement = con.prepareStatement(sql);
-					preparedStatement.setInt(1, credit.getCreditID());
-					preparedStatement.executeUpdate();
+					creditService.deleteCredit(credit.getCreditID());
 				} catch (SQLException ex) {
-					System.err.println(ex.getMessage());
+					dialogPane.showError("Error","An error occurred while deleting the credit",ex.getMessage());
+					ex.printStackTrace();
 				}
 				closeCreditPopover();
 				fillCreditTable();
-				dialogPane.showInformation("Success","Credit was succesfully deleted");
+				dialogPane.showInformation("Success","Credit was successfully deleted");
 			}
 		});
 	}
 
 	public void fillInvoiceTable(){
-
 		YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
-		ObservableList<Invoice> currentInvoiceDataPoints = FXCollections.observableArrayList();
-		String sql = null;
 		try {
-			sql = "SELECT \n" +
-					"    invoices.*,\n" +
-					"    i.*,\n" +
-					"    idp.*,\n" +
-					"    (SELECT \n" +
-					"            SUM(credits.creditAmount)\n" +
-					"        FROM\n" +
-					"            credits\n" +
-					"        WHERE\n" +
-					"            credits.referenceInvoiceNo = invoices.invoiceNo) AS total_credits\n" +
-					"FROM\n" +
-					"    invoices\n" +
-					"        JOIN\n" +
-					"    invoiceSuppliers i ON invoices.supplierID = i.idinvoiceSuppliers\n" +
-					"        LEFT JOIN\n" +
-					"    invoicedatapoints idp ON invoices.invoiceNo = idp.invoiceNo\n" +
-					"WHERE\n" +
-					"    invoices.storeID = ?\n" + "AND MONTH(invoices.invoiceDate) = ?\n" + "AND YEAR(invoices.invoiceDate) = ?\n" +
-					"ORDER BY invoices.invoiceNo ASC";
-
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-			preparedStatement.setInt(2, yearMonthObject.getMonthValue());
-			preparedStatement.setInt(3, yearMonthObject.getYear());
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				currentInvoiceDataPoints.add(new Invoice(resultSet));
-			}
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
+			ObservableList<Invoice> currentInvoiceDataPoints  = FXCollections.observableArrayList(invoiceService.getInvoiceTableData(main.getCurrentStore().getStoreID(),yearMonthObject));
+			invoiceFilterView.getItems().setAll(currentInvoiceDataPoints);
+		} catch (SQLException ex) {
+			dialogPane.showError("Error","An error occurred while loading invoice data",ex.getMessage());
+			ex.printStackTrace();
 		}
-		invoiceFilterView.getItems().setAll(currentInvoiceDataPoints);
-		addInvoiceDoubleClickfunction();
+		addInvoiceDoubleClickFunction();
 		invoicesTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
 		invoicesTable.setMaxWidth(Double.MAX_VALUE);
 		invoicesTable.setMaxHeight(Double.MAX_VALUE);
@@ -867,28 +750,17 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		}
 		Platform.runLater(() -> GUIUtils.customResize(invoicesTable,notesCol));
 		Platform.runLater(() -> invoicesTable.sort());
-
 	}
 
 	public void fillCreditTable(){
 		YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
-		int daysInMonth = yearMonthObject.lengthOfMonth();
-		ObservableList<Credit> currentCreditDataPoints = FXCollections.observableArrayList();
-		String sql = null;
 		try {
-			sql = "SELECT * FROM credits JOIN invoiceSuppliers i on credits.supplierID = i.idinvoiceSuppliers WHERE credits.storeID = ? AND MONTH(creditDate) = ? AND YEAR(creditDate) = ?";
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-			preparedStatement.setInt(2, yearMonthObject.getMonthValue());
-			preparedStatement.setInt(3, yearMonthObject.getYear());
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				currentCreditDataPoints.add(new Credit(resultSet));
-			}
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
+			ObservableList<Credit> currentCreditDataPoints = FXCollections.observableArrayList(creditService.getAllCredits(main.getCurrentStore().getStoreID(),yearMonthObject));
+			creditFilterView.getItems().setAll(currentCreditDataPoints);
+		} catch (SQLException ex) {
+			dialogPane.showError("Error","An error occurred while loading credit data",ex.getMessage());
+			ex.printStackTrace();
 		}
-		creditFilterView.getItems().setAll(currentCreditDataPoints);
 		creditsTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
 		creditsTable.setMaxWidth(Double.MAX_VALUE);
 		creditsTable.setMaxHeight(Double.MAX_VALUE);
@@ -911,16 +783,11 @@ public class InvoiceEntryController extends DateSelectController implements acti
 			HSSFWorkbook workbook = new HSSFWorkbook(file);
 			WorkbookProcessor wbp = new WorkbookProcessor(workbook);
 			for(CellDataPoint cdp : wbp.getDataPoints()){
-				String sql = "INSERT INTO invoicedatapoints(storeID,invoiceNo,amount) VALUES(?,?,?) ON DUPLICATE KEY UPDATE amount=?";
 				try {
-					preparedStatement = con.prepareStatement(sql);
-					preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-					preparedStatement.setString(2, cdp.getCategory());
-					preparedStatement.setDouble(3, cdp.getAmount());
-					preparedStatement.setDouble(4, cdp.getAmount());
-					preparedStatement.executeUpdate();
+					invoiceService.importInvoiceData(main.getCurrentStore().getStoreID(),cdp);
 				} catch (SQLException ex) {
-					System.err.println(ex.getMessage());
+					dialogPane.showError("Error","An error occurred while importing invoice data",ex.getMessage());
+					ex.printStackTrace();
 				}
 			}
 		}
@@ -934,45 +801,36 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		if (file != null) {
 			try (PrintWriter pw = new PrintWriter(file)) {
 				pw.println("*ContactName,EmailAddress,POAddressLine1,POAddressLine2,POAddressLine3,POAddressLine4,POCity,PORegion,POPostalCode,POCountry,*InvoiceNumber,*InvoiceDate,*DueDate,InventoryItemCode,Description,*Quantity,*UnitAmount,*AccountCode,*TaxType,TrackingName1,TrackingOption1,TrackingName2,TrackingOption2");
-
 				YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
-				int daysInMonth = yearMonthObject.lengthOfMonth();
-
-				ObservableList<Invoice> currentInvoices = FXCollections.observableArrayList();
-				String sql = null;
 				try {
-					sql = "SELECT * FROM invoices JOIN invoicesuppliers a on a.idinvoiceSuppliers = invoices.supplierID JOIN invoicedatapoints i on invoices.invoiceNo = i.invoiceNo WHERE invoices.storeID = ? AND MONTH(invoiceDate) = ? AND YEAR(invoiceDate) = ?";
-					preparedStatement = con.prepareStatement(sql);
-					preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-					preparedStatement.setInt(2, yearMonthObject.getMonthValue());
-					preparedStatement.setInt(3, yearMonthObject.getYear());
-					resultSet = preparedStatement.executeQuery();
-					while (resultSet.next()) {
-						currentInvoices.add(new Invoice(resultSet));
+					ObservableList<Invoice> currentInvoices = FXCollections.observableArrayList(invoiceService.getAllInvoices(main.getCurrentStore().getStoreID(),yearMonthObject));
+					for(Invoice a: currentInvoices){
+						pw.print(a.getSupplierName()+",,,,,,,,,,");
+						pw.print(a.getInvoiceNo()+",");
+						pw.print(a.getInvoiceDate()+",");
+						pw.print(a.getDueDate()+",,");
+						pw.print(a.getDescription()+",1,");
+						pw.print("$"+a.getUnitAmount()+",");
+						pw.println("310,gst on expenses,");
 					}
-				} catch (SQLException throwables) {
-					throwables.printStackTrace();
-				}
-
-
-				for(Invoice a: currentInvoices){
-					pw.print(a.getSupplierName()+",,,,,,,,,,");
-					pw.print(a.getInvoiceNo()+",");
-					pw.print(a.getInvoiceDate()+",");
-					pw.print(a.getDueDate()+",,");
-					pw.print(a.getDescription()+",1,");
-					pw.print("$"+a.getUnitAmount()+",");
-					pw.println("310,gst on expenses,");
+				} catch (SQLException ex) {
+					dialogPane.showError("Error","An error occurred while loading invoice data",ex.getMessage());
+					ex.printStackTrace();
 				}
 				dialogPane.showInformation("Success", "Information exported succesfully");
 			} catch (FileNotFoundException e){
 				dialogPane.showError("Error", "This file could not be accessed, please ensure its not open in another program");
+				e.printStackTrace();
 			}
 		}
 	}
 
 	public DialogPane.Dialog<Object> getDialog() {
 		return dialog;
+	}
+
+	public DialogPane getDialogPane() {
+		return dialogPane;
 	}
 
 	public void formatTabSelect(BorderPane b){
@@ -1001,6 +859,3 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		}
 	}
 }
-
-
-

@@ -60,6 +60,8 @@ public class Invoice {
 		}
 	}
 
+	public Invoice(){}
+
 	private boolean columnExists(ResultSet rs, String columnName) throws SQLException {
 		ResultSetMetaData rsMetaData = rs.getMetaData();
 		int columnCount = rsMetaData.getColumnCount();
@@ -195,6 +197,22 @@ public class Invoice {
 
 	public void setNotes(String notes) {
 		this.notes = notes;
+	}
+
+	public int getStoreID() {
+		return storeID;
+	}
+
+	public void setStoreID(int storeID) {
+		this.storeID = storeID;
+	}
+
+	public int getSupplierID() {
+		return supplierID;
+	}
+
+	public void setSupplierID(int supplierID) {
+		this.supplierID = supplierID;
 	}
 
 }

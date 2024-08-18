@@ -29,6 +29,9 @@ public class InvoiceSupplier {
 		this.storeID = storeID;
 	}
 
+	public InvoiceSupplier() {
+	}
+
 	public int getContactID() {return contactID;}
 
 	public void setContactID(int contactID) {this.contactID = contactID;}
@@ -40,6 +43,14 @@ public class InvoiceSupplier {
 	public MFXButton getDeleteButton() {return deleteButton;}
 
 	public void setDeleteButton(MFXButton deleteButton) {this.deleteButton = deleteButton;}
+
+	public int getStoreID() {
+		return storeID;
+	}
+
+	public void setStoreID(int storeID) {
+		this.storeID = storeID;
+	}
 
 	@Override
 	public String toString() {
