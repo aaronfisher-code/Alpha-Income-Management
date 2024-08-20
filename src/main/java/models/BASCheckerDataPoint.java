@@ -49,6 +49,8 @@ public class BASCheckerDataPoint {
         }
     }
 
+    public BASCheckerDataPoint(){}
+
     public LocalDate getDate() {
         return date;
     }

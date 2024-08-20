@@ -15,6 +15,10 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.*;
 import models.*;
 import org.controlsfx.control.PopOver;
+import services.BASCheckerService;
+import services.EODService;
+import services.InvoiceService;
+import services.TillReportService;
 import utils.RosterUtils;
 import utils.ValidatorUtils;
 
@@ -87,22 +91,23 @@ public class BASCheckerController extends DateSelectController{
 	@FXML
 	private MFXButton saveButton;
 
-
-	private Connection con = null;
-    PreparedStatement preparedStatement = null;
-    ResultSet resultSet = null;
     private Main main;
+	private EODService eodService;
+	private TillReportService tillReportService;
+	private InvoiceService invoiceService;
+	private BASCheckerService basCheckerService;
 
 	@FXML
-	private void initialize() throws IOException {}
+	private void initialize() {
+		eodService = new EODService();
+		tillReportService = new TillReportService();
+		invoiceService = new InvoiceService();
+		basCheckerService = new BASCheckerService();
+	}
 
 	@Override
 	public void setMain(Main main) {
 		this.main = main;
-	}
-
-	public void setConnection(Connection c) {
-		this.con = c;
 	}
 
 	@Override
@@ -119,7 +124,6 @@ public class BASCheckerController extends DateSelectController{
 		}else{
 			saveButton.setDisable(true);
 		}
-
 		for (Node node : incomeCheckTable.getChildren()) {
 			if (node instanceof MFXTextField textField) {
                 textField.setOnKeyPressed(event -> {
@@ -135,7 +139,6 @@ public class BASCheckerController extends DateSelectController{
 				});
 			}
 		}
-
 		setDate(main.getCurrentDate());
 	}
 
@@ -162,31 +165,13 @@ public class BASCheckerController extends DateSelectController{
 		ObservableList<EODDataPoint> currentEODDataPoints = FXCollections.observableArrayList();
 		ObservableList<TillReportDataPoint> currentTillDataPoints = FXCollections.observableArrayList();
 		LocalDate startOfMonth = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonthValue(), 1);
-		LocalDate startOfNextMonth = startOfMonth.plusMonths(1);
-		String sql;
+		LocalDate endOfMonth = startOfMonth.plusMonths(1).minusDays(1);
 		try {
-			sql = "SELECT * FROM eoddatapoints WHERE eoddatapoints.storeID = ? AND date >= ? AND date < ?";
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-			preparedStatement.setDate(2, Date.valueOf(startOfMonth));
-			preparedStatement.setDate(3, Date.valueOf(startOfNextMonth));
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				currentEODDataPoints.add(new EODDataPoint(resultSet));
-			}
-			sql = "SELECT * FROM tillreportdatapoints WHERE storeID = ? AND MONTH(assignedDate) = ? AND YEAR(assignedDate) = ?";
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-			preparedStatement.setInt(2, yearMonthObject.getMonthValue());
-			preparedStatement.setInt(3, yearMonthObject.getYear());
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				currentTillDataPoints.add(new TillReportDataPoint(resultSet));
-			}
+            currentEODDataPoints.addAll(eodService.getEODDataPoints(main.getCurrentStore().getStoreID(), startOfMonth, endOfMonth));
+            currentTillDataPoints.addAll(tillReportService.getTillReportDataPoints(main.getCurrentStore().getStoreID(), startOfMonth, endOfMonth));
 		} catch (SQLException throwable) {
 			throwable.printStackTrace();
 		}
-
 		double cashTotal = 0;
 		double eftposTotal = 0;
 		double amexTotal = 0;
@@ -262,7 +247,6 @@ public class BASCheckerController extends DateSelectController{
 		}else{
 			tillBalance.setText("");
 		}
-
 		spreadsheetCheck1.setText(String.format("%.2f", cashTotal+eftposTotal+amexTotal+googleSquareTotal+chequesTotal+medicareTotal));
 		ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints = FXCollections.observableArrayList();
 		RosterUtils rosterUtils;
@@ -271,7 +255,6 @@ public class BASCheckerController extends DateSelectController{
 		} catch (SQLException e) {
             throw new RuntimeException(e);
         }
-
         for(int i = 1; i<daysInMonth+1; i++){
 			LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(),i);
 			monthlySummaryPoints.add(new MonthlySummaryDataPoint(d,currentTillDataPoints,currentEODDataPoints,monthlySummaryPoints,rosterUtils,0,0,0,0));
@@ -279,60 +262,44 @@ public class BASCheckerController extends DateSelectController{
 		MonthlySummaryDataPoint totalList = new MonthlySummaryDataPoint(monthlySummaryPoints, true, rosterUtils.getOpenDuration());
 		spreadsheetCheck2.setText(String.format("%.2f",totalList.getTotalIncome()));
 		spreadsheetCheck3.setText(String.format("%.2f", Double.parseDouble(spreadsheetCheck2.getText())-Double.parseDouble(spreadsheetCheck1.getText())));
-
-
 		try {
-			sql = "SELECT SUM(unitAmount) AS total FROM invoices WHERE storeID = ? AND MONTH(invoiceDate) = ? AND YEAR(invoiceDate) = ?";
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-			preparedStatement.setInt(2, yearMonthObject.getMonthValue());
-			preparedStatement.setInt(3, yearMonthObject.getYear());
-			resultSet = preparedStatement.executeQuery();
-			if(resultSet.next()){
-				cogsCheck1.setText(String.format("%.2f", resultSet.getDouble("total")));
-				LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth().plus(1), 1);
-				double sohGrowth = 0;
-				for(EODDataPoint e: currentEODDataPoints){
-					if(e.getDate().equals(d)){
-						sohGrowth += e.getStockOnHandAmount();
-						break;
-					}
+			double total = invoiceService.getTotalInvoiceAmount(main.getCurrentStore().getStoreID(), yearMonthObject);
+			cogsCheck1.setText(String.format("%.2f", total));
+			LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth().plus(1), 1);
+			double sohGrowth = 0;
+			for(EODDataPoint e: currentEODDataPoints){
+				if(e.getDate().equals(d)){
+					sohGrowth += e.getStockOnHandAmount();
+					break;
 				}
-				d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(), 1);
-				for(EODDataPoint e: currentEODDataPoints){
-					if(e.getDate().equals(d)){
-						sohGrowth -= e.getStockOnHandAmount();
-						break;
-					}
+			}
+			d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(), 1);
+			for(EODDataPoint e: currentEODDataPoints){
+				if(e.getDate().equals(d)){
+					sohGrowth -= e.getStockOnHandAmount();
+					break;
 				}
+			}
 //				total sales - gp($) + soh growth
 //				System.out.println("Total invoice amount: "+resultSet.getDouble("total"));
 //				System.out.println("Total sales: "+totalSales);
 //				System.out.println("GP: "+gp);
 //				System.out.println("SOH Growth: "+sohGrowth);
-				//todo: revist this formula
+			//todo: revist this formula
 
-				cogsCheck2.setText(String.format("%.2f", (totalSales+gp)-sohGrowth));
-				cogsCheck3.setText(String.format("%.2f", Double.parseDouble(cogsCheck1.getText())-Double.parseDouble(cogsCheck2.getText())));
-			}
+			cogsCheck2.setText(String.format("%.2f", (totalSales+gp)-sohGrowth));
+			cogsCheck3.setText(String.format("%.2f", Double.parseDouble(cogsCheck1.getText())-Double.parseDouble(cogsCheck2.getText())));
 		}catch(SQLException e){
 				e.printStackTrace();
 		}
-
 		//set all textfields to have $ leading icon
 		formatTextFields(incomeCheckTable);
 		formatTextFields(medicareCheckTable);
 		formatTextFields(cogsCheckTable);
 		//Add BASChecker values
 		try {
-			sql = "SELECT * FROM baschecker WHERE storeID = ? AND MONTH(date) = ? AND YEAR(date) = ?";
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-			preparedStatement.setInt(2, main.getCurrentDate().getMonthValue());
-			preparedStatement.setInt(3, main.getCurrentDate().getYear());
-			resultSet = preparedStatement.executeQuery();
-			//check if resultset returns no results
-			if (resultSet == null || !resultSet.next()) {
+			BASCheckerDataPoint data = basCheckerService.getBASData(main.getCurrentStore().getStoreID(), yearMonthObject);
+			if (data==null) {
 				cash2.setText("0.00");
 				eftpos2.setText("0.00");
 				amex2.setText("0.00");
@@ -350,7 +317,6 @@ public class BASCheckerController extends DateSelectController{
 				gstCorrect.setSelected(false);
 				medicareBAS.setText("0.00");
 			}else{
-				BASCheckerDataPoint data = new BASCheckerDataPoint(resultSet);
 				cash2.setText(String.format("%.2f", data.getCashAdjustment()));
 				eftpos2.setText(String.format("%.2f", data.getEftposAdjustment()));
 				amex2.setText(String.format("%.2f", data.getAmexAdjustment()));
@@ -379,7 +345,7 @@ public class BASCheckerController extends DateSelectController{
 			if(n instanceof MFXTextField){
 				((MFXTextField) n).setLeadingIcon(new Label("$"));
 				((MFXTextField) n).setAlignment(Pos.CENTER_RIGHT);
-				((MFXTextField) n).delegateFocusedProperty().addListener((obs, oldVal, newVal) -> {
+				((MFXTextField) n).delegateFocusedProperty().addListener((_, _, _) -> {
 					if (((MFXTextField) n).isValid()) {
 						updateTotals();
 					}
@@ -390,7 +356,7 @@ public class BASCheckerController extends DateSelectController{
 
 	public void updateTotals(){
 		if(cash2.isValid()){
-			if(cash2.getText().equals(""))
+			if(cash2.getText().isEmpty())
 				cash2.setText("0.00");
 			else{
 				cash2.setText(String.format("%.2f", Double.parseDouble(cash2.getText())));
@@ -398,7 +364,7 @@ public class BASCheckerController extends DateSelectController{
 			cash3.setText(String.format("%.2f", Double.parseDouble(cash1.getText())+Double.parseDouble(cash2.getText())));
 		}
 		if(eftpos2.isValid()){
-			if(eftpos2.getText().equals(""))
+			if(eftpos2.getText().isEmpty())
 				eftpos2.setText("0.00");
 			else{
 				eftpos2.setText(String.format("%.2f", Double.parseDouble(eftpos2.getText())));
@@ -406,7 +372,7 @@ public class BASCheckerController extends DateSelectController{
 			eftpos3.setText(String.format("%.2f", Double.parseDouble(eftpos1.getText())+Double.parseDouble(eftpos2.getText())));
 		}
 		if(amex2.isValid()){
-			if(amex2.getText().equals(""))
+			if(amex2.getText().isEmpty())
 				amex2.setText("0.00");
 			else{
 				amex2.setText(String.format("%.2f", Double.parseDouble(amex2.getText())));
@@ -414,7 +380,7 @@ public class BASCheckerController extends DateSelectController{
 			amex3.setText(String.format("%.2f", Double.parseDouble(amex1.getText())+Double.parseDouble(amex2.getText())));
 		}
 		if(googleSquare2.isValid()){
-			if(googleSquare2.getText().equals(""))
+			if(googleSquare2.getText().isEmpty())
 				googleSquare2.setText("0.00");
 			else{
 				googleSquare2.setText(String.format("%.2f", Double.parseDouble(googleSquare2.getText())));
@@ -422,7 +388,7 @@ public class BASCheckerController extends DateSelectController{
 			googleSquare3.setText(String.format("%.2f", Double.parseDouble(googleSquare1.getText())+Double.parseDouble(googleSquare2.getText())));
 		}
 		if(cheque2.isValid()){
-			if(cheque2.getText().equals(""))
+			if(cheque2.getText().isEmpty())
 				cheque2.setText("0.00");
 			else{
 				cheque2.setText(String.format("%.2f", Double.parseDouble(cheque2.getText())));
@@ -430,7 +396,7 @@ public class BASCheckerController extends DateSelectController{
 			cheque3.setText(String.format("%.2f", Double.parseDouble(cheque1.getText())+Double.parseDouble(cheque2.getText())));
 		}
 		if(total2.isValid()){
-			if(total2.getText().equals(""))
+			if(total2.getText().isEmpty())
 				total2.setText("0.00");
 			else{
 				total2.setText(String.format("%.2f", Double.parseDouble(total2.getText())));
@@ -438,7 +404,7 @@ public class BASCheckerController extends DateSelectController{
 			total3.setText(String.format("%.2f", Double.parseDouble(total1.getText())+Double.parseDouble(total2.getText())));
 		}
 		if(medicareBAS.isValid()){
-			if(medicareBAS.getText().equals(""))
+			if(medicareBAS.getText().isEmpty())
 				medicareBAS.setText("0.00");
 			else{
 				medicareBAS.setText(String.format("%.2f", Double.parseDouble(medicareBAS.getText())));
@@ -447,7 +413,7 @@ public class BASCheckerController extends DateSelectController{
 			medicare2.setText(String.format("%.2f", Double.parseDouble(medicareBAS.getText())-Double.parseDouble(medicareSpreadsheet.getText())));
 		}
 		if(medicare2.isValid()){
-			if(medicare2.getText().equals(""))
+			if(medicare2.getText().isEmpty())
 				medicare2.setText("0.00");
 			else{
 				medicare2.setText(String.format("%.2f", Double.parseDouble(medicare2.getText())));
@@ -464,46 +430,27 @@ public class BASCheckerController extends DateSelectController{
 			errorLabel.setVisible(true);
 			return;
 		}
-		Date date = Date.valueOf(LocalDate.of(main.getCurrentDate().getYear(),main.getCurrentDate().getMonth(),1));
-		String sql = "INSERT INTO baschecker(date,storeID,cashAdjustment,eftposAdjustment,amexAdjustment,googleSquareAdjustment,chequesAdjustment,medicareAdjustment,totalIncomeAdjustment,cashCorrect,eftposCorrect,amexCorrect,googleSquareCorrect,chequesCorrect,medicareCorrect,totalIncomeCorrect,gstCorrect,basDailyScript) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) " +
-				"ON DUPLICATE KEY UPDATE cashAdjustment=?,eftposAdjustment=?,amexAdjustment=?,googleSquareAdjustment=?,chequesAdjustment=?,medicareAdjustment=?,totalIncomeAdjustment=?,cashCorrect=?,eftposCorrect=?,amexCorrect=?,googleSquareCorrect=?,chequesCorrect=?,medicareCorrect=?,totalIncomeCorrect=?,gstCorrect=?,basDailyScript=?";
 		try {
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setDate(1, date);
-			preparedStatement.setInt(2, main.getCurrentStore().getStoreID());
-			preparedStatement.setDouble(3, Double.parseDouble(cash2.getText()));
-			preparedStatement.setDouble(4, Double.parseDouble(eftpos2.getText()));
-			preparedStatement.setDouble(5, Double.parseDouble(amex2.getText()));
-			preparedStatement.setDouble(6, Double.parseDouble(googleSquare2.getText()));
-			preparedStatement.setDouble(7, Double.parseDouble(cheque2.getText()));
-			preparedStatement.setDouble(8, Double.parseDouble(medicare2.getText()));
-			preparedStatement.setDouble(9, Double.parseDouble(total2.getText()));
-			preparedStatement.setBoolean(10, cashCorrect.isSelected());
-			preparedStatement.setBoolean(11, eftposCorrect.isSelected());
-			preparedStatement.setBoolean(12, amexCorrect.isSelected());
-			preparedStatement.setBoolean(13, googleSquareCorrect.isSelected());
-			preparedStatement.setBoolean(14, chequeCorrect.isSelected());
-			preparedStatement.setBoolean(15, medicareCorrect.isSelected());
-			preparedStatement.setBoolean(16, totalIncomeCorrect.isSelected());
-			preparedStatement.setBoolean(17, gstCorrect.isSelected());
-			preparedStatement.setDouble(18, Double.parseDouble(medicareBAS.getText()));
-			preparedStatement.setDouble(19, Double.parseDouble(cash2.getText()));
-			preparedStatement.setDouble(20, Double.parseDouble(eftpos2.getText()));
-			preparedStatement.setDouble(21, Double.parseDouble(amex2.getText()));
-			preparedStatement.setDouble(22, Double.parseDouble(googleSquare2.getText()));
-			preparedStatement.setDouble(23, Double.parseDouble(cheque2.getText()));
-			preparedStatement.setDouble(24, Double.parseDouble(medicare2.getText()));
-			preparedStatement.setDouble(25, Double.parseDouble(total2.getText()));
-			preparedStatement.setBoolean(26, cashCorrect.isSelected());
-			preparedStatement.setBoolean(27, eftposCorrect.isSelected());
-			preparedStatement.setBoolean(28, amexCorrect.isSelected());
-			preparedStatement.setBoolean(29, googleSquareCorrect.isSelected());
-			preparedStatement.setBoolean(30, chequeCorrect.isSelected());
-			preparedStatement.setBoolean(31, medicareCorrect.isSelected());
-			preparedStatement.setBoolean(32, totalIncomeCorrect.isSelected());
-			preparedStatement.setBoolean(33, gstCorrect.isSelected());
-			preparedStatement.setDouble(34, Double.parseDouble(medicareBAS.getText()));
-			preparedStatement.executeUpdate();
+			BASCheckerDataPoint newDataPoint = new BASCheckerDataPoint();
+			newDataPoint.setDate(LocalDate.of(main.getCurrentDate().getYear(),main.getCurrentDate().getMonth(),1));
+			newDataPoint.setStoreID(main.getCurrentStore().getStoreID());
+			newDataPoint.setCashAdjustment(Double.parseDouble(cash2.getText()));
+			newDataPoint.setEftposAdjustment(Double.parseDouble(eftpos2.getText()));
+			newDataPoint.setAmexAdjustment(Double.parseDouble(amex2.getText()));
+			newDataPoint.setGoogleSquareAdjustment(Double.parseDouble(googleSquare2.getText()));
+			newDataPoint.setChequeAdjustment(Double.parseDouble(cheque2.getText()));
+			newDataPoint.setMedicareAdjustment(Double.parseDouble(medicare2.getText()));
+			newDataPoint.setTotalIncomeAdjustment(Double.parseDouble(total2.getText()));
+			newDataPoint.setCashCorrect(cashCorrect.isSelected());
+			newDataPoint.setEftposCorrect(eftposCorrect.isSelected());
+			newDataPoint.setAmexCorrect(amexCorrect.isSelected());
+			newDataPoint.setGoogleSquareCorrect(googleSquareCorrect.isSelected());
+			newDataPoint.setChequeCorrect(chequeCorrect.isSelected());
+			newDataPoint.setMedicareCorrect(medicareCorrect.isSelected());
+			newDataPoint.setTotalIncomeCorrect(totalIncomeCorrect.isSelected());
+			newDataPoint.setGstCorrect(gstCorrect.isSelected());
+			newDataPoint.setBasDailyScript(Double.parseDouble(medicareBAS.getText()));
+			basCheckerService.updateBASData(newDataPoint);
 		} catch (SQLException ex) {
 			System.err.println(ex.getMessage());
 		}
@@ -547,7 +494,6 @@ public class BASCheckerController extends DateSelectController{
 			rdc.setMain(main);
 			rdc.setParent(this);
 			rdc.fill();
-
 			monthSelectorMenu.setOpacity(1);
 			monthSelectorMenu.setContentNode(monthSelectorMenuContent);
 			monthSelectorMenu.setArrowSize(0);
@@ -563,8 +509,4 @@ public class BASCheckerController extends DateSelectController{
 			monthSelectorField.requestFocus();
 		}
 	}
-
-
-
-
 }

@@ -41,6 +41,22 @@ public class InvoiceService {
         return invoices;
     }
 
+    public double getTotalInvoiceAmount(int storeId, YearMonth yearMonth) throws SQLException {
+    String sql = "SELECT SUM(unitAmount) AS total FROM invoices WHERE storeID = ? AND MONTH(invoiceDate) = ? AND YEAR(invoiceDate) = ?";
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setInt(1, storeId);
+            preparedStatement.setInt(2, yearMonth.getMonthValue());
+            preparedStatement.setInt(3, yearMonth.getYear());
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getDouble("total");
+                }
+            }
+        }
+        return 0;
+    }
+
     public List<Invoice> getInvoiceTableData(int storeId, YearMonth yearMonth) throws SQLException {
         List<Invoice> invoices = new ArrayList<>();
         String sql = """
