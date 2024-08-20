@@ -35,6 +35,7 @@ public class RosterUtils {
     public RosterUtils(Main main, YearMonth yearMonth) throws SQLException {
         this.main = main;
         this.rosterService = new RosterService();
+        this.leaveService = new LeaveService();
         this.yearMonth = yearMonth;
 
         LocalDate monthStart = yearMonth.atDay(1);
