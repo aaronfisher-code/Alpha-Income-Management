@@ -19,7 +19,7 @@ import java.sql.SQLException;
 
 import application.Main;
 
-public class LogController extends Controller {
+public class LogController extends PageController {
 
     @FXML private Label logInError, confirmPasswordLabel;
     @FXML private Text subtitle;
@@ -29,14 +29,7 @@ public class LogController extends Controller {
     @FXML private Button maximize, minimize, close;
     @FXML private StackPane backgroundPane;
     @FXML private HBox windowControls;
-    @FXML private DialogPane dialogPane;
-
-    private Main main = null;
     private UserService userService;
-
-    public void setMain(Main main) {
-        this.main = main;
-    }
 
     @FXML
     private void initialize() {
@@ -45,21 +38,16 @@ public class LogController extends Controller {
 
     @Override
     public void fill() {
-
         this.main.getBs().setMoveControl(backgroundPane);
-
         close.setOnAction(_ -> this.main.getStg().close());
         close.setOnMouseEntered(_ -> colourWindowButton(close, "#c42b1c", "#FFFFFF"));
         close.setOnMouseExited(_ -> colourWindowButton(close, "#FFFFFF", "#000000"));
-
         minimize.setOnAction(_ -> this.main.getStg().setIconified(true));
         minimize.setOnMouseEntered(_ -> colourWindowButton(minimize, "#f5f5f5", "#000000"));
         minimize.setOnMouseExited(_ -> colourWindowButton(minimize, "#FFFFFF", "#000000"));
-
         maximize.setOnAction(_ -> this.main.getBs().maximizeStage());
         maximize.setOnMouseEntered(_ -> colourWindowButton(maximize, "#f5f5f5", "#000000"));
         maximize.setOnMouseExited(_ -> colourWindowButton(maximize, "#FFFFFF", "#000000"));
-
         this.main.getBs().maximizedProperty().addListener(_ -> {
             if (this.main.getBs().isMaximized()) {
                 SVGPath newIcon = (SVGPath) maximize.getGraphic();
@@ -99,12 +87,10 @@ public class LogController extends Controller {
                     status = "Error";
                 }
             } catch (SQLException ex) {
-                dialogPane.showError("Failed to login", ex.getMessage());
-                ex.printStackTrace();
+                dialogPane.showError("Failed to login", ex);
                 status = "Exception";
             }
         }
-
         if (status.equals("Success")) {
             try {
                 User currentUser = userService.getUserByUsername(username);
@@ -112,8 +98,7 @@ public class LogController extends Controller {
                 main.setCurrentUser(currentUser);
                 main.changeScene("/views/FXML/MainMenu.fxml");
             } catch (IOException | SQLException ex) {
-                dialogPane.showError("Failed to login", ex.getMessage());
-                ex.printStackTrace();
+                dialogPane.showError("Failed to login", ex);
             }
         } else {
             logInError.setText("Login error, please ensure your username and password are correct");
@@ -130,20 +115,17 @@ public class LogController extends Controller {
                 userService.updateUserPassword(user.getUsername(), password.getText());
                 status = "Success";
             } catch (SQLException ex) {
-                dialogPane.showError("Failed to login", ex.getMessage());
-                ex.printStackTrace();
+                dialogPane.showError("Failed to login", ex);
                 status = "Exception";
             }
         }
-
         if (status.equals("Success")) {
             try {
                 user.setPermissions(userService.getUserPermissions(user.getUsername()));
                 main.setCurrentUser(user);
                 main.changeScene("/views/FXML/MainMenu.fxml");
             } catch (IOException | SQLException ex) {
-                dialogPane.showError("Failed to login", ex.getMessage());
-                ex.printStackTrace();
+                dialogPane.showError("Failed to login", ex);
             }
         }
     }

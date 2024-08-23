@@ -12,45 +12,30 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
-import javafx.scene.AccessibleRole;
-import javafx.scene.Node;
-import javafx.scene.control.Label;
 import javafx.scene.layout.*;
-import models.User;
+import utils.GUIUtils;
 
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 
-public class TargetGraphsPageController extends Controller{
+public class TargetGraphsPageController extends PageController {
 	
-	@FXML
-	private MFXScrollPane graphScrollPane;
-	@FXML
-	private BorderPane wtdButton,mtdButton,ytdButton,backgroundPane;
-	@FXML
-	private DialogPane dialogPane;
-
-    private Main main;
-    private User selectedUser;
+	@FXML private MFXScrollPane graphScrollPane;
+	@FXML private BorderPane wtdButton;
+    @FXML private BorderPane mtdButton;
+    @FXML private BorderPane ytdButton;
+    @FXML private DialogPane dialogPane;
     private BootstrapPane outerPane;
 	private BootstrapPane graphPane;
 	private BootstrapPane gaugePane;
 	
 	 @FXML
 	private void initialize() {
-		 graphScrollPane.heightProperty().addListener((observable, oldValue, newValue) -> {
+		 graphScrollPane.heightProperty().addListener((_, _, newValue) -> {
 			 graphPane.setPrefHeight((Double) newValue);
 		 });
 	 }
-
-	@Override
-	public void setMain(Main main) {
-		this.main = main;
-	}
 
 	public Main getMain() {return main;}
 
@@ -65,14 +50,11 @@ public class TargetGraphsPageController extends Controller{
 		outerPane.setVgap(20);
 		outerPane.setHgap(20);
 		outerPane.setPadding(new Insets(20));
-
 		BootstrapRow contentRow = new BootstrapRow();
-
 		//Setup line graphs
 		graphPane = new BootstrapPane(graphScrollPane);
 		graphPane.setVgap(20);
 		graphPane.setHgap(20);
-
 		BootstrapRow graphRow = new BootstrapRow();
 		BootstrapColumn graph1 = new BootstrapColumn(loadGraph(new NumberOfScriptsStrategy(startDate, endDate, this)));
 		BootstrapColumn graph2 = new BootstrapColumn(loadGraph(new OTCDollarPerCustomerStrategy(startDate, endDate, this)));
@@ -94,24 +76,20 @@ public class TargetGraphsPageController extends Controller{
 		graph2.getContent().maxHeight((main.getStg().getHeight()-392)/2);
 		graph3.getContent().maxHeight((main.getStg().getHeight()-392)/2);
 		graph4.getContent().maxHeight((main.getStg().getHeight()-392)/2);
-
 		graphRow.addColumn(graph1);
 		graphRow.addColumn(graph2);
 		graphRow.addColumn(graph3);
 		graphRow.addColumn(graph4);
-
 		graphPane.addRow(graphRow);
 		BootstrapColumn graphCol = new BootstrapColumn(graphPane);
 		graphCol.setBreakpointColumnWidth(Breakpoint.XSMALL, 12);
 		graphCol.setBreakpointColumnWidth(Breakpoint.SMALL, 12);
 		graphCol.setBreakpointColumnWidth(Breakpoint.LARGE, 9);
 		contentRow.addColumn(graphCol);
-
 		//Setup Gauges
 		gaugePane = new BootstrapPane(graphScrollPane);
 		gaugePane.setVgap(20);
 		gaugePane.setHgap(20);
-
 		BootstrapRow gaugeRow = new BootstrapRow();
 		BootstrapColumn gauge1 = new BootstrapColumn(loadGauge());
 		BootstrapColumn gauge2 = new BootstrapColumn(loadGauge());
@@ -121,23 +99,18 @@ public class TargetGraphsPageController extends Controller{
 		gauge2.setBreakpointColumnWidth(Breakpoint.XSMALL, 12);
 		gauge2.setBreakpointColumnWidth(Breakpoint.SMALL, 12);
 		gauge2.setBreakpointColumnWidth(Breakpoint.LARGE, 6);
-
 		gaugeRow.addColumn(gauge1);
 		gaugeRow.addColumn(gauge2);
-
-
 		gaugePane.addRow(gaugeRow);
 		BootstrapColumn gaugeCol = new BootstrapColumn(gaugePane);
 		gaugeCol.setBreakpointColumnWidth(Breakpoint.XSMALL, 12);
 		gaugeCol.setBreakpointColumnWidth(Breakpoint.SMALL, 12);
 		gaugeCol.setBreakpointColumnWidth(Breakpoint.LARGE, 3);
 		contentRow.addColumn(gaugeCol);
-
 		outerPane.addRow(contentRow);
 		graphScrollPane.setContent(outerPane);
-
 		Platform.runLater(() -> graphPane.setPrefHeight(graphScrollPane.getHeight()));
-		Platform.runLater(() -> adjustHeight());
+		Platform.runLater(this::adjustHeight);
 	}
 
 	public BorderPane loadGraph(LineGraphTargetStrategy strategy){
@@ -146,12 +119,10 @@ public class TargetGraphsPageController extends Controller{
 		try {
 			graphTile = loader.load();
 		} catch (IOException e) {
-
-			e.printStackTrace();
+			dialogPane.showError("Error loading graph tile", e);
 		}
 		GraphTileController gtc = loader.getController();
 		gtc.setMain(main);
-		gtc.setParent(this);
 		gtc.setStrategy(strategy);
 		gtc.fill();
 		return graphTile;
@@ -163,68 +134,40 @@ public class TargetGraphsPageController extends Controller{
 		try {
 			gaugeTile = loader.load();
 		} catch (IOException e) {
-
-			e.printStackTrace();
+			dialogPane.showError("Error loading gauge tile", e);
 		}
 		GaugeTileController gtc = loader.getController();
 		gtc.setMain(main);
-		gtc.setParent(this);
 		gtc.fill();
 		VBox.setVgrow(gaugeTile, Priority.ALWAYS);
 		return gaugeTile;
 	}
 
 	public void wtdView(){
-		formatTabSelect(wtdButton);
-		formatTabDeselect(mtdButton);
-		formatTabDeselect(ytdButton);
+		GUIUtils.formatTabSelect(wtdButton);
+		GUIUtils.formatTabDeselect(mtdButton);
+		GUIUtils.formatTabDeselect(ytdButton);
 		LocalDate weekStart = LocalDate.now().with(DayOfWeek.MONDAY);
 		LocalDate weekEnd = LocalDate.now().with(DayOfWeek.SUNDAY);
 		updateGraphs(weekStart,weekEnd);
 	}
 
 	public void mtdView(){
-		formatTabSelect(mtdButton);
-		formatTabDeselect(wtdButton);
-		formatTabDeselect(ytdButton);
+		GUIUtils.formatTabSelect(mtdButton);
+		GUIUtils.formatTabDeselect(wtdButton);
+		GUIUtils.formatTabDeselect(ytdButton);
 		LocalDate monthStart = LocalDate.now().withDayOfMonth(1);
 		LocalDate monthEnd = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
 		updateGraphs(monthStart,monthEnd);
 	}
 
 	public void ytdView(){
-		formatTabSelect(ytdButton);
-		formatTabDeselect(wtdButton);
-		formatTabDeselect(mtdButton);
+		GUIUtils.formatTabSelect(ytdButton);
+		GUIUtils.formatTabDeselect(wtdButton);
+		GUIUtils.formatTabDeselect(mtdButton);
 		LocalDate yearStart = LocalDate.now().withDayOfYear(1);
 		LocalDate yearEnd = LocalDate.now().withDayOfYear(LocalDate.now().lengthOfYear());
 		updateGraphs(yearStart,yearEnd);
-	}
-
-	public void formatTabSelect(BorderPane b){
-		for (Node n:b.getChildren()) {
-			if(n.getAccessibleRole() == AccessibleRole.TEXT){
-				Label a = (Label) n;
-				a.setStyle("-fx-text-fill: #0F60FF");
-			}
-			if(n.getAccessibleRole() == AccessibleRole.PARENT){
-				Region a = (Region) n;
-				a.setStyle("-fx-background-color: #0F60FF");
-			}
-		}
-	}
-
-	public void formatTabDeselect(BorderPane b){
-		for (Node n:b.getChildren()) {
-			if(n.getAccessibleRole() == AccessibleRole.TEXT){
-				Label a = (Label) n;
-				a.setStyle("-fx-text-fill: #6e6b7b");
-			}
-			if(n.getAccessibleRole() == AccessibleRole.PARENT){
-				Region a = (Region) n;
-				a.setStyle("");
-			}
-		}
 	}
 
 	public void adjustHeight(){
@@ -233,10 +176,5 @@ public class TargetGraphsPageController extends Controller{
 
 	public void throwError (Exception e){
 		dialogPane.showError("Error", e.getMessage());
-		e.printStackTrace();
 	}
-
-
-
-	
 }

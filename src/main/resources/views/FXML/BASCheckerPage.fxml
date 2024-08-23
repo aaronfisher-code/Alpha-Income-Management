@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.dlsc.gemsfx.DialogPane?>
 <?import io.github.palexdev.materialfx.controls.MFXButton?>
 <?import io.github.palexdev.materialfx.controls.MFXCheckbox?>
 <?import io.github.palexdev.materialfx.controls.MFXTextField?>
@@ -22,7 +23,7 @@
 <?import javafx.scene.paint.Color?>
 <?import javafx.scene.text.Font?>
 
-<StackPane fx:id="backgroundPane" prefHeight="724.0" prefWidth="1080.0" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.BASCheckerController">
+<StackPane fx:id="backgroundPane" prefHeight="724.0" prefWidth="1080.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.BASCheckerController">
    <children>
       <BorderPane prefWidth="955.0" style="-fx-background-color: TRANSPARENT;">
          <padding>
@@ -361,6 +362,7 @@
             </VBox>
          </center>
       </BorderPane>
+      <DialogPane fx:id="dialogPane" />
    </children>
    <stylesheets>
       <URL value="@../CSS/application.css" />

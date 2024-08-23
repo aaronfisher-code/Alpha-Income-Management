@@ -1,97 +1,57 @@
 package controllers;
 
-import application.Main;
 import io.github.palexdev.materialfx.controls.MFXButton;
 import io.github.palexdev.materialfx.controls.MFXCheckbox;
 import io.github.palexdev.materialfx.controls.MFXTextField;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.*;
 import models.*;
-import org.controlsfx.control.PopOver;
 import services.BASCheckerService;
 import services.EODService;
 import services.InvoiceService;
 import services.TillReportService;
 import utils.RosterUtils;
+import utils.TableUtils;
 import utils.ValidatorUtils;
-
-import java.io.IOException;
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
-import java.time.format.TextStyle;
 import java.util.Arrays;
-import java.util.Locale;
 
 public class BASCheckerController extends DateSelectController{
 
-	private PopOver currentDatePopover;
-
-	@FXML
-	private StackPane monthSelector;
-	@FXML
-	private MFXTextField monthSelectorField;
-	@FXML
-	private GridPane incomeCheckTable;
-	@FXML
-	private GridPane medicareCheckTable;
-	@FXML
-	private GridPane cogsCheckTable;
-	@FXML
-	private MFXTextField cash1,cash2,cash3;
-	@FXML
-	private MFXTextField eftpos1,eftpos2,eftpos3;
-	@FXML
-	private MFXTextField amex1,amex2,amex3;
-	@FXML
-	private MFXTextField googleSquare1,googleSquare2,googleSquare3;
-	@FXML
-	private MFXTextField cheque1,cheque2,cheque3;
-	@FXML
-	private MFXTextField medicare1,medicare2,medicare3;
-	@FXML
-	private MFXTextField total1,total2,total3;
-	@FXML
-	private MFXTextField gst1,gst3;
-	@FXML
-	private MFXTextField tillBalance;
-	@FXML
-	private MFXCheckbox cashCorrect;
-	@FXML
-	private MFXCheckbox eftposCorrect;
-	@FXML
-	private MFXCheckbox amexCorrect;
-	@FXML
-	private MFXCheckbox googleSquareCorrect;
-	@FXML
-	private MFXCheckbox chequeCorrect;
-	@FXML
-	private MFXCheckbox medicareCorrect;
-	@FXML
-	private MFXCheckbox totalIncomeCorrect;
-	@FXML
-	private MFXCheckbox gstCorrect;
-	@FXML
-	private MFXTextField medicareSpreadsheet, medicareBAS, medicareAdjustment;
-	@FXML
-	private MFXTextField spreadsheetCheck1,spreadsheetCheck2,spreadsheetCheck3;
-	@FXML
-	private MFXTextField cogsCheck1,cogsCheck2,cogsCheck3;
-	@FXML
-	private Label errorLabel;
-	@FXML
-	private MFXButton saveButton;
-
-    private Main main;
+	@FXML private GridPane incomeCheckTable;
+	@FXML private GridPane medicareCheckTable;
+	@FXML private GridPane cogsCheckTable;
+	@FXML private MFXTextField cash1,cash2,cash3;
+	@FXML private MFXTextField eftpos1,eftpos2,eftpos3;
+	@FXML private MFXTextField amex1,amex2,amex3;
+	@FXML private MFXTextField googleSquare1,googleSquare2,googleSquare3;
+	@FXML private MFXTextField cheque1,cheque2,cheque3;
+	@FXML private MFXTextField medicare1,medicare2,medicare3;
+	@FXML private MFXTextField total1,total2,total3;
+	@FXML private MFXTextField gst1,gst3;
+	@FXML private MFXTextField tillBalance;
+	@FXML private MFXCheckbox cashCorrect;
+	@FXML private MFXCheckbox eftposCorrect;
+	@FXML private MFXCheckbox amexCorrect;
+	@FXML private MFXCheckbox googleSquareCorrect;
+	@FXML private MFXCheckbox chequeCorrect;
+	@FXML private MFXCheckbox medicareCorrect;
+	@FXML private MFXCheckbox totalIncomeCorrect;
+	@FXML private MFXCheckbox gstCorrect;
+	@FXML private MFXTextField medicareSpreadsheet, medicareBAS, medicareAdjustment;
+	@FXML private MFXTextField spreadsheetCheck1,spreadsheetCheck2,spreadsheetCheck3;
+	@FXML private MFXTextField cogsCheck1,cogsCheck2,cogsCheck3;
+	@FXML private Label errorLabel;
+	@FXML private MFXButton saveButton;
 	private EODService eodService;
 	private TillReportService tillReportService;
 	private InvoiceService invoiceService;
@@ -103,11 +63,6 @@ public class BASCheckerController extends DateSelectController{
 		tillReportService = new TillReportService();
 		invoiceService = new InvoiceService();
 		basCheckerService = new BASCheckerService();
-	}
-
-	@Override
-	public void setMain(Main main) {
-		this.main = main;
 	}
 
 	@Override
@@ -169,8 +124,8 @@ public class BASCheckerController extends DateSelectController{
 		try {
             currentEODDataPoints.addAll(eodService.getEODDataPoints(main.getCurrentStore().getStoreID(), startOfMonth, endOfMonth));
             currentTillDataPoints.addAll(tillReportService.getTillReportDataPoints(main.getCurrentStore().getStoreID(), startOfMonth, endOfMonth));
-		} catch (SQLException throwable) {
-			throwable.printStackTrace();
+		} catch (SQLException ex) {
+			dialogPane.showError("Error", "Error getting EOD/TillReport data points", ex);
 		}
 		double cashTotal = 0;
 		double eftposTotal = 0;
@@ -252,16 +207,16 @@ public class BASCheckerController extends DateSelectController{
 		RosterUtils rosterUtils;
 		try{
 			rosterUtils = new RosterUtils(main,yearMonthObject);
-		} catch (SQLException e) {
-            throw new RuntimeException(e);
+			for(int i = 1; i<daysInMonth+1; i++){
+				LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(),i);
+				monthlySummaryPoints.add(new MonthlySummaryDataPoint(d,currentTillDataPoints,currentEODDataPoints,monthlySummaryPoints,rosterUtils,0,0,0,0));
+			}
+			MonthlySummaryDataPoint totalList = new MonthlySummaryDataPoint(monthlySummaryPoints, true, rosterUtils.getOpenDuration());
+			spreadsheetCheck2.setText(String.format("%.2f",totalList.getTotalIncome()));
+			spreadsheetCheck3.setText(String.format("%.2f", Double.parseDouble(spreadsheetCheck2.getText())-Double.parseDouble(spreadsheetCheck1.getText())));
+		} catch (SQLException ex) {
+			dialogPane.showError("Error", "Error getting Roster data", ex);
         }
-        for(int i = 1; i<daysInMonth+1; i++){
-			LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(),i);
-			monthlySummaryPoints.add(new MonthlySummaryDataPoint(d,currentTillDataPoints,currentEODDataPoints,monthlySummaryPoints,rosterUtils,0,0,0,0));
-		}
-		MonthlySummaryDataPoint totalList = new MonthlySummaryDataPoint(monthlySummaryPoints, true, rosterUtils.getOpenDuration());
-		spreadsheetCheck2.setText(String.format("%.2f",totalList.getTotalIncome()));
-		spreadsheetCheck3.setText(String.format("%.2f", Double.parseDouble(spreadsheetCheck2.getText())-Double.parseDouble(spreadsheetCheck1.getText())));
 		try {
 			double total = invoiceService.getTotalInvoiceAmount(main.getCurrentStore().getStoreID(), yearMonthObject);
 			cogsCheck1.setText(String.format("%.2f", total));
@@ -286,16 +241,15 @@ public class BASCheckerController extends DateSelectController{
 //				System.out.println("GP: "+gp);
 //				System.out.println("SOH Growth: "+sohGrowth);
 			//todo: revist this formula
-
 			cogsCheck2.setText(String.format("%.2f", (totalSales+gp)-sohGrowth));
 			cogsCheck3.setText(String.format("%.2f", Double.parseDouble(cogsCheck1.getText())-Double.parseDouble(cogsCheck2.getText())));
-		}catch(SQLException e){
-				e.printStackTrace();
+		}catch(SQLException ex){
+			dialogPane.showError("Error", "Error getting total invoice amount", ex);
 		}
-		//set all textfields to have $ leading icon
-		formatTextFields(incomeCheckTable);
-		formatTextFields(medicareCheckTable);
-		formatTextFields(cogsCheckTable);
+		//set all text fields to have $ leading icon
+		TableUtils.formatTextFields(incomeCheckTable,this::updateTotals);
+		TableUtils.formatTextFields(medicareCheckTable,this::updateTotals);
+		TableUtils.formatTextFields(cogsCheckTable,this::updateTotals);
 		//Add BASChecker values
 		try {
 			BASCheckerDataPoint data = basCheckerService.getBASData(main.getCurrentStore().getStoreID(), yearMonthObject);
@@ -335,23 +289,9 @@ public class BASCheckerController extends DateSelectController{
 				medicareBAS.setText(String.format("%.2f", data.getBasDailyScript()));
 			}
 		} catch (SQLException e) {
-			throw new RuntimeException(e);
+			dialogPane.showError("Error", "Error getting BAS data", e);
 		}
 		updateTotals();
-	}
-
-	private void formatTextFields(GridPane table) {
-		for(Node n: table.getChildren()){
-			if(n instanceof MFXTextField){
-				((MFXTextField) n).setLeadingIcon(new Label("$"));
-				((MFXTextField) n).setAlignment(Pos.CENTER_RIGHT);
-				((MFXTextField) n).delegateFocusedProperty().addListener((_, _, _) -> {
-					if (((MFXTextField) n).isValid()) {
-						updateTotals();
-					}
-				});
-			}
-		}
 	}
 
 	public void updateTotals(){
@@ -452,7 +392,7 @@ public class BASCheckerController extends DateSelectController{
 			newDataPoint.setBasDailyScript(Double.parseDouble(medicareBAS.getText()));
 			basCheckerService.updateBASData(newDataPoint);
 		} catch (SQLException ex) {
-			System.err.println(ex.getMessage());
+			dialogPane.showError("Error", "Error saving BAS data", ex);
 		}
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss a");
 		errorLabel.setVisible(true);
@@ -460,53 +400,10 @@ public class BASCheckerController extends DateSelectController{
 		errorLabel.setStyle("-fx-text-fill: black");
 	}
 
-	public void monthForward() {
-		setDate(main.getCurrentDate().plusMonths(1));
-	}
-
-	public void monthBackward() {
-		setDate(main.getCurrentDate().minusMonths(1));
-	}
-
 	@Override
 	public void setDate(LocalDate date) {
 		main.setCurrentDate(date);
-		String fieldText = main.getCurrentDate().getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
-		fieldText += ", ";
-		fieldText += main.getCurrentDate().getYear();
-		monthSelectorField.setText(fieldText);
+		updateMonthSelectorField();
 		updateValues();
-	}
-
-	public void openMonthSelector(){
-		if(currentDatePopover!=null&&currentDatePopover.isShowing()){
-			currentDatePopover.hide();
-		}else {
-			PopOver monthSelectorMenu = new PopOver();
-			FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/MonthYearSelectorContent.fxml"));
-			VBox monthSelectorMenuContent = null;
-			try {
-				monthSelectorMenuContent = loader.load();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			MonthYearSelectorContentController rdc = loader.getController();
-			rdc.setMain(main);
-			rdc.setParent(this);
-			rdc.fill();
-			monthSelectorMenu.setOpacity(1);
-			monthSelectorMenu.setContentNode(monthSelectorMenuContent);
-			monthSelectorMenu.setArrowSize(0);
-			monthSelectorMenu.setAnimated(true);
-			monthSelectorMenu.setArrowLocation(PopOver.ArrowLocation.TOP_CENTER);
-			monthSelectorMenu.setAutoHide(true);
-			monthSelectorMenu.setDetachable(false);
-			monthSelectorMenu.setHideOnEscape(true);
-			monthSelectorMenu.setCornerRadius(10);
-			monthSelectorMenu.setArrowIndent(0);
-			monthSelectorMenu.show(monthSelector);
-			currentDatePopover=monthSelectorMenu;
-			monthSelectorField.requestFocus();
-		}
 	}
 }

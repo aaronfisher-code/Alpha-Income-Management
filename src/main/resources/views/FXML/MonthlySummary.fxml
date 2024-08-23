@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.dlsc.gemsfx.DialogPane?>
 <?import io.github.palexdev.materialfx.controls.MFXButton?>
 <?import io.github.palexdev.materialfx.controls.MFXTextField?>
 <?import io.github.palexdev.materialfx.font.MFXFontIcon?>
@@ -255,7 +256,7 @@
                <right>
                   <HBox alignment="CENTER" BorderPane.alignment="CENTER">
                      <children>
-                        <Button fx:id="exportDataButton" graphicTextGap="10.0" mnemonicParsing="false" onAction="#exportData" prefHeight="35.0" prefWidth="150.0" style="-fx-background-color: #F3F2F7; -fx-border-color: #6e6b7b; -fx-border-radius: 5;" styleClass="controlButton" text="Export" textFill="#6e6b7b">
+                        <Button fx:id="exportDataButton" graphicTextGap="10.0" mnemonicParsing="false" onAction="#exportData" prefHeight="35.0" prefWidth="150.0" style="-fx-background-color: #F3F2F7; -fx-border-color: #6e6b7b; -fx-border-radius: 5;" styleClass="controlButton" text="One-line export" textFill="#6e6b7b">
                            <cursor>
                               <Cursor fx:constant="HAND" />
                            </cursor>
@@ -278,6 +279,7 @@
             <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
          </StackPane.margin>
       </BorderPane>
+      <DialogPane fx:id="dialogPane" />
    </children>
    <stylesheets>
       <URL value="@../CSS/MonthlySummaryPage.css" />

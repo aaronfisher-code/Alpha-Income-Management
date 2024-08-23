@@ -1,57 +1,30 @@
 package controllers;
 
-import application.Main;
 import io.github.palexdev.materialfx.controls.MFXTextField;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.scene.control.ToggleButton;
-import models.Shift;
 import javafx.fxml.FXML;
-
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.time.LocalTime;
 
-public class TimePickerContentController extends Controller {
+public class TimePickerContentController extends PageController {
 
-    @FXML
-    private ToggleButton amSelect,pmSelect;
-    @FXML
-    private MFXTextField hourField,minuteField;
-
-
-    private Connection con = null;
-    PreparedStatement preparedStatement = null;
-    ResultSet resultSet = null;
-    private Main main;
-    private Shift shift;
-
+    @FXML private ToggleButton amSelect,pmSelect;
+    @FXML private MFXTextField hourField,minuteField;
     private LocalTime currentTime;
 
     @Override
-    public void setMain(Main main) { this.main = main; }
-
-    public void setConnection(Connection c) {
-        this.con = c;
-    }
-
-
-    @Override
     public void fill() {
-        hourField.textProperty().addListener((observable, oldValue, newValue) -> {
+        hourField.textProperty().addListener((_, oldValue, newValue) -> {
             if (!newValue.matches("\\d+") || Integer.parseInt(newValue) > 12) {
                 hourField.setText(oldValue);
             }
         });
-        minuteField.textProperty().addListener((observable, oldValue, newValue) -> {
+        minuteField.textProperty().addListener((_, oldValue, newValue) -> {
             if (!newValue.matches("\\d+") || Integer.parseInt(newValue) > 59) {
                 minuteField.setText(oldValue);
             }
         });
-
-        amSelect.setOnAction(event -> {if(!amSelect.isSelected()){amSelect.setSelected(true);}});
-        pmSelect.setOnAction(event -> {if(!pmSelect.isSelected()){pmSelect.setSelected(true);}});
+        amSelect.setOnAction(_ -> {if(!amSelect.isSelected()){amSelect.setSelected(true);}});
+        pmSelect.setOnAction(_ -> {if(!pmSelect.isSelected()){pmSelect.setSelected(true);}});
     }
 
     public LocalTime getCurrentTime() {return currentTime;}

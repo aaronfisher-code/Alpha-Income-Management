@@ -1,25 +1,19 @@
 package controllers;
 
-import application.Main;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Region;
 import models.SpecialDateObj;
 import services.RosterService;
-
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.TextStyle;
 import java.util.Locale;
 
-public class RosterDayCardController extends Controller {
+public class RosterDayCardController extends PageController {
 
-    @FXML
-    private Label weekdayLbl, dateLbl, eventLbl;
-    @FXML
-    private Region selectionHighlight;
-
-    private Main main;
+    @FXML private Label weekdayLbl, dateLbl, eventLbl;
+    @FXML private Region selectionHighlight;
     private LocalDate date;
     private RosterPageController parent;
     private boolean selected = false;
@@ -28,11 +22,6 @@ public class RosterDayCardController extends Controller {
     @FXML
     private void initialize() {
         rosterService = new RosterService();
-    }
-
-    @Override
-    public void setMain(Main newMain) {
-        this.main = newMain;
     }
 
     public void setDate(LocalDate d) {

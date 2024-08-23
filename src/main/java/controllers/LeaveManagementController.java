@@ -1,8 +1,5 @@
 package controllers;
 
-
-import application.Main;
-import com.dlsc.gemsfx.DialogPane;
 import com.dlsc.gemsfx.FilterView;
 import components.CustomDateStringConverter;
 import io.github.palexdev.materialfx.controls.*;
@@ -20,10 +17,8 @@ import org.controlsfx.control.PopOver;
 import services.LeaveService;
 import services.UserService;
 import utils.AnimationUtils;
-import utils.GUIUtils;
 import utils.TableUtils;
 import utils.ValidatorUtils;
-
 import java.io.IOException;
 import java.sql.*;
 import java.time.LocalDate;
@@ -31,70 +26,27 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
-import java.time.format.TextStyle;
 import java.util.List;
 import java.util.Locale;
 
-
 public class LeaveManagementController extends DateSelectController {
 
-    @FXML
-    private StackPane monthSelector;
-    @FXML
-    private MFXTextField monthSelectorField;
-
-    private PopOver currentDatePopover;
-
-    private PopOver currentTimePopover;
-
-    @FXML
-    private TableView<LeaveRequest>  leaveTable;
-
-    @FXML
-    private TableColumn<?, ?>  employeeNameCol,employeeRoleCol, leaveTypeCol, fromCol, toCol, reasonCol;
-
-    @FXML
-    private VBox controlBox, editLeavePopover;
-
-    @FXML
-    private Label popoverLabel;
-
-    @FXML
-    private Button deleteButton;
-
-    @FXML
-    private Region contentDarken;
-
-    @FXML
-    private MFXFilterComboBox<User> employeeSelect;
-
-    @FXML
-    private MFXComboBox<String> leaveTypeCombo;
-
-    @FXML
-    private MFXDatePicker startDate, endDate;
-
-    @FXML
-    private MFXButton openStartTimePicker, openEndTimePicker;
-
-    @FXML
-    private MFXTextField startTimeField, endTimeField;
-
-    @FXML
-    private TextArea reasonField;
-
-    @FXML
-    private MFXButton saveButton;
-
-    @FXML
-    private DialogPane dialogPane;
-
-    @FXML
-    private Label employeeSelectValidationLabel, leaveTypeValidationLabel, startDateValidationLabel, endDateValidationLabel, startTimeValidationLabel, endTimeValidationLabel;
-
+    @FXML private TableView<LeaveRequest>  leaveTable;
+    @FXML private TableColumn<?, ?>  employeeNameCol,employeeRoleCol, leaveTypeCol, fromCol, toCol, reasonCol;
+    @FXML private VBox controlBox, editLeavePopover;
+    @FXML private Label popoverLabel;
+    @FXML private Button deleteButton;
+    @FXML private Region contentDarken;
+    @FXML private MFXFilterComboBox<User> employeeSelect;
+    @FXML private MFXComboBox<String> leaveTypeCombo;
+    @FXML private MFXDatePicker startDate, endDate;
+    @FXML private MFXButton openStartTimePicker, openEndTimePicker;
+    @FXML private MFXTextField startTimeField, endTimeField;
+    @FXML private TextArea reasonField;
+    @FXML private MFXButton saveButton;
+    @FXML private Label employeeSelectValidationLabel, leaveTypeValidationLabel, startDateValidationLabel, endDateValidationLabel, startTimeValidationLabel, endTimeValidationLabel;
     private FilterView<LeaveRequest> leaveRequestFilterView;
-
-    private Main main;
+    private PopOver currentTimePopover;
     private LocalTime startTime,endTime;
     private UserService userService;
     private LeaveService leaveService;
@@ -105,10 +57,6 @@ public class LeaveManagementController extends DateSelectController {
         leaveService = new LeaveService();
     }
 
-    public void setMain(Main main) {
-        this.main = main;
-    }
-
     public void fill() {
         try {
             List<User> currentUsers = userService.getAllUserEmployments(main.getCurrentStore().getStoreID());
@@ -116,49 +64,34 @@ public class LeaveManagementController extends DateSelectController {
                 employeeSelect.getItems().add(u);
             }
         } catch (SQLException ex) {
-            dialogPane.showError("Error", "An error occurred while trying to fetch employees",ex.getMessage());
-            ex.printStackTrace();
+            dialogPane.showError("Error", "An error occurred while trying to fetch employees",ex);
         }
-
         leaveTypeCombo.getItems().addAll("Sick Leave", "Annual Leave", "Unpaid Leave", "Maternity Leave", "Paternity Leave", "Bereavement Leave", "Other");
-
         openStartTimePicker.setOnAction(_ -> {
             if(!startTimeField.getText().isEmpty()){startTime = LocalTime.parse(startTimeField.getText().toLowerCase(), DateTimeFormatter.ofPattern("h:mm a"));}
             else {startTime = LocalTime.MIDNIGHT;}
             openTimePicker(startTimeField,startTime);
         });
-
         openEndTimePicker.setOnAction(_ -> {
             if(!endTimeField.getText().isEmpty()) {endTime = LocalTime.parse(endTimeField.getText().toLowerCase(), DateTimeFormatter.ofPattern("h:mm a"));}
             else{endTime = LocalTime.MIDNIGHT;}
             openTimePicker(endTimeField,endTime);
         });
-
         controlBox.getChildren().clear();
         leaveRequestFilterView = new FilterView<>();
         leaveRequestFilterView.setTitle("Leave Requests this month");
         leaveRequestFilterView.setTextFilterProvider(text -> leaveRequest -> leaveRequest.getEmployeeName().toLowerCase().contains(text) || leaveRequest.getLeaveType().toLowerCase().contains(text));
         ObservableList<LeaveRequest> leaveRequests = leaveRequestFilterView.getFilteredItems();
-
         employeeNameCol.setCellValueFactory(new PropertyValueFactory<>("employeeName"));
         employeeRoleCol.setCellValueFactory(new PropertyValueFactory<>("employeeRole"));
         leaveTypeCol.setCellValueFactory(new PropertyValueFactory<>("leaveType"));
         fromCol.setCellValueFactory(new PropertyValueFactory<>("fromDateString"));
         toCol.setCellValueFactory(new PropertyValueFactory<>("toDateString"));
         reasonCol.setCellValueFactory(new PropertyValueFactory<>("leaveReason"));
-
-        leaveTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
-        leaveTable.setMaxWidth(Double.MAX_VALUE);
-        leaveTable.setMaxHeight(Double.MAX_VALUE);
+        TableUtils.resizeTableColumns(leaveTable,reasonCol);
         leaveRequestFilterView.setPadding(new Insets(20,20,10,20));//top,right,bottom,left
         controlBox.getChildren().addAll(leaveRequestFilterView,leaveTable);
-        leaveTable.setFixedCellSize(25.0);
-        VBox.setVgrow(leaveTable, Priority.ALWAYS);
         leaveTable.setItems(leaveRequests);
-        for(TableColumn<LeaveRequest,?> tc: leaveTable.getColumns()){
-            tc.setPrefWidth(TableUtils.getColumnWidth(tc)+30);
-        }
-        Platform.runLater(() -> GUIUtils.customResize(leaveTable,reasonCol));
         Platform.runLater(this::addDoubleClickFunction);
         ValidatorUtils.setupRegexValidation(employeeSelect,employeeSelectValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveButton);
         ValidatorUtils.setupRegexValidation(leaveTypeCombo,leaveTypeValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveButton);
@@ -192,8 +125,7 @@ public class LeaveManagementController extends DateSelectController {
         try {
             currentLeaveRequests = leaveService.getLeaveRequests(main.getCurrentStore().getStoreID(), startOfMonth, endOfMonth);
         } catch (SQLException ex) {
-            dialogPane.showError("Error", "An error occurred while trying to fetch leave requests",ex.getMessage());
-            ex.printStackTrace();
+            dialogPane.showError("Error", "An error occurred while trying to fetch leave requests",ex);
         }
         leaveRequestFilterView.getItems().setAll(currentLeaveRequests);
         addDoubleClickFunction();
@@ -226,8 +158,7 @@ public class LeaveManagementController extends DateSelectController {
         try {
             employeeSelect.setValue(userService.getUserByUsername(leaveRequest.getEmployeeID()));
         } catch (SQLException ex) {
-            dialogPane.showError("Error", "An error occurred while trying to find this employee",ex.getMessage());
-            ex.printStackTrace();
+            dialogPane.showError("Error", "An error occurred while trying to find this employee",ex);
         }
         leaveTypeCombo.setValue(leaveRequest.getLeaveType());
         startDate.setValue(leaveRequest.getFromDate().toLocalDate());
@@ -278,8 +209,7 @@ public class LeaveManagementController extends DateSelectController {
                     leaveRequest.setLeaveReason(reasonField.getText());
                     leaveService.addLeaveRequest(leaveRequest);
                 } catch (SQLException ex) {
-                    dialogPane.showError("Error", "An error occurred while trying to add the leave request",ex.getMessage());
-                    ex.printStackTrace();
+                    dialogPane.showError("Error", "An error occurred while trying to add the leave request",ex);
                 }
                 closePopover();
                 fillTable();
@@ -314,8 +244,7 @@ public class LeaveManagementController extends DateSelectController {
                     leaveRequest.setLeaveReason(reasonField.getText());
                     leaveService.updateLeaveRequest(leaveRequest);
                 } catch (SQLException ex) {
-                    dialogPane.showError("Error", "An error occurred while trying to update the leave request",ex.getMessage());
-                    ex.printStackTrace();
+                    dialogPane.showError("Error", "An error occurred while trying to update the leave request",ex);
                 }
                 closePopover();
                 fillTable();
@@ -332,8 +261,7 @@ public class LeaveManagementController extends DateSelectController {
                 try {
                     leaveService.deleteLeaveRequest(leaveRequest.getLeaveID());
                 } catch (SQLException ex) {
-                    dialogPane.showError("Error", "An error occurred while trying to delete the leave request",ex.getMessage());
-                    ex.printStackTrace();
+                    dialogPane.showError("Error", "An error occurred while trying to delete the leave request",ex);
                 }
                 closePopover();
                 fillTable();
@@ -352,14 +280,12 @@ public class LeaveManagementController extends DateSelectController {
             try {
                 timePickerContent = loader.load();
             } catch (IOException ex) {
-                dialogPane.showError("Error", "An error occurred while trying to load the time picker",ex.getMessage());
-                ex.printStackTrace();
+                dialogPane.showError("Error", "An error occurred while trying to load the time picker",ex);
             }
             TimePickerContentController rdc = loader.getController();
             rdc.setMain(main);
             rdc.fill();
             rdc.setCurrentTime(time);
-
             timePickerMenu.setOpacity(1);
             timePickerMenu.setContentNode(timePickerContent);
             timePickerMenu.setArrowSize(0);
@@ -385,56 +311,10 @@ public class LeaveManagementController extends DateSelectController {
         m.changePage("/views/FXML/RosterPage.fxml");
     }
 
-    public void monthForward() {
-        setDate(main.getCurrentDate().plusMonths(1));
-    }
-
-    public void monthBackward() {
-        setDate(main.getCurrentDate().minusMonths(1));
-    }
-
     @Override
     public void setDate(LocalDate date) {
         main.setCurrentDate(date);
-        String fieldText = main.getCurrentDate().getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
-        fieldText += ", ";
-        fieldText += main.getCurrentDate().getYear();
-        monthSelectorField.setText(fieldText);
+        updateMonthSelectorField();
         fillTable();
     }
-
-    public void openMonthSelector(){
-        if(currentDatePopover!=null&&currentDatePopover.isShowing()){
-            currentDatePopover.hide();
-        }else {
-            PopOver monthSelectorMenu = new PopOver();
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/MonthYearSelectorContent.fxml"));
-            VBox monthSelectorMenuContent = null;
-            try {
-                monthSelectorMenuContent = loader.load();
-            } catch (IOException ex) {
-                dialogPane.showError("Error", "An error occurred while trying to load the month selector",ex.getMessage());
-                ex.printStackTrace();
-            }
-            MonthYearSelectorContentController rdc = loader.getController();
-            rdc.setMain(main);
-            rdc.setParent(this);
-            rdc.fill();
-
-            monthSelectorMenu.setOpacity(1);
-            monthSelectorMenu.setContentNode(monthSelectorMenuContent);
-            monthSelectorMenu.setArrowSize(0);
-            monthSelectorMenu.setAnimated(true);
-            monthSelectorMenu.setArrowLocation(PopOver.ArrowLocation.TOP_CENTER);
-            monthSelectorMenu.setAutoHide(true);
-            monthSelectorMenu.setDetachable(false);
-            monthSelectorMenu.setHideOnEscape(true);
-            monthSelectorMenu.setCornerRadius(10);
-            monthSelectorMenu.setArrowIndent(0);
-            monthSelectorMenu.show(monthSelector);
-            currentDatePopover=monthSelectorMenu;
-            monthSelectorField.requestFocus();
-        }
-    }
 }
-

@@ -1,8 +1,9 @@
 package application;
 
 
+import com.dlsc.gemsfx.DialogPane;
 import com.goxr3plus.fxborderlessscene.borderless.BorderlessScene;
-import controllers.Controller;
+import controllers.PageController;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
@@ -14,14 +15,10 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import models.Store;
 import models.User;
-import utils.DBConnector;
-import utils.LogRedirector;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.Connection;
 import java.time.LocalDate;
-import java.util.Objects;
 import java.util.Properties;
 
 
@@ -30,16 +27,18 @@ public class Main extends Application {
 	private static Stage stg;
 	private User currentUser;
 	private Store currentStore;
-	public Controller c;
+	public PageController c;
 	private static BorderlessScene bs;
 	private Image icon;
 	private LocalDate currentDate;
 	private String version;
 	private SplashScreen splashScreen;
+	private DialogPane dialogPane;
 
 	@Override
 	public void init() throws Exception {
 //		LogRedirector.redirectOutputToFile("app.log");
+		Thread.setDefaultUncaughtExceptionHandler(this::handleGlobalException);
 		System.out.println("Application initializing...");
 
 		splashScreen = new SplashScreen();
@@ -78,7 +77,7 @@ public class Main extends Application {
 			try {
 				showMainStage(primaryStage);
 			} catch (Exception e) {
-				e.printStackTrace();
+				c.getDialogPane().showError("Error loading main stage", e);
 			} finally {
 				// Close the splash screen
 				splashScreen.closeSplash();
@@ -89,43 +88,58 @@ public class Main extends Application {
 	private void showMainStage(Stage primaryStage) throws IOException {
 		System.out.println("Main application stage loading...");
 		stg = primaryStage;
-		FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/LogIn.fxml"));
-		Parent root = loader.load();
-		c = loader.getController();
-		c.setMain(this);
-
-		primaryStage.setTitle("Alpha Income Management " + version);
-		bs = new BorderlessScene(primaryStage, StageStyle.TRANSPARENT, root);
-		bs.removeDefaultCSS();
-		bs.setFill(Color.TRANSPARENT);
-		primaryStage.setScene(bs);
-		primaryStage.getIcons().add(icon);
-		primaryStage.show();
-		bs.maximizeStage();
-		bs.setResizable(true);
-		c.fill();
+		setupScene("/views/FXML/LogIn.fxml", true);
 		System.out.println("Application started successfully. Running version " + version);
 	}
-	
+
 	public void changeScene(String fxml) throws IOException {
-		FXMLLoader loader = new FXMLLoader(getClass().getResource(fxml));
+		stg.close();
+		stg = new Stage();
+		setupScene(fxml, false);
+	}
+
+	private void setupScene(String fxmlPath, boolean isMainStage) throws IOException {
+		FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
 		Parent root = loader.load();
 		c = loader.getController();
 		c.setMain(this);
-		stg.close();
-		stg = new Stage();
-		stg.setTitle("Alpha Income Management "+ version);
-		bs = new BorderlessScene(stg,StageStyle.UNDECORATED,root);
-		setBs(bs);
+		stg.setTitle("Alpha Income Management " + version);
+		bs = new BorderlessScene(stg, StageStyle.TRANSPARENT, root);
+		bs.removeDefaultCSS();
+		bs.setFill(Color.TRANSPARENT);
 		stg.setScene(bs);
 		stg.getIcons().add(icon);
 		stg.show();
 		bs.maximizeStage();
 		bs.setResizable(true);
-//		stg.setMinWidth(950);
-		bs.removeDefaultCSS();
+		if (!isMainStage) {
+			setBs(bs);
+		}
 		c.fill();
-}
+		dialogPane = c.getDialogPane();
+		Platform.runLater(() -> {
+			Thread.currentThread().setUncaughtExceptionHandler(this::handleGlobalException);
+		});
+	}
+
+	public void handleGlobalException(Thread t, Throwable e) {
+		System.err.println("An unexpected error occurred in thread " + t.getName());
+		e.printStackTrace(); // Print to console for debugging
+		Platform.runLater(() -> {
+			if (dialogPane != null) {
+				if (e instanceof Exception) {
+					dialogPane.showError("An unexpected error occurred", (Exception) e);
+				} else {
+					// If it's not an Exception, create a new Exception with the Throwable's message
+					Exception exception = new Exception(e.getMessage(), e);
+					dialogPane.showError("An unexpected error occurred", exception);
+				}
+			} else {
+				// Fallback if the current PageController or DialogPane is not available
+				System.err.println("Unable to show error dialog: " + e.getMessage());
+			}
+		});
+	}
 	
 	public void setCurrentUser(User newUser){
 		this.currentUser = newUser;
@@ -153,12 +167,15 @@ public class Main extends Application {
 
 	public void setCurrentDate(LocalDate currentDate) {this.currentDate = currentDate;}
 
-	public Controller getController() {
+	public void setDialogPane(DialogPane dialogPane) {this.dialogPane = dialogPane;}
+
+	public DialogPane getDialogPane() {return dialogPane;}
+
+	public PageController getController() {
 		return c;
 	}
 
 	public static void main(String[] args) {
 		launch(args);
 	}
-	
 }

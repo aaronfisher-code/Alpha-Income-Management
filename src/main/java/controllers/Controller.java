@@ -1,12 +1,10 @@
 package controllers;
 
-import java.sql.Connection;
-
 import application.Main;
 
-public abstract class Controller {
-
-	public abstract void setMain(Main main);
-
-	public abstract void fill();
+public abstract class Controller{
+	protected Main main;
+	public void setMain(Main main) {
+		this.main = main;
+	}
 }

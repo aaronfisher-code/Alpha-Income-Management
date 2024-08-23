@@ -1,13 +1,9 @@
 package controllers;
 
-import application.Main;
 import javafx.animation.Animation;
 import javafx.animation.Transition;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.scene.Cursor;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.effect.BlurType;
 import javafx.scene.effect.DropShadow;
@@ -15,34 +11,20 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
 import javafx.util.Duration;
 import models.Shift;
-
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
-public class ShiftCardController extends Controller{
+public class ShiftCardController extends PageController {
 
 	@FXML private StackPane backgroundPane;
 	@FXML private Label employeeIcon,employeeName,employeeRole,startTime,endTime,startAMPM,endAMPM,leaveLabel;
 	@FXML private Region blurBG;
-
-	private Main main;
 	private Shift shift;
 	private LocalDate shiftCardDate;
 
 	public ShiftCardController() {}
-
-	@Override
-	public void setMain(Main newMain) {
-		this.main = newMain;
-	}
 
 	public void setShift(Shift newShift) {
 		this.shift = newShift;
@@ -67,7 +49,6 @@ public class ShiftCardController extends Controller{
 		employeeIcon.setText(String.valueOf(shift.getFirst_name().charAt(0)));
 		employeeIcon.setStyle("-fx-background-color: " + shift.getProfileBG() + ";-fx-background-radius: 26px;");
 		employeeIcon.setTextFill(Paint.valueOf(shift.getProfileText()));
-
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("hh:mm");
 		startTime.setText(shift.getShiftStartTime().format(formatter));
 		endTime.setText(shift.getShiftEndTime().format(formatter));
@@ -137,7 +118,6 @@ public class ShiftCardController extends Controller{
 				targetButton.setTranslateY(current);
 			}
 		};
-
 		animation.playFromStart();
 	}
 }

@@ -19,7 +19,7 @@ public class BASCheckerService {
             preparedStatement.setInt(2, yearMonth.getMonthValue());
             preparedStatement.setInt(3, yearMonth.getYear());
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                while (resultSet.next()) {
+                if (resultSet.next()) {
                     return new BASCheckerDataPoint(resultSet);
                 }
             }

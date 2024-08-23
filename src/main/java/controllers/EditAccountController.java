@@ -1,7 +1,5 @@
 package controllers;
 
-import application.Main;
-import com.dlsc.gemsfx.DialogPane;
 import com.dlsc.gemsfx.FilterView;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXNodesList;
@@ -12,8 +10,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
-import javafx.scene.AccessibleRole;
-import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
@@ -23,15 +19,15 @@ import models.User;
 import models.Employment;
 import services.*;
 import utils.AnimationUtils;
+import utils.GUIUtils;
 import utils.ValidatorUtils;
-
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
-public class EditAccountController extends Controller{
+public class EditAccountController extends PageController {
 
 	@FXML private BorderPane usersButton,storesButton;
 	@FXML private VBox controlBox,editStorePopover,editUserPopover,editPermissionsPopover;
@@ -47,8 +43,6 @@ public class EditAccountController extends Controller{
 	@FXML private MFXCheckListView<Store> storeSelector;
 	@FXML private MFXCheckListView<Permission> permissionsSelector;
 	@FXML private MFXButton saveStoreButton,passwordResetButton,saveUserButton;
-	@FXML private DialogPane dialogPane;
-
 	private MFXTableView<User> accountsTable = new MFXTableView<>();
 	private MFXTableColumn<User> usernameCol;
 	private MFXTableColumn<User> firstNameCol;
@@ -58,8 +52,6 @@ public class EditAccountController extends Controller{
 	private MFXTableView<Store> storesTable = new MFXTableView<>();
 	private MFXTableColumn<Store> storeNameCol;
 	private FilterView<Store> storeFilterView = new FilterView<>();
-
-    private Main main;
 	private UserService userService;
 	private StoreService storeService;
 	private PermissionService permissionService;
@@ -76,19 +68,10 @@ public class EditAccountController extends Controller{
 	 }
 
 	@Override
-	public void setMain(Main main) {
-		this.main = main;
-	}
-
-	@Override
 	public void fill() {usersView();}
 
 	public void usersView(){
-		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Users - Edit"))) {
-			addList.setVisible(true);
-		}else{
-			addList.setVisible(false);
-		}
+        addList.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Users - Edit")));
 		 //Change inactive user text depending on if it's selected or not
 		inactiveUserToggle.selectedProperty().addListener(_ -> {
 			if (inactiveUserToggle.isSelected()) {
@@ -97,8 +80,8 @@ public class EditAccountController extends Controller{
 				inactiveUserToggle.setText("Active");
 			}
 		});
-		formatTabSelect(usersButton);
-		formatTabDeselect(storesButton);
+		GUIUtils.formatTabSelect(usersButton);
+		GUIUtils.formatTabDeselect(storesButton);
 		addButton.setOnAction(_ -> openUserPopover());
 		userFilterView = new FilterView<>();
 		userFilterView.setTitle("Current Users");
@@ -126,8 +109,7 @@ public class EditAccountController extends Controller{
 			allUsers = FXCollections.observableArrayList(userList);
 			accountsTable.setItems(allUsers);
 		} catch (SQLException ex) {
-			dialogPane.showError("Error","An error occurred while fetching users", ex.getMessage());
-			ex.printStackTrace();
+			dialogPane.showError("Error","An error occurred while fetching users", ex);
 		}
 		accountsTable.setFooterVisible(true);
 		accountsTable.autosizeColumnsOnInitialization();
@@ -137,15 +119,17 @@ public class EditAccountController extends Controller{
 		controlBox.getChildren().removeAll(controlBox.getChildren());
 		controlBox.getChildren().addAll(userFilterView,accountsTable);
 		VBox.setVgrow(accountsTable, Priority.ALWAYS);
-		accountsTable.virtualFlowInitializedProperty().addListener((_, _, _) -> {addUserDoubleClickfunction();});
-		userFilterView.filteredItemsProperty().addListener((_, _, _) -> {addUserDoubleClickfunction();});
+		accountsTable.virtualFlowInitializedProperty().addListener((_, _, _) -> {
+			addUserDoubleClickFunction();});
+		userFilterView.filteredItemsProperty().addListener((_, _, _) -> {
+			addUserDoubleClickFunction();});
 		accountsTable.setItems(allUsers);
 		ValidatorUtils.setupRegexValidation(usernameField,usernameValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveUserButton);
 		ValidatorUtils.setupRegexValidation(firstNameField,firstNameValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveUserButton);
 		ValidatorUtils.setupRegexValidation(lastNameField,lastNameValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveUserButton);
 	}
 
-	private void addUserDoubleClickfunction(){
+	private void addUserDoubleClickFunction(){
 		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Users - Edit"))) {
 			for (Map.Entry<Integer, MFXTableRow<User>> entry : accountsTable.getCells().entrySet()) {
 				entry.getValue().setOnMouseClicked(event -> {
@@ -168,8 +152,8 @@ public class EditAccountController extends Controller{
 
 	public void storesView(){
         addList.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Stores - Edit")));
-		formatTabSelect(storesButton);
-		formatTabDeselect(usersButton);
+		GUIUtils.formatTabSelect(storesButton);
+		GUIUtils.formatTabDeselect(usersButton);
 		addButton.setOnAction(_ -> openStorePopover());
 		storeFilterView = new FilterView<>();
 		storeFilterView.setTitle("Current Stores");
@@ -188,8 +172,7 @@ public class EditAccountController extends Controller{
 			allStores = FXCollections.observableArrayList(storeList);
 			storesTable.setItems(allStores);
 		} catch (SQLException ex) {
-			dialogPane.showError("Error","An error occurred while fetching stores", ex.getMessage());
-			ex.printStackTrace();
+			dialogPane.showError("Error","An error occurred while fetching stores", ex);
 		}
 		storesTable.setFooterVisible(true);
 		storesTable.autosizeColumnsOnInitialization();
@@ -245,8 +228,7 @@ public class EditAccountController extends Controller{
 			List<Store> allStores = storeService.getAllStores();
 			storeSelector.setItems(FXCollections.observableArrayList(allStores));
 		} catch (SQLException ex) {
-			dialogPane.showError("Error","An error occurred while fetching stores", ex.getMessage());
-			ex.printStackTrace();
+			dialogPane.showError("Error","An error occurred while fetching stores", ex);
 		}
 		permissionsSelector.getSelectionModel().clearSelection();
 		//Refresh permissions list for permissions selector
@@ -254,8 +236,7 @@ public class EditAccountController extends Controller{
 			List<Permission> allPermissions = permissionService.getAllPermissions();
 			permissionsSelector.setItems(FXCollections.observableArrayList(allPermissions));
 		} catch (SQLException ex) {
-			dialogPane.showError("Error","An error occurred while fetching permissions", ex.getMessage());
-			ex.printStackTrace();
+			dialogPane.showError("Error","An error occurred while fetching permissions", ex);
 		}
 		//Add live updates to person card preview
 		firstNameField.textProperty().addListener((_, _, newValue) -> {
@@ -320,8 +301,7 @@ public class EditAccountController extends Controller{
 				passwordResetButton.setOnAction(_ -> resetPassword(user));
 			}
 		} catch (SQLException ex) {
-			dialogPane.showError("Error","An error occurred while fetching user information", ex.getMessage());
-			ex.printStackTrace();
+			dialogPane.showError("Error","An error occurred while fetching user information", ex);
 		}
 		employeeName.setText(user.getFirst_name() + "." + user.getLast_name().charAt(0));
 		employeeRole.setText(user.getRole());
@@ -342,8 +322,7 @@ public class EditAccountController extends Controller{
 				}
 			}
 		} catch (SQLException ex) {
-			dialogPane.showError("Error","An error occurred while fetching employment information", ex.getMessage());
-			ex.printStackTrace();
+			dialogPane.showError("Error","An error occurred while fetching employment information", ex);
 		}
 		permissionsSelector.getSelectionModel().clearSelection();
 		//Refresh permissions list for permissions selector
@@ -360,8 +339,7 @@ public class EditAccountController extends Controller{
 				}
 			}
 		} catch (SQLException ex) {
-			dialogPane.showError("Error","An error occurred while fetching permission information", ex.getMessage());
-			ex.printStackTrace();
+			dialogPane.showError("Error","An error occurred while fetching permission information", ex);
 		}
 		//Add live updates to person card preview
 		firstNameField.textProperty().addListener((_, _, newValue) -> {
@@ -461,8 +439,7 @@ public class EditAccountController extends Controller{
 				Store store = new Store(name);
 				storeService.addStore(store);
 			} catch (SQLException ex) {
-				dialogPane.showError("Error","An error occurred while adding a store", ex.getMessage());
-				ex.printStackTrace();
+				dialogPane.showError("Error","An error occurred while adding a store", ex);
 			}
 			dialogPane.showInformation("Success","Store was successfully added to the database");
 			storesView();
@@ -510,8 +487,7 @@ public class EditAccountController extends Controller{
 				usersView();
 			}
 		} catch (SQLException ex) {
-			dialogPane.showError("Error","An error occurred while adding a user", ex.getMessage());
-			ex.printStackTrace();
+			dialogPane.showError("Error","An error occurred while adding a user", ex);
 		}
 	}
 
@@ -524,8 +500,7 @@ public class EditAccountController extends Controller{
 				store.setStoreName(name);
 				storeService.updateStore(store);
 			} catch (SQLException ex) {
-				dialogPane.showError("Error","An error occurred while updating the store", ex.getMessage());
-				ex.printStackTrace();
+				dialogPane.showError("Error","An error occurred while updating the store", ex);
 			}
 			dialogPane.showInformation("Success","Store was succesfully updated");
 			closeStorePopover();
@@ -575,8 +550,7 @@ public class EditAccountController extends Controller{
 					userPermissionService.addUserPermission(user,p);
 				}
 			} catch (SQLException ex) {
-				dialogPane.showError("Error","An error occurred while updating the user", ex.getMessage());
-				ex.printStackTrace();
+				dialogPane.showError("Error","An error occurred while updating the user", ex);
 			}
 			dialogPane.showInformation("Success","User was succesfully updated");
 			closeUserPopover();
@@ -588,84 +562,47 @@ public class EditAccountController extends Controller{
 		try{
 			userService.resetUserPassword(user);
 		}catch(SQLException ex){
-			dialogPane.showError("Error","An error occurred while updating user password", ex.getMessage());
-			ex.printStackTrace();
+			dialogPane.showError("Error","An error occurred while updating user password", ex);
 		}
 		passwordResetButton.setText("Password reset requested");
 		passwordResetButton.setDisable(true);
 	}
 
 	public void deleteStore(Store store){
-	 	Alert alert = new Alert(Alert.AlertType.WARNING);
-		alert.setTitle("Confirm Deletion");
-		alert.setContentText("This action will permanently delete the store from all systems, are you sure?");
-		ButtonType okButton = new ButtonType("Yes", ButtonBar.ButtonData.YES);
-		ButtonType noButton = new ButtonType("No", ButtonBar.ButtonData.NO);
-		alert.getButtonTypes().setAll(okButton, noButton);
-		alert.showAndWait().ifPresent(type -> {
-			if (type == okButton) {
-				try {
-					storeService.deleteStore(store);
-				} catch (SQLException ex) {
-					dialogPane.showError("Error","An error occurred while deleting store", ex.getMessage());
-					ex.printStackTrace();
-				}
-				dialogPane.showInformation("Success","Store was succesfully deleted");
-				closeStorePopover();
-				storesView();
-			} else if (type == noButton) {
-			}
-		});
+		 dialogPane.showWarning("Confirm Delete",
+				 "This action will permanently delete the store from all systems,\n" +
+						 "Are you sure you still want to delete this store?").thenAccept(buttonType -> {
+			 if (buttonType.equals(ButtonType.OK)) {
+				 try {
+					 storeService.deleteStore(store);
+				 } catch (SQLException ex) {
+					 dialogPane.showError("Error","An error occurred while deleting store", ex);
+				 }
+				 dialogPane.showInformation("Success","Store was successfully deleted");
+				 closeStorePopover();
+				 storesView();
+			 }
+		 });
 	}
 
 	public void deleteUser(User user){
-		Alert alert = new Alert(Alert.AlertType.WARNING);
-		alert.setTitle("Confirm Deletion");
-		alert.setContentText("This action will permanently delete the user from all systems,\n" +
-							 "if the archived information for this user must be saved, its instead " +
-							 "preferred that you mark them as a now inactive user\n\n" +
-							 "Are you sure you still want to delete this user?");
-		ButtonType okButton = new ButtonType("Yes", ButtonBar.ButtonData.YES);
-		ButtonType noButton = new ButtonType("No", ButtonBar.ButtonData.NO);
-		alert.getButtonTypes().setAll(okButton, noButton);
-		alert.showAndWait().ifPresent(type -> {
-			if (type == okButton) {
+		dialogPane.showWarning("Confirm Delete",
+                """
+                        This action will permanently delete the user from all systems,
+                        if the archived information for this user must be saved, its instead \
+                        preferred that you mark them as a now inactive user
+
+                        Are you sure you still want to delete this user?""").thenAccept(buttonType -> {
+			if (buttonType.equals(ButtonType.OK)) {
 				try {
 					userService.deleteUser(user);
 				} catch (SQLException ex) {
-					dialogPane.showError("Error","An error occurred while deleting user", ex.getMessage());
-					ex.printStackTrace();
+					dialogPane.showError("Error","An error occurred while deleting user", ex);
 				}
-				dialogPane.showInformation("Success","User was succesfully deleted");
+				dialogPane.showInformation("Success","User was successfully deleted");
 				closeUserPopover();
 				usersView();
 			}
-        });
-	}
-
-	public void formatTabSelect(BorderPane b){
-		for (Node n:b.getChildren()) {
-			if(n.getAccessibleRole() == AccessibleRole.TEXT){
-				Label a = (Label) n;
-				a.setStyle("-fx-text-fill: #0F60FF");
-			}
-			if(n.getAccessibleRole() == AccessibleRole.PARENT){
-				Region a = (Region) n;
-				a.setStyle("-fx-background-color: #0F60FF");
-			}
-		}
-	}
-
-	public void formatTabDeselect(BorderPane b){
-		for (Node n:b.getChildren()) {
-			if(n.getAccessibleRole() == AccessibleRole.TEXT){
-				Label a = (Label) n;
-				a.setStyle("-fx-text-fill: #6e6b7b");
-			}
-			if(n.getAccessibleRole() == AccessibleRole.PARENT){
-				Region a = (Region) n;
-				a.setStyle("");
-			}
-		}
+		});
 	}
 }

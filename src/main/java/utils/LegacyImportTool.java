@@ -26,9 +26,7 @@ public class LegacyImportTool {
     private String sql = null;
 
 
-    public LegacyImportTool(Connection c, PreparedStatement p, Main main){
-        this.con = c;
-        this.preparedStatement = p;
+    public LegacyImportTool(Main main){
         this.main = main;
     }
 

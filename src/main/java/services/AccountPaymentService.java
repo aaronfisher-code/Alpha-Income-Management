@@ -4,6 +4,8 @@ import models.AccountPayment;
 import utils.DatabaseConnectionManager;
 
 import java.sql.*;
+import java.time.LocalDate;
+import java.time.Year;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
@@ -80,5 +82,50 @@ public class AccountPaymentService {
 
             preparedStatement.executeUpdate();
         }
+    }
+
+    private static final String TOTAL_PAYMENT_BASE_SQL =
+            "SELECT SUM(ap.unitAmount) AS TotalPayment " +
+                    "FROM accountpayments ap " +
+                    "INNER JOIN accountpaymentcontacts apc ON apc.idaccountPaymentContacts = ap.contactID " +
+                    "WHERE %s " +
+                    "AND MONTH(ap.invoiceDate) = ? AND YEAR(ap.invoiceDate) = ? " +
+                    "AND ap.storeID = ?";
+
+    public enum PaymentType {
+        CPA("apc.contactName LIKE ?", "%CPA%"),
+        TAC("apc.contactName LIKE ?", "%TAC%"),
+        OTHER("apc.contactName NOT LIKE ? AND apc.contactName NOT LIKE ?", "%TAC%", "%CPA%");
+
+        private final String condition;
+        private final String[] params;
+
+        PaymentType(String condition, String... params) {
+            this.condition = condition;
+            this.params = params;
+        }
+    }
+
+    public double getTotalPayment(int storeId, YearMonth yearMonth, PaymentType type) throws SQLException {
+        String sql = String.format(TOTAL_PAYMENT_BASE_SQL, type.condition);
+
+        try (Connection connection = DatabaseConnectionManager.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            int paramIndex = 1;
+            for (String param : type.params) {
+                preparedStatement.setString(paramIndex++, param);
+            }
+            preparedStatement.setInt(paramIndex++, yearMonth.getMonthValue());
+            preparedStatement.setInt(paramIndex++, yearMonth.getYear());
+            preparedStatement.setInt(paramIndex, storeId);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getDouble("TotalPayment");
+                }
+            }
+        }
+        return 0.0;
     }
 }

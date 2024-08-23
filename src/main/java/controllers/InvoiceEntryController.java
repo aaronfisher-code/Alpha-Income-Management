@@ -1,13 +1,11 @@
 package controllers;
 
-import application.Main;
 import com.dlsc.gemsfx.DialogPane;
 import com.dlsc.gemsfx.FilterView;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXNodesList;
 import components.ActionableFilterComboBox;
 import components.CustomDateStringConverter;
-import interfaces.actionableComboBox;
 import io.github.palexdev.materialfx.controls.MFXButton;
 import io.github.palexdev.materialfx.controls.MFXDatePicker;
 import io.github.palexdev.materialfx.controls.MFXTextField;
@@ -18,7 +16,6 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
-import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.Button;
@@ -28,31 +25,24 @@ import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import models.*;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.controlsfx.control.PopOver;
 import services.CreditService;
 import services.InvoiceService;
 import services.InvoiceSupplierService;
 import utils.*;
-
 import java.io.*;
 import java.sql.*;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.time.format.TextStyle;
 import java.util.Locale;
 import java.util.Objects;
-
 import static com.dlsc.gemsfx.DialogPane.Type.BLANK;
 
-public class InvoiceEntryController extends DateSelectController implements actionableComboBox{
+public class InvoiceEntryController extends DateSelectController{
 
-	@FXML private StackPane monthSelector;
-	@FXML private MFXTextField monthSelectorField;
 	@FXML private VBox controlBox,addInvoicePopover,addCreditPopover;
 	@FXML private BorderPane invoicesButton,creditsButton;
 	@FXML private Region contentDarken;
-	@FXML private DialogPane dialogPane;
 	@FXML private MFXTextField invoiceNoField,descriptionField,amountField,notesField;
 	@FXML private MFXDatePicker invoiceDateField, dueDateField;
 	@FXML private MFXButton saveButton;
@@ -68,7 +58,6 @@ public class InvoiceEntryController extends DateSelectController implements acti
 	@FXML private JFXButton plusButton;
 	@FXML private JFXNodesList addList;
 	@FXML private Button importDataButton,exportDataButton;
-
 	private TableView<Invoice> invoicesTable = new TableView<>();
 	private TableView<Credit> creditsTable = new TableView<>();
 	private TableColumn<Invoice,String> supplierNameCol;
@@ -89,11 +78,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 	private TableColumn<Credit,String> creditNotesCol;
 	private FilterView<Invoice> invoiceFilterView = new FilterView<>();
 	private FilterView<Credit> creditFilterView = new FilterView<>();
-	private ActionableFilterComboBox invoiceAFX,creditAFX;
-	private DialogPane.Dialog<Object> dialog;
-
-    private Main main;
-	private PopOver currentDatePopover;
+	private ActionableFilterComboBox<InvoiceSupplier> invoiceAFX,creditAFX;
 	private InvoiceService invoiceService;
 	private InvoiceSupplierService invoiceSupplierService;
 	private CreditService creditService;
@@ -103,11 +88,6 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		invoiceService = new InvoiceService();
 		invoiceSupplierService = new InvoiceSupplierService();
 		creditService = new CreditService();
-	}
-
-	@Override
-	public void setMain(Main main) {
-		this.main = main;
 	}
 
 	@Override
@@ -145,8 +125,8 @@ public class InvoiceEntryController extends DateSelectController implements acti
 	}
 
 	public void invoicesView() {
-		formatTabSelect(invoicesButton);
-		formatTabDeselect(creditsButton);
+		GUIUtils.formatTabSelect(invoicesButton);
+		GUIUtils.formatTabDeselect(creditsButton);
 		controlBox.getChildren().clear();
 		invoiceFilterView = new FilterView<>();
 		invoiceFilterView.setTitle("Current Invoices");
@@ -194,18 +174,9 @@ public class InvoiceEntryController extends DateSelectController implements acti
 				totalAfterCreditCol,
 				notesCol
 		);
-		invoicesTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
-		invoicesTable.setMaxWidth(Double.MAX_VALUE);
-		invoicesTable.setMaxHeight(Double.MAX_VALUE);
 		invoiceFilterView.setPadding(new Insets(20,20,10,20));//top,right,bottom,left
 		controlBox.getChildren().addAll(invoiceFilterView,invoicesTable);
-		invoicesTable.setFixedCellSize(25.0);
-		VBox.setVgrow(invoicesTable, Priority.ALWAYS);
 		invoicesTable.setItems(allInvoices);
-		for(TableColumn tc: invoicesTable.getColumns()){
-			tc.setPrefWidth(TableUtils.getColumnWidth(tc)+30);
-		}
-		Platform.runLater(() -> GUIUtils.customResize(invoicesTable,notesCol));
 		Platform.runLater(this::addInvoiceDoubleClickFunction);
 		fillContactList();
 		fillInvoiceTable();
@@ -232,8 +203,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 						varianceLabel.setText("N/A");
 					}
 				} catch (SQLException ex) {
-					dialogPane.showError("Error","An error occurred while loading invoice information",ex.getMessage());
-					ex.printStackTrace();
+					dialogPane.showError("Error","An error occurred while loading invoice information",ex);
 				}
 			}
 		});
@@ -248,8 +218,8 @@ public class InvoiceEntryController extends DateSelectController implements acti
 	}
 
 	public void creditsView(){
-		formatTabSelect(creditsButton);
-		formatTabDeselect(invoicesButton);
+		GUIUtils.formatTabSelect(creditsButton);
+		GUIUtils.formatTabDeselect(invoicesButton);
 		controlBox.getChildren().clear();
 		creditFilterView = new FilterView<>();
 		creditFilterView.setTitle("Current Credits");
@@ -276,27 +246,18 @@ public class InvoiceEntryController extends DateSelectController implements acti
 				creditAmountCol,
 				creditNotesCol
 		);
-		creditsTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
-		creditsTable.setMaxWidth(Double.MAX_VALUE);
-		creditsTable.setMaxHeight(Double.MAX_VALUE);
 		creditFilterView.setPadding(new Insets(20,20,10,20));//top,right,bottom,left
 		controlBox.getChildren().addAll(creditFilterView,creditsTable);
-		creditsTable.setFixedCellSize(25.0);
-		VBox.setVgrow(creditsTable, Priority.ALWAYS);
 		creditsTable.setItems(allCredits);
-		for(TableColumn tc: creditsTable.getColumns()){
-			tc.setPrefWidth(TableUtils.getColumnWidth(tc)+30);
-		}
 		fillContactList();
 		fillCreditTable();
-		Platform.runLater(() -> GUIUtils.customResize(creditsTable,creditNotesCol));
 		Platform.runLater(this::addCreditDoubleClickFunction);
 		addCreditDoubleClickFunction();
 		plusButton.setOnAction(_ -> openCreditPopover());
 		contentDarken.setOnMouseClicked(_ -> closeCreditPopover());
 	}
 
-	public ActionableFilterComboBox createAFX(){
+	public ActionableFilterComboBox<InvoiceSupplier> createAFX(){
 		MFXButton addSupplierButton = new MFXButton("Create New");
 		addSupplierButton.setOnAction(_ -> {
 			dialog = new DialogPane.Dialog<>(dialogPane, BLANK);
@@ -311,7 +272,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 			dialog.setContent(createManageSuppliersDialog());
 			dialogPane.showDialog(dialog);
 		});
-		ActionableFilterComboBox newAFX = new ActionableFilterComboBox(addSupplierButton, manageSuppliersButton);
+		ActionableFilterComboBox<InvoiceSupplier> newAFX = new ActionableFilterComboBox<>(addSupplierButton, manageSuppliersButton);
 		newAFX.setFloatMode(FloatMode.ABOVE);
 		newAFX.setFloatingText("Contact name");
 		newAFX.setFloatingTextGap(5);
@@ -358,8 +319,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		try {
 			newContactDialog = loader.load();
 		} catch (IOException e) {
-			dialogPane.showError("Error","An error occurred while loading the new supplier dialog",e.getMessage());
-			e.printStackTrace();
+			dialogPane.showError("Error","An error occurred while loading the new supplier dialog",e);
 		}
 		AddNewSupplierDialogController dialogController = loader.getController();
 		dialogController.setParent(this);
@@ -373,8 +333,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		try {
 			manageSuppliersDialog = loader.load();
 		} catch (IOException e) {
-			dialogPane.showError("Error","An error occurred while loading the manage suppliers dialog",e.getMessage());
-			e.printStackTrace();
+			dialogPane.showError("Error","An error occurred while loading the manage suppliers dialog",e);
 		}
 		ManageSuppliersDialogController dialogController = loader.getController();
 		dialogController.setParent(this);
@@ -388,8 +347,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		try {
 			contacts = FXCollections.observableArrayList(invoiceSupplierService.getAllInvoiceSuppliers(main.getCurrentStore().getStoreID()));
 		} catch (SQLException ex) {
-			dialogPane.showError("Error","An error occurred while loading invoice suppliers",ex.getMessage());
-			ex.printStackTrace();
+			dialogPane.showError("Error","An error occurred while loading invoice suppliers",ex);
 		}
         assert contacts != null;
         if(contacts.isEmpty()){
@@ -403,54 +361,10 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		creditAFX.clearSelection();
 	}
 
-	public void monthForward() {
-		setDate(main.getCurrentDate().plusMonths(1));
-	}
-
-	public void monthBackward() {
-		setDate(main.getCurrentDate().minusMonths(1));
-	}
-
-	public void openMonthSelector(){
-		if(currentDatePopover!=null&&currentDatePopover.isShowing()){
-			currentDatePopover.hide();
-		}else {
-			PopOver monthSelectorMenu = new PopOver();
-			FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/MonthYearSelectorContent.fxml"));
-			VBox monthSelectorMenuContent = null;
-			try {
-				monthSelectorMenuContent = loader.load();
-			} catch (IOException e) {
-				dialogPane.showError("Error","An error occurred while loading the month selector",e.getMessage());
-				e.printStackTrace();
-			}
-			MonthYearSelectorContentController rdc = loader.getController();
-			rdc.setMain(main);
-			rdc.setParent(this);
-			rdc.fill();
-			monthSelectorMenu.setOpacity(1);
-			monthSelectorMenu.setContentNode(monthSelectorMenuContent);
-			monthSelectorMenu.setArrowSize(0);
-			monthSelectorMenu.setAnimated(true);
-			monthSelectorMenu.setArrowLocation(PopOver.ArrowLocation.TOP_CENTER);
-			monthSelectorMenu.setAutoHide(true);
-			monthSelectorMenu.setDetachable(false);
-			monthSelectorMenu.setHideOnEscape(true);
-			monthSelectorMenu.setCornerRadius(10);
-			monthSelectorMenu.setArrowIndent(0);
-			monthSelectorMenu.show(monthSelector);
-			currentDatePopover=monthSelectorMenu;
-			monthSelectorField.requestFocus();
-		}
-	}
-
 	@Override
 	public void setDate(LocalDate date) {
 		main.setCurrentDate(date);
-		String fieldText = main.getCurrentDate().getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
-		fieldText += ", ";
-		fieldText += main.getCurrentDate().getYear();
-		monthSelectorField.setText(fieldText);
+		updateMonthSelectorField();
 		fillInvoiceTable();
 		fillCreditTable();
 		fillContactList();
@@ -486,8 +400,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		try{
 			invoiceAFX.setValue(invoiceSupplierService.getInvoiceSupplierByName(invoice.getSupplierName(),main.getCurrentStore().getStoreID()));
 		}catch (SQLException ex) {
-			dialogPane.showError("Error","An error occurred while locating the invoice supplier",ex.getMessage());
-			ex.printStackTrace();
+			dialogPane.showError("Error","An error occurred while locating the invoice supplier",ex);
 		}
 		invoiceNoField.setText(invoice.getInvoiceNo());
 		invoiceDateField.setValue(invoice.getInvoiceDate());
@@ -525,8 +438,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		try{
 			creditAFX.setValue(invoiceSupplierService.getInvoiceSupplierByName(credit.getSupplierName(),main.getCurrentStore().getStoreID()));
 		}catch (SQLException ex) {
-			dialogPane.showError("Error","An error occurred while locating the credit supplier",ex.getMessage());
-			ex.printStackTrace();
+			dialogPane.showError("Error","An error occurred while locating the credit supplier",ex);
 		}
 		creditNoField.setText(credit.getCreditNo());
 		refInvNoField.setText(credit.getReferenceInvoiceNo());
@@ -559,8 +471,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		try {
 			return invoiceService.checkDuplicateInvoice(invoiceNoField.getText(),main.getCurrentStore().getStoreID(),((InvoiceSupplier) invoiceAFX.getValue()).getContactID());
 		} catch (SQLException ex) {
-			dialogPane.showError("Error","An error occurred while checking for duplicate invoices",ex.getMessage());
-			ex.printStackTrace();
+			dialogPane.showError("Error","An error occurred while checking for duplicate invoices",ex);
 		}
 		return false;
 	}
@@ -576,7 +487,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 			invoiceNoValidationLabel.setText("Invoice Already Exists");
 			invoiceNoValidationLabel.setVisible(true);
 		}else{
-			InvoiceSupplier contact = (InvoiceSupplier) invoiceAFX.getSelectedItem();
+			InvoiceSupplier contact = invoiceAFX.getSelectedItem();
 			try {
 				Invoice newInvoice = new Invoice();
 				newInvoice.setSupplierID(contact.getContactID());
@@ -589,8 +500,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 				newInvoice.setStoreID(main.getCurrentStore().getStoreID());
 				invoiceService.addInvoice(newInvoice);
 			} catch (SQLException ex) {
-				dialogPane.showError("Error","An error occurred while adding the invoice",ex.getMessage());
-				ex.printStackTrace();
+				dialogPane.showError("Error","An error occurred while adding the invoice",ex);
 			}
 			invoiceNoValidationLabel.setVisible(false);
 			invoiceNoField.clear();
@@ -614,7 +524,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 			invoiceNoValidationLabel.setText("Invoice Already Exists");
 			invoiceNoValidationLabel.setVisible(true);
 		}else{
-			InvoiceSupplier contact = (InvoiceSupplier) invoiceAFX.getValue();
+			InvoiceSupplier contact = invoiceAFX.getValue();
 			try {
 				String oldInvoiceNo = invoice.getInvoiceNo();
 				invoice.setSupplierID(contact.getContactID());
@@ -626,8 +536,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 				invoice.setNotes(notesField.getText());
 				invoiceService.updateInvoice(invoice,oldInvoiceNo);
 			} catch (SQLException ex) {
-				dialogPane.showError("Error","An error occurred while updating the invoice",ex.getMessage());
-				ex.printStackTrace();
+				dialogPane.showError("Error","An error occurred while updating the invoice",ex);
 			}
 			closeInvoicePopover();
 			fillInvoiceTable();
@@ -643,8 +552,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 				try {
 					invoiceService.deleteInvoice(invoice.getInvoiceNo(),main.getCurrentStore().getStoreID());
 				} catch (SQLException ex) {
-					dialogPane.showError("Error","An error occurred while deleting the invoice",ex.getMessage());
-					ex.printStackTrace();
+					dialogPane.showError("Error","An error occurred while deleting the invoice",ex);
 				}
 				closeInvoicePopover();
 				fillInvoiceTable();
@@ -660,7 +568,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		else if (!creditDateField.isValid()) {creditDateField.requestFocus();}
 		else if (!creditAmountField.isValid()) {creditAmountField.requestFocus();}
 		else {
-			InvoiceSupplier contact = (InvoiceSupplier) creditAFX.getSelectedItem();
+			InvoiceSupplier contact = creditAFX.getSelectedItem();
 			try {
 				Credit newCredit = new Credit();
 				newCredit.setSupplierID(contact.getContactID());
@@ -672,8 +580,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 				newCredit.setStoreID(main.getCurrentStore().getStoreID());
 				creditService.addCredit(newCredit);
 			} catch (SQLException ex) {
-				dialogPane.showError("Error","An error occurred while adding the credit",ex.getMessage());
-				ex.printStackTrace();
+				dialogPane.showError("Error","An error occurred while adding the credit",ex);
 			}
 			creditNoField.clear();
 			refInvNoField.clear();
@@ -692,7 +599,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 		else if (!creditDateField.isValid()) {creditDateField.requestFocus();}
 		else if (!creditAmountField.isValid()) {creditAmountField.requestFocus();}
 		else {
-			InvoiceSupplier contact = (InvoiceSupplier) creditAFX.getValue();
+			InvoiceSupplier contact = creditAFX.getValue();
 			try {
 				credit.setSupplierID(contact.getContactID());
 				credit.setCreditNo(creditNoField.getText());
@@ -702,8 +609,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 				credit.setNotes(creditNotesField.getText());
 				creditService.updateCredit(credit);
 			} catch (SQLException ex) {
-				dialogPane.showError("Error","An error occurred while updating the credit",ex.getMessage());
-				ex.printStackTrace();
+				dialogPane.showError("Error","An error occurred while updating the credit",ex);
 			}
 			closeCreditPopover();
 			fillCreditTable();
@@ -719,8 +625,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 				try {
 					creditService.deleteCredit(credit.getCreditID());
 				} catch (SQLException ex) {
-					dialogPane.showError("Error","An error occurred while deleting the credit",ex.getMessage());
-					ex.printStackTrace();
+					dialogPane.showError("Error","An error occurred while deleting the credit",ex);
 				}
 				closeCreditPopover();
 				fillCreditTable();
@@ -735,20 +640,13 @@ public class InvoiceEntryController extends DateSelectController implements acti
 			ObservableList<Invoice> currentInvoiceDataPoints  = FXCollections.observableArrayList(invoiceService.getInvoiceTableData(main.getCurrentStore().getStoreID(),yearMonthObject));
 			invoiceFilterView.getItems().setAll(currentInvoiceDataPoints);
 		} catch (SQLException ex) {
-			dialogPane.showError("Error","An error occurred while loading invoice data",ex.getMessage());
-			ex.printStackTrace();
+			dialogPane.showError("Error","An error occurred while loading invoice data",ex);
 		}
 		addInvoiceDoubleClickFunction();
-		invoicesTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
-		invoicesTable.setMaxWidth(Double.MAX_VALUE);
-		invoicesTable.setMaxHeight(Double.MAX_VALUE);
-		invoicesTable.setFixedCellSize(25.0);
-		VBox.setVgrow(invoicesTable, Priority.ALWAYS);
-		for(TableColumn tc: invoicesTable.getColumns()){
-			tc.setPrefWidth(TableUtils.getColumnWidth(tc)+30);
+		TableUtils.resizeTableColumns(invoicesTable,notesCol);
+		for(TableColumn<?,?> tc: invoicesTable.getColumns()){
 			tc.setSortable(true);
 		}
-		Platform.runLater(() -> GUIUtils.customResize(invoicesTable,notesCol));
 		Platform.runLater(() -> invoicesTable.sort());
 	}
 
@@ -758,19 +656,12 @@ public class InvoiceEntryController extends DateSelectController implements acti
 			ObservableList<Credit> currentCreditDataPoints = FXCollections.observableArrayList(creditService.getAllCredits(main.getCurrentStore().getStoreID(),yearMonthObject));
 			creditFilterView.getItems().setAll(currentCreditDataPoints);
 		} catch (SQLException ex) {
-			dialogPane.showError("Error","An error occurred while loading credit data",ex.getMessage());
-			ex.printStackTrace();
+			dialogPane.showError("Error","An error occurred while loading credit data",ex);
 		}
-		creditsTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
-		creditsTable.setMaxWidth(Double.MAX_VALUE);
-		creditsTable.setMaxHeight(Double.MAX_VALUE);
-		creditsTable.setFixedCellSize(25.0);
-		VBox.setVgrow(creditsTable, Priority.ALWAYS);
-		for(TableColumn tc: creditsTable.getColumns()){
-			tc.setPrefWidth(TableUtils.getColumnWidth(tc)+30);
+		TableUtils.resizeTableColumns(creditsTable,creditNotesCol);
+		for(TableColumn<?,?> tc: creditsTable.getColumns()){
 			tc.setSortable(true);
 		}
-		Platform.runLater(() -> GUIUtils.customResize(creditsTable,notesCol));
 	}
 
 	public void importFiles() throws IOException {
@@ -786,8 +677,7 @@ public class InvoiceEntryController extends DateSelectController implements acti
 				try {
 					invoiceService.importInvoiceData(main.getCurrentStore().getStoreID(),cdp);
 				} catch (SQLException ex) {
-					dialogPane.showError("Error","An error occurred while importing invoice data",ex.getMessage());
-					ex.printStackTrace();
+					dialogPane.showError("Error","An error occurred while importing invoice data",ex);
 				}
 			}
 		}
@@ -814,47 +704,11 @@ public class InvoiceEntryController extends DateSelectController implements acti
 						pw.println("310,gst on expenses,");
 					}
 				} catch (SQLException ex) {
-					dialogPane.showError("Error","An error occurred while loading invoice data",ex.getMessage());
-					ex.printStackTrace();
+					dialogPane.showError("Error","An error occurred while loading invoice data",ex);
 				}
-				dialogPane.showInformation("Success", "Information exported succesfully");
+				dialogPane.showInformation("Success", "Information exported successfully");
 			} catch (FileNotFoundException e){
-				dialogPane.showError("Error", "This file could not be accessed, please ensure its not open in another program");
-				e.printStackTrace();
-			}
-		}
-	}
-
-	public DialogPane.Dialog<Object> getDialog() {
-		return dialog;
-	}
-
-	public DialogPane getDialogPane() {
-		return dialogPane;
-	}
-
-	public void formatTabSelect(BorderPane b){
-		for (Node n:b.getChildren()) {
-			if(n.getAccessibleRole() == AccessibleRole.TEXT){
-				Label a = (Label) n;
-				a.setStyle("-fx-text-fill: #0F60FF");
-			}
-			if(n.getAccessibleRole() == AccessibleRole.PARENT){
-				Region a = (Region) n;
-				a.setStyle("-fx-background-color: #0F60FF");
-			}
-		}
-	}
-
-	public void formatTabDeselect(BorderPane b){
-		for (Node n:b.getChildren()) {
-			if(n.getAccessibleRole() == AccessibleRole.TEXT){
-				Label a = (Label) n;
-				a.setStyle("-fx-text-fill: #6e6b7b");
-			}
-			if(n.getAccessibleRole() == AccessibleRole.PARENT){
-				Region a = (Region) n;
-				a.setStyle("");
+				dialogPane.showError("Error", "This file could not be accessed, please ensure its not open in another program",e);
 			}
 		}
 	}

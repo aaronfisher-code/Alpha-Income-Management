@@ -1,8 +1,6 @@
 package controllers;
 
-import application.Main;
 import io.github.palexdev.materialfx.controls.MFXButton;
-import io.github.palexdev.materialfx.controls.MFXTextField;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -16,39 +14,25 @@ import models.AccountPaymentContactDataPoint;
 import services.AccountPaymentContactService;
 import utils.GUIUtils;
 import utils.TableUtils;
-
 import java.sql.*;
-import java.time.LocalDate;
 import java.util.List;
 
-public class ManageContactsDialogController extends DateSelectController{
+public class ManageContactsDialogController extends Controller{
 	//TODO: Reconsider how to edit payment contacts (visibility?/hide not delete/show results of update after complete)
-    private Main main;
+	@FXML private TableColumn<AccountPaymentContactDataPoint,String> nameCol;
+	@FXML private TableColumn<AccountPaymentContactDataPoint,String> accountCodeCol;
+	@FXML private TableColumn<AccountPaymentContactDataPoint,Button> deleteCol;
+	@FXML private TableView<AccountPaymentContactDataPoint> contactsTable;
 	private AccountPaymentsPageController parent;
 	private AccountPaymentContactService accountPaymentContactService;
-
-	@FXML
-	private TableColumn<AccountPaymentContactDataPoint,String> nameCol;
-	@FXML
-	private TableColumn<AccountPaymentContactDataPoint,String> accountCodeCol;
-	@FXML
-	private TableColumn<AccountPaymentContactDataPoint,Button> deleteCol;
-	@FXML
-	private TableView<AccountPaymentContactDataPoint> contactsTable;
 
 	@FXML
 	private void initialize() {
 		accountPaymentContactService = new AccountPaymentContactService();
 	}
 
-	@Override
-	public void setMain(Main main) {
-		this.main = main;
-	}
-
 	public void setParent(AccountPaymentsPageController d) {this.parent = d;}
 
-	@Override
 	public void fill() {
 		nameCol.setCellValueFactory(new PropertyValueFactory<>("contactName"));
 		accountCodeCol.setCellValueFactory(new PropertyValueFactory<>("accountCode"));
@@ -65,8 +49,7 @@ public class ManageContactsDialogController extends DateSelectController{
 						parent.fillContactList();
 						fill();
 					} catch (SQLException e) {
-						parent.getDialogPane().showError("Error","An error occurred while deleting the contact",e.getMessage());
-						e.printStackTrace();
+						parent.getDialogPane().showError("Error","An error occurred while deleting the contact",e);
 					}
 				});
 				a.setDeleteButton(delButton);
@@ -74,18 +57,13 @@ public class ManageContactsDialogController extends DateSelectController{
 			allContacts = FXCollections.observableArrayList(currentAccountPaymentDataPoints);
 			contactsTable.setItems(allContacts);
 		} catch (SQLException e) {
-			parent.getDialogPane().showError("Error","An error occurred while loading existing contacts",e.getMessage());
-			e.printStackTrace();
+			parent.getDialogPane().showError("Error","An error occurred while loading existing contacts",e);
 		}
-
-		for(TableColumn tc: contactsTable.getColumns()){
+		for(TableColumn<?,?> tc: contactsTable.getColumns()){
 			tc.setPrefWidth(TableUtils.getColumnWidth(tc)+20);
 		}
 		Platform.runLater(() -> GUIUtils.customResize(contactsTable,nameCol));
 	}
-
-	@Override
-	public void setDate(LocalDate date) {}
 
 	private void editableCols() {
 		nameCol.setCellFactory(TextFieldTableCell.forTableColumn());
@@ -96,11 +74,9 @@ public class ManageContactsDialogController extends DateSelectController{
 				accountPaymentContactService.updateAccountPaymentContact(a);
 				parent.fillContactList();
 			} catch (SQLException ex) {
-				parent.getDialogPane().showError("Error","An error occurred while updating the contact name",ex.getMessage());
-				ex.printStackTrace();
+				parent.getDialogPane().showError("Error","An error occurred while updating the contact name",ex);
 			}
 		});
-
 		accountCodeCol.setCellFactory(TextFieldTableCell.forTableColumn());
 		accountCodeCol.setOnEditCommit(e -> {
 			try {
@@ -109,8 +85,7 @@ public class ManageContactsDialogController extends DateSelectController{
 				accountPaymentContactService.updateAccountPaymentContact(a);
 				parent.fillContactList();
 			} catch (SQLException ex) {
-				parent.getDialogPane().showError("Error","An error occurred while updating the contact account code",ex.getMessage());
-				ex.printStackTrace();
+				parent.getDialogPane().showError("Error","An error occurred while updating the contact account code",ex);
 			}
 		});
 		contactsTable.setEditable(true);

@@ -1,7 +1,5 @@
 package controllers;
 
-
-import application.Main;
 import com.dlsc.gemsfx.DialogPane;
 import com.jfoenix.controls.JFXNodesList;
 import components.CustomDateStringConverter;
@@ -27,7 +25,6 @@ import services.RosterService;
 import services.UserService;
 import utils.AnimationUtils;
 import utils.ValidatorUtils;
-
 import java.io.IOException;
 import java.sql.*;
 import java.time.LocalDate;
@@ -39,54 +36,31 @@ import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-
 import static com.dlsc.gemsfx.DialogPane.Type.BLANK;
 import static java.time.temporal.ChronoUnit.DAYS;
 
 
-public class RosterPageController extends Controller {
+public class RosterPageController extends PageController {
 
+    @FXML private Label popoverLabel;
+    @FXML private MFXDatePicker startDate;
+    @FXML private VBox monBox, tueBox, wedBox, thuBox, friBox, satBox, sunBox, editShiftPopover;
+    @FXML private GridPane weekdayBox;
+    @FXML private JFXNodesList addList;
+    @FXML private GridPane shiftCardGrid;
+    @FXML private FlowPane datePickerPane;
+    @FXML private Region contentDarken;
+    @FXML private MFXTextField startTimeField,endTimeField,repeatValue,thirtyMinBreaks,tenMinBreaks;
+    @FXML private Button openStartTimePicker,openEndTimePicker,deleteButton,manageLeaveButton,exportDataButton;
+    @FXML private MFXFilterComboBox<User> employeeSelect;
+    @FXML private MFXToggleButton repeatingShiftToggle;
+    @FXML private Label repeatLabel;
+    @FXML private MFXComboBox<String> repeatUnit;
+    @FXML private MFXButton saveButton;
+    @FXML private Label employeeSelectValidationLabel, startDateValidationLabel, startTimeValidationLabel, endTimeValidationLabel, tenMinBreaksValidationLabel, thirtyMinBreaksValidationLabel, repeatValueValidationLabel;
     private MFXDatePicker datePkr;
-    @FXML
-    private Label popoverLabel;
-    @FXML
-    private MFXDatePicker startDate;
-    @FXML
-    private VBox monBox, tueBox, wedBox, thuBox, friBox, satBox, sunBox, editShiftPopover;
-    @FXML
-    private GridPane weekdayBox;
-    @FXML
-    private JFXNodesList addList;
-    @FXML
-    private GridPane shiftCardGrid;
-    @FXML
-    private FlowPane datePickerPane;
-    @FXML
-    private Region contentDarken;
-    @FXML
-    private MFXTextField startTimeField,endTimeField,repeatValue,thirtyMinBreaks,tenMinBreaks;
-    @FXML
-    private Button openStartTimePicker,openEndTimePicker,deleteButton,manageLeaveButton,exportDataButton;
-    @FXML
-    private MFXFilterComboBox<User> employeeSelect;
-    @FXML
-    private MFXToggleButton repeatingShiftToggle;
-    @FXML
-    private Label repeatLabel;
-    @FXML
-    private MFXComboBox<String> repeatUnit;
-    @FXML
-    private MFXButton saveButton;
-    @FXML
-    private DialogPane dialogPane;
-    @FXML
-    private Label employeeSelectValidationLabel, startDateValidationLabel, startTimeValidationLabel, endTimeValidationLabel, tenMinBreaksValidationLabel, thirtyMinBreaksValidationLabel, repeatValueValidationLabel;
-
-
-    private Main main;
     private PopOver currentTimePopover;
     private LocalTime startTime,endTime;
-    private DialogPane.Dialog<Object> dialog;
     private UserService userService;
     private RosterService rosterService;
     private LeaveService leaveService;
@@ -96,18 +70,6 @@ public class RosterPageController extends Controller {
         userService = new UserService();
         rosterService = new RosterService();
         leaveService = new LeaveService();
-    }
-
-    public void setMain(Main main) {
-        this.main = main;
-    }
-
-    public DialogPane.Dialog<Object> getDialog() {
-        return dialog;
-    }
-
-    public DialogPane getDialogPane() {
-        return dialogPane;
     }
 
     public void fill() {
@@ -122,10 +84,8 @@ public class RosterPageController extends Controller {
         try {
             currentUsers = userService.getAllUserEmployments(main.getCurrentStore().getStoreID());
         } catch (SQLException ex) {
-            dialogPane.showError("Error","An error occurred while fetching users", ex.getMessage());
-            ex.printStackTrace();
+            dialogPane.showError("Error","An error occurred while fetching users", ex);
         }
-
         if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))){
             for(User u:currentUsers){
                 employeeSelect.getItems().add(u);
@@ -139,11 +99,8 @@ public class RosterPageController extends Controller {
         }else{
             addList.setVisible(false);
         }
-
-
         manageLeaveButton.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Manage Leave")));
         exportDataButton.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Export")));
-
         openStartTimePicker.setOnAction(_ -> {
             if(!startTimeField.getText().isEmpty()){
                 try{
@@ -183,7 +140,6 @@ public class RosterPageController extends Controller {
             }
         });
         addList.setRotate(180);
-
         ValidatorUtils.setupRegexValidation(employeeSelect,employeeSelectValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveButton);
         ValidatorUtils.setupRegexValidation(startDate,startDateValidationLabel,ValidatorUtils.DATE_REGEX,ValidatorUtils.DATE_ERROR,null,saveButton);
         ValidatorUtils.setupRegexValidation(startTimeField,startTimeValidationLabel,ValidatorUtils.TIME_REGEX,ValidatorUtils.TIME_ERROR,null,saveButton);
@@ -201,15 +157,13 @@ public class RosterPageController extends Controller {
         //empty the contents of the current day VBox
         shiftContainer.getChildren().removeAll(shiftContainer.getChildren());
         long weekDay = date.getDayOfWeek().getValue();
-
         //Create Day Header card
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/RosterDayCard.fxml"));
         VBox rosterDayCard = null;
         try {
             rosterDayCard = loader.load();
         } catch (IOException ex) {
-            dialogPane.showError("Error","An error occurred while loading the day card", ex.getMessage());
-            ex.printStackTrace();
+            dialogPane.showError("Error","An error occurred while loading the day card", ex);
         }
         RosterDayCardController rdc = loader.getController();
         rdc.setMain(main);
@@ -222,7 +176,6 @@ public class RosterPageController extends Controller {
         }
         HBox.setHgrow(rosterDayCard, Priority.ALWAYS);
         weekdayBox.add(rosterDayCard,dayOfWeek-1,0);
-
         //Create Shift Cards
         for (Shift s : allShifts) {
             boolean repeatShiftDay = (s.isRepeating() && DAYS.between(s.getShiftStartDate(), date.minusDays(weekDay - dayOfWeek)) % s.getDaysPerRepeat() == 0 && DAYS.between(s.getShiftStartDate(), date.minusDays(weekDay - dayOfWeek)) >= 0);
@@ -263,13 +216,11 @@ public class RosterPageController extends Controller {
                         }
                         shiftContainer.getChildren().add(shiftCard);
                     } catch (Exception ex) {
-                        dialogPane.showError("Error","An error occurred while loading the shift card", ex.getMessage());
-                        System.err.println(ex.getMessage());
+                        dialogPane.showError("Error","An error occurred while loading the shift card", ex);
                     }
                 }
             }
         }
-
         for(Shift m: allModifications){
             if(m.getShiftStartDate()!=null&&m.getShiftStartDate().equals(date.minusDays(weekDay - dayOfWeek))&&(!(m.getShiftStartDate().equals(m.getOriginalDate())))){
                 try {
@@ -294,8 +245,7 @@ public class RosterPageController extends Controller {
                     }
                     shiftContainer.getChildren().add(shiftCard);
                 } catch (Exception ex) {
-                    dialogPane.showError("Error","An error occurred while loading the shift card", ex.getMessage());
-                    ex.printStackTrace();
+                    dialogPane.showError("Error","An error occurred while loading the shift card", ex);
                 }
             }
         }
@@ -305,25 +255,20 @@ public class RosterPageController extends Controller {
         List<Shift> allShifts = new ArrayList<>();
         List<Shift> allModifications = new ArrayList<>();
         List<LeaveRequest> allLeaveRequests = new ArrayList<>();
-
         //Set date in case the value is still null
         if (datePkr.getValue() == null)
             datePkr.setValue(main.getCurrentDate());
-
         //Get Week start and End dates for search range
         long weekDay = datePkr.getValue().getDayOfWeek().getValue();
         LocalDate weekStart = datePkr.getValue().minusDays(weekDay-1);
         LocalDate weekEnd = datePkr.getValue().plusDays(7-weekDay);
-
         try {
             allShifts = rosterService.getShifts(main.getCurrentStore().getStoreID(),weekStart,weekEnd);
             allModifications = rosterService.getShiftModifications(main.getCurrentStore().getStoreID(),weekStart,weekEnd);
             allLeaveRequests = leaveService.getLeaveRequests(main.getCurrentStore().getStoreID(),weekStart,weekEnd);
         } catch (SQLException ex) {
-            dialogPane.showError("Error","An error occurred while fetching shifts", ex.getMessage());
-            ex.printStackTrace();
+            dialogPane.showError("Error","An error occurred while fetching shifts", ex);
         }
-
         weekdayBox.getChildren().removeAll(weekdayBox.getChildren());
         updateDay(datePkr.getValue(), monBox, 1, allShifts,allModifications,allLeaveRequests);
         updateDay(datePkr.getValue(), tueBox, 2, allShifts,allModifications,allLeaveRequests);
@@ -332,7 +277,6 @@ public class RosterPageController extends Controller {
         updateDay(datePkr.getValue(), friBox, 5, allShifts,allModifications,allLeaveRequests);
         updateDay(datePkr.getValue(), satBox, 6, allShifts,allModifications,allLeaveRequests);
         updateDay(datePkr.getValue(), sunBox, 7, allShifts,allModifications,allLeaveRequests);
-
         adjustGridSize();
     }
 
@@ -346,7 +290,6 @@ public class RosterPageController extends Controller {
 
     public void setDatePkr(LocalDate date) {
         datePkr.setValue(date);
-//        updatePage();
     }
 
     public void openPopover(){
@@ -377,14 +320,11 @@ public class RosterPageController extends Controller {
         deleteButton.setVisible(true);
         contentDarken.setVisible(true);
         AnimationUtils.slideIn(editShiftPopover,0);
-
         try {
             employeeSelect.setValue(userService.getUserByUsername(s.getUsername()));
         } catch (SQLException ex) {
-            dialogPane.showError("Error","An error occurred while fetching user", ex.getMessage());
-            ex.printStackTrace();
+            dialogPane.showError("Error","An error occurred while fetching user", ex);
         }
-
         startDate.setValue(shiftCardDate);
         startTimeField.setText(s.getShiftStartTime().format(DateTimeFormatter.ofPattern("h:mm a", Locale.US)));
         endTimeField.setText(s.getShiftEndTime().format(DateTimeFormatter.ofPattern("h:mm a", Locale.US)));
@@ -405,7 +345,6 @@ public class RosterPageController extends Controller {
             repeatValue.setText("");
             repeatUnit.clearSelection();
         }
-
         saveButton.setOnAction(_ -> {
             if(s.isRepeating()){
                 dialog = new DialogPane.Dialog<>(dialogPane, BLANK);
@@ -416,7 +355,6 @@ public class RosterPageController extends Controller {
                 editShift(s);
             }
         });
-
         deleteButton.setOnAction(_ -> {
             dialog = new DialogPane.Dialog<>(dialogPane, BLANK);
             dialog.setPadding(false);
@@ -447,14 +385,12 @@ public class RosterPageController extends Controller {
             try {
                 timePickerContent = loader.load();
             } catch (IOException ex) {
-                dialogPane.showError("Error","An error occurred while loading the time picker", ex.getMessage());
-                ex.printStackTrace();
+                dialogPane.showError("Error","An error occurred while loading the time picker", ex);
             }
             TimePickerContentController rdc = loader.getController();
             rdc.setMain(main);
             rdc.fill();
             rdc.setCurrentTime(time);
-
             timePickerMenu.setOpacity(1);
             timePickerMenu.setContentNode(timePickerContent);
             timePickerMenu.setArrowSize(0);
@@ -479,15 +415,12 @@ public class RosterPageController extends Controller {
         if (!validateInputs()) {
             return;
         }
-
         User selectedUser = employeeSelect.getValue();
         LocalDate shiftDate = manualStartDate == null ? startDate.getValue() : manualStartDate;
         if (deleteShift) {
             shiftDate = null;
         }
-
         Shift newShift = createShiftFromInputs(selectedUser.getUsername(), shiftDate);
-
         try {
             if (previousShift != null) {
                 Shift modification = createModificationFromShift(newShift, previousShift.getShiftID(), originalShiftDate);
@@ -495,9 +428,7 @@ public class RosterPageController extends Controller {
             } else {
                 rosterService.addShift(newShift);
             }
-
             updatePage();
-
             if (manualStartDate == null) {
                 dialogPane.showInformation("Success", "Shift created successfully");
             } else if (previousShift != null) {
@@ -509,8 +440,7 @@ public class RosterPageController extends Controller {
                 }
             }
         } catch (SQLException ex) {
-            dialogPane.showError("Error", "An error occurred while saving the shift. Please try again.", ex.getMessage());
-            ex.printStackTrace();
+            dialogPane.showError("Error", "An error occurred while saving the shift. Please try again.", ex);
         }
     }
 
@@ -548,17 +478,14 @@ public class RosterPageController extends Controller {
             repeatUnit.requestFocus();
             return false;
         }
-
         LocalTime startTime = LocalTime.parse(startTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
         LocalTime endTime = LocalTime.parse(endTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
-
         if (startTime.isAfter(endTime)) {
             startTimeField.requestFocus();
             startTimeValidationLabel.setText("Start time must be before end time");
             startTimeValidationLabel.setVisible(true);
             return false;
         }
-
         startTimeValidationLabel.setVisible(false);
         return true;
     }
@@ -570,10 +497,9 @@ public class RosterPageController extends Controller {
         int tenMin = tenMinBreaks.getText().isEmpty() ? 0 : Integer.parseInt(tenMinBreaks.getText());
         int daysPerRepeat = 1;
         if (repeatingShiftToggle.isSelected()) {
-            int multiplier = repeatUnit.getValue().toString().equals("Weeks") ? 7 : 1;
+            int multiplier = repeatUnit.getValue().equals("Weeks") ? 7 : 1;
             daysPerRepeat = Integer.parseInt(repeatValue.getText()) * multiplier;
         }
-
         Shift shift = new Shift();
         shift.setStoreID(main.getCurrentStore().getStoreID());
         shift.setUsername(username);
@@ -584,7 +510,6 @@ public class RosterPageController extends Controller {
         shift.setTenMinBreaks(tenMin);
         shift.setRepeating(repeatingShiftToggle.isSelected());
         shift.setDaysPerRepeat(daysPerRepeat);
-
         return shift;
     }
 
@@ -633,7 +558,6 @@ public class RosterPageController extends Controller {
                 int multiplier = ((repeatUnit.getSelectedItem().equals("Weeks")) ? 7 : 1);
                 daysPerRepeat = Integer.parseInt(repeatValue.getText()) * multiplier;
             }
-
             try {
                 s.setUsername(usrname);
                 s.setShiftStartTime(sTime);
@@ -648,8 +572,7 @@ public class RosterPageController extends Controller {
                 updatePage();
                 dialogPane.showInformation("Success", "Shifts edited successfully");
             } catch (SQLException ex) {
-                dialogPane.showError("Error", "An error occurred while saving the shift. Please try again.", ex.getMessage());
-                ex.printStackTrace();
+                dialogPane.showError("Error", "An error occurred while saving the shift. Please try again.", ex);
             }
         }
     }
@@ -661,8 +584,7 @@ public class RosterPageController extends Controller {
             updatePage();
             dialogPane.showInformation("Success", "Shift deleted succesfully");
         } catch (SQLException ex) {
-            dialogPane.showError("Error", "An error occurred while deleting the shift. Please try again.", ex.getMessage());
-            ex.printStackTrace();
+            dialogPane.showError("Error", "An error occurred while deleting the shift. Please try again.", ex);
         }
     }
 
@@ -673,8 +595,7 @@ public class RosterPageController extends Controller {
             updatePage();
             dialogPane.showInformation("Success", "Future shifts have been updated successfully.");
         } catch (SQLException ex) {
-            dialogPane.showError("Error", "An error occurred while updating future shifts. Please try again.", ex.getMessage());
-            ex.printStackTrace();
+            dialogPane.showError("Error", "An error occurred while updating future shifts. Please try again.", ex);
         }
     }
 
@@ -685,8 +606,7 @@ public class RosterPageController extends Controller {
             updatePage();
             dialogPane.showInformation("Success", "Shifts deleted succesfully");
         } catch (SQLException ex) {
-            dialogPane.showError("Error", "An error occurred while deleting the shift. Please try again.", ex.getMessage());
-            ex.printStackTrace();
+            dialogPane.showError("Error", "An error occurred while deleting the shift. Please try again.", ex);
         }
     }
 
@@ -706,8 +626,7 @@ public class RosterPageController extends Controller {
             calendarEditDialog = loader.load();
 
         } catch (IOException ex) {
-            dialogPane.showError("Error","An error occurred while loading the edit dialog", ex.getMessage());
-            ex.printStackTrace();
+            dialogPane.showError("Error","An error occurred while loading the edit dialog", ex);
         }
         CalendarEditDialogController dialogController = loader.getController();
         dialogController.fill(s,shiftCardDate);
@@ -722,8 +641,7 @@ public class RosterPageController extends Controller {
             calendarDeleteDialog = loader.load();
 
         } catch (IOException ex) {
-            dialogPane.showError("Error","An error occurred while loading the delete dialog", ex.getMessage());
-            ex.printStackTrace();
+            dialogPane.showError("Error","An error occurred while loading the delete dialog", ex);
         }
         CalendarDeleteDialogController dialogController = loader.getController();
         dialogController.fill(s,shiftCardDate);
@@ -738,14 +656,12 @@ public class RosterPageController extends Controller {
             rosterDayEdit = loader.load();
 
         } catch (IOException ex) {
-            dialogPane.showError("Error","An error occurred while loading the edit dialog", ex.getMessage());
-            ex.printStackTrace();
+            dialogPane.showError("Error","An error occurred while loading the edit dialog", ex);
         }
         EditRosterDayController dialogController = loader.getController();
         dialogController.setParent(this);
-        dialogController.setDate(date);
+        dialogController.setRosterDayDate(date);
         dialogController.fill();
-
         dialog = new DialogPane.Dialog<>(dialogPane, BLANK);
         dialog.setPadding(false);
         dialog.setContent(rosterDayEdit);

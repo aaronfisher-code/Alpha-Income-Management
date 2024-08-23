@@ -1,20 +1,16 @@
 package controllers;
 
-import application.Main;
-import com.dlsc.gemsfx.DialogPane;
 import io.github.palexdev.materialfx.controls.*;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import models.*;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.controlsfx.control.PopOver;
 import services.EODService;
 import services.TillReportService;
 import utils.*;
@@ -25,48 +21,24 @@ import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
-import java.time.format.TextStyle;
 import java.util.Locale;
 import java.util.List;
 
 public class EODDataEntryPageController extends DateSelectController{
 
-    private Main main;
-	private PopOver currentDatePopover;
-
-    @FXML
-    private TableView<EODDataPoint> eodDataTable;
-	@FXML
-	private VBox editDayPopover;
-	@FXML
-	private StackPane monthSelector;
-	@FXML
-	private MFXTextField monthSelectorField;
-	@FXML
-	private Region contentDarken;
-	@FXML
-	private Label popoverLabel,tillBalanceLabel,runningTillBalanceLabel,subheading;
-	@FXML
-	private MFXTextField cashField,eftposField,amexField,googleSquareField,chequeField;
-	@FXML
-	private MFXTextField medschecksField,sohField,sofField,smsPatientsField;
-	@FXML
-	private Label cashValidationLabel,eftposValidationLabel,amexValidationLabel,googleSquareValidationLabel,chequeValidationLabel;
-	@FXML
-	private Label medschecksValidationLabel,sohValidationLabel,sofValidationLabel,smsPatientsValidationLabel;
-	@FXML
-	private TextArea notesField;
-	@FXML
-	private MFXButton saveButton;
-	@FXML
-	private MFXScrollPane popOverScroll;
-	@FXML
-	private Button importDataButton,xeroExportButton;
-	@FXML
-	private DialogPane dialogPane;
-
+	@FXML private TableView<EODDataPoint> eodDataTable;
+	@FXML private VBox editDayPopover;
+	@FXML private Region contentDarken;
+	@FXML private Label popoverLabel,tillBalanceLabel,runningTillBalanceLabel,subheading;
+	@FXML private MFXTextField cashField,eftposField,amexField,googleSquareField,chequeField;
+	@FXML private MFXTextField medschecksField,sohField,sofField,smsPatientsField;
+	@FXML private Label cashValidationLabel,eftposValidationLabel,amexValidationLabel,googleSquareValidationLabel,chequeValidationLabel;
+	@FXML private Label medschecksValidationLabel,sohValidationLabel,sofValidationLabel,smsPatientsValidationLabel;
+	@FXML private TextArea notesField;
+	@FXML private MFXButton saveButton;
+	@FXML private MFXScrollPane popOverScroll;
+	@FXML private Button importDataButton,xeroExportButton;
     private TableColumn<EODDataPoint, String> notesCol;
-
 	private double currentTotalTakings;
 	private double currentRunningTillBalance;
 	private EODService eodService;
@@ -79,11 +51,6 @@ public class EODDataEntryPageController extends DateSelectController{
 	 }
 
 	@Override
-	public void setMain(Main main) {
-		this.main = main;
-	}
-
-	@Override
 	public void fill() {
 	 	//Fix slow scroll on popover scroll pane
 		final double SPEED = 0.002;
@@ -91,7 +58,6 @@ public class EODDataEntryPageController extends DateSelectController{
 			double deltaY = scrollEvent.getDeltaY() * SPEED;
 			popOverScroll.setVvalue(popOverScroll.getVvalue() - deltaY);
 		});
-
 		ValidatorUtils.setupRegexValidation(cashField,cashValidationLabel,ValidatorUtils.CASH_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
 		ValidatorUtils.setupRegexValidation(eftposField,eftposValidationLabel,ValidatorUtils.CASH_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
 		ValidatorUtils.setupRegexValidation(amexField,amexValidationLabel,ValidatorUtils.CASH_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
@@ -101,7 +67,6 @@ public class EODDataEntryPageController extends DateSelectController{
 		ValidatorUtils.setupRegexValidation(sohField,sohValidationLabel,ValidatorUtils.CASH_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
 		ValidatorUtils.setupRegexValidation(sofField,sofValidationLabel,ValidatorUtils.INT_REGEX,ValidatorUtils.INT_ERROR,null,saveButton);
 		ValidatorUtils.setupRegexValidation(smsPatientsField,smsPatientsValidationLabel,ValidatorUtils.INT_REGEX,ValidatorUtils.INT_ERROR,null,saveButton);
-
         TableColumn<EODDataPoint, LocalDate> dateCol = new TableColumn<>("DATE");
         TableColumn<EODDataPoint, Double> cashAmountCol = new TableColumn<>("CASH");
         TableColumn<EODDataPoint, Double> eftposAmountCol = new TableColumn<>("EFTPOS");
@@ -116,7 +81,6 @@ public class EODDataEntryPageController extends DateSelectController{
         TableColumn<EODDataPoint, Double> runningTillBalanceCol = new TableColumn<>("RUNNING TILL\nBALANCE");
 		notesCol = new TableColumn<>("NOTES");
 		dateCol.setMinWidth(80);
-
 		dateCol.setCellValueFactory(new PropertyValueFactory<>("dateString"));
 		cashAmountCol.setCellValueFactory(new PropertyValueFactory<>("cashAmountString"));
 		eftposAmountCol.setCellValueFactory(new PropertyValueFactory<>("eftposAmountString"));
@@ -130,7 +94,6 @@ public class EODDataEntryPageController extends DateSelectController{
 		tillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("tillBalanceString"));
 		runningTillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("runningTillBalanceString"));
 		notesCol.setCellValueFactory(new PropertyValueFactory<>("notes"));
-
 		eodDataTable.getColumns().addAll(
                 dateCol,
                 cashAmountCol,
@@ -147,22 +110,14 @@ public class EODDataEntryPageController extends DateSelectController{
 				notesCol
 		);
 		setDate(main.getCurrentDate());
-		eodDataTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
-		eodDataTable.setMaxWidth(Double.MAX_VALUE);
-		eodDataTable.setMaxHeight(Double.MAX_VALUE);
-		eodDataTable.setFixedCellSize(25.0);
-		VBox.setVgrow(eodDataTable, Priority.ALWAYS);
-		for(TableColumn<EODDataPoint, ?> tc: eodDataTable.getColumns()){
-			tc.setPrefWidth(TableUtils.getColumnWidth(tc)+40);
-		}
+		TableUtils.resizeTableColumns(eodDataTable,notesCol);
 		cashField.textProperty().addListener(_ -> updatePopoverTillBalance());
 		eftposField.textProperty().addListener(_ -> updatePopoverTillBalance());
 		amexField.textProperty().addListener(_ -> updatePopoverTillBalance());
 		googleSquareField.textProperty().addListener(_ -> updatePopoverTillBalance());
 		chequeField.textProperty().addListener(_ -> updatePopoverTillBalance());
-		Platform.runLater(() -> GUIUtils.customResize(eodDataTable,notesCol));
 		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("EOD - Edit"))){
-			Platform.runLater(this::addDoubleClickfunction);
+			Platform.runLater(this::addDoubleClickFunction);
 		}else{
 			subheading.setVisible(false);
 		}
@@ -181,7 +136,7 @@ public class EODDataEntryPageController extends DateSelectController{
 		runningTillBalanceLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(currentRunningTillBalance+tillBalanceTotal));
 	}
 
-	private void addDoubleClickfunction(){
+	private void addDoubleClickFunction(){
 		eodDataTable.setRowFactory(_ -> {
 			TableRow<EODDataPoint> row = new TableRow<>();
 			row.setOnMouseClicked(event -> {
@@ -211,69 +166,24 @@ public class EODDataEntryPageController extends DateSelectController{
 		}
 	}
 
-	public void monthForward() {
-		setDate(main.getCurrentDate().plusMonths(1));
-	}
-
-	public void monthBackward() {
-		setDate(main.getCurrentDate().minusMonths(1));
-	}
-
-	public void openMonthSelector(){
-		if(currentDatePopover!=null&&currentDatePopover.isShowing()){
-			currentDatePopover.hide();
-		}else {
-			PopOver monthSelectorMenu = new PopOver();
-			FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/MonthYearSelectorContent.fxml"));
-			VBox monthSelectorMenuContent = null;
-			try {
-				monthSelectorMenuContent = loader.load();
-			} catch (IOException ex) {
-				dialogPane.showError("Failed to open month selector", ex.getMessage());
-				ex.printStackTrace();
-			}
-			MonthYearSelectorContentController rdc = loader.getController();
-			rdc.setMain(main);
-			rdc.setParent(this);
-			rdc.fill();
-
-			monthSelectorMenu.setOpacity(1);
-			monthSelectorMenu.setContentNode(monthSelectorMenuContent);
-			monthSelectorMenu.setArrowSize(0);
-			monthSelectorMenu.setAnimated(true);
-			monthSelectorMenu.setArrowLocation(PopOver.ArrowLocation.TOP_CENTER);
-			monthSelectorMenu.setAutoHide(true);
-			monthSelectorMenu.setDetachable(false);
-			monthSelectorMenu.setHideOnEscape(true);
-			monthSelectorMenu.setCornerRadius(10);
-			monthSelectorMenu.setArrowIndent(0);
-			monthSelectorMenu.show(monthSelector);
-			currentDatePopover=monthSelectorMenu;
-			monthSelectorField.requestFocus();
-		}
-	}
-
 	public void fillTable(){
 		ObservableList<EODDataPoint> eodDataPoints = FXCollections.observableArrayList();
 		YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
 		int daysInMonth = yearMonthObject.lengthOfMonth();
-
 		try {
 			List<EODDataPoint> currentEODDataPoints = eodService.getEODDataPoints(
 					main.getCurrentStore().getStoreID(),
 					yearMonthObject.atDay(1),
 					yearMonthObject.atEndOfMonth()
 			);
-
 			List<TillReportDataPoint> currentTillReportDataPoints = tillReportService.getTillReportDataPointsByKey(
 					main.getCurrentStore().getStoreID(),
 					yearMonthObject.atDay(1),
 					yearMonthObject.atEndOfMonth(),
 					"Total Takings"
 			);
-
 			for(int i = 1; i<daysInMonth+1; i++){
-				Boolean dateAlreadyCreated = false;
+				boolean dateAlreadyCreated = false;
 				for(EODDataPoint e: currentEODDataPoints){
 					if(e.getDate().getDayOfMonth()==i){
 						eodDataPoints.add(e);
@@ -298,13 +208,12 @@ public class EODDataEntryPageController extends DateSelectController{
 			}
 			eodDataTable.setItems(eodDataPoints);
 			if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("EOD - Edit"))){
-				addDoubleClickfunction();
+				addDoubleClickFunction();
 			}else{
 				subheading.setVisible(false);
 			}
 		} catch (SQLException ex) {
-			dialogPane.showError("Failed to fill table", ex.getMessage());
-			ex.printStackTrace();
+			dialogPane.showError("Failed to fill table", ex);
 		}
 	}
 
@@ -328,9 +237,8 @@ public class EODDataEntryPageController extends DateSelectController{
 		currentTotalTakings = 0;
 		try {
 			tillReportService.getTillReportDataPointsByKey(main.getCurrentStore().getStoreID(),e.getDate(),e.getDate(),"Total Takings").forEach(t -> currentTotalTakings += t.getAmount());
-		} catch (SQLException throwables) {
-			dialogPane.showError("Failed to get total takings", throwables.getMessage());
-			throwables.printStackTrace();
+		} catch (SQLException ex) {
+			dialogPane.showError("Failed to get total takings", ex);
 		}
 		currentRunningTillBalance = e.getRunningTillBalance()-e.getTillBalance();
 		updatePopoverTillBalance();
@@ -338,8 +246,7 @@ public class EODDataEntryPageController extends DateSelectController{
 			try {
 				importFiles(e.getDate());
 			} catch (IOException|SQLException ex) {
-				dialogPane.showError("Failed to import data", ex.getMessage());
-				ex.printStackTrace();
+				dialogPane.showError("Failed to import data", ex);
 			}
 		});
 	}
@@ -370,7 +277,6 @@ public class EODDataEntryPageController extends DateSelectController{
 		e.setScriptsOnFile(sofValue);
 		e.setSmsPatients(smsPatientsValue);
 		e.setNotes(notesValue);
-
 		try {
 			if(e.isInDB()){
 				eodService.updateEODDataPoint(e);
@@ -381,19 +287,14 @@ public class EODDataEntryPageController extends DateSelectController{
 			}
 			fillTable();
 		} catch (SQLException ex) {
-			dialogPane.showError("Failed to edit EOD entry", ex.getMessage());
-			ex.printStackTrace();
+			dialogPane.showError("Failed to edit EOD entry", ex);
 		}
-
 	}
 
 	@Override
 	public void setDate(LocalDate date) {
 		main.setCurrentDate(date);
-		String fieldText = main.getCurrentDate().getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
-		fieldText += ", ";
-		fieldText += main.getCurrentDate().getYear();
-		monthSelectorField.setText(fieldText);
+		updateMonthSelectorField();
 		fillTable();
 	}
 
@@ -411,10 +312,8 @@ public class EODDataEntryPageController extends DateSelectController{
 						"Avg. OTC  Sales Per Customer ($),*AccountCode,*TaxType,Z Dispense Govt Cont," +
 						"Stock on hand,Scripts on file count,SMS patients,Clinical Interventions,Medschecks," +
 						"Till Balance,Running till Balance,Notes");
-
 				YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
 				int daysInMonth = yearMonthObject.lengthOfMonth();
-
 				List<EODDataPoint> currentEODDataPoints = FXCollections.observableArrayList();
 				List<TillReportDataPoint> currentTillDataPoints = FXCollections.observableArrayList();
 				try {
@@ -429,8 +328,7 @@ public class EODDataEntryPageController extends DateSelectController{
 							yearMonthObject.atEndOfMonth()
 					);
 				} catch (SQLException ex) {
-					dialogPane.showError("Failed to get EOD data", ex.getMessage());
-					ex.printStackTrace();
+					dialogPane.showError("Failed to get EOD data", ex);
 				}
 				double runningTillBalance = 0;
 				for(int i=1;i<daysInMonth+1;i++){
@@ -484,15 +382,13 @@ public class EODDataEntryPageController extends DateSelectController{
 							totalTakings = Double.parseDouble(recoveryStr);
 						}
 					} catch (NumberFormatException ex) {
-						dialogPane.showError("Failed to get total takings for " + d, ex.getMessage());
-						System.err.println("Error parsing Govt Recovery value: " + ex.getMessage());
+						dialogPane.showError("Failed to get total takings for " + d, ex);
 					}
 					double tillBalance = e.getCashAmount()+e.getEftposAmount()+e.getAmexAmount()+e.getGoogleSquareAmount()+e.getChequeAmount() - totalTakings;
 					pw.print(NumberFormat.getCurrencyInstance(Locale.US).format(tillBalance)+",");
 					runningTillBalance+=tillBalance;
 					pw.print(NumberFormat.getCurrencyInstance(Locale.US).format(runningTillBalance)+",");
 					pw.println(e.getNotes());
-
 					pw.print("Eftpos Income,"+i+",");
 					pw.print(e.getEftposAmount()+",,,,,,,,");
 					dateTimeFormatter = DateTimeFormatter.ofPattern("ddMMyyyy");
@@ -504,7 +400,6 @@ public class EODDataEntryPageController extends DateSelectController{
 					formattedDate = lastDayOfMonth.format(dateTimeFormatter);
 					pw.print((e.getEftposAmount()>0)?formattedDate+",,":",,");
 					pw.println("Eftpos Income,1,"+e.getEftposAmount()+",,,200,GST Free Income");
-
 					pw.print("Amex Income,"+i+",");
 					pw.print(e.getAmexAmount()+",,,,,,,,");
 					dateTimeFormatter = DateTimeFormatter.ofPattern("ddMMyyyy");
@@ -516,7 +411,6 @@ public class EODDataEntryPageController extends DateSelectController{
 					formattedDate = lastDayOfMonth.format(dateTimeFormatter);
 					pw.print((e.getAmexAmount()>0)?formattedDate+",,":",,");
 					pw.println("Amex Income,1,"+e.getAmexAmount()+",,,200,GST Free Income");
-
 					pw.print("Google Square Income,"+i+",");
 					pw.print(e.getGoogleSquareAmount()+",,,,,,,,");
 					dateTimeFormatter = DateTimeFormatter.ofPattern("ddMMyyyy");
@@ -528,7 +422,6 @@ public class EODDataEntryPageController extends DateSelectController{
 					formattedDate = lastDayOfMonth.format(dateTimeFormatter);
 					pw.print((e.getGoogleSquareAmount()>0)?formattedDate+",,":",,");
 					pw.println("Google Square Income,1,"+e.getGoogleSquareAmount()+",,,200,GST Free Income");
-
 					pw.print("Cheques Income,"+i+",");
 					pw.print(e.getChequeAmount()+",,,,,,,,");
 					dateTimeFormatter = DateTimeFormatter.ofPattern("ddMMyyyy");
@@ -547,8 +440,7 @@ public class EODDataEntryPageController extends DateSelectController{
 							govtRecovery = Double.parseDouble(recoveryStr);
 						}
 					} catch (NumberFormatException ex) {
-						dialogPane.showError("Failed to get govt recovery for " + d, ex.getMessage());
-						System.err.println("Error parsing Govt Recovery value: " + ex.getMessage());
+						dialogPane.showError("Failed to get govt recovery for " + d, ex);
 					}
 					pw.print("Medicare PBS (Ex GST),"+i+",");
 					pw.print(govtRecovery+",,,,,,,,");
@@ -564,8 +456,7 @@ public class EODDataEntryPageController extends DateSelectController{
 				}
 				dialogPane.showInformation("Success","EOD data was succesfully exported in Xero format");
 			} catch (FileNotFoundException ex){
-				dialogPane.showError("Failed to export data", ex.getMessage());
-				ex.printStackTrace();
+				dialogPane.showError("Failed to export data", ex);
 			}
 		}
 	}
