@@ -16,7 +16,6 @@ import services.TillReportService;
 import utils.*;
 
 import java.io.*;
-import java.sql.*;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -46,8 +45,12 @@ public class EODDataEntryPageController extends DateSelectController{
 
 	 @FXML
 	private void initialize(){
-		 eodService = new EODService();
-		 tillReportService = new TillReportService();
+		 try{
+			 eodService = new EODService();
+			 tillReportService = new TillReportService();
+		 }catch (IOException e){
+			 dialogPane.showError("Failed to initialize services", e);
+		 }
 	 }
 
 	@Override
@@ -149,7 +152,7 @@ public class EODDataEntryPageController extends DateSelectController{
 		});
 	}
 
-	public void importFiles(LocalDate targetDate) throws IOException, SQLException {
+	public void importFiles(LocalDate targetDate) throws IOException{
 		FileChooser fileChooser = new FileChooser();
 		fileChooser.setTitle("Open Data entry File");
 		fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("XLS Files", "*.xls"));
@@ -161,7 +164,8 @@ public class EODDataEntryPageController extends DateSelectController{
 			//TODO: Verify store is correct
 			//TODO: Verify if period overlaps
 			for(CellDataPoint cdp : wbp.getDataPoints()){
-				tillReportService.importTillReportDataPoint(cdp,wbp,targetDate,main.getCurrentStore().getStoreID());
+				TillReportDataPoint tdp = new TillReportDataPoint(cdp,wbp,targetDate,main.getCurrentStore().getStoreID());
+				tillReportService.importTillReportDataPoint(tdp);
 			}
 		}
 	}
@@ -212,7 +216,7 @@ public class EODDataEntryPageController extends DateSelectController{
 			}else{
 				subheading.setVisible(false);
 			}
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			dialogPane.showError("Failed to fill table", ex);
 		}
 	}
@@ -237,7 +241,7 @@ public class EODDataEntryPageController extends DateSelectController{
 		currentTotalTakings = 0;
 		try {
 			tillReportService.getTillReportDataPointsByKey(main.getCurrentStore().getStoreID(),e.getDate(),e.getDate(),"Total Takings").forEach(t -> currentTotalTakings += t.getAmount());
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			dialogPane.showError("Failed to get total takings", ex);
 		}
 		currentRunningTillBalance = e.getRunningTillBalance()-e.getTillBalance();
@@ -245,7 +249,7 @@ public class EODDataEntryPageController extends DateSelectController{
 		importDataButton.setOnAction(_ -> {
 			try {
 				importFiles(e.getDate());
-			} catch (IOException|SQLException ex) {
+			} catch (IOException ex) {
 				dialogPane.showError("Failed to import data", ex);
 			}
 		});
@@ -278,17 +282,17 @@ public class EODDataEntryPageController extends DateSelectController{
 		e.setSmsPatients(smsPatientsValue);
 		e.setNotes(notesValue);
 		try {
-			if(e.isInDB()){
+			if (e.isInDB()) {
 				eodService.updateEODDataPoint(e);
-				dialogPane.showInformation("Success","EOD data was succesfully edited");
-			}else{
-				eodService.insertEODDataPoint(new EODDataPoint(true,e.getDate(),main.getCurrentStore().getStoreID(),cashValue,eftposValue,amexValue,googleSquareValue,chequeValue,medschecksValue,sohValue,sofValue,smsPatientsValue,0,0,notesValue));
-				dialogPane.showInformation("Success","EOD data was succesfully added");
+				dialogPane.showInformation("Success", "EOD data was successfully edited");
+			} else {
+				eodService.insertEODDataPoint(new EODDataPoint(true, e.getDate(), main.getCurrentStore().getStoreID(), cashValue, eftposValue, amexValue, googleSquareValue, chequeValue, medschecksValue, sohValue, sofValue, smsPatientsValue, 0, 0, notesValue));
+				dialogPane.showInformation("Success", "EOD data was successfully added");
 			}
 			fillTable();
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			dialogPane.showError("Failed to edit EOD entry", ex);
-		}
+        }
 	}
 
 	@Override
@@ -327,7 +331,7 @@ public class EODDataEntryPageController extends DateSelectController{
 							yearMonthObject.atDay(1),
 							yearMonthObject.atEndOfMonth()
 					);
-				} catch (SQLException ex) {
+				} catch (Exception ex) {
 					dialogPane.showError("Failed to get EOD data", ex);
 				}
 				double runningTillBalance = 0;
@@ -454,7 +458,7 @@ public class EODDataEntryPageController extends DateSelectController{
 					pw.print((govtRecovery>0)?formattedDate+",,":",,");
 					pw.println("Medicare PBS (Ex GST),1,"+govtRecovery+",,,200,GST Free Income");
 				}
-				dialogPane.showInformation("Success","EOD data was succesfully exported in Xero format");
+				dialogPane.showInformation("Success","EOD data was successfully exported in Xero format");
 			} catch (FileNotFoundException ex){
 				dialogPane.showError("Failed to export data", ex);
 			}

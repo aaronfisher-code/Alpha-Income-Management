@@ -23,7 +23,11 @@ public class ManageSuppliersDialogController extends Controller{
 
 	@FXML
 	private void initialize() {
-		invoiceSupplierService = new InvoiceSupplierService();
+		try{
+			invoiceSupplierService = new InvoiceSupplierService();
+		} catch (Exception e){
+			parent.getDialogPane().showError("Error", "Error initializing the supplier service", e);
+		}
 	}
 
 	public void setParent(InvoiceEntryController d) {this.parent = d;}
@@ -41,14 +45,14 @@ public class ManageSuppliersDialogController extends Controller{
 						invoiceSupplierService.deleteInvoiceSupplier(a.getContactID());
 						parent.fillContactList();
 						fill();
-					} catch (SQLException ex) {
+					} catch (Exception ex) {
 						parent.getDialogPane().showError("Error", "Error deleting the supplier", ex);
 					}
 				});
 				a.setDeleteButton(delButton);
 			}
 			contactsTable.setItems(FXCollections.observableArrayList(currentInvoiceSuppliers));
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			parent.getDialogPane().showError("Error", "Error loading invoice suppliers", ex);
 		}
 	}
@@ -61,7 +65,7 @@ public class ManageSuppliersDialogController extends Controller{
 				updatedSupplier.setSupplierName(e.getNewValue());
 				invoiceSupplierService.updateInvoiceSupplier(updatedSupplier);
 				parent.fillContactList();
-			} catch (SQLException ex) {
+			} catch (Exception ex) {
 				parent.getDialogPane().showError("Error", "Error updating the supplier", ex);
 			}
 		});

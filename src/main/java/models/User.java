@@ -1,9 +1,6 @@
 package models;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 
 public class User {
@@ -26,29 +23,6 @@ public class User {
 	private List<Employment> employments;
 
 	private List<Permission> permissions;
-
-	public User(ResultSet resultSet) {
-		try {
-			if(resultSet.getString("username")!=null)
-				this.username = resultSet.getString("username");
-			if(resultSet.getString("password")!=null)
-				this.password = resultSet.getString("password");
-			if(resultSet.getString("first_name")!=null)
-				this.first_name = resultSet.getString("first_name");
-			if(resultSet.getString("last_name")!=null)
-				this.last_name = resultSet.getString("last_name");
-			if(resultSet.getString("role")!=null)
-				this.role = resultSet.getString("role");
-			if(resultSet.getString("profileBG")!=null)
-				this.bgColour = resultSet.getString("profileBG");
-			if(resultSet.getString("profileText")!=null)
-				this.textColour = resultSet.getString("profileText");
-			if(resultSet.getString("inactiveDate")!=null)
-				this.inactiveDate = LocalDate.parse(resultSet.getString("inactiveDate"));
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-	}
 
 	public User() {
 	}

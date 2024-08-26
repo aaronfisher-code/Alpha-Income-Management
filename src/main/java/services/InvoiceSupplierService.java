@@ -1,74 +1,101 @@
 package services;
 
-import models.AccountPaymentContactDataPoint;
-import models.Invoice;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import models.InvoiceSupplier;
-import utils.DatabaseConnectionManager;
+import org.springframework.http.*;
+import org.springframework.web.client.RestTemplate;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
+import java.io.IOException;
 import java.util.List;
+import java.util.Properties;
+import java.util.stream.Collectors;
 
 public class InvoiceSupplierService {
-    public List<InvoiceSupplier> getAllInvoiceSuppliers(int storeId) throws SQLException {
-        List<InvoiceSupplier> suppliers = new ArrayList<>();
-        String sql = "SELECT * FROM invoiceSuppliers where storeID = ?";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setInt(1, storeId);
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                while (resultSet.next()) {
-                    suppliers.add(new InvoiceSupplier(resultSet));
-                }
-            }
-        }
-        return suppliers;
+    private String apiBaseUrl;
+    private String apiToken;
+    private RestTemplate restTemplate;
+    private ObjectMapper objectMapper;
+
+    public InvoiceSupplierService() throws IOException {
+        this.restTemplate = new RestTemplate();
+        this.objectMapper = new ObjectMapper();
+        Properties properties = new Properties();
+        properties.load(InvoiceSupplierService.class.getClassLoader().getResourceAsStream("application.properties"));
+        this.apiToken = properties.getProperty("api.token");
+        this.apiBaseUrl = properties.getProperty("api.base.url") + "/invoice-suppliers";
     }
 
-    public InvoiceSupplier getInvoiceSupplierByName(String supplierName, int storeID) throws SQLException {
-        String sql = "SELECT * FROM invoicesuppliers  WHERE supplierName = ? AND storeID = ?";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, supplierName);
-            preparedStatement.setInt(2, storeID);
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                if (resultSet.next()) {
-                    return new InvoiceSupplier(resultSet);
-                }
-            }
-        }
-        return null;
+    private HttpHeaders createHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + apiToken);
+        return headers;
     }
 
-    public void addInvoiceSupplier(InvoiceSupplier invoiceSupplier) throws SQLException {
-        String sql = "INSERT INTO invoiceSuppliers(supplierName,storeID) VALUES(?,?)";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, invoiceSupplier.getSupplierName());
-            preparedStatement.setInt(2, invoiceSupplier.getStoreID());
-            preparedStatement.executeUpdate();
+    public List<InvoiceSupplier> getAllInvoiceSuppliers(int storeId) {
+        String url = apiBaseUrl + "?storeId=" + storeId;
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+        try {
+            List<BackendInvoiceSupplier> backendSuppliers = objectMapper.readValue(response.getBody(), new TypeReference<>() {
+            });
+            return backendSuppliers.stream()
+                    .map(this::convertToFrontendModel)
+                    .collect(Collectors.toList());
+        } catch (IOException e) {
+            throw new RuntimeException("Error parsing JSON response", e);
         }
     }
 
-    public void updateInvoiceSupplier(InvoiceSupplier invoiceSupplier) throws SQLException {
-        String sql = "UPDATE invoiceSuppliers SET supplierName = ? WHERE idinvoiceSuppliers = ?";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, invoiceSupplier.getSupplierName());
-            preparedStatement.setInt(2, invoiceSupplier.getContactID());
-            preparedStatement.executeUpdate();
-        }
+    public InvoiceSupplier getInvoiceSupplierByName(String supplierName, int storeId) {
+        String url = apiBaseUrl + "/by-name?supplierName=" + supplierName + "&storeId=" + storeId;
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        ResponseEntity<BackendInvoiceSupplier> response = restTemplate.exchange(url, HttpMethod.GET, entity, BackendInvoiceSupplier.class);
+        return convertToFrontendModel(response.getBody());
     }
 
-    public void deleteInvoiceSupplier(int supplierId) throws SQLException {
-        String sql = "DELETE from invoiceSuppliers WHERE idinvoiceSuppliers = ?";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setInt(1, supplierId);
-            preparedStatement.executeUpdate();
-        }
+    public void addInvoiceSupplier(InvoiceSupplier invoiceSupplier) {
+        HttpEntity<BackendInvoiceSupplier> entity = new HttpEntity<>(convertToBackendModel(invoiceSupplier), createHeaders());
+        restTemplate.exchange(apiBaseUrl, HttpMethod.POST, entity, Void.class);
+    }
+
+    public void updateInvoiceSupplier(InvoiceSupplier invoiceSupplier) {
+        String url = apiBaseUrl + "/" + invoiceSupplier.getContactID();
+        HttpEntity<BackendInvoiceSupplier> entity = new HttpEntity<>(convertToBackendModel(invoiceSupplier), createHeaders());
+        restTemplate.exchange(url, HttpMethod.PUT, entity, Void.class);
+    }
+
+    public void deleteInvoiceSupplier(int supplierId) {
+        String url = apiBaseUrl + "/" + supplierId;
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
+    }
+
+    private InvoiceSupplier convertToFrontendModel(BackendInvoiceSupplier backendSupplier) {
+        return new InvoiceSupplier(
+                backendSupplier.getContactID(),
+                backendSupplier.getSupplierName(),
+                backendSupplier.getStoreID()
+        );
+    }
+
+    private BackendInvoiceSupplier convertToBackendModel(InvoiceSupplier frontendSupplier) {
+        BackendInvoiceSupplier backendSupplier = new BackendInvoiceSupplier();
+        backendSupplier.setContactID(frontendSupplier.getContactID());
+        backendSupplier.setSupplierName(frontendSupplier.getSupplierName());
+        backendSupplier.setStoreID(frontendSupplier.getStoreID());
+        return backendSupplier;
+    }
+
+    private static class BackendInvoiceSupplier {
+        private int contactID;
+        private String supplierName;
+        private int storeID;
+        public int getContactID() { return contactID; }
+        public void setContactID(int contactID) { this.contactID = contactID; }
+        public String getSupplierName() { return supplierName; }
+        public void setSupplierName(String supplierName) { this.supplierName = supplierName; }
+        public int getStoreID() { return storeID; }
+        public void setStoreID(int storeID) { this.storeID = storeID; }
     }
 }

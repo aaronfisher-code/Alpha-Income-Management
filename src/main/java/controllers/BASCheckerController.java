@@ -18,7 +18,8 @@ import services.TillReportService;
 import utils.RosterUtils;
 import utils.TableUtils;
 import utils.ValidatorUtils;
-import java.sql.*;
+
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
@@ -59,10 +60,14 @@ public class BASCheckerController extends DateSelectController{
 
 	@FXML
 	private void initialize() {
-		eodService = new EODService();
-		tillReportService = new TillReportService();
-		invoiceService = new InvoiceService();
-		basCheckerService = new BASCheckerService();
+        try {
+            eodService = new EODService();
+			tillReportService = new TillReportService();
+			invoiceService = new InvoiceService();
+			basCheckerService = new BASCheckerService();
+        } catch (IOException e) {
+			dialogPane.showError("Error", "Error initialising services", e);
+        }
 	}
 
 	@Override
@@ -124,7 +129,7 @@ public class BASCheckerController extends DateSelectController{
 		try {
             currentEODDataPoints.addAll(eodService.getEODDataPoints(main.getCurrentStore().getStoreID(), startOfMonth, endOfMonth));
             currentTillDataPoints.addAll(tillReportService.getTillReportDataPoints(main.getCurrentStore().getStoreID(), startOfMonth, endOfMonth));
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			dialogPane.showError("Error", "Error getting EOD/TillReport data points", ex);
 		}
 		double cashTotal = 0;
@@ -214,7 +219,7 @@ public class BASCheckerController extends DateSelectController{
 			MonthlySummaryDataPoint totalList = new MonthlySummaryDataPoint(monthlySummaryPoints, true, rosterUtils.getOpenDuration());
 			spreadsheetCheck2.setText(String.format("%.2f",totalList.getTotalIncome()));
 			spreadsheetCheck3.setText(String.format("%.2f", Double.parseDouble(spreadsheetCheck2.getText())-Double.parseDouble(spreadsheetCheck1.getText())));
-		} catch (SQLException ex) {
+		} catch (IOException ex) {
 			dialogPane.showError("Error", "Error getting Roster data", ex);
         }
 		try {
@@ -243,7 +248,7 @@ public class BASCheckerController extends DateSelectController{
 			//todo: revist this formula
 			cogsCheck2.setText(String.format("%.2f", (totalSales+gp)-sohGrowth));
 			cogsCheck3.setText(String.format("%.2f", Double.parseDouble(cogsCheck1.getText())-Double.parseDouble(cogsCheck2.getText())));
-		}catch(SQLException ex){
+		}catch(Exception ex){
 			dialogPane.showError("Error", "Error getting total invoice amount", ex);
 		}
 		//set all text fields to have $ leading icon
@@ -288,7 +293,7 @@ public class BASCheckerController extends DateSelectController{
 				gstCorrect.setSelected(data.isGstCorrect());
 				medicareBAS.setText(String.format("%.2f", data.getBasDailyScript()));
 			}
-		} catch (SQLException e) {
+		} catch (Exception e) {
 			dialogPane.showError("Error", "Error getting BAS data", e);
 		}
 		updateTotals();
@@ -391,7 +396,7 @@ public class BASCheckerController extends DateSelectController{
 			newDataPoint.setGstCorrect(gstCorrect.isSelected());
 			newDataPoint.setBasDailyScript(Double.parseDouble(medicareBAS.getText()));
 			basCheckerService.updateBASData(newDataPoint);
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			dialogPane.showError("Error", "Error saving BAS data", ex);
 		}
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss a");

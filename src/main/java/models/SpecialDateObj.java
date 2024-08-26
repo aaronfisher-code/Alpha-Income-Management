@@ -1,7 +1,5 @@
 package models;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.time.LocalDate;
 
 public class SpecialDateObj {
@@ -9,21 +7,6 @@ public class SpecialDateObj {
 	private LocalDate eventDate;
 	private String storeStatus;
 	private String note;
-
-	public SpecialDateObj(ResultSet resultSet) {
-		try {
-			if(resultSet.getString("eventID")!=null)
-				this.eventID = resultSet.getInt("eventID");
-			if(resultSet.getString("eventDate")!=null)
-				this.eventDate = LocalDate.parse(resultSet.getString("eventDate"));
-			if(resultSet.getString("storeStatus")!=null)
-				this.storeStatus = resultSet.getString("storeStatus");
-			if(resultSet.getString("note")!=null)
-				this.note = resultSet.getString("note");
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-	}
 
 	public SpecialDateObj() {
 	}

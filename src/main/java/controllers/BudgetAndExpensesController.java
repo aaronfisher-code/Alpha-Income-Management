@@ -11,7 +11,8 @@ import services.BudgetExpensesService;
 import utils.RosterUtils;
 import utils.TableUtils;
 import utils.ValidatorUtils;
-import java.sql.*;
+
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
@@ -30,8 +31,12 @@ public class BudgetAndExpensesController extends DateSelectController{
 
 	@FXML
 	private void initialize() {
-		budgetExpensesService = new BudgetExpensesService();
-		accountPaymentService = new AccountPaymentService();
+		try{
+			budgetExpensesService = new BudgetExpensesService();
+			accountPaymentService = new AccountPaymentService();
+		}catch (IOException e){
+			dialogPane.showError("Error", "Error initializing budget and expenses service", e);
+		}
 	}
 
 	@Override
@@ -59,7 +64,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 		RosterUtils rosterUtils = null;
 		try{
 			rosterUtils = new RosterUtils(main,yearMonthObject);
-		}catch (SQLException e){
+		}catch (IOException e){
 			dialogPane.showError("Error", "Error loading roster data", e);
 		}
         assert rosterUtils != null;
@@ -106,7 +111,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 			lanternPayIncomeSpreadsheet.setText(totalTACPayment==0.0?"":String.format("%.2f", totalTACPayment));
 			double totalOtherPayment = accountPaymentService.getTotalPayment(main.getCurrentStore().getStoreID(),yearMonthObject, AccountPaymentService.PaymentType.OTHER);
 			otherIncomeSpreadsheet.setText(totalOtherPayment==0.0?"":String.format("%.2f", totalOtherPayment));
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			dialogPane.showError("Error", "Error loading budget and expenses data", ex);
 		}
 		TableUtils.formatTextFields(endOfMonthTable, this::updateTotals);
@@ -184,7 +189,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 			newData.setAtoGSTrefund(Double.parseDouble(atoGSTrefundXero.getText()));
 			newData.setMonthlyWages(Double.parseDouble(monthlyWagesField.getText()));
 			budgetExpensesService.updateBudgetExpensesData(newData);
-		} catch (SQLException e) {
+		} catch (Exception e) {
 			dialogPane.showError("Error", "Error saving budget and expenses data", e);
 		}
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("h:mm:ss a");

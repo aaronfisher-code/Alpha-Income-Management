@@ -20,7 +20,6 @@ import utils.AnimationUtils;
 import utils.TableUtils;
 import utils.ValidatorUtils;
 import java.io.IOException;
-import java.sql.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -53,8 +52,12 @@ public class LeaveManagementController extends DateSelectController {
 
     @FXML
     private void initialize() {
-        userService = new UserService();
-        leaveService = new LeaveService();
+        try{
+            userService = new UserService();
+            leaveService = new LeaveService();
+        } catch (IOException ex) {
+            dialogPane.showError("Error", "An error occurred while trying to create the user service",ex);
+        }
     }
 
     public void fill() {
@@ -63,7 +66,7 @@ public class LeaveManagementController extends DateSelectController {
             for(User u:currentUsers){
                 employeeSelect.getItems().add(u);
             }
-        } catch (SQLException ex) {
+        } catch (Exception ex) {
             dialogPane.showError("Error", "An error occurred while trying to fetch employees",ex);
         }
         leaveTypeCombo.getItems().addAll("Sick Leave", "Annual Leave", "Unpaid Leave", "Maternity Leave", "Paternity Leave", "Bereavement Leave", "Other");
@@ -124,7 +127,7 @@ public class LeaveManagementController extends DateSelectController {
         LocalDate startOfMonth = yearMonthObject.atDay(1);
         try {
             currentLeaveRequests = leaveService.getLeaveRequests(main.getCurrentStore().getStoreID(), startOfMonth, endOfMonth);
-        } catch (SQLException ex) {
+        } catch (Exception ex) {
             dialogPane.showError("Error", "An error occurred while trying to fetch leave requests",ex);
         }
         leaveRequestFilterView.getItems().setAll(currentLeaveRequests);
@@ -157,7 +160,7 @@ public class LeaveManagementController extends DateSelectController {
         AnimationUtils.slideIn(editLeavePopover,0);
         try {
             employeeSelect.setValue(userService.getUserByUsername(leaveRequest.getEmployeeID()));
-        } catch (SQLException ex) {
+        } catch (Exception ex) {
             dialogPane.showError("Error", "An error occurred while trying to find this employee",ex);
         }
         leaveTypeCombo.setValue(leaveRequest.getLeaveType());
@@ -208,7 +211,7 @@ public class LeaveManagementController extends DateSelectController {
                     leaveRequest.setToDate(endDate.getValue().atTime(endTime));
                     leaveRequest.setLeaveReason(reasonField.getText());
                     leaveService.addLeaveRequest(leaveRequest);
-                } catch (SQLException ex) {
+                } catch (Exception ex) {
                     dialogPane.showError("Error", "An error occurred while trying to add the leave request",ex);
                 }
                 closePopover();
@@ -243,7 +246,7 @@ public class LeaveManagementController extends DateSelectController {
                     leaveRequest.setToDate(endDate.getValue().atTime(endTime));
                     leaveRequest.setLeaveReason(reasonField.getText());
                     leaveService.updateLeaveRequest(leaveRequest);
-                } catch (SQLException ex) {
+                } catch (Exception ex) {
                     dialogPane.showError("Error", "An error occurred while trying to update the leave request",ex);
                 }
                 closePopover();
@@ -260,7 +263,7 @@ public class LeaveManagementController extends DateSelectController {
             if (buttonType.equals(ButtonType.OK)) {
                 try {
                     leaveService.deleteLeaveRequest(leaveRequest.getLeaveID());
-                } catch (SQLException ex) {
+                } catch (Exception ex) {
                     dialogPane.showError("Error", "An error occurred while trying to delete the leave request",ex);
                 }
                 closePopover();

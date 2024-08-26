@@ -1,7 +1,5 @@
 package models;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -21,23 +19,7 @@ public class AccountPayment {
 	private String accountCode;
 	private String taxRate;
 
-	public AccountPayment(ResultSet resultSet) {
-		try {
-			this.contactName = resultSet.getString("contactName");
-			this.contactID = resultSet.getInt("contactID");
-			this.storeID = resultSet.getInt("storeID");
-			this.invoiceNumber = resultSet.getString("invoiceNo");
-			this.invDate = resultSet.getDate("invoiceDate").toLocalDate();
-			this.dueDate = resultSet.getDate("dueDate").toLocalDate();
-			this.description = resultSet.getString("description");
-			this.unitAmount = resultSet.getDouble("unitAmount");
-			this.accountAdjusted = resultSet.getBoolean("accountAdjusted");
-			this.taxRate = resultSet.getString("taxRate");
-			this.accountCode = resultSet.getString("accountCode");
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-	}
+	public AccountPayment() {}
 
 	public AccountPayment(String contactName, int contactID, int storeID, String invoiceNumber, LocalDate invDate, LocalDate dueDate, String description, double quantity, double unitAmount, boolean accountAdjusted, String accountCode, String taxRate) {
 		this.contactName = contactName;

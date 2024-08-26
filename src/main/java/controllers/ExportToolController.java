@@ -120,7 +120,8 @@ public class ExportToolController extends PageController {
             resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
                 for(int i = 0; i<daysBetween; i++){
-                    s=new Shift(resultSet);
+//                    s=new Shift(resultSet);
+                    s = new Shift();
                     boolean repeatShiftDay = (s.isRepeating() && DAYS.between(s.getShiftStartDate(), sDate.plusDays(i)) % s.getDaysPerRepeat() == 0 && DAYS.between(s.getShiftStartDate(), sDate.plusDays(i)) >= 0);
                     boolean equalDay = s.getShiftStartDate().equals(sDate.plusDays(i));
                     boolean pastEnd = s.getShiftEndDate() != null && s.getShiftEndDate().isBefore(sDate.plusDays(i));
@@ -172,7 +173,7 @@ public class ExportToolController extends PageController {
             preparedStatement = con.prepareStatement(sql);
             resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
-                allUsers.add(new User(resultSet));
+//                allUsers.add(new User(resultSet));
             }
         } catch (SQLException ex) {
             System.err.println(ex.getMessage());

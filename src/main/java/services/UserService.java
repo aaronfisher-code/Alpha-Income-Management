@@ -1,185 +1,142 @@
 package services;
 
-import models.Employment;
-import models.Store;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import models.User;
+import models.Employment;
 import models.Permission;
-import org.mindrot.jbcrypt.BCrypt;
-import utils.DatabaseConnectionManager;
+import models.Store;
+import org.springframework.http.*;
+import org.springframework.web.client.RestTemplate;
 
-import java.sql.*;
-import java.util.ArrayList;
+import java.io.IOException;
 import java.util.List;
+import java.util.Properties;
 
 public class UserService {
+    private String apiBaseUrl;
+    private String apiToken;
+    private RestTemplate restTemplate;
+    private ObjectMapper objectMapper;
 
-    public User getUserByUsername(String username) throws SQLException {
-        String sql = "SELECT * FROM accounts WHERE username = ?";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, username);
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                if (resultSet.next()) {
-                    return new User(resultSet);
-                }
-            }
-        }
-        return null;
+    public UserService() throws IOException {
+        this.restTemplate = new RestTemplate();
+        this.objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        Properties properties = new Properties();
+        properties.load(UserService.class.getClassLoader().getResourceAsStream("application.properties"));
+        this.apiToken = properties.getProperty("api.token");
+        this.apiBaseUrl = properties.getProperty("api.base.url") + "/users";
     }
 
-    public List<User> getAllUsers() throws SQLException {
-        List<User> users = new ArrayList<>();
-        String sql = "SELECT * FROM accounts";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(sql)) {
-            while (resultSet.next()) {
-                users.add(new User(resultSet));
-            }
-        }
-        return users;
+    private HttpHeaders createHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + apiToken);
+        return headers;
     }
 
-    public List<User> getAllUserEmployments(int storeID) throws SQLException {
-        List<User> users = new ArrayList<>();
-        String sql = "SELECT * FROM accounts JOIN employments e on accounts.username = e.username WHERE storeID = ? AND inactiveDate IS NULL ";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)){
-            preparedStatement.setInt(1, storeID);
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                while (resultSet.next()) {
-                    users.add(new User(resultSet));
-                }
-            }
-        }
-        return users;
+    public User getUserByUsername(String username) {
+        String url = apiBaseUrl + "/" + username;
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        ResponseEntity<User> response = restTemplate.exchange(url, HttpMethod.GET, entity, User.class);
+        return response.getBody();
     }
 
-    public List<Employment> getEmploymentsForUser(String username) throws SQLException {
-        List<Employment> employments = new ArrayList<>();
-        String sql = "SELECT * FROM employments WHERE username = ?";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, username);
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                while (resultSet.next()) {
-                    employments.add(new Employment(resultSet));
-                }
-            }
-        }
-        return employments;
-    }
-
-    public boolean verifyPassword(User user, String password) {
-        return BCrypt.checkpw(password, user.getPassword());
-    }
-
-    public void updateUserPassword(String username, String newPassword) throws SQLException {
-        String sql = "UPDATE accounts SET password = ? WHERE username = ?";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            String hashedPassword = BCrypt.hashpw(newPassword, BCrypt.gensalt());
-            preparedStatement.setString(1, hashedPassword);
-            preparedStatement.setString(2, username);
-            preparedStatement.executeUpdate();
+    public List<User> getAllUsers() {
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        ResponseEntity<String> response = restTemplate.exchange(apiBaseUrl, HttpMethod.GET, entity, String.class);
+        try {
+            return objectMapper.readValue(response.getBody(), new TypeReference<List<User>>(){});
+        } catch (IOException e) {
+            throw new RuntimeException("Error parsing JSON response", e);
         }
     }
 
-    public boolean isPasswordResetRequested(String username) throws SQLException {
-        String sql = "SELECT CASE WHEN password IS NOT NULL THEN 1 ELSE 0 END AS password_exists FROM accounts WHERE username = ?";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, username);
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                if(resultSet.next()) {
-                    return resultSet.getInt("password_exists") == 0;
-                }
-            }
-        }
-        return false;
-    }
-
-    public List<Permission> getUserPermissions(String username) throws SQLException {
-        List<Permission> permissions = new ArrayList<>();
-        String sql = "SELECT * FROM permissions WHERE permissionID IN (SELECT permissionID FROM userpermissions WHERE userID = ?)";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, username);
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                while (resultSet.next()) {
-                    permissions.add(new Permission(resultSet));
-                }
-            }
-        }
-        return permissions;
-    }
-
-    public List<Store> getStoresForUser(String username) throws SQLException {
-        List<Store> stores = new ArrayList<>();
-        String sql = "SELECT * FROM employments JOIN stores a on a.storeID = employments.storeID where username = ?";
-
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, username);
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                while (resultSet.next()) {
-                    stores.add(new Store(resultSet));
-                }
-            }
-        }
-        return stores;
-    }
-
-    public void addUser(User user) throws SQLException {
-        String sql = "INSERT INTO accounts(username,first_name,last_name,role,profileBG,profileText) VALUES(?,?,?,?,?,?)";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, user.getUsername());
-            preparedStatement.setString(2, BCrypt.hashpw(user.getPassword(), BCrypt.gensalt()));
-            preparedStatement.setString(3, user.getFirst_name());
-            preparedStatement.setString(4, user.getLast_name());
-            preparedStatement.setString(5, user.getRole());
-            preparedStatement.setString(6, user.getBgColour());
-            preparedStatement.setString(7, user.getTextColour());
-            preparedStatement.executeUpdate();
+    public List<User> getAllUserEmployments(int storeId) {
+        String url = apiBaseUrl + "/store/" + storeId;
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+        try {
+            return objectMapper.readValue(response.getBody(), new TypeReference<List<User>>(){});
+        } catch (IOException e) {
+            throw new RuntimeException("Error parsing JSON response", e);
         }
     }
 
-    public void updateUser(User user) throws SQLException {
-        String sql = "UPDATE accounts SET first_name = ?,last_name = ?,role = ?, profileBG = ?, profileText = ?,inactiveDate = ? WHERE username = ?";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, user.getFirst_name());
-            preparedStatement.setString(2, user.getLast_name());
-            preparedStatement.setString(3, user.getRole());
-            preparedStatement.setString(4, user.getBgColour());
-            preparedStatement.setString(5, user.getTextColour());
-            if(user.getInactiveDate()!=null)
-                preparedStatement.setDate(6, Date.valueOf(user.getInactiveDate()));
-            else
-                preparedStatement.setNull(6, Types.DATE);
-            preparedStatement.setString(7, user.getUsername());
-            preparedStatement.executeUpdate();
+    public List<Employment> getEmploymentsForUser(String username) {
+        String url = apiBaseUrl + "/" + username + "/employments";
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+        try {
+            return objectMapper.readValue(response.getBody(), new TypeReference<List<Employment>>(){});
+        } catch (IOException e) {
+            throw new RuntimeException("Error parsing JSON response", e);
         }
     }
 
-    public void deleteUser(User user) throws SQLException {
-        String sql = "DELETE FROM accounts WHERE username = ?";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, user.getUsername());
-            preparedStatement.executeUpdate();
+    public boolean verifyPassword(String username, String password) {
+        String url = apiBaseUrl + "/" + username + "/verify-password";
+        HttpEntity<String> entity = new HttpEntity<>(password, createHeaders());
+        ResponseEntity<Boolean> response = restTemplate.exchange(url, HttpMethod.POST, entity, Boolean.class);
+        return response.getBody();
+    }
+
+    public void updateUserPassword(String username, String newPassword) {
+        String url = apiBaseUrl + "/" + username + "/password";
+        HttpEntity<String> entity = new HttpEntity<>(newPassword, createHeaders());
+        restTemplate.exchange(url, HttpMethod.PUT, entity, Void.class);
+    }
+
+    public boolean isPasswordResetRequested(String username) {
+        String url = apiBaseUrl + "/" + username + "/password-reset-requested";
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        ResponseEntity<Boolean> response = restTemplate.exchange(url, HttpMethod.GET, entity, Boolean.class);
+        return response.getBody();
+    }
+
+    public List<Permission> getUserPermissions(String username) {
+        String url = apiBaseUrl + "/" + username + "/permissions";
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+        try {
+            return objectMapper.readValue(response.getBody(), new TypeReference<List<Permission>>(){});
+        } catch (IOException e) {
+            throw new RuntimeException("Error parsing JSON response", e);
         }
     }
 
-    public void resetUserPassword(User user) throws SQLException{
-        String sql = "UPDATE accounts SET password = ? WHERE username = ?";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            String hashedPassword = BCrypt.hashpw("password", BCrypt.gensalt());
-            preparedStatement.setString(1, hashedPassword);
-            preparedStatement.setString(2, user.getUsername());
-            preparedStatement.executeUpdate();
+    public List<Store> getStoresForUser(String username) {
+        String url = apiBaseUrl + "/" + username + "/stores";
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+        try {
+            return objectMapper.readValue(response.getBody(), new TypeReference<List<Store>>(){});
+        } catch (IOException e) {
+            throw new RuntimeException("Error parsing JSON response", e);
         }
+    }
+
+    public void addUser(User user) {
+        HttpEntity<User> entity = new HttpEntity<>(user, createHeaders());
+        restTemplate.exchange(apiBaseUrl, HttpMethod.POST, entity, Void.class);
+    }
+
+    public void updateUser(User user) {
+        String url = apiBaseUrl + "/" + user.getUsername();
+        HttpEntity<User> entity = new HttpEntity<>(user, createHeaders());
+        restTemplate.exchange(url, HttpMethod.PUT, entity, Void.class);
+    }
+
+    public void deleteUser(String username) {
+        String url = apiBaseUrl + "/" + username;
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
+    }
+
+    public void resetUserPassword(String username) {
+        String url = apiBaseUrl + "/" + username + "/reset-password";
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
     }
 }

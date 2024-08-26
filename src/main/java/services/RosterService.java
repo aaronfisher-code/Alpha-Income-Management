@@ -1,190 +1,143 @@
 package services;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import models.Shift;
-import models.LeaveRequest;
 import models.SpecialDateObj;
-import utils.DatabaseConnectionManager;
+import org.springframework.http.*;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
-import java.sql.*;
+import java.io.IOException;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 public class RosterService {
+    private String apiBaseUrl;
+    private String apiToken;
+    private RestTemplate restTemplate;
+    private ObjectMapper objectMapper;
 
-    public List<Shift> getShifts(int storeId, LocalDate startDate, LocalDate endDate) throws SQLException {
-        List<Shift> shifts = new ArrayList<>();
-        String sql = "SELECT * FROM shifts JOIN accounts a on a.username = shifts.username " +
-                "WHERE storeID = ? AND" +
-                "(shifts.repeating=TRUE AND (isNull(shiftEndDate) OR shiftEndDate>=?) AND shiftStartDate<=?)"+
-                "OR (shifts.repeating=false AND shiftStartDate>=? AND shiftStartDate<=?)"+
-                "ORDER BY shiftStartTime, a.first_name";
-
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setInt(1, storeId);
-            preparedStatement.setDate(2, Date.valueOf(startDate));
-            preparedStatement.setDate(3, Date.valueOf(endDate));
-            preparedStatement.setDate(4, Date.valueOf(startDate));
-            preparedStatement.setDate(5, Date.valueOf(endDate));
-
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                while (resultSet.next()) {
-                    shifts.add(new Shift(resultSet));
-                }
-            }
-        }
-        return shifts;
+    public RosterService() throws IOException {
+        this.restTemplate = new RestTemplate();
+        this.objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        Properties properties = new Properties();
+        properties.load(RosterService.class.getClassLoader().getResourceAsStream("application.properties"));
+        this.apiToken = properties.getProperty("api.token");
+        this.apiBaseUrl = properties.getProperty("api.base.url") + "/roster";
     }
 
-    public List<Shift> getShiftModifications(int storeId, LocalDate startDate, LocalDate endDate) throws SQLException {
-        List<Shift> modifications = new ArrayList<>();
-        String sql = "SELECT * FROM shiftmodifications JOIN accounts a on a.username = shiftmodifications.username " +
-                "WHERE storeID = ? AND "+
-                "modificationID in (select max(modificationID) from shiftmodifications group by shift_id, originalDate) AND" +
-                "((shiftmodifications.shiftStartDate>=? AND shiftmodifications.shiftStartDate<=?) OR (shiftmodifications.originalDate>=? AND shiftmodifications.originalDate<=?))";
-
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setInt(1, storeId);
-            preparedStatement.setDate(2, Date.valueOf(startDate));
-            preparedStatement.setDate(3, Date.valueOf(endDate));
-            preparedStatement.setDate(4, Date.valueOf(startDate));
-            preparedStatement.setDate(5, Date.valueOf(endDate));
-
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                while (resultSet.next()) {
-                    modifications.add(new Shift(resultSet));
-                }
-            }
-        }
-        return modifications;
+    private HttpHeaders createHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + apiToken);
+        return headers;
     }
 
-    public void addShift(Shift shift) throws SQLException {
-        String sql = "INSERT INTO shifts(storeID, username, shiftStartTime, shiftEndTime, shiftStartDate, thirtyMinBreaks, tenMinBreaks, repeating, daysPerRepeat) VALUES(?,?,?,?,?,?,?,?,?)";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setInt(1, shift.getStoreID());
-            preparedStatement.setString(2, shift.getUsername());
-            preparedStatement.setTime(3, Time.valueOf(shift.getShiftStartTime()));
-            preparedStatement.setTime(4, Time.valueOf(shift.getShiftEndTime()));
-            preparedStatement.setDate(5, Date.valueOf(shift.getShiftStartDate()));
-            preparedStatement.setInt(6, shift.getThirtyMinBreaks());
-            preparedStatement.setInt(7, shift.getTenMinBreaks());
-            preparedStatement.setBoolean(8, shift.isRepeating());
-            preparedStatement.setInt(9, shift.getDaysPerRepeat());
-            preparedStatement.executeUpdate();
+    public List<Shift> getShifts(int storeId, LocalDate startDate, LocalDate endDate) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(apiBaseUrl + "/shifts")
+                .queryParam("storeId", storeId)
+                .queryParam("startDate", startDate)
+                .queryParam("endDate", endDate);
+
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        ResponseEntity<String> response = restTemplate.exchange(
+                builder.toUriString(),
+                HttpMethod.GET,
+                entity,
+                String.class);
+
+        try {
+            return objectMapper.readValue(response.getBody(), new TypeReference<List<Shift>>(){});
+        } catch (IOException e) {
+            throw new RuntimeException("Error parsing JSON response", e);
         }
     }
 
-    public void updateShift(Shift shift) throws SQLException {
-        String sql = "UPDATE shifts SET username=?, shiftStartTime=?, shiftEndTime=?, shiftStartDate=?, thirtyMinBreaks=?, tenMinBreaks=?, repeating=?, daysPerRepeat=? WHERE shift_id=?";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, shift.getUsername());
-            preparedStatement.setTime(2, Time.valueOf(shift.getShiftStartTime()));
-            preparedStatement.setTime(3, Time.valueOf(shift.getShiftEndTime()));
-            preparedStatement.setDate(4, Date.valueOf(shift.getShiftStartDate()));
-            preparedStatement.setInt(5, shift.getThirtyMinBreaks());
-            preparedStatement.setInt(6, shift.getTenMinBreaks());
-            preparedStatement.setBoolean(7, shift.isRepeating());
-            preparedStatement.setInt(8, shift.getDaysPerRepeat());
-            preparedStatement.setInt(9, shift.getShiftID());
-            preparedStatement.executeUpdate();
+    public List<Shift> getShiftModifications(int storeId, LocalDate startDate, LocalDate endDate) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(apiBaseUrl + "/shift-modifications")
+                .queryParam("storeId", storeId)
+                .queryParam("startDate", startDate)
+                .queryParam("endDate", endDate);
+
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        ResponseEntity<String> response = restTemplate.exchange(
+                builder.toUriString(),
+                HttpMethod.GET,
+                entity,
+                String.class);
+
+        try {
+            return objectMapper.readValue(response.getBody(), new TypeReference<List<Shift>>(){});
+        } catch (IOException e) {
+            throw new RuntimeException("Error parsing JSON response", e);
         }
     }
 
-    public void deleteShift(int shiftId) throws SQLException {
-        String sql = "DELETE FROM shifts WHERE shift_id = ?";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setInt(1, shiftId);
-            preparedStatement.executeUpdate();
-        }
+    public void addShift(Shift shift) {
+        HttpEntity<Shift> entity = new HttpEntity<>(shift, createHeaders());
+        restTemplate.exchange(apiBaseUrl + "/shifts", HttpMethod.POST, entity, Void.class);
     }
 
-    public void addShiftModification(Shift modification) throws SQLException {
-        String sql = "INSERT INTO shiftModifications(storeID, username, shiftStartTime, shiftEndTime, shiftStartDate, thirtyMinBreaks, tenMinBreaks, repeating, daysPerRepeat, shift_id, originalDate) VALUES(?,?,?,?,?,?,?,?,?,?,?)";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setInt(1, modification.getStoreID());
-            preparedStatement.setString(2, modification.getUsername());
-            preparedStatement.setTime(3, Time.valueOf(modification.getShiftStartTime()));
-            preparedStatement.setTime(4, Time.valueOf(modification.getShiftEndTime()));
-            preparedStatement.setDate(5, modification.getShiftStartDate() != null ? Date.valueOf(modification.getShiftStartDate()) : null);
-            preparedStatement.setInt(6, modification.getThirtyMinBreaks());
-            preparedStatement.setInt(7, modification.getTenMinBreaks());
-            preparedStatement.setBoolean(8, modification.isRepeating());
-            preparedStatement.setInt(9, modification.getDaysPerRepeat());
-            preparedStatement.setInt(10, modification.getShiftID());
-            preparedStatement.setDate(11, Date.valueOf(modification.getOriginalDate()));
-            preparedStatement.executeUpdate();
-        }
+    public void updateShift(Shift shift) {
+        HttpEntity<Shift> entity = new HttpEntity<>(shift, createHeaders());
+        restTemplate.exchange(apiBaseUrl + "/shifts/" + shift.getShiftID(), HttpMethod.PUT, entity, Void.class);
     }
 
-    public void deleteShiftModifications(int shiftId) throws SQLException {
-        String sql = "DELETE FROM shiftmodifications WHERE shift_id = ?";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setInt(1, shiftId);
-            preparedStatement.executeUpdate();
-        }
+    public void deleteShift(int shiftId) {
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        restTemplate.exchange(apiBaseUrl + "/shifts/" + shiftId, HttpMethod.DELETE, entity, Void.class);
     }
 
-    public void deleteShiftModifications(int shiftId, LocalDate cutoffDate) throws SQLException {
-        String sql = "DELETE FROM shiftmodifications WHERE shift_id = ? AND originalDate > ?";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setInt(1, shiftId);
-            preparedStatement.setDate(2, Date.valueOf(cutoffDate));
-            preparedStatement.executeUpdate();
-        }
+    public void addShiftModification(Shift modification) {
+        HttpEntity<Shift> entity = new HttpEntity<>(modification, createHeaders());
+        restTemplate.exchange(apiBaseUrl + "/shift-modifications", HttpMethod.POST, entity, Void.class);
     }
 
-    public void updateShiftEndDate(int shiftId, LocalDate endDate) throws SQLException {
-        String sql = "UPDATE shifts SET shiftEndDate = ? WHERE shift_id = ?";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setDate(1, Date.valueOf(endDate));
-            preparedStatement.setInt(2, shiftId);
-            preparedStatement.executeUpdate();
-        }
+    public void deleteShiftModifications(int shiftId) {
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        restTemplate.exchange(apiBaseUrl + "/shift-modifications/" + shiftId, HttpMethod.DELETE, entity, Void.class);
     }
 
-    public SpecialDateObj getSpecialDateInfo(LocalDate date) throws SQLException {
-        String sql = "SELECT * FROM specialDates Where eventDate = ?";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, date.toString());
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                if (resultSet.next()) {
-                    return new SpecialDateObj(resultSet);
-                }
-            }
-        }
-        return null;
+    public void deleteShiftModifications(int shiftId, LocalDate cutoffDate) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(apiBaseUrl + "/shift-modifications/" + shiftId + "/cutoff")
+                .queryParam("cutoffDate", cutoffDate);
+
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        restTemplate.exchange(builder.toUriString(), HttpMethod.DELETE, entity, Void.class);
     }
 
-    public void addSpecialDate(SpecialDateObj specialDateObj) throws SQLException {
-        String sql = "INSERT INTO specialDates(storeStatus, note, eventDate) VALUES(?,?,?)";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, specialDateObj.getStoreStatus());
-            preparedStatement.setString(2, specialDateObj.getNote());
-            preparedStatement.setString(3, specialDateObj.getEventDate().toString());
-            preparedStatement.executeUpdate();
-        }
+    public void updateShiftEndDate(int shiftId, LocalDate endDate) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(apiBaseUrl + "/shifts/" + shiftId + "/end-date")
+                .queryParam("endDate", endDate);
+
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        restTemplate.exchange(builder.toUriString(), HttpMethod.PUT, entity, Void.class);
     }
 
-    public void updateSpecialDate(SpecialDateObj specialDateObj) throws SQLException {
-        String sql = "UPDATE specialDates SET storeStatus = ?, note = ? WHERE eventDate = ?";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, specialDateObj.getStoreStatus());
-            preparedStatement.setString(2, specialDateObj.getNote());
-            preparedStatement.setString(3, specialDateObj.getEventDate().toString());
-            preparedStatement.executeUpdate();
-        }
+    public SpecialDateObj getSpecialDateInfo(LocalDate date) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(apiBaseUrl + "/special-dates")
+                .queryParam("date", date);
+
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        ResponseEntity<SpecialDateObj> response = restTemplate.exchange(
+                builder.toUriString(),
+                HttpMethod.GET,
+                entity,
+                SpecialDateObj.class);
+
+        return response.getBody();
+    }
+
+    public void addSpecialDate(SpecialDateObj specialDateObj) {
+        HttpEntity<SpecialDateObj> entity = new HttpEntity<>(specialDateObj, createHeaders());
+        restTemplate.exchange(apiBaseUrl + "/special-dates", HttpMethod.POST, entity, Void.class);
+    }
+
+    public void updateSpecialDate(SpecialDateObj specialDateObj) {
+        HttpEntity<SpecialDateObj> entity = new HttpEntity<>(specialDateObj, createHeaders());
+        restTemplate.exchange(apiBaseUrl + "/special-dates", HttpMethod.PUT, entity, Void.class);
     }
 }

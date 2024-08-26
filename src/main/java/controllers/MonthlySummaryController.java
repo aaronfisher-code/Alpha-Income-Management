@@ -15,6 +15,8 @@ import services.*;
 import utils.GUIUtils;
 import utils.RosterUtils;
 import utils.TableUtils;
+
+import java.io.IOException;
 import java.sql.SQLException;
 import java.text.NumberFormat;
 import java.time.LocalDate;
@@ -80,13 +82,17 @@ public class MonthlySummaryController extends DateSelectController{
 
 	@FXML
 	private void initialize() {
-		eodService = new EODService();
-		tillReportService = new TillReportService();
-		budgetExpensesService = new BudgetExpensesService();
-		basCheckerService = new BASCheckerService();
-		accountPaymentService = new AccountPaymentService();
-		invoiceService = new InvoiceService();
-		accountPaymentContactService = new AccountPaymentContactService();
+		try{
+			eodService = new EODService();
+			tillReportService = new TillReportService();
+			budgetExpensesService = new BudgetExpensesService();
+			basCheckerService = new BASCheckerService();
+			accountPaymentService = new AccountPaymentService();
+			invoiceService = new InvoiceService();
+			accountPaymentContactService = new AccountPaymentContactService();
+		}catch (IOException e){
+			dialogPane.showError("Error","Error loading services",e);
+		}
 	 }
 
 	@Override
@@ -194,7 +200,7 @@ public class MonthlySummaryController extends DateSelectController{
 		LocalDate endDate = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(), daysInMonth);
 		try{
 			rosterUtils = new RosterUtils(main,yearMonthObject);
-		}catch (SQLException e){
+		}catch (IOException e){
 			dialogPane.showError("Error","Error loading roster data",e);
 		}
 		double monthlyRent = 0;
@@ -209,7 +215,7 @@ public class MonthlySummaryController extends DateSelectController{
 				dailyOutgoings = currentBudgetAndExpensesDataPoint.getDailyOutgoings();
 				monthlyWages = currentBudgetAndExpensesDataPoint.getMonthlyWages();
 			}
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			dialogPane.showError("Error","Error loading data",ex);
 		}
 		double totalOpenDuration = rosterUtils.getOpenDuration();
@@ -392,7 +398,7 @@ public class MonthlySummaryController extends DateSelectController{
 			content.putString(outString.toString());
 			Clipboard.getSystemClipboard().setContent(content);
 			dialogPane.showInformation("Data Exported","Data copied to clipboard!");
-		} catch (SQLException e) {
+		} catch (Exception e) {
 			dialogPane.showError("Failed to export data", e);
 		}
 	}

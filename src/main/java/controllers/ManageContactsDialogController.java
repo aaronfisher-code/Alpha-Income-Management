@@ -14,7 +14,8 @@ import models.AccountPaymentContactDataPoint;
 import services.AccountPaymentContactService;
 import utils.GUIUtils;
 import utils.TableUtils;
-import java.sql.*;
+
+import java.io.IOException;
 import java.util.List;
 
 public class ManageContactsDialogController extends Controller{
@@ -28,7 +29,11 @@ public class ManageContactsDialogController extends Controller{
 
 	@FXML
 	private void initialize() {
-		accountPaymentContactService = new AccountPaymentContactService();
+		try {
+			accountPaymentContactService = new AccountPaymentContactService();
+		} catch (IOException e) {
+			parent.getDialogPane().showError("Error initializing contact service",e);
+		}
 	}
 
 	public void setParent(AccountPaymentsPageController d) {this.parent = d;}
@@ -48,7 +53,7 @@ public class ManageContactsDialogController extends Controller{
 						accountPaymentContactService.deleteAccountPaymentContact(a.getContactID());
 						parent.fillContactList();
 						fill();
-					} catch (SQLException e) {
+					} catch (Exception e) {
 						parent.getDialogPane().showError("Error","An error occurred while deleting the contact",e);
 					}
 				});
@@ -56,7 +61,7 @@ public class ManageContactsDialogController extends Controller{
 			}
 			allContacts = FXCollections.observableArrayList(currentAccountPaymentDataPoints);
 			contactsTable.setItems(allContacts);
-		} catch (SQLException e) {
+		} catch (Exception e) {
 			parent.getDialogPane().showError("Error","An error occurred while loading existing contacts",e);
 		}
 		for(TableColumn<?,?> tc: contactsTable.getColumns()){
@@ -73,7 +78,7 @@ public class ManageContactsDialogController extends Controller{
 				a.setContactName(e.getNewValue());
 				accountPaymentContactService.updateAccountPaymentContact(a);
 				parent.fillContactList();
-			} catch (SQLException ex) {
+			} catch (Exception ex) {
 				parent.getDialogPane().showError("Error","An error occurred while updating the contact name",ex);
 			}
 		});
@@ -84,7 +89,7 @@ public class ManageContactsDialogController extends Controller{
 				a.setAccountCode(e.getNewValue());
 				accountPaymentContactService.updateAccountPaymentContact(a);
 				parent.fillContactList();
-			} catch (SQLException ex) {
+			} catch (Exception ex) {
 				parent.getDialogPane().showError("Error","An error occurred while updating the contact account code",ex);
 			}
 		});

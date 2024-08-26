@@ -5,6 +5,8 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.Region;
 import models.SpecialDateObj;
 import services.RosterService;
+
+import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.TextStyle;
@@ -21,7 +23,11 @@ public class RosterDayCardController extends PageController {
 
     @FXML
     private void initialize() {
-        rosterService = new RosterService();
+        try{
+            rosterService = new RosterService();
+        }catch (IOException e){
+            parent.getDialogPane().showError("Error", "Error loading roster service", e.getMessage());
+        }
     }
 
     public void setDate(LocalDate d) {
@@ -44,7 +50,7 @@ public class RosterDayCardController extends PageController {
             SpecialDateObj specialDateObj = rosterService.getSpecialDateInfo(date);
             if(specialDateObj != null)
                 eventLbl.setText(specialDateObj.getNote());
-        } catch (SQLException ex) {
+        } catch (Exception ex) {
             parent.getDialogPane().showError("Error", "Error loading special date info", ex.getMessage());
             System.err.println(ex.getMessage());
         }

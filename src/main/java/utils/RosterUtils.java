@@ -5,7 +5,7 @@ import services.LeaveService;
 import services.RosterService;
 import application.Main;
 
-import java.sql.SQLException;
+import java.io.IOException;
 import java.time.*;
 import java.util.*;
 
@@ -24,7 +24,7 @@ public class RosterUtils {
 
     private Map<LocalDate, Double> dayDurationMap = new HashMap<>();
 
-    public RosterUtils(Main main, LocalDate startDate, LocalDate endDate) throws SQLException {
+    public RosterUtils(Main main, LocalDate startDate, LocalDate endDate) throws IOException {
         this.main = main;
         this.rosterService = new RosterService();
         this.leaveService = new LeaveService();
@@ -32,7 +32,7 @@ public class RosterUtils {
         fillDayDurations(startDate, endDate);
     }
 
-    public RosterUtils(Main main, YearMonth yearMonth) throws SQLException {
+    public RosterUtils(Main main, YearMonth yearMonth) throws IOException {
         this.main = main;
         this.rosterService = new RosterService();
         this.leaveService = new LeaveService();
@@ -43,7 +43,7 @@ public class RosterUtils {
         fillDayDurations(monthStart, monthEnd);
     }
 
-    private void fillDayDurations(LocalDate startDate, LocalDate endDate) throws SQLException {
+    private void fillDayDurations(LocalDate startDate, LocalDate endDate){
         allShifts = rosterService.getShifts(main.getCurrentStore().getStoreID(), startDate, endDate);
         allModifications = rosterService.getShiftModifications(main.getCurrentStore().getStoreID(), startDate, endDate);
         allLeaveRequests = leaveService.getLeaveRequests(main.getCurrentStore().getStoreID(), startDate, endDate);

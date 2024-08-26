@@ -1,131 +1,76 @@
 package services;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import models.AccountPayment;
-import utils.DatabaseConnectionManager;
+import org.springframework.http.*;
+import org.springframework.web.client.RestTemplate;
 
-import java.sql.*;
-import java.time.LocalDate;
-import java.time.Year;
+import java.io.IOException;
 import java.time.YearMonth;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 public class AccountPaymentService {
+    private String apiBaseUrl;
+    private String apiToken;
+    private RestTemplate restTemplate;
+    private ObjectMapper objectMapper;
 
-    public List<AccountPayment> getAccountPaymentsForMonth(int storeId, YearMonth yearMonth) throws SQLException {
-        List<AccountPayment> accountPayments = new ArrayList<>();
-        String sql = "SELECT * FROM accountPayments JOIN accountPaymentContacts a on a.idaccountPaymentContacts = accountPayments.contactID WHERE accountPayments.storeID = ? AND MONTH(invoiceDate) = ? AND YEAR(invoiceDate) = ?";
-
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            preparedStatement.setInt(1, storeId);
-            preparedStatement.setInt(2, yearMonth.getMonthValue());
-            preparedStatement.setInt(3, yearMonth.getYear());
-
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                while (resultSet.next()) {
-                    accountPayments.add(new AccountPayment(resultSet));
-                }
-            }
-        }
-        return accountPayments;
+    public AccountPaymentService() throws IOException {
+        this.restTemplate = new RestTemplate();
+        this.objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        Properties properties = new Properties();
+        properties.load(AccountPaymentService.class.getClassLoader().getResourceAsStream("application.properties"));
+        this.apiToken = properties.getProperty("api.token");
+        this.apiBaseUrl = properties.getProperty("api.base.url") + "/account-payments";
     }
 
-    public void addAccountPayment(AccountPayment payment) throws SQLException {
-        String sql = "INSERT INTO accountPayments(contactID,storeID,invoiceNo,invoiceDate,dueDate,description,unitAmount,accountAdjusted,taxRate) VALUES(?,?,?,?,?,?,?,?,?)";
+    private HttpHeaders createHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + apiToken);
+        return headers;
+    }
 
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setInt(1, payment.getContactID());
-            preparedStatement.setInt(2, payment.getStoreID());
-            preparedStatement.setString(3, payment.getInvoiceNumber());
-            preparedStatement.setDate(4, Date.valueOf(payment.getInvDate()));
-            preparedStatement.setDate(5, Date.valueOf(payment.getDueDate()));
-            preparedStatement.setString(6, payment.getDescription());
-            preparedStatement.setDouble(7, payment.getUnitAmount());
-            preparedStatement.setBoolean(8, payment.isAccountAdjusted());
-            preparedStatement.setString(9, payment.getTaxRate());
-
-            preparedStatement.executeUpdate();
+    public List<AccountPayment> getAccountPaymentsForMonth(int storeId, YearMonth yearMonth) {
+        String url = apiBaseUrl + "?storeId=" + storeId + "&yearMonth=" + yearMonth;
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+        try {
+            return objectMapper.readValue(response.getBody(), new TypeReference<>() {
+            });
+        } catch (IOException e) {
+            throw new RuntimeException("Error parsing JSON response", e);
         }
     }
 
-    public void updateAccountPayment(String originalInvoiceNo,AccountPayment payment) throws SQLException  {
-        String sql = "UPDATE accountPayments SET contactID = ?,storeID = ?,invoiceNo = ?, invoiceDate = ?, dueDate = ?,description = ?,unitAmount = ?,accountAdjusted = ?,taxRate = ? WHERE storeID = ? AND invoiceNo = ?";
-
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setInt(1, payment.getContactID());
-            preparedStatement.setInt(2, payment.getStoreID());
-            preparedStatement.setString(3, payment.getInvoiceNumber());
-            preparedStatement.setDate(4, Date.valueOf(payment.getInvDate()));
-            preparedStatement.setDate(5, Date.valueOf(payment.getDueDate()));
-            preparedStatement.setString(6, payment.getDescription());
-            preparedStatement.setDouble(7, payment.getUnitAmount());
-            preparedStatement.setBoolean(8, payment.isAccountAdjusted());
-            preparedStatement.setString(9, payment.getTaxRate());
-            preparedStatement.setInt(10, payment.getStoreID());
-            preparedStatement.setString(11, originalInvoiceNo);
-
-            preparedStatement.executeUpdate();
-        }
+    public void addAccountPayment(AccountPayment payment) {
+        HttpEntity<AccountPayment> entity = new HttpEntity<>(payment, createHeaders());
+        restTemplate.exchange(apiBaseUrl, HttpMethod.POST, entity, Void.class);
     }
 
-    public void deleteAccountPayment(int storeId, String invoiceNumber) throws SQLException  {
-        String sql = "DELETE from accountPayments WHERE invoiceNo = ? AND storeID = ?";
-
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, invoiceNumber);
-            preparedStatement.setInt(2, storeId);
-
-            preparedStatement.executeUpdate();
-        }
+    public void updateAccountPayment(String originalInvoiceNo, AccountPayment payment) {
+        String url = apiBaseUrl + "/" + originalInvoiceNo;
+        HttpEntity<AccountPayment> entity = new HttpEntity<>(payment, createHeaders());
+        restTemplate.exchange(url, HttpMethod.PUT, entity, Void.class);
     }
 
-    private static final String TOTAL_PAYMENT_BASE_SQL =
-            "SELECT SUM(ap.unitAmount) AS TotalPayment " +
-                    "FROM accountpayments ap " +
-                    "INNER JOIN accountpaymentcontacts apc ON apc.idaccountPaymentContacts = ap.contactID " +
-                    "WHERE %s " +
-                    "AND MONTH(ap.invoiceDate) = ? AND YEAR(ap.invoiceDate) = ? " +
-                    "AND ap.storeID = ?";
+    public void deleteAccountPayment(int storeId, String invoiceNumber) {
+        String url = apiBaseUrl + "/" + storeId + "/" + invoiceNumber;
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
+    }
+
+    public double getTotalPayment(int storeId, YearMonth yearMonth, PaymentType type) {
+        String url = apiBaseUrl + "/total?storeId=" + storeId + "&yearMonth=" + yearMonth + "&type=" + type;
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        ResponseEntity<Double> response = restTemplate.exchange(url, HttpMethod.GET, entity, Double.class);
+        return response.getBody();
+    }
 
     public enum PaymentType {
-        CPA("apc.contactName LIKE ?", "%CPA%"),
-        TAC("apc.contactName LIKE ?", "%TAC%"),
-        OTHER("apc.contactName NOT LIKE ? AND apc.contactName NOT LIKE ?", "%TAC%", "%CPA%");
-
-        private final String condition;
-        private final String[] params;
-
-        PaymentType(String condition, String... params) {
-            this.condition = condition;
-            this.params = params;
-        }
-    }
-
-    public double getTotalPayment(int storeId, YearMonth yearMonth, PaymentType type) throws SQLException {
-        String sql = String.format(TOTAL_PAYMENT_BASE_SQL, type.condition);
-
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            int paramIndex = 1;
-            for (String param : type.params) {
-                preparedStatement.setString(paramIndex++, param);
-            }
-            preparedStatement.setInt(paramIndex++, yearMonth.getMonthValue());
-            preparedStatement.setInt(paramIndex++, yearMonth.getYear());
-            preparedStatement.setInt(paramIndex, storeId);
-
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                if (resultSet.next()) {
-                    return resultSet.getDouble("TotalPayment");
-                }
-            }
-        }
-        return 0.0;
+        CPA, TAC, OTHER
     }
 }

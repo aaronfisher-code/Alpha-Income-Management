@@ -28,42 +28,6 @@ public class Shift {
 
 	public Shift(){}
 
-	public Shift(ResultSet resultSet) {
-		try {
-			this.shiftID = resultSet.getInt("shift_id");
-			this.username = resultSet.getString("username");
-			this.shiftStartTime = LocalTime.parse(resultSet.getString("shiftStartTime"));
-			this.shiftEndTime = LocalTime.parse(resultSet.getString("shiftEndTime"));
-			if(resultSet.getString("shiftStartDate") != null && !resultSet.getString("shiftStartDate").isEmpty())
-				this.shiftStartDate = LocalDate.parse(resultSet.getString("shiftStartDate"));
-			if(resultSet.getString("shiftEndDate") != null && !resultSet.getString("shiftEndDate").isEmpty())
-				this.shiftEndDate = LocalDate.parse(resultSet.getString("shiftEndDate"));
-			this.thirtyMinBreaks = resultSet.getInt("thirtyMinBreaks");
-			this.tenMinBreaks = resultSet.getInt("tenMinBreaks");
-			this.repeating = resultSet.getInt("repeating") == 1;
-			this.daysPerRepeat = resultSet.getInt("daysPerRepeat");
-			this.storeID = resultSet.getInt("storeID");
-			try{
-				if(resultSet.getString("password") != null && !resultSet.getString("password").isEmpty())
-					this.password = resultSet.getString("password");
-				if(resultSet.getString("first_name") != null && !resultSet.getString("first_name").isEmpty())
-					this.first_name = resultSet.getString("first_name");
-				if(resultSet.getString("last_name") != null && !resultSet.getString("last_name").isEmpty())
-					this.last_name = resultSet.getString("last_name");
-				if(resultSet.getString("role") != null && !resultSet.getString("role").isEmpty())
-					this.role = resultSet.getString("role");
-				if(resultSet.getString("profileBG") != null && !resultSet.getString("profileBG").isEmpty())
-					this.profileBG = resultSet.getString("profileBG");
-				if(resultSet.getString("profileText") != null && !resultSet.getString("profileText").isEmpty())
-					this.profileText = resultSet.getString("profileText");
-				if(resultSet.getString("originalDate") != null && !resultSet.getString("originalDate").isEmpty())
-					this.originalDate = LocalDate.parse(resultSet.getString("originalDate"));
-			}catch(SQLException s){}
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-	}
-
 	public int getShiftID() {
 		return shiftID;
 	}

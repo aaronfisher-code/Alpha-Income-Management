@@ -1,6 +1,5 @@
 package models;
 
-import java.sql.ResultSet;
 import java.time.LocalDate;
 
 public class BudgetAndExpensesDataPoint {
@@ -14,24 +13,6 @@ public class BudgetAndExpensesDataPoint {
     private double otherIncome;
     private double atoGSTrefund;
     private double monthlyWages;
-
-
-    public BudgetAndExpensesDataPoint(ResultSet resultSet){
-        try {
-            this.date = resultSet.getDate("date").toLocalDate();
-            this.storeID = resultSet.getInt("storeID");
-            this.monthlyRent = resultSet.getDouble("monthlyRent");
-            this.dailyOutgoings = resultSet.getDouble("dailyOutgoings");
-            this.monthlyLoan = resultSet.getDouble("monthlyLoan");
-            this.cpaIncome = resultSet.getDouble("6CPAIncome");
-            this.lanternIncome = resultSet.getDouble("LanternPayIncome");
-            this.otherIncome = resultSet.getDouble("OtherIncome");
-            this.atoGSTrefund = resultSet.getDouble("ATO_GST_BAS_Refund");
-            this.monthlyWages = resultSet.getDouble("monthlyWages");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
     public BudgetAndExpensesDataPoint(){}
 

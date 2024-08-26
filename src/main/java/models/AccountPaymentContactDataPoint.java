@@ -1,14 +1,12 @@
 package models;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.github.palexdev.materialfx.controls.MFXButton;
-import javafx.scene.control.Button;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.text.NumberFormat;
-import java.time.LocalDate;
 import java.util.Locale;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class AccountPaymentContactDataPoint {
 
 
@@ -20,16 +18,7 @@ public class AccountPaymentContactDataPoint {
 	private double totalValue;
 	private MFXButton deleteButton;
 
-	public AccountPaymentContactDataPoint(ResultSet resultSet) {
-		try {
-			this.contactID = resultSet.getInt("idaccountPaymentContacts");
-			this.contactName = resultSet.getString("contactName");
-			this.accountCode = resultSet.getString("accountCode");
-			this.storeID = resultSet.getInt("storeID");
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-	}
+	public AccountPaymentContactDataPoint() {}
 
 	public AccountPaymentContactDataPoint(int contactID,String contactName, int storeID){
 		this.contactID = contactID;

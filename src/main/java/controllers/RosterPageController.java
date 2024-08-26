@@ -26,7 +26,6 @@ import services.UserService;
 import utils.AnimationUtils;
 import utils.ValidatorUtils;
 import java.io.IOException;
-import java.sql.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -67,9 +66,13 @@ public class RosterPageController extends PageController {
 
     @FXML
     private void initialize() {
-        userService = new UserService();
-        rosterService = new RosterService();
-        leaveService = new LeaveService();
+        try{
+            userService = new UserService();
+            rosterService = new RosterService();
+            leaveService = new LeaveService();
+        }catch (IOException ex){
+            dialogPane.showError("Failed to initialize services", ex);
+        }
     }
 
     public void fill() {
@@ -83,7 +86,7 @@ public class RosterPageController extends PageController {
         List<User> currentUsers = FXCollections.observableArrayList();
         try {
             currentUsers = userService.getAllUserEmployments(main.getCurrentStore().getStoreID());
-        } catch (SQLException ex) {
+        } catch (Exception ex) {
             dialogPane.showError("Error","An error occurred while fetching users", ex);
         }
         if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))){
@@ -266,7 +269,7 @@ public class RosterPageController extends PageController {
             allShifts = rosterService.getShifts(main.getCurrentStore().getStoreID(),weekStart,weekEnd);
             allModifications = rosterService.getShiftModifications(main.getCurrentStore().getStoreID(),weekStart,weekEnd);
             allLeaveRequests = leaveService.getLeaveRequests(main.getCurrentStore().getStoreID(),weekStart,weekEnd);
-        } catch (SQLException ex) {
+        } catch (Exception ex) {
             dialogPane.showError("Error","An error occurred while fetching shifts", ex);
         }
         weekdayBox.getChildren().removeAll(weekdayBox.getChildren());
@@ -322,7 +325,7 @@ public class RosterPageController extends PageController {
         AnimationUtils.slideIn(editShiftPopover,0);
         try {
             employeeSelect.setValue(userService.getUserByUsername(s.getUsername()));
-        } catch (SQLException ex) {
+        } catch (Exception ex) {
             dialogPane.showError("Error","An error occurred while fetching user", ex);
         }
         startDate.setValue(shiftCardDate);
@@ -439,7 +442,7 @@ public class RosterPageController extends PageController {
                     dialogPane.showInformation("Success", "Shift edited successfully");
                 }
             }
-        } catch (SQLException ex) {
+        } catch (Exception ex) {
             dialogPane.showError("Error", "An error occurred while saving the shift. Please try again.", ex);
         }
     }
@@ -571,7 +574,7 @@ public class RosterPageController extends PageController {
                 rosterService.deleteShiftModifications(s.getShiftID());
                 updatePage();
                 dialogPane.showInformation("Success", "Shifts edited successfully");
-            } catch (SQLException ex) {
+            } catch (Exception ex) {
                 dialogPane.showError("Error", "An error occurred while saving the shift. Please try again.", ex);
             }
         }
@@ -582,8 +585,8 @@ public class RosterPageController extends PageController {
             rosterService.deleteShift(s.getShiftID());
             rosterService.deleteShiftModifications(s.getShiftID());
             updatePage();
-            dialogPane.showInformation("Success", "Shift deleted succesfully");
-        } catch (SQLException ex) {
+            dialogPane.showInformation("Success", "Shift deleted successfully");
+        } catch (Exception ex) {
             dialogPane.showError("Error", "An error occurred while deleting the shift. Please try again.", ex);
         }
     }
@@ -594,7 +597,7 @@ public class RosterPageController extends PageController {
             addShift(null, shiftCardDate, null, false);
             updatePage();
             dialogPane.showInformation("Success", "Future shifts have been updated successfully.");
-        } catch (SQLException ex) {
+        } catch (Exception ex) {
             dialogPane.showError("Error", "An error occurred while updating future shifts. Please try again.", ex);
         }
     }
@@ -604,8 +607,8 @@ public class RosterPageController extends PageController {
             rosterService.updateShiftEndDate(s.getShiftID(), shiftCardDate.minusDays(1));
             rosterService.deleteShiftModifications(s.getShiftID(), shiftCardDate.minusDays(1));
             updatePage();
-            dialogPane.showInformation("Success", "Shifts deleted succesfully");
-        } catch (SQLException ex) {
+            dialogPane.showInformation("Success", "Shifts deleted successfully");
+        } catch (Exception ex) {
             dialogPane.showError("Error", "An error occurred while deleting the shift. Please try again.", ex);
         }
     }

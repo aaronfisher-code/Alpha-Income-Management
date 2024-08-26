@@ -1,10 +1,14 @@
 package models;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class LeaveRequest {
 	private int leaveID;
 	private int storeID;
@@ -15,31 +19,15 @@ public class LeaveRequest {
 
 	private String employeeRole;
 
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
 	private LocalDateTime fromDate;
 
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
 	private LocalDateTime toDate;
 
 	private String leaveType;
 
 	private String leaveReason;
-
-
-	public LeaveRequest(ResultSet resultSet) {
-		try {
-			this.leaveID = resultSet.getInt("leaveID");
-			this.storeID = resultSet.getInt("storeID");
-			this.employeeID = resultSet.getString("employeeID");
-			this.employeeFirstName = resultSet.getString("first_name");
-			this.employeeLastName = resultSet.getString("last_name");
-			this.employeeRole = resultSet.getString("role");
-			this.fromDate = resultSet.getTimestamp("leaveStartDate").toLocalDateTime();
-			this.toDate = resultSet.getTimestamp("leaveEndDate").toLocalDateTime();
-			this.leaveType = resultSet.getString("leaveType");
-			this.leaveReason = resultSet.getString("reason");
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-	}
 
 	public LeaveRequest() {
 	}
@@ -114,6 +102,26 @@ public class LeaveRequest {
 
 	public void setLeaveReason(String leaveReason) {
 		this.leaveReason = leaveReason;
+	}
+
+	public String getEmployeeFirstName() {
+		return employeeFirstName;
+	}
+
+	public void setEmployeeFirstName(String employeeFirstName) {
+		this.employeeFirstName = employeeFirstName;
+	}
+
+	public String getEmployeeLastName() {
+		return employeeLastName;
+	}
+
+	public void setEmployeeLastName(String employeeLastName) {
+		this.employeeLastName = employeeLastName;
+	}
+
+	public void setEmployeeRole(String employeeRole) {
+		this.employeeRole = employeeRole;
 	}
 
 }

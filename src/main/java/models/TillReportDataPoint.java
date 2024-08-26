@@ -1,8 +1,13 @@
 package models;
 
+import javafx.scene.control.Cell;
+import utils.WorkbookProcessor;
+
+import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.ZoneId;
 
 public class TillReportDataPoint {
 
@@ -14,21 +19,16 @@ public class TillReportDataPoint {
 	private double quantity;
 	private double amount;
 
-	public TillReportDataPoint(ResultSet resultSet) {
-		try {
-			this.storeID = resultSet.getInt("storeID");
-			this.assignedDate = resultSet.getDate("assignedDate").toLocalDate();
-			if(resultSet.getDate("periodStartDate")!=null)
-				this.periodStartDate = resultSet.getDate("periodStartDate").toLocalDate();
-			if(resultSet.getDate("periodEndDate")!=null)
-				this.periodEndDate = resultSet.getDate("periodEndDate").toLocalDate();
-			if(resultSet.getString("key")!=null)
-				this.key = resultSet.getString("key");
-			this.quantity = resultSet.getDouble("quantity");
-			this.amount = resultSet.getDouble("amount");
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+	public TillReportDataPoint() {}
+
+	public TillReportDataPoint(CellDataPoint cdp, WorkbookProcessor wp, LocalDate targetDate, int storeID) {
+		this.storeID = storeID;
+		this.assignedDate = (cdp.getAssignedDate() == null) ? targetDate : cdp.getAssignedDate();
+		this.periodStartDate = (wp.getPeriodStart() != null) ? LocalDate.from(wp.getPeriodStart().atZone(ZoneId.of("Australia/Melbourne"))) : null;
+		this.periodEndDate = (wp.getPeriodStart() != null) ? LocalDate.from(wp.getPeriodEnd().atZone(ZoneId.of("Australia/Melbourne"))) : null;
+		this.key = cdp.getCategory() + ((cdp.getSubCategory() != "") ? "-" + cdp.getSubCategory() : "");
+		this.quantity = cdp.getQuantity();
+		this.amount = cdp.getAmount();
 	}
 
 	public int getStoreID() {

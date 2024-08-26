@@ -1,6 +1,5 @@
 package controllers;
 
-import com.dlsc.gemsfx.DialogPane;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
@@ -15,9 +14,6 @@ import models.User;
 import services.UserService;
 
 import java.io.IOException;
-import java.sql.SQLException;
-
-import application.Main;
 
 public class LogController extends PageController {
 
@@ -33,7 +29,11 @@ public class LogController extends PageController {
 
     @FXML
     private void initialize() {
-        userService = new UserService();
+        try {
+            userService = new UserService();
+        }catch (IOException ex) {
+            dialogPane.showError("Failed to initialize user service", ex);
+        }
     }
 
     @Override
@@ -81,12 +81,12 @@ public class LogController extends PageController {
                 } else if (user.getPassword() == null) {
                     status = "PasswordReset";
                     setNewPasswordView(user);
-                } else if (userService.verifyPassword(user, password)) {
+                } else if (userService.verifyPassword(user.getUsername(), password)) {
                     status = "Success";
                 } else {
                     status = "Error";
                 }
-            } catch (SQLException ex) {
+            } catch (Exception ex) {
                 dialogPane.showError("Failed to login", ex);
                 status = "Exception";
             }
@@ -97,7 +97,7 @@ public class LogController extends PageController {
                 currentUser.setPermissions(userService.getUserPermissions(username));
                 main.setCurrentUser(currentUser);
                 main.changeScene("/views/FXML/MainMenu.fxml");
-            } catch (IOException | SQLException ex) {
+            } catch (IOException ex) {
                 dialogPane.showError("Failed to login", ex);
             }
         } else {
@@ -114,7 +114,7 @@ public class LogController extends PageController {
             try {
                 userService.updateUserPassword(user.getUsername(), password.getText());
                 status = "Success";
-            } catch (SQLException ex) {
+            } catch (Exception ex) {
                 dialogPane.showError("Failed to login", ex);
                 status = "Exception";
             }
@@ -124,7 +124,7 @@ public class LogController extends PageController {
                 user.setPermissions(userService.getUserPermissions(user.getUsername()));
                 main.setCurrentUser(user);
                 main.changeScene("/views/FXML/MainMenu.fxml");
-            } catch (IOException | SQLException ex) {
+            } catch (IOException ex) {
                 dialogPane.showError("Failed to login", ex);
             }
         }

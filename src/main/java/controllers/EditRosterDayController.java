@@ -6,6 +6,8 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import models.SpecialDateObj;
 import services.RosterService;
+
+import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -29,7 +31,11 @@ public class EditRosterDayController extends PageController {
 
     @FXML
     private void initialize() {
-        rosterService = new RosterService();
+        try{
+            rosterService = new RosterService();
+        }catch (IOException e){
+            parent.getDialogPane().showError("Error", "Error loading roster service", e);
+        }
     }
 
     @Override
@@ -46,7 +52,7 @@ public class EditRosterDayController extends PageController {
                 publicHolidayToggle.setSelected(false);
                 noteField.setText("");
             }
-        } catch (SQLException ex) {
+        } catch (Exception ex) {
             parent.getDialogPane().showError("Error", "Error loading special date info", ex);
         }
     }
@@ -70,7 +76,7 @@ public class EditRosterDayController extends PageController {
             parent.updatePage();
             closeDialog();
             parent.getDialogPane().showInformation("Success", "Changes Successfully saved");
-        } catch (SQLException ex) {
+        } catch (Exception ex) {
             parent.getDialogPane().showError("Error", "Error saving special date info", ex);
         }
     }

@@ -28,7 +28,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.*;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -60,9 +59,13 @@ public class AccountPaymentsPageController extends DateSelectController{
 	
 	 @FXML
 	private void initialize() {
-		accountPaymentService = new AccountPaymentService();
-		accountPaymentContactService = new AccountPaymentContactService();
-	 }
+		 try {
+			 accountPaymentService = new AccountPaymentService();
+			 accountPaymentContactService = new AccountPaymentContactService();
+		 } catch (IOException e) {
+			 dialogPane.showError("Error initializing account payment service",e);
+		 }
+	}
 
 	@Override
 	public void fill() {
@@ -187,7 +190,7 @@ public class AccountPaymentsPageController extends DateSelectController{
             contacts = FXCollections.observableArrayList(
                     accountPaymentContactService.getAllAccountPaymentContacts(main.getCurrentStore().getStoreID())
             );
-        } catch (SQLException e) {
+        } catch (Exception e) {
             dialogPane.showError("Error", "An error occurred while trying to retrieve account payment contact information", e);
         }
         assert contacts != null;
@@ -206,7 +209,7 @@ public class AccountPaymentsPageController extends DateSelectController{
             currentAccountPaymentDataPoints = FXCollections.observableArrayList(
                     accountPaymentService.getAccountPaymentsForMonth(main.getCurrentStore().getStoreID(), yearMonthObject)
             );
-        } catch (SQLException e) {
+        } catch (Exception e) {
             dialogPane.showError("Error", "An error occurred while trying to retrieve account payment information", e);
 			return;
         }
@@ -225,7 +228,7 @@ public class AccountPaymentsPageController extends DateSelectController{
                 AccountPaymentContactDataPoint acdp = null;
                 try {
                     acdp = accountPaymentContactService.getContactByName(a.getContactName(),main.getCurrentStore().getStoreID());
-                } catch (SQLException e) {
+                } catch (Exception e) {
                     dialogPane.showError("Error", "An error occurred while trying to retrieve account payment contact information", e);
                 }
                 assert acdp != null;
@@ -270,7 +273,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 				dialogPane.showInformation("Success", "Information exported successfully");
 			} catch (FileNotFoundException e){
 				dialogPane.showError("Error", "This file could not be accessed, please ensure its not open in another program", e);
-			} catch (SQLException e) {
+			} catch (Exception e) {
 				dialogPane.showError("Error", "An error occurred while trying to retrieve account payment information", e);
             }
         }
@@ -318,7 +321,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 			} else {
 				dialogPane.showError("Error", "Could not find the contact for this payment", "");
 			}
-        } catch (SQLException e) {
+        } catch (Exception e) {
             dialogPane.showError("Error","An error occurred while trying to retrieve the contact information",e);
         }
         invoiceNoField.setText(ap.getInvoiceNumber());
@@ -352,12 +355,12 @@ public class AccountPaymentsPageController extends DateSelectController{
 			AccountPayment newPayment = getNewPayment();
 			try {
                 accountPaymentService.addAccountPayment(newPayment);
-            } catch (SQLException e) {
+            } catch (Exception e) {
 				dialogPane.showError("Error","An error occurred while trying to add the payment",e);
             }
             closePopover();
 			fillTable();
-			dialogPane.showInformation("Success","Payment was succesfully added");
+			dialogPane.showInformation("Success","Payment was successfully added");
 		}
 
 	}
@@ -404,7 +407,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 			accountPayment.setTaxRate(taxRate);
             try {
                 accountPaymentService.updateAccountPayment(originalInvoiceNo,accountPayment);
-            } catch (SQLException e) {
+            } catch (Exception e) {
                 dialogPane.showError("Error","An error occurred while trying to edit the payment",e);
             }
             closePopover();
@@ -420,7 +423,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 			 if (buttonType.equals(ButtonType.OK)) {
                  try {
                      accountPaymentService.deleteAccountPayment(accountPayment.getStoreID(), accountPayment.getInvoiceNumber());
-                 } catch (SQLException e) {
+                 } catch (Exception e) {
 					 dialogPane.showError("Error","An error occurred while trying to delete the payment",e);
                  }
                  closePopover();

@@ -1,30 +1,49 @@
 package services;
 
-import models.Permission;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import models.User;
-import utils.DatabaseConnectionManager;
+import models.Permission;
+import org.springframework.http.*;
+import org.springframework.web.client.RestTemplate;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 
 public class UserPermissionService {
-    public void addUserPermission(User user, Permission permission) throws SQLException {
-        String sql = "INSERT INTO userpermissions(userID,permissionID) VALUES(?,?)";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, user.getUsername());
-            preparedStatement.setInt(2, permission.getPermissionID());
-            preparedStatement.executeUpdate();
-        }
+    private String apiBaseUrl;
+    private String apiToken;
+    private RestTemplate restTemplate;
+    private ObjectMapper objectMapper;
+
+    public UserPermissionService() throws IOException {
+        this.restTemplate = new RestTemplate();
+        this.objectMapper = new ObjectMapper();
+        Properties properties = new Properties();
+        properties.load(UserPermissionService.class.getClassLoader().getResourceAsStream("application.properties"));
+        this.apiToken = properties.getProperty("api.token");
+        this.apiBaseUrl = properties.getProperty("api.base.url") + "/user-permissions";
     }
 
-    public void deletePermissionsForUser(User user) throws SQLException {
-        String sql = "DELETE from userpermissions WHERE userID = ?";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, user.getUsername());
-            preparedStatement.executeUpdate();
-        }
+    private HttpHeaders createHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + apiToken);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return headers;
+    }
+
+    public void addUserPermission(User user, Permission permission) {
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("username", user.getUsername());
+        requestBody.put("permissionID", permission.getPermissionID());
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, createHeaders());
+        restTemplate.exchange(apiBaseUrl, HttpMethod.POST, entity, Void.class);
+    }
+
+    public void deletePermissionsForUser(User user) {
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        restTemplate.exchange(apiBaseUrl + "/" + user.getUsername(), HttpMethod.DELETE, entity, Void.class);
     }
 }

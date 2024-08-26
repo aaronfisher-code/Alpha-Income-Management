@@ -4,7 +4,8 @@ import io.github.palexdev.materialfx.controls.MFXTextField;
 import javafx.fxml.FXML;
 import models.InvoiceSupplier;
 import services.InvoiceSupplierService;
-import java.sql.SQLException;
+
+import java.io.IOException;
 
 public class AddNewSupplierDialogController extends Controller {
 
@@ -14,7 +15,11 @@ public class AddNewSupplierDialogController extends Controller {
 
 	@FXML
 	private void initialize() {
-		invoiceSupplierService = new InvoiceSupplierService();
+		try {
+			invoiceSupplierService = new InvoiceSupplierService();
+		} catch (IOException e) {
+			parent.getDialogPane().showError("Error initializing supplier service",e);
+		}
 	}
 
 	public void setParent(InvoiceEntryController d) {this.parent = d;}
@@ -25,7 +30,7 @@ public class AddNewSupplierDialogController extends Controller {
 			newInvoiceSupplier.setSupplierName(newContactField.getText());
 			newInvoiceSupplier.setStoreID(main.getCurrentStore().getStoreID());
 			invoiceSupplierService.addInvoiceSupplier(newInvoiceSupplier);
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			parent.getDialogPane().showError("Error", "Error adding new supplier", ex);
 		}
 		parent.getDialog().cancel();

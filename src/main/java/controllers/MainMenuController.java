@@ -48,11 +48,15 @@ public class MainMenuController extends PageController {
     @FXML private Region contentDarken;
     private PopOver currentUserPopover;
     private PageController currentPageController;
-    private UserService userService = new UserService();
+    private UserService userService;
 
     @FXML
     private void initialize() {
-        userService = new UserService();
+        try{
+            userService = new UserService();
+        }catch (IOException ex){
+            dialogPane.showError("Failed to initialize user service", ex);
+        }
     }
 
     public void fill() {
@@ -64,7 +68,7 @@ public class MainMenuController extends PageController {
             for (Store store : userService.getStoresForUser(main.getCurrentUser().getUsername())) {
                 storeSearchCombo.getItems().add(store);
             }
-        } catch (SQLException ex) {
+        } catch (Exception ex) {
             dialogPane.showError("Error loading stores", ex);
         }
         storeSearchCombo.setOnAction(_ -> main.setCurrentStore((Store) storeSearchCombo.getSelectedItem()));

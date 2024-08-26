@@ -1,24 +1,9 @@
 package models;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.time.LocalDate;
-
 public class Store {
 	private int storeID;
 
 	private String storeName;
-
-	public Store(ResultSet resultSet) {
-		try {
-			if(resultSet.getString("storeID")!=null)
-				this.storeID = resultSet.getInt("storeID");
-			if(resultSet.getString("storeName")!=null)
-				this.storeName = resultSet.getString("storeName");
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-	}
 
 	public Store() {
 	}

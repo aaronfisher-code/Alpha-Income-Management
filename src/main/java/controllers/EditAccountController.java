@@ -21,7 +21,8 @@ import services.*;
 import utils.AnimationUtils;
 import utils.GUIUtils;
 import utils.ValidatorUtils;
-import java.sql.*;
+
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
@@ -60,11 +61,15 @@ public class EditAccountController extends PageController {
 	
 	 @FXML
 	private void initialize() {
-		 userService = new UserService();
-		 storeService = new StoreService();
-		 permissionService = new PermissionService();
-		 employmentService = new EmploymentService();
-		 userPermissionService = new UserPermissionService();
+		 try {
+			 userService = new UserService();
+			 storeService = new StoreService();
+			 permissionService = new PermissionService();
+			 employmentService = new EmploymentService();
+			 userPermissionService = new UserPermissionService();
+		 } catch (IOException ex) {
+			 dialogPane.showError("Error","An error occurred while initializing the services", ex);
+		 }
 	 }
 
 	@Override
@@ -108,7 +113,7 @@ public class EditAccountController extends PageController {
 			List<User> userList = userService.getAllUsers();
 			allUsers = FXCollections.observableArrayList(userList);
 			accountsTable.setItems(allUsers);
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			dialogPane.showError("Error","An error occurred while fetching users", ex);
 		}
 		accountsTable.setFooterVisible(true);
@@ -171,7 +176,7 @@ public class EditAccountController extends PageController {
 			List<Store> storeList = storeService.getAllStores();
 			allStores = FXCollections.observableArrayList(storeList);
 			storesTable.setItems(allStores);
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			dialogPane.showError("Error","An error occurred while fetching stores", ex);
 		}
 		storesTable.setFooterVisible(true);
@@ -227,7 +232,7 @@ public class EditAccountController extends PageController {
 		try {
 			List<Store> allStores = storeService.getAllStores();
 			storeSelector.setItems(FXCollections.observableArrayList(allStores));
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			dialogPane.showError("Error","An error occurred while fetching stores", ex);
 		}
 		permissionsSelector.getSelectionModel().clearSelection();
@@ -235,7 +240,7 @@ public class EditAccountController extends PageController {
 		try {
 			List<Permission> allPermissions = permissionService.getAllPermissions();
 			permissionsSelector.setItems(FXCollections.observableArrayList(allPermissions));
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			dialogPane.showError("Error","An error occurred while fetching permissions", ex);
 		}
 		//Add live updates to person card preview
@@ -300,7 +305,7 @@ public class EditAccountController extends PageController {
 				passwordResetButton.setText("Request Password Reset");
 				passwordResetButton.setOnAction(_ -> resetPassword(user));
 			}
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			dialogPane.showError("Error","An error occurred while fetching user information", ex);
 		}
 		employeeName.setText(user.getFirst_name() + "." + user.getLast_name().charAt(0));
@@ -321,7 +326,7 @@ public class EditAccountController extends PageController {
 					}
 				}
 			}
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			dialogPane.showError("Error","An error occurred while fetching employment information", ex);
 		}
 		permissionsSelector.getSelectionModel().clearSelection();
@@ -338,7 +343,7 @@ public class EditAccountController extends PageController {
 					}
 				}
 			}
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			dialogPane.showError("Error","An error occurred while fetching permission information", ex);
 		}
 		//Add live updates to person card preview
@@ -438,7 +443,7 @@ public class EditAccountController extends PageController {
 			try {
 				Store store = new Store(name);
 				storeService.addStore(store);
-			} catch (SQLException ex) {
+			} catch (Exception ex) {
 				dialogPane.showError("Error","An error occurred while adding a store", ex);
 			}
 			dialogPane.showInformation("Success","Store was successfully added to the database");
@@ -486,7 +491,7 @@ public class EditAccountController extends PageController {
 				dialogPane.showInformation("Success", "User was successfully added to the database");
 				usersView();
 			}
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			dialogPane.showError("Error","An error occurred while adding a user", ex);
 		}
 	}
@@ -499,10 +504,10 @@ public class EditAccountController extends PageController {
 			try {
 				store.setStoreName(name);
 				storeService.updateStore(store);
-			} catch (SQLException ex) {
+			} catch (Exception ex) {
 				dialogPane.showError("Error","An error occurred while updating the store", ex);
 			}
-			dialogPane.showInformation("Success","Store was succesfully updated");
+			dialogPane.showInformation("Success","Store was successfully updated");
 			closeStorePopover();
 			storesView();
 		}
@@ -549,10 +554,10 @@ public class EditAccountController extends PageController {
 				for(Permission p:permissionsSelector.getSelectionModel().getSelection().values()){
 					userPermissionService.addUserPermission(user,p);
 				}
-			} catch (SQLException ex) {
+			} catch (Exception ex) {
 				dialogPane.showError("Error","An error occurred while updating the user", ex);
 			}
-			dialogPane.showInformation("Success","User was succesfully updated");
+			dialogPane.showInformation("Success","User was successfully updated");
 			closeUserPopover();
 			usersView();
 		}
@@ -560,8 +565,8 @@ public class EditAccountController extends PageController {
 
 	public void resetPassword(User user){
 		try{
-			userService.resetUserPassword(user);
-		}catch(SQLException ex){
+			userService.resetUserPassword(user.getUsername());
+		}catch(Exception ex){
 			dialogPane.showError("Error","An error occurred while updating user password", ex);
 		}
 		passwordResetButton.setText("Password reset requested");
@@ -575,7 +580,7 @@ public class EditAccountController extends PageController {
 			 if (buttonType.equals(ButtonType.OK)) {
 				 try {
 					 storeService.deleteStore(store);
-				 } catch (SQLException ex) {
+				 } catch (Exception ex) {
 					 dialogPane.showError("Error","An error occurred while deleting store", ex);
 				 }
 				 dialogPane.showInformation("Success","Store was successfully deleted");
@@ -595,8 +600,8 @@ public class EditAccountController extends PageController {
                         Are you sure you still want to delete this user?""").thenAccept(buttonType -> {
 			if (buttonType.equals(ButtonType.OK)) {
 				try {
-					userService.deleteUser(user);
-				} catch (SQLException ex) {
+					userService.deleteUser(user.getUsername());
+				} catch (Exception ex) {
 					dialogPane.showError("Error","An error occurred while deleting user", ex);
 				}
 				dialogPane.showInformation("Success","User was successfully deleted");

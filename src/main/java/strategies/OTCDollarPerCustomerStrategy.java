@@ -8,6 +8,7 @@ import services.TargetService;
 import services.TillReportService;
 import utils.RosterUtils;
 
+import java.io.IOException;
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -41,10 +42,10 @@ public class OTCDollarPerCustomerStrategy implements LineGraphTargetStrategy {
         this.endDate = endDate;
         this.parent = parent;
         this.main = parent.getMain();
-        this.tillReportService = new TillReportService();
-        this.targetService = new TargetService();
 
         try {
+            this.tillReportService = new TillReportService();
+            this.targetService = new TargetService();
             this.rosterUtils = new RosterUtils(main, startDate, endDate);
             double[] targets = targetService.getTargets(main.getCurrentStore().getStoreID(), "otcDollarPerCustomer");
             this.target1 = targets[0];
@@ -56,7 +57,7 @@ public class OTCDollarPerCustomerStrategy implements LineGraphTargetStrategy {
                     endDate,
                     "Avg. OTC Sales Per Customer"
             );
-        } catch (SQLException e) {
+        } catch (SQLException | IOException e) {
             parent.throwError(e);
         }
     }

@@ -11,18 +11,7 @@ public class Employment {
 	private String username;
 	private int storeID;
 
-	public Employment(ResultSet resultSet) {
-		try {
-			if(resultSet.getString("employmentsID")!=null)
-				this.employmentID = resultSet.getInt("employmentsID");
-			if(resultSet.getString("username")!=null)
-				this.username = resultSet.getString("username");
-			if(resultSet.getString("storeID")!=null)
-				this.storeID = resultSet.getInt("storeID");
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-	}
+	public Employment() {}
 
 	public int getEmploymentID() {
 		return employmentID;

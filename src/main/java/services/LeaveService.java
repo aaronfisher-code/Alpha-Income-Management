@@ -1,70 +1,65 @@
 package services;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import models.LeaveRequest;
-import utils.DatabaseConnectionManager;
+import org.springframework.http.*;
+import org.springframework.web.client.RestTemplate;
 
-import java.sql.*;
+import java.io.IOException;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 public class LeaveService {
-    public List<LeaveRequest> getLeaveRequests(int storeId, LocalDate startDate, LocalDate endDate) throws SQLException {
-        List<LeaveRequest> leaveRequests = new ArrayList<>();
-        String sql = "SELECT * FROM leaverequests JOIN accounts a on a.username = leaverequests.employeeID WHERE storeID = ? AND ((leaveStartDate>=? AND leaveStartDate<=?) OR (leaveEndDate>=? AND leaveEndDate<=?) OR (leaveStartDate<=? AND leaveEndDate>=?))";
+    private String apiBaseUrl;
+    private String apiToken;
+    private RestTemplate restTemplate;
+    private ObjectMapper objectMapper;
 
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setInt(1, storeId);
-            preparedStatement.setDate(2, Date.valueOf(startDate));
-            preparedStatement.setDate(3, Date.valueOf(endDate));
-            preparedStatement.setDate(4, Date.valueOf(startDate));
-            preparedStatement.setDate(5, Date.valueOf(endDate));
-            preparedStatement.setDate(6, Date.valueOf(startDate));
-            preparedStatement.setDate(7, Date.valueOf(endDate));
-
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                while (resultSet.next()) {
-                    leaveRequests.add(new LeaveRequest(resultSet));
-                }
-            }
-        }
-        return leaveRequests;
+    public LeaveService() throws IOException {
+        this.restTemplate = new RestTemplate();
+        this.objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        Properties properties = new Properties();
+        properties.load(LeaveService.class.getClassLoader().getResourceAsStream("application.properties"));
+        this.apiToken = properties.getProperty("api.token");
+        this.apiBaseUrl = properties.getProperty("api.base.url") + "/leave";
     }
 
-    public void addLeaveRequest(LeaveRequest leaveRequest) throws SQLException {
-        String sql = "INSERT INTO leaverequests (employeeID, storeID, leaveType, leaveStartDate, leaveEndDate, reason) VALUES (?,?,?,?,?,?)";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, leaveRequest.getEmployeeID());
-            preparedStatement.setInt(2, leaveRequest.getStoreID());
-            preparedStatement.setString(3, leaveRequest.getLeaveType());
-            preparedStatement.setTimestamp(4, Timestamp.valueOf(leaveRequest.getFromDate()));
-            preparedStatement.setTimestamp(5, Timestamp.valueOf(leaveRequest.getToDate()));
-            preparedStatement.setString(6, leaveRequest.getLeaveReason());
-            preparedStatement.executeUpdate();
+    private HttpHeaders createHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + apiToken);
+        return headers;
+    }
+
+    public List<LeaveRequest> getLeaveRequests(int storeId, LocalDate startDate, LocalDate endDate) {
+        String url = apiBaseUrl + "?storeId=" + storeId + "&startDate=" + startDate + "&endDate=" + endDate;
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+        try {
+            return objectMapper.readValue(response.getBody(), new TypeReference<>() {
+            });
+        } catch (IOException e) {
+            throw new RuntimeException("Error parsing JSON response", e);
         }
     }
 
-    public void updateLeaveRequest(LeaveRequest leaveRequest) throws SQLException {
-        String sql = "UPDATE leaverequests SET leaveType = ?, leaveStartDate = ?, leaveEndDate = ?, reason = ? WHERE leaveID = ?";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, leaveRequest.getLeaveType());
-            preparedStatement.setTimestamp(2, Timestamp.valueOf(leaveRequest.getFromDate()));
-            preparedStatement.setTimestamp(3, Timestamp.valueOf(leaveRequest.getToDate()));
-            preparedStatement.setString(4, leaveRequest.getLeaveReason());
-            preparedStatement.setInt(5, leaveRequest.getLeaveID());
-            preparedStatement.executeUpdate();
-        }
+    public void addLeaveRequest(LeaveRequest leaveRequest) {
+        HttpEntity<LeaveRequest> entity = new HttpEntity<>(leaveRequest, createHeaders());
+        restTemplate.exchange(apiBaseUrl, HttpMethod.POST, entity, Void.class);
     }
 
-    public void deleteLeaveRequest(int leaveId) throws SQLException {
-        String sql = "DELETE FROM leaverequests WHERE leaveID = ?";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setInt(1, leaveId);
-            preparedStatement.executeUpdate();
-        }
+    public void updateLeaveRequest(LeaveRequest leaveRequest) {
+        String url = apiBaseUrl + "/" + leaveRequest.getLeaveID();
+        HttpEntity<LeaveRequest> entity = new HttpEntity<>(leaveRequest, createHeaders());
+        restTemplate.exchange(url, HttpMethod.PUT, entity, Void.class);
+    }
+
+    public void deleteLeaveRequest(int leaveId) {
+        String url = apiBaseUrl + "/" + leaveId;
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
     }
 }

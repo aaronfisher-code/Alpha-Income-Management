@@ -10,6 +10,7 @@ import services.EODService;
 import services.TargetService;
 import utils.RosterUtils;
 
+import java.io.IOException;
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -43,8 +44,12 @@ public class ScriptsOnFileStrategy implements LineGraphTargetStrategy {
         this.endDate = endDate;
         this.parent = parent;
         this.main = parent.getMain();
-        this.eodService = new EODService();
-        this.targetService = new TargetService();
+        try{
+            this.eodService = new EODService();
+            this.targetService = new TargetService();
+        }catch (IOException e){
+            parent.throwError(e);
+        }
 
         try {
             this.rosterUtils = new RosterUtils(main, startDate, endDate);
@@ -57,7 +62,7 @@ public class ScriptsOnFileStrategy implements LineGraphTargetStrategy {
                     startDate,
                     endDate
             );
-        } catch (SQLException e) {
+        } catch (SQLException | IOException e) {
             parent.throwError(e);
         }
     }

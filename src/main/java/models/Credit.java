@@ -1,6 +1,5 @@
 package models;
 
-import java.sql.ResultSet;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -10,9 +9,7 @@ public class Credit {
 
     private int creditID;
     private String supplierName;
-
     private int supplierID;
-
     private int storeID;
     private String creditNo;
     private LocalDate creditDate;
@@ -20,22 +17,6 @@ public class Credit {
     private double creditAmount;
     private String notes;
     //TODO: make sure all notes fields dont extend past 255 character SQL limit
-
-    public Credit(ResultSet resultSet){
-        try {
-            this.creditID= resultSet.getInt("idCredits");
-            this.supplierID = resultSet.getInt("supplierID");
-            this.storeID = resultSet.getInt("storeID");
-            this.supplierName = resultSet.getString("supplierName");
-            this.creditNo = resultSet.getString("creditNo");
-            this.creditDate = resultSet.getDate("creditDate").toLocalDate();
-            this.referenceInvoiceNo = resultSet.getString("referenceInvoiceNo");
-            this.creditAmount = resultSet.getDouble("creditAmount");
-            this.notes = resultSet.getString("notes");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
     public Credit() {
     }
@@ -118,5 +99,4 @@ public class Credit {
     public void setStoreID(int storeID) {
         this.storeID = storeID;
     }
-
 }

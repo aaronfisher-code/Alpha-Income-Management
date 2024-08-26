@@ -30,7 +30,6 @@ import services.InvoiceService;
 import services.InvoiceSupplierService;
 import utils.*;
 import java.io.*;
-import java.sql.*;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -85,9 +84,13 @@ public class InvoiceEntryController extends DateSelectController{
 
     @FXML
 	private void initialize() {
-		invoiceService = new InvoiceService();
-		invoiceSupplierService = new InvoiceSupplierService();
-		creditService = new CreditService();
+		try{
+			invoiceService = new InvoiceService();
+			invoiceSupplierService = new InvoiceSupplierService();
+			creditService = new CreditService();
+		}catch(IOException ex){
+			dialogPane.showError("Error","An error occurred while initialising the invoice service",ex);
+		}
 	}
 
 	@Override
@@ -202,7 +205,7 @@ public class InvoiceEntryController extends DateSelectController{
 						invoiceNoValidationLabel.setVisible(true);
 						varianceLabel.setText("N/A");
 					}
-				} catch (SQLException ex) {
+				} catch (Exception ex) {
 					dialogPane.showError("Error","An error occurred while loading invoice information",ex);
 				}
 			}
@@ -346,11 +349,10 @@ public class InvoiceEntryController extends DateSelectController{
 		ObservableList<InvoiceSupplier> contacts = null;
 		try {
 			contacts = FXCollections.observableArrayList(invoiceSupplierService.getAllInvoiceSuppliers(main.getCurrentStore().getStoreID()));
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			dialogPane.showError("Error","An error occurred while loading invoice suppliers",ex);
 		}
-        assert contacts != null;
-        if(contacts.isEmpty()){
+        if(contacts == null || contacts.isEmpty()){
 			invoiceAFX.getItems().add(new InvoiceSupplier(0,"*Please add new suppliers below",0));
 			creditAFX.getItems().add(new InvoiceSupplier(0,"*Please add new suppliers below",0));
 		}else{
@@ -399,7 +401,7 @@ public class InvoiceEntryController extends DateSelectController{
 		AnimationUtils.slideIn(addInvoicePopover,0);
 		try{
 			invoiceAFX.setValue(invoiceSupplierService.getInvoiceSupplierByName(invoice.getSupplierName(),main.getCurrentStore().getStoreID()));
-		}catch (SQLException ex) {
+		}catch (Exception ex) {
 			dialogPane.showError("Error","An error occurred while locating the invoice supplier",ex);
 		}
 		invoiceNoField.setText(invoice.getInvoiceNo());
@@ -437,7 +439,7 @@ public class InvoiceEntryController extends DateSelectController{
 		AnimationUtils.slideIn(addCreditPopover,0);
 		try{
 			creditAFX.setValue(invoiceSupplierService.getInvoiceSupplierByName(credit.getSupplierName(),main.getCurrentStore().getStoreID()));
-		}catch (SQLException ex) {
+		}catch (Exception ex) {
 			dialogPane.showError("Error","An error occurred while locating the credit supplier",ex);
 		}
 		creditNoField.setText(credit.getCreditNo());
@@ -470,7 +472,7 @@ public class InvoiceEntryController extends DateSelectController{
 	public boolean invoiceDuplicateCheck(){
 		try {
 			return invoiceService.checkDuplicateInvoice(invoiceNoField.getText(),main.getCurrentStore().getStoreID(),((InvoiceSupplier) invoiceAFX.getValue()).getContactID());
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			dialogPane.showError("Error","An error occurred while checking for duplicate invoices",ex);
 		}
 		return false;
@@ -499,7 +501,7 @@ public class InvoiceEntryController extends DateSelectController{
 				newInvoice.setNotes(notesField.getText());
 				newInvoice.setStoreID(main.getCurrentStore().getStoreID());
 				invoiceService.addInvoice(newInvoice);
-			} catch (SQLException ex) {
+			} catch (Exception ex) {
 				dialogPane.showError("Error","An error occurred while adding the invoice",ex);
 			}
 			invoiceNoValidationLabel.setVisible(false);
@@ -535,7 +537,7 @@ public class InvoiceEntryController extends DateSelectController{
 				invoice.setUnitAmount(Double.parseDouble(amountField.getText()));
 				invoice.setNotes(notesField.getText());
 				invoiceService.updateInvoice(invoice,oldInvoiceNo);
-			} catch (SQLException ex) {
+			} catch (Exception ex) {
 				dialogPane.showError("Error","An error occurred while updating the invoice",ex);
 			}
 			closeInvoicePopover();
@@ -551,7 +553,7 @@ public class InvoiceEntryController extends DateSelectController{
 			if (buttonType.equals(ButtonType.OK)) {
 				try {
 					invoiceService.deleteInvoice(invoice.getInvoiceNo(),main.getCurrentStore().getStoreID());
-				} catch (SQLException ex) {
+				} catch (Exception ex) {
 					dialogPane.showError("Error","An error occurred while deleting the invoice",ex);
 				}
 				closeInvoicePopover();
@@ -579,7 +581,7 @@ public class InvoiceEntryController extends DateSelectController{
 				newCredit.setNotes(creditNotesField.getText());
 				newCredit.setStoreID(main.getCurrentStore().getStoreID());
 				creditService.addCredit(newCredit);
-			} catch (SQLException ex) {
+			} catch (Exception ex) {
 				dialogPane.showError("Error","An error occurred while adding the credit",ex);
 			}
 			creditNoField.clear();
@@ -608,7 +610,7 @@ public class InvoiceEntryController extends DateSelectController{
 				credit.setCreditAmount(Double.parseDouble(creditAmountField.getText()));
 				credit.setNotes(creditNotesField.getText());
 				creditService.updateCredit(credit);
-			} catch (SQLException ex) {
+			} catch (Exception ex) {
 				dialogPane.showError("Error","An error occurred while updating the credit",ex);
 			}
 			closeCreditPopover();
@@ -624,7 +626,7 @@ public class InvoiceEntryController extends DateSelectController{
 			if (buttonType.equals(ButtonType.OK)) {
 				try {
 					creditService.deleteCredit(credit.getCreditID());
-				} catch (SQLException ex) {
+				} catch (Exception ex) {
 					dialogPane.showError("Error","An error occurred while deleting the credit",ex);
 				}
 				closeCreditPopover();
@@ -639,7 +641,7 @@ public class InvoiceEntryController extends DateSelectController{
 		try {
 			ObservableList<Invoice> currentInvoiceDataPoints  = FXCollections.observableArrayList(invoiceService.getInvoiceTableData(main.getCurrentStore().getStoreID(),yearMonthObject));
 			invoiceFilterView.getItems().setAll(currentInvoiceDataPoints);
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			dialogPane.showError("Error","An error occurred while loading invoice data",ex);
 		}
 		addInvoiceDoubleClickFunction();
@@ -655,7 +657,7 @@ public class InvoiceEntryController extends DateSelectController{
 		try {
 			ObservableList<Credit> currentCreditDataPoints = FXCollections.observableArrayList(creditService.getAllCredits(main.getCurrentStore().getStoreID(),yearMonthObject));
 			creditFilterView.getItems().setAll(currentCreditDataPoints);
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			dialogPane.showError("Error","An error occurred while loading credit data",ex);
 		}
 		TableUtils.resizeTableColumns(creditsTable,creditNotesCol);
@@ -676,7 +678,7 @@ public class InvoiceEntryController extends DateSelectController{
 			for(CellDataPoint cdp : wbp.getDataPoints()){
 				try {
 					invoiceService.importInvoiceData(main.getCurrentStore().getStoreID(),cdp);
-				} catch (SQLException ex) {
+				} catch (Exception ex) {
 					dialogPane.showError("Error","An error occurred while importing invoice data",ex);
 				}
 			}
@@ -703,7 +705,7 @@ public class InvoiceEntryController extends DateSelectController{
 						pw.print("$"+a.getUnitAmount()+",");
 						pw.println("310,gst on expenses,");
 					}
-				} catch (SQLException ex) {
+				} catch (Exception ex) {
 					dialogPane.showError("Error","An error occurred while loading invoice data",ex);
 				}
 				dialogPane.showInformation("Success", "Information exported successfully");

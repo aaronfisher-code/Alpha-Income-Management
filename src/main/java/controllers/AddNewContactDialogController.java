@@ -4,7 +4,8 @@ import io.github.palexdev.materialfx.controls.MFXTextField;
 import javafx.fxml.FXML;
 import models.AccountPaymentContactDataPoint;
 import services.AccountPaymentContactService;
-import java.sql.SQLException;
+
+import java.io.IOException;
 
 public class AddNewContactDialogController extends Controller {
 
@@ -14,7 +15,11 @@ public class AddNewContactDialogController extends Controller {
 
 	@FXML
 	private void initialize() {
-		accountPaymentContactService = new AccountPaymentContactService();
+		try{
+			accountPaymentContactService = new AccountPaymentContactService();
+		}catch (IOException ex){
+			parent.getDialogPane().showError("Error initializing contact service",ex);
+		}
 	}
 
 	public void setParent(AccountPaymentsPageController d) {this.parent = d;}
@@ -24,7 +29,7 @@ public class AddNewContactDialogController extends Controller {
 		String accountCode = accountCodeField.getText();
 		try {
 			accountPaymentContactService.addAccountPaymentContact(new AccountPaymentContactDataPoint(contactName,main.getCurrentStore().getStoreID(),accountCode));
-		} catch (SQLException ex) {
+		} catch (Exception ex) {
 			parent.getDialogPane().showError("Error adding contact",ex);
 		}
 		parent.getDialog().cancel();
