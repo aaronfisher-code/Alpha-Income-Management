@@ -7,6 +7,7 @@
 <?import io.github.palexdev.materialfx.controls.MFXCheckbox?>
 <?import io.github.palexdev.materialfx.controls.MFXComboBox?>
 <?import io.github.palexdev.materialfx.controls.MFXDatePicker?>
+<?import io.github.palexdev.materialfx.controls.MFXProgressSpinner?>
 <?import io.github.palexdev.materialfx.controls.MFXScrollPane?>
 <?import io.github.palexdev.materialfx.controls.MFXTableView?>
 <?import io.github.palexdev.materialfx.controls.MFXTextField?>
@@ -31,13 +32,13 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane prefHeight="674.0" prefWidth="1289.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.AccountPaymentsPageController">
+<StackPane prefHeight="674.0" prefWidth="1289.0" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.AccountPaymentsPageController">
    <children>
       <BorderPane prefHeight="200.0" prefWidth="200.0">
          <top>
             <BorderPane style="-fx-background-color: #F3F2F7; -fx-background-radius: 10;" BorderPane.alignment="CENTER">
                <padding>
-                  <Insets bottom="12.0" left="10.0" right="10.0" top="10.0" />
+                  <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
                </padding>
                <right>
                   <Button graphicTextGap="10.0" mnemonicParsing="false" onAction="#exportToXero" prefHeight="35.0" prefWidth="227.0" style="-fx-background-color: #F3F2F7; -fx-border-color: #6e6b7b; -fx-border-radius: 5;" styleClass="controlButton" text="Export in Xero Format" textFill="#6e6b7b" BorderPane.alignment="CENTER" fx:id="xeroExportButton">
@@ -119,10 +120,8 @@
                               <Cursor fx:constant="HAND" />
                            </cursor>
                         </Button>
+                        <MFXProgressSpinner fx:id="progressSpinner" radius="7.0" visible="false" />
                      </children>
-                     <padding>
-                        <Insets top="5.0" />
-                     </padding>
                   </FlowPane>
                </left>
                <BorderPane.margin>

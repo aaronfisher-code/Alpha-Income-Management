@@ -11,6 +11,7 @@ import io.github.palexdev.materialfx.enums.FloatMode;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
@@ -31,10 +32,9 @@ import java.io.PrintWriter;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
 
 public class AccountPaymentsPageController extends DateSelectController{
 
@@ -52,19 +52,21 @@ public class AccountPaymentsPageController extends DateSelectController{
 	@FXML private MFXComboBox<String> taxRateField;
 	@FXML private JFXNodesList addList;
 	@FXML private Button xeroExportButton;
+	@FXML private MFXProgressSpinner progressSpinner;
 	private AccountPaymentService accountPaymentService;
 	private AccountPaymentContactService accountPaymentContactService;
     private TableColumn<AccountPayment,String> descriptionCol;
     private ActionableFilterComboBox<AccountPaymentContactDataPoint> afx;
-	
-	 @FXML
+
+	@FXML
 	private void initialize() {
-		 try {
-			 accountPaymentService = new AccountPaymentService();
-			 accountPaymentContactService = new AccountPaymentContactService();
-		 } catch (IOException e) {
-			 dialogPane.showError("Error initializing account payment service",e);
-		 }
+		try {
+			accountPaymentService = new AccountPaymentService();
+			accountPaymentContactService = new AccountPaymentContactService();
+			executor = Executors.newCachedThreadPool();
+		} catch (IOException e) {
+			dialogPane.showError("Error initializing account payment service", e);
+		}
 	}
 
 	@Override
@@ -184,68 +186,95 @@ public class AccountPaymentsPageController extends DateSelectController{
 		return manageContactsDialog;
 	}
 
-	public void fillContactList(){
-        ObservableList<AccountPaymentContactDataPoint> contacts = null;
-        try {
-            contacts = FXCollections.observableArrayList(
-                    accountPaymentContactService.getAllAccountPaymentContacts(main.getCurrentStore().getStoreID())
-            );
-        } catch (Exception e) {
-            dialogPane.showError("Error", "An error occurred while trying to retrieve account payment contact information", e);
-        }
-        assert contacts != null;
-        if (contacts.isEmpty()) {
-			afx.getItems().add(new AccountPaymentContactDataPoint(0, "*Please add new suppliers below", 0));
-		} else {
-			afx.setItems(contacts);
-		}
-		afx.selectFirst();
+	public void fillContactList() {
+		Task<ObservableList<AccountPaymentContactDataPoint>> task = new Task<>() {
+			@Override
+			protected ObservableList<AccountPaymentContactDataPoint> call() {
+				return FXCollections.observableArrayList(
+						accountPaymentContactService.getAllAccountPaymentContacts(main.getCurrentStore().getStoreID())
+				);
+			}
+		};
+		task.setOnSucceeded(_ -> {
+			progressSpinner.setVisible(false);
+			ObservableList<AccountPaymentContactDataPoint> contacts = task.getValue();
+			if (contacts.isEmpty()) {
+				afx.getItems().add(new AccountPaymentContactDataPoint(0, "*Please add new suppliers below", 0));
+			} else {
+				afx.setItems(contacts);
+			}
+			afx.selectFirst();
+		});
+		task.setOnFailed(_ -> {
+			progressSpinner.setVisible(false);
+			dialogPane.showError("Error", "An error occurred while trying to retrieve account payment contact information", task.getException());
+		});
+		progressSpinner.setVisible(true);
+		executor.submit(task);
 	}
 
-	public void fillTable(){
+	public void fillTable() {
+		progressSpinner.setVisible(true);
 		YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
-        ObservableList<AccountPayment> currentAccountPaymentDataPoints;
-        try {
-            currentAccountPaymentDataPoints = FXCollections.observableArrayList(
-                    accountPaymentService.getAccountPaymentsForMonth(main.getCurrentStore().getStoreID(), yearMonthObject)
-            );
-        } catch (Exception e) {
-            dialogPane.showError("Error", "An error occurred while trying to retrieve account payment information", e);
-			return;
-        }
-        accountPaymentTable.setItems(currentAccountPaymentDataPoints);
-		ObservableList<AccountPaymentContactDataPoint> currentContactTotals = FXCollections.observableArrayList();
-		boolean contactFound;
-		for(AccountPayment a:currentAccountPaymentDataPoints){
-			contactFound = false;
-			for(AccountPaymentContactDataPoint c: currentContactTotals){
-				if(a.getContactName().equals(c.getContactName())){
-					c.setTotalValue(c.getTotalValue()+a.getUnitAmount());
-					contactFound = true;
+		CompletableFuture<List<AccountPayment>> accountPaymentsFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				return accountPaymentService.getAccountPaymentsForMonth(main.getCurrentStore().getStoreID(), yearMonthObject);
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}, executor);
+		CompletableFuture<List<AccountPaymentContactDataPoint>> contactsFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				return accountPaymentContactService.getAllAccountPaymentContacts(main.getCurrentStore().getStoreID());
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}, executor);
+		CompletableFuture.allOf(accountPaymentsFuture, contactsFuture).thenRunAsync(() -> {
+			try {
+				List<AccountPayment> currentAccountPaymentDataPoints = accountPaymentsFuture.get();
+				List<AccountPaymentContactDataPoint> contacts = contactsFuture.get();
+				// Create a map to store the totals for each contact
+				Map<String, AccountPaymentContactDataPoint> contactTotalsMap = new HashMap<>();
+				double supplierTotal = 0;
+				for (AccountPayment a : currentAccountPaymentDataPoints) {
+					AccountPaymentContactDataPoint contact = contacts.stream()
+							.filter(c -> c.getContactName().equals(a.getContactName()))
+							.findFirst()
+							.orElse(null);
+					if (contact != null) {
+						// Get or create the contact total
+						AccountPaymentContactDataPoint contactTotal = contactTotalsMap.computeIfAbsent(
+								contact.getContactName(),
+								_ -> new AccountPaymentContactDataPoint(contact.getContactID(), contact.getContactName(), 0)
+						);
+						// Update the total
+						contactTotal.setTotalValue(contactTotal.getTotalValue() + a.getUnitAmount());
+						supplierTotal += a.getUnitAmount();
+					}
 				}
+				// Convert the map values to a list
+				ObservableList<AccountPaymentContactDataPoint> currentContactTotals =
+						FXCollections.observableArrayList(contactTotalsMap.values());
+				double finalSupplierTotal = supplierTotal;
+				Platform.runLater(() -> {
+					accountPaymentTable.setItems(FXCollections.observableArrayList(currentAccountPaymentDataPoints));
+					accountTotalsTable.setItems(currentContactTotals);
+					supplierTotalLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(finalSupplierTotal));
+
+					if (main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Account Payments - Edit"))) {
+						addDoubleClickFunction();
+					}
+					TableUtils.resizeTableColumns(accountPaymentTable, descriptionCol);
+					progressSpinner.setVisible(false);
+				});
+			} catch (Exception e) {
+				Platform.runLater(() -> {
+					progressSpinner.setVisible(false);
+					dialogPane.showError("Error", "An error occurred while trying to retrieve account payment information", e);
+				});
 			}
-			if(!contactFound){
-                AccountPaymentContactDataPoint acdp = null;
-                try {
-                    acdp = accountPaymentContactService.getContactByName(a.getContactName(),main.getCurrentStore().getStoreID());
-                } catch (Exception e) {
-                    dialogPane.showError("Error", "An error occurred while trying to retrieve account payment contact information", e);
-                }
-                assert acdp != null;
-                acdp.setTotalValue(a.getUnitAmount());
-				currentContactTotals.add(acdp);
-			}
-		}
-		accountTotalsTable.setItems(currentContactTotals);
-		accountPaymentTable.setItems(currentAccountPaymentDataPoints);
-		double supplierTotal=0;
-		for(AccountPaymentContactDataPoint acdp:currentContactTotals)
-			supplierTotal+=acdp.getTotalValue();
-		supplierTotalLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(supplierTotal));
-		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Account Payments - Edit"))) {
-			addDoubleClickFunction();
-		}
-		TableUtils.resizeTableColumns(accountPaymentTable,descriptionCol);
+		}, executor);
 	}
 
 	public void exportToXero() {
@@ -254,29 +283,50 @@ public class AccountPaymentsPageController extends DateSelectController{
 		fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
 		File file = fileChooser.showSaveDialog(main.getStg());
 		if (file != null) {
-			try (PrintWriter pw = new PrintWriter(file)) {
-				pw.println("Contact,,,,,,,,,,Invoice number,Invoice date ,Due Date,,Description,Quantity,Unit amount,Account code,GST free,");
-				YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
-				ObservableList<AccountPayment> currentAccountPaymentDataPoints = FXCollections.observableArrayList(
-						accountPaymentService.getAccountPaymentsForMonth(main.getCurrentStore().getStoreID(), yearMonthObject)
-				);
-				for(AccountPayment a: currentAccountPaymentDataPoints){
-					pw.print(a.getContactName()+",,,,,,,,,,");
-					pw.print(a.getInvoiceNumber()+",");
-					pw.print(a.getInvDate()+",");
-					pw.print(a.getDueDate()+",,");
-					pw.print(a.getDescription()+",1,");
-					pw.print("$"+a.getUnitAmount()+",");
-					pw.print(a.getAccountCode()+",");
-					pw.println(a.getTaxRate());
+			progressSpinner.setVisible(true);
+			Task<Void> exportTask = new Task<>() {
+				@Override
+				protected Void call() {
+					try (PrintWriter pw = new PrintWriter(file)) {
+						pw.println("Contact,,,,,,,,,,Invoice number,Invoice date ,Due Date,,Description,Quantity,Unit amount,Account code,GST free,");
+						YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
+						ObservableList<AccountPayment> currentAccountPaymentDataPoints = FXCollections.observableArrayList(
+								accountPaymentService.getAccountPaymentsForMonth(main.getCurrentStore().getStoreID(), yearMonthObject)
+						);
+						for(AccountPayment a: currentAccountPaymentDataPoints){
+							pw.print(a.getContactName()+",,,,,,,,,,");
+							pw.print(a.getInvoiceNumber()+",");
+							pw.print(a.getInvDate()+",");
+							pw.print(a.getDueDate()+",,");
+							pw.print(a.getDescription()+",1,");
+							pw.print("$"+a.getUnitAmount()+",");
+							pw.print(a.getAccountCode()+",");
+							pw.println(a.getTaxRate());
+						}
+						dialogPane.showInformation("Success", "Information exported successfully");
+					} catch (FileNotFoundException e){
+						dialogPane.showError("Error", "This file could not be accessed, please ensure its not open in another program", e);
+					} catch (Exception e) {
+						dialogPane.showError("Error", "An error occurred while trying to retrieve account payment information", e);
+					}
+					return null;
 				}
+			};
+			exportTask.setOnSucceeded(_ -> {
 				dialogPane.showInformation("Success", "Information exported successfully");
-			} catch (FileNotFoundException e){
-				dialogPane.showError("Error", "This file could not be accessed, please ensure its not open in another program", e);
-			} catch (Exception e) {
-				dialogPane.showError("Error", "An error occurred while trying to retrieve account payment information", e);
-            }
-        }
+				progressSpinner.setVisible(false);
+			});
+			exportTask.setOnFailed(_ -> {
+				Throwable e = exportTask.getException();
+				if (e instanceof FileNotFoundException) {
+					dialogPane.showError("Error", "This file could not be accessed, please ensure it's not open in another program", e);
+				} else {
+					dialogPane.showError("Error", "An error occurred while trying to export account payment information", e);
+				}
+				progressSpinner.setVisible(false);
+			});
+			executor.submit(exportTask);
+		}
 	}
 
 	public void openPopover(){
@@ -314,16 +364,26 @@ public class AccountPaymentsPageController extends DateSelectController{
 		deleteButton.setOnAction(_ -> deletePayment(ap));
 		contentDarken.setVisible(true);
 		AnimationUtils.slideIn(addPaymentPopover,0);
-        try {
-			AccountPaymentContactDataPoint contact = accountPaymentContactService.getContactByName(ap.getContactName(), main.getCurrentStore().getStoreID());
-			if (contact != null) {
-				afx.getSelectionModel().selectItem(contact);
+		Task<AccountPaymentContactDataPoint> contactsTask = new Task<>() {
+			@Override
+			protected AccountPaymentContactDataPoint call() {
+                return accountPaymentContactService.getContactByName(ap.getContactName(), main.getCurrentStore().getStoreID());
+			}
+		};
+		contactsTask.setOnSucceeded(_ -> {
+			if (contactsTask.getValue() != null) {
+				afx.getSelectionModel().selectItem(contactsTask.getValue());
 			} else {
 				dialogPane.showError("Error", "Could not find the contact for this payment", "");
 			}
-        } catch (Exception e) {
-            dialogPane.showError("Error","An error occurred while trying to retrieve the contact information",e);
-        }
+			progressSpinner.setVisible(false);
+		});
+		contactsTask.setOnFailed(_ -> {
+			dialogPane.showError("Error","An error occurred while trying to retrieve the contact information",contactsTask.getException());
+			progressSpinner.setVisible(false);
+		});
+		progressSpinner.setVisible(true);
+		executor.submit(contactsTask);
         invoiceNoField.setText(ap.getInvoiceNumber());
 		invoiceDateField.setValue(ap.getInvDate());
 		dueDateField.setValue(ap.getDueDate());
@@ -353,16 +413,26 @@ public class AccountPaymentsPageController extends DateSelectController{
 		}else{
 			invoiceDateValidationLabel.setVisible(false);
 			AccountPayment newPayment = getNewPayment();
-			try {
-                accountPaymentService.addAccountPayment(newPayment);
-            } catch (Exception e) {
-				dialogPane.showError("Error","An error occurred while trying to add the payment",e);
-            }
-            closePopover();
-			fillTable();
-			dialogPane.showInformation("Success","Payment was successfully added");
+			progressSpinner.setVisible(true);
+			Task<Void> addPaymentTask = new Task<>() {
+				@Override
+				protected Void call() {
+					accountPaymentService.addAccountPayment(newPayment);
+					return null;
+				}
+			};
+			addPaymentTask.setOnSucceeded(_ -> {
+				closePopover();
+				fillTable();
+				dialogPane.showInformation("Success", "Payment was successfully added");
+				progressSpinner.setVisible(false);
+			});
+			addPaymentTask.setOnFailed(_ -> {
+				dialogPane.showError("Error", "An error occurred while trying to add the payment", addPaymentTask.getException());
+				progressSpinner.setVisible(false);
+			});
+			executor.submit(addPaymentTask);
 		}
-
 	}
 
 	private AccountPayment getNewPayment() {
@@ -405,31 +475,53 @@ public class AccountPaymentsPageController extends DateSelectController{
 			accountPayment.setAccountAdjusted(accountAdjustedBox.isSelected());
 			accountPayment.setAccountCode(contact.getAccountCode());
 			accountPayment.setTaxRate(taxRate);
-            try {
-                accountPaymentService.updateAccountPayment(originalInvoiceNo,accountPayment);
-            } catch (Exception e) {
-                dialogPane.showError("Error","An error occurred while trying to edit the payment",e);
-            }
-            closePopover();
-			fillTable();
-			dialogPane.showInformation("Success","Payment was successfully edited");
+			progressSpinner.setVisible(true);
+			Task<Void> editPaymentTask = new Task<>() {
+				@Override
+				protected Void call() {
+					accountPaymentService.updateAccountPayment(originalInvoiceNo, accountPayment);
+					return null;
+				}
+			};
+			editPaymentTask.setOnSucceeded(_ -> {
+				closePopover();
+				fillTable();
+				dialogPane.showInformation("Success", "Payment was successfully edited");
+				progressSpinner.setVisible(false);
+			});
+			editPaymentTask.setOnFailed(_ -> {
+				dialogPane.showError("Error", "An error occurred while trying to edit the payment", editPaymentTask.getException());
+				progressSpinner.setVisible(false);
+			});
+			executor.submit(editPaymentTask);
 		}
 	}
 
-	public void deletePayment(AccountPayment accountPayment){
-		 dialogPane.showWarning("Confirm Delete",
-				 "This action will permanently delete this Account payment from all systems,\n" +
-				 "Are you sure you still want to delete this Account payment?").thenAccept(buttonType -> {
-			 if (buttonType.equals(ButtonType.OK)) {
-                 try {
-                     accountPaymentService.deleteAccountPayment(accountPayment.getStoreID(), accountPayment.getInvoiceNumber());
-                 } catch (Exception e) {
-					 dialogPane.showError("Error","An error occurred while trying to delete the payment",e);
-                 }
-                 closePopover();
-				 fillTable();
-				 dialogPane.showInformation("Success","Payment was successfully deleted");
-			 }
-		 });
+	public void deletePayment(AccountPayment accountPayment) {
+		dialogPane.showWarning("Confirm Delete",
+				"This action will permanently delete this Account payment from all systems,\n" +
+						"Are you sure you still want to delete this Account payment?").thenAccept(buttonType -> {
+			if (buttonType.equals(ButtonType.OK)) {
+				progressSpinner.setVisible(true);
+				Task<Void> deletePaymentTask = new Task<>() {
+					@Override
+					protected Void call() {
+						accountPaymentService.deleteAccountPayment(accountPayment.getStoreID(), accountPayment.getInvoiceNumber());
+						return null;
+					}
+				};
+				deletePaymentTask.setOnSucceeded(_ -> {
+					closePopover();
+					fillTable();
+					dialogPane.showInformation("Success", "Payment was successfully deleted");
+					progressSpinner.setVisible(false);
+				});
+				deletePaymentTask.setOnFailed(event -> {
+					dialogPane.showError("Error", "An error occurred while trying to delete the payment", deletePaymentTask.getException());
+					progressSpinner.setVisible(false);
+				});
+				executor.submit(deletePaymentTask);
+			}
+		});
 	}
 }

@@ -277,7 +277,7 @@ public class MainMenuController extends PageController {
     }
 
     private void updatePageFXML(String fxml) {
-        if (currentPageController != null && currentPageController.getExecutor() != null)
+        if (currentPageController != null && currentPageController.getExecutor() != null && !currentPageController.getExecutor().isShutdown())
             currentPageController.shutdownExecutor();
         FXMLLoader loader = new FXMLLoader(getClass().getResource(fxml));
         StackPane pageContent = null;
