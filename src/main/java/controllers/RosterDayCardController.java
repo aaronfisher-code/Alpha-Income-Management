@@ -19,16 +19,6 @@ public class RosterDayCardController extends PageController {
     private LocalDate date;
     private RosterPageController parent;
     private boolean selected = false;
-    private RosterService rosterService;
-
-    @FXML
-    private void initialize() {
-        try{
-            rosterService = new RosterService();
-        }catch (IOException e){
-            parent.getDialogPane().showError("Error", "Error loading roster service", e.getMessage());
-        }
-    }
 
     public void setDate(LocalDate d) {
         this.date = d;
@@ -46,14 +36,6 @@ public class RosterDayCardController extends PageController {
     public void fill() {
         weekdayLbl.setText(String.valueOf(date.getDayOfWeek()));
         dateLbl.setText(date.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH) + " " + date.getDayOfMonth());
-        try {
-            SpecialDateObj specialDateObj = rosterService.getSpecialDateInfo(date);
-            if(specialDateObj != null)
-                eventLbl.setText(specialDateObj.getNote());
-        } catch (Exception ex) {
-            parent.getDialogPane().showError("Error", "Error loading special date info", ex.getMessage());
-            System.err.println(ex.getMessage());
-        }
     }
 
     public void editDay() {
@@ -73,5 +55,9 @@ public class RosterDayCardController extends PageController {
     public void select() {
         selectionHighlight.setStyle("-fx-background-color: #0F60FF;");
         selected = true;
+    }
+
+    public void setSpecialDate(SpecialDateObj sd) {
+        eventLbl.setText(sd.getNote());
     }
 }

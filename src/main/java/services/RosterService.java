@@ -118,7 +118,7 @@ public class RosterService {
     }
 
     public SpecialDateObj getSpecialDateInfo(LocalDate date) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(apiBaseUrl + "/special-dates")
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(apiBaseUrl + "/special-date")
                 .queryParam("date", date);
 
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
@@ -131,13 +131,32 @@ public class RosterService {
         return response.getBody();
     }
 
+    public List<SpecialDateObj> getSpecialDates(LocalDate startDate, LocalDate endDate) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(apiBaseUrl + "/special-dates")
+                .queryParam("startDate", startDate)
+                .queryParam("endDate", endDate);
+
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        ResponseEntity<String> response = restTemplate.exchange(
+                builder.toUriString(),
+                HttpMethod.GET,
+                entity,
+                String.class);
+        try {
+            return objectMapper.readValue(response.getBody(), new TypeReference<>() {
+            });
+        } catch (IOException e) {
+            throw new RuntimeException("Error parsing JSON response", e);
+        }
+    }
+
     public void addSpecialDate(SpecialDateObj specialDateObj) {
         HttpEntity<SpecialDateObj> entity = new HttpEntity<>(specialDateObj, createHeaders());
-        restTemplate.exchange(apiBaseUrl + "/special-dates", HttpMethod.POST, entity, Void.class);
+        restTemplate.exchange(apiBaseUrl + "/special-date", HttpMethod.POST, entity, Void.class);
     }
 
     public void updateSpecialDate(SpecialDateObj specialDateObj) {
         HttpEntity<SpecialDateObj> entity = new HttpEntity<>(specialDateObj, createHeaders());
-        restTemplate.exchange(apiBaseUrl + "/special-dates", HttpMethod.PUT, entity, Void.class);
+        restTemplate.exchange(apiBaseUrl + "/special-date", HttpMethod.PUT, entity, Void.class);
     }
 }

@@ -19,6 +19,7 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import models.LeaveRequest;
 import models.Shift;
+import models.SpecialDateObj;
 import models.User;
 import org.controlsfx.control.PopOver;
 import services.LeaveService;
@@ -33,6 +34,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.FormatStyle;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
@@ -107,7 +109,6 @@ public class RosterPageController extends PageController {
                 addList.setVisible(false);
             }
             progressSpinner.setVisible(false);
-            updatePage();
         });
         getUsersTask.setOnFailed(_ -> {
             dialogPane.showError("Error", "An error occurred while fetching users", getUsersTask.getException());
@@ -169,7 +170,7 @@ public class RosterPageController extends PageController {
         updatePage();
     }
 
-    public void updateDay(LocalDate date, VBox shiftContainer, int dayOfWeek, List<Shift> allShifts,List<Shift> allModifications,List<LeaveRequest> allLeaveRequests) {
+    public void updateDay(LocalDate date, VBox shiftContainer, int dayOfWeek, List<Shift> allShifts,List<Shift> allModifications,List<LeaveRequest> allLeaveRequests,List<SpecialDateObj> specialDates) {
         //empty the contents of the current day VBox
         shiftContainer.getChildren().removeAll(shiftContainer.getChildren());
         long weekDay = date.getDayOfWeek().getValue();
@@ -185,6 +186,11 @@ public class RosterPageController extends PageController {
         rdc.setMain(main);
         rdc.setDate(date.minusDays(weekDay - dayOfWeek));
         rdc.setParent(this);
+        for(SpecialDateObj sd: specialDates){
+            if(sd.getEventDate().equals(date.minusDays(weekDay - dayOfWeek))){
+                rdc.setSpecialDate(sd);
+            }
+        }
         rdc.fill();
         if (rdc.getDate() == date) {
             //add blue selection formatting if date is current
@@ -271,7 +277,7 @@ public class RosterPageController extends PageController {
         progressSpinner.setVisible(true);
         Task<Void> updatePageTask = new Task<>() {
             @Override
-            protected Void call() {
+            protected Void call() throws Exception {
                 long weekDay = datePkr.getValue().getDayOfWeek().getValue();
                 LocalDate weekStart = datePkr.getValue().minusDays(weekDay - 1);
                 LocalDate weekEnd = datePkr.getValue().plusDays(7 - weekDay);
@@ -300,39 +306,44 @@ public class RosterPageController extends PageController {
                     }
                 }, executor);
 
-                CompletableFuture<Void> allFutures = CompletableFuture.allOf(shiftsFuture, modificationsFuture, leaveRequestsFuture);
-
-                allFutures.thenRunAsync(() -> {
+                CompletableFuture<List<SpecialDateObj>> specialDatesFuture = CompletableFuture.supplyAsync(() -> {
                     try {
-                        List<Shift> allShifts = shiftsFuture.get();
-                        List<Shift> allModifications = modificationsFuture.get();
-                        List<LeaveRequest> allLeaveRequests = leaveRequestsFuture.get();
-
-                        Platform.runLater(() -> {
-                            weekdayBox.getChildren().clear();
-                            updateDay(datePkr.getValue(), monBox, 1, allShifts, allModifications, allLeaveRequests);
-                            updateDay(datePkr.getValue(), tueBox, 2, allShifts, allModifications, allLeaveRequests);
-                            updateDay(datePkr.getValue(), wedBox, 3, allShifts, allModifications, allLeaveRequests);
-                            updateDay(datePkr.getValue(), thuBox, 4, allShifts, allModifications, allLeaveRequests);
-                            updateDay(datePkr.getValue(), friBox, 5, allShifts, allModifications, allLeaveRequests);
-                            updateDay(datePkr.getValue(), satBox, 6, allShifts, allModifications, allLeaveRequests);
-                            updateDay(datePkr.getValue(), sunBox, 7, allShifts, allModifications, allLeaveRequests);
-                            adjustGridSize();
-                            progressSpinner.setVisible(false);
-                        });
+                        return rosterService.getSpecialDates(weekStart, weekEnd);
                     } catch (Exception e) {
-                        Platform.runLater(() -> {
-                            dialogPane.showError("Error", "An error occurred while updating the page", e);
-                            progressSpinner.setVisible(false);
-                        });
+                        // Return an empty list instead of throwing an exception
+                        return new ArrayList<>();
                     }
                 }, executor);
 
+                try {
+                    List<Shift> allShifts = shiftsFuture.get();
+                    List<Shift> allModifications = modificationsFuture.get();
+                    List<LeaveRequest> allLeaveRequests = leaveRequestsFuture.get();
+                    List<SpecialDateObj> specialDates = specialDatesFuture.get();
+
+                    Platform.runLater(() -> {
+                        weekdayBox.getChildren().clear();
+                        updateDay(datePkr.getValue(), monBox, 1, allShifts, allModifications, allLeaveRequests, specialDates);
+                        updateDay(datePkr.getValue(), tueBox, 2, allShifts, allModifications, allLeaveRequests, specialDates);
+                        updateDay(datePkr.getValue(), wedBox, 3, allShifts, allModifications, allLeaveRequests, specialDates);
+                        updateDay(datePkr.getValue(), thuBox, 4, allShifts, allModifications, allLeaveRequests, specialDates);
+                        updateDay(datePkr.getValue(), friBox, 5, allShifts, allModifications, allLeaveRequests, specialDates);
+                        updateDay(datePkr.getValue(), satBox, 6, allShifts, allModifications, allLeaveRequests, specialDates);
+                        updateDay(datePkr.getValue(), sunBox, 7, allShifts, allModifications, allLeaveRequests, specialDates);
+                        adjustGridSize();
+                    });
+                } catch (Exception e) {
+                    throw new Exception("Error updating page: " + e.getMessage(), e);
+                }
                 return null;
             }
         };
+        updatePageTask.setOnSucceeded(_ -> {
+            progressSpinner.setVisible(false);
+        });
         updatePageTask.setOnFailed(_ -> {
-            dialogPane.showError("Error", "An error occurred while updating the page", updatePageTask.getException());
+            Throwable exception = updatePageTask.getException();
+            dialogPane.showError("Error", "An error occurred while updating the page", exception);
             progressSpinner.setVisible(false);
         });
         executor.submit(updatePageTask);
@@ -473,33 +484,43 @@ public class RosterPageController extends PageController {
         if (!validateInputs()) {
             return;
         }
-        User selectedUser = employeeSelect.getValue();
-        LocalDate shiftDate = manualStartDate == null ? startDate.getValue() : manualStartDate;
-        if (deleteShift) {
-            shiftDate = null;
-        }
-        Shift newShift = createShiftFromInputs(selectedUser.getUsername(), shiftDate);
-        try {
-            if (previousShift != null) {
-                Shift modification = createModificationFromShift(newShift, previousShift.getShiftID(), originalShiftDate);
-                rosterService.addShiftModification(modification);
-            } else {
-                rosterService.addShift(newShift);
+        progressSpinner.setVisible(true);
+        Task<Void> addShiftTask = new Task<>() {
+            @Override
+            protected Void call() {
+                User selectedUser = employeeSelect.getValue();
+                LocalDate shiftDate = manualStartDate == null ? startDate.getValue() : manualStartDate;
+                if (deleteShift) {
+                    shiftDate = null;
+                }
+                Shift newShift = createShiftFromInputs(selectedUser.getUsername(), shiftDate);
+                if (previousShift != null) {
+                    Shift modification = createModificationFromShift(newShift, previousShift.getShiftID(), originalShiftDate);
+                    rosterService.addShiftModification(modification);
+                } else {
+                    rosterService.addShift(newShift);
+                }
+                return null;
             }
+        };
+        addShiftTask.setOnSucceeded(_ -> {
             updatePage();
             if (manualStartDate == null) {
                 dialogPane.showInformation("Success", "Shift created successfully");
             } else if (previousShift != null) {
-                updatePage();
                 if (deleteShift) {
                     dialogPane.showInformation("Success", "Shift deleted successfully");
                 } else {
                     dialogPane.showInformation("Success", "Shift edited successfully");
                 }
             }
-        } catch (Exception ex) {
-            dialogPane.showError("Error", "An error occurred while saving the shift. Please try again.", ex);
-        }
+            progressSpinner.setVisible(false);
+        });
+        addShiftTask.setOnFailed(_ -> {
+            dialogPane.showError("Error", "An error occurred while saving the shift. Please try again.", addShiftTask.getException());
+            progressSpinner.setVisible(false);
+        });
+        executor.submit(addShiftTask);
     }
 
     private boolean validateInputs() {
@@ -587,36 +608,26 @@ public class RosterPageController extends PageController {
         return modification;
     }
 
-    public void editShift(Shift s){
-        //Validate inputs
-        if(!employeeSelect.isValid()){employeeSelect.requestFocus();}
-        else if(!startDate.isValid()){startDate.requestFocus();}
-        else if(!startTimeField.isValid()){startTimeField.requestFocus();}
-        else if(!endTimeField.isValid()){endTimeField.requestFocus();}
-        else if(!thirtyMinBreaks.isValid()){thirtyMinBreaks.requestFocus();}
-        else if(!tenMinBreaks.isValid()){tenMinBreaks.requestFocus();}
-        else if(!repeatValue.isValid()){repeatValue.requestFocus();}
-        else if(repeatingShiftToggle.isSelected() && !repeatUnit.isValid()){repeatUnit.requestFocus();}
-        else if(LocalTime.parse(startTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US )).isAfter(LocalTime.parse(endTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US )))){
-            startTimeField.requestFocus();
-            startTimeValidationLabel.setText("Start time must be before end time");
-            startTimeValidationLabel.setVisible(true);
-        }else {
-            startTimeValidationLabel.setVisible(false);
-            String usrname = employeeSelect.getValue().getUsername();
-            LocalDate sDate = startDate.getValue();
-            LocalTime sTime = LocalTime.parse(startTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
-            LocalTime eTime = LocalTime.parse(endTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
-            int thirtyMin = 0;
-            int tenMin = 0;
-            int daysPerRepeat = 1;
-            if (!thirtyMinBreaks.getText().isEmpty()) {thirtyMin = Integer.parseInt(thirtyMinBreaks.getText());}
-            if (!tenMinBreaks.getText().isEmpty()) {tenMin = Integer.parseInt(tenMinBreaks.getText());}
-            if(repeatingShiftToggle.isSelected()){
-                int multiplier = ((repeatUnit.getSelectedItem().equals("Weeks")) ? 7 : 1);
-                daysPerRepeat = Integer.parseInt(repeatValue.getText()) * multiplier;
-            }
-            try {
+    public void editShift(Shift s) {
+        if (!validateInputs()) {
+            return;
+        }
+
+        progressSpinner.setVisible(true);
+        Task<Void> editShiftTask = new Task<>() {
+            @Override
+            protected Void call() {
+                String usrname = employeeSelect.getValue().getUsername();
+                LocalDate sDate = startDate.getValue();
+                LocalTime sTime = LocalTime.parse(startTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
+                LocalTime eTime = LocalTime.parse(endTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
+                int thirtyMin = thirtyMinBreaks.getText().isEmpty() ? 0 : Integer.parseInt(thirtyMinBreaks.getText());
+                int tenMin = tenMinBreaks.getText().isEmpty() ? 0 : Integer.parseInt(tenMinBreaks.getText());
+                int daysPerRepeat = 1;
+                if (repeatingShiftToggle.isSelected()) {
+                    int multiplier = repeatUnit.getSelectedItem().equals("Weeks") ? 7 : 1;
+                    daysPerRepeat = Integer.parseInt(repeatValue.getText()) * multiplier;
+                }
                 s.setUsername(usrname);
                 s.setShiftStartTime(sTime);
                 s.setShiftEndTime(eTime);
@@ -627,54 +638,125 @@ public class RosterPageController extends PageController {
                 s.setDaysPerRepeat(daysPerRepeat);
                 rosterService.updateShift(s);
                 rosterService.deleteShiftModifications(s.getShiftID());
-                updatePage();
-                dialogPane.showInformation("Success", "Shifts edited successfully");
-            } catch (Exception ex) {
-                dialogPane.showError("Error", "An error occurred while saving the shift. Please try again.", ex);
+                return null;
             }
-        }
+        };
+        editShiftTask.setOnSucceeded(_ -> {
+            updatePage();
+            dialogPane.showInformation("Success", "Shifts edited successfully");
+            progressSpinner.setVisible(false);
+        });
+        editShiftTask.setOnFailed(_ -> {
+            dialogPane.showError("Error", "An error occurred while saving the shift. Please try again.", editShiftTask.getException());
+            progressSpinner.setVisible(false);
+        });
+        executor.submit(editShiftTask);
     }
 
-    public void deleteShift(Shift s){
-        try {
-            rosterService.deleteShift(s.getShiftID());
-            rosterService.deleteShiftModifications(s.getShiftID());
+    public void deleteShift(Shift s) {
+        progressSpinner.setVisible(true);
+        Task<Void> deleteShiftTask = new Task<>() {
+            @Override
+            protected Void call() {
+                rosterService.deleteShift(s.getShiftID());
+                rosterService.deleteShiftModifications(s.getShiftID());
+                return null;
+            }
+        };
+        deleteShiftTask.setOnSucceeded(_ -> {
             updatePage();
             dialogPane.showInformation("Success", "Shift deleted successfully");
-        } catch (Exception ex) {
-            dialogPane.showError("Error", "An error occurred while deleting the shift. Please try again.", ex);
-        }
+            progressSpinner.setVisible(false);
+        });
+        deleteShiftTask.setOnFailed(_ -> {
+            dialogPane.showError("Error", "An error occurred while deleting the shift. Please try again.", deleteShiftTask.getException());
+            progressSpinner.setVisible(false);
+        });
+        executor.submit(deleteShiftTask);
     }
 
     public void editFutureShifts(Shift s, LocalDate shiftCardDate) {
-        try {
-            rosterService.updateShiftEndDate(s.getShiftID(), shiftCardDate.minusDays(1));
-            addShift(null, shiftCardDate, null, false);
+        progressSpinner.setVisible(true);
+        Task<Void> editFutureShiftsTask = new Task<>() {
+            @Override
+            protected Void call() {
+                rosterService.updateShiftEndDate(s.getShiftID(), shiftCardDate.minusDays(1));
+                addShift(null, shiftCardDate, null, false);
+                return null;
+            }
+        };
+        editFutureShiftsTask.setOnSucceeded(_ -> {
             updatePage();
             dialogPane.showInformation("Success", "Future shifts have been updated successfully.");
-        } catch (Exception ex) {
-            dialogPane.showError("Error", "An error occurred while updating future shifts. Please try again.", ex);
-        }
+            progressSpinner.setVisible(false);
+        });
+        editFutureShiftsTask.setOnFailed(_ -> {
+            dialogPane.showError("Error", "An error occurred while updating future shifts. Please try again.", editFutureShiftsTask.getException());
+            progressSpinner.setVisible(false);
+        });
+        executor.submit(editFutureShiftsTask);
     }
 
-    public void deleteFutureShifts(Shift s,LocalDate shiftCardDate){
-        try {
-            rosterService.updateShiftEndDate(s.getShiftID(), shiftCardDate.minusDays(1));
-            rosterService.deleteShiftModifications(s.getShiftID(), shiftCardDate.minusDays(1));
+    public void deleteFutureShifts(Shift s, LocalDate shiftCardDate) {
+        progressSpinner.setVisible(true);
+        Task<Void> deleteFutureShiftsTask = new Task<>() {
+            @Override
+            protected Void call() {
+                rosterService.updateShiftEndDate(s.getShiftID(), shiftCardDate.minusDays(1));
+                rosterService.deleteShiftModifications(s.getShiftID(), shiftCardDate.minusDays(1));
+                return null;
+            }
+        };
+        deleteFutureShiftsTask.setOnSucceeded(_ -> {
             updatePage();
             dialogPane.showInformation("Success", "Shifts deleted successfully");
-        } catch (Exception ex) {
-            dialogPane.showError("Error", "An error occurred while deleting the shift. Please try again.", ex);
-        }
+            progressSpinner.setVisible(false);
+        });
+        deleteFutureShiftsTask.setOnFailed(_ -> {
+            dialogPane.showError("Error", "An error occurred while deleting the shifts. Please try again.", deleteFutureShiftsTask.getException());
+            progressSpinner.setVisible(false);
+        });
+        executor.submit(deleteFutureShiftsTask);
     }
 
-    public void editCurrentShift(Shift s,LocalDate shiftCardDate){
-        addShift(s,startDate.getValue(),s.getOriginalDate()==null?shiftCardDate:s.getOriginalDate(),false);
-        updatePage();
+    public void editCurrentShift(Shift s, LocalDate shiftCardDate) {
+        progressSpinner.setVisible(true);
+        Task<Void> editCurrentShiftTask = new Task<>() {
+            @Override
+            protected Void call() {
+                addShift(s, startDate.getValue(), s.getOriginalDate() == null ? shiftCardDate : s.getOriginalDate(), false);
+                return null;
+            }
+        };
+        editCurrentShiftTask.setOnSucceeded(_ -> {
+            updatePage();
+            progressSpinner.setVisible(false);
+        });
+        editCurrentShiftTask.setOnFailed(_ -> {
+            dialogPane.showError("Error", "An error occurred while editing the current shift. Please try again.", editCurrentShiftTask.getException());
+            progressSpinner.setVisible(false);
+        });
+        executor.submit(editCurrentShiftTask);
     }
 
-    public void deleteCurrentShift(Shift s,LocalDate shiftCardDate){
-        addShift(s,LocalDate.now(),s.getOriginalDate()==null?shiftCardDate:s.getOriginalDate(),true);
+    public void deleteCurrentShift(Shift s, LocalDate shiftCardDate) {
+        progressSpinner.setVisible(true);
+        Task<Void> deleteCurrentShiftTask = new Task<>() {
+            @Override
+            protected Void call() {
+                addShift(s, LocalDate.now(), s.getOriginalDate() == null ? shiftCardDate : s.getOriginalDate(), true);
+                return null;
+            }
+        };
+        deleteCurrentShiftTask.setOnSucceeded(_ -> {
+            updatePage();
+            progressSpinner.setVisible(false);
+        });
+        deleteCurrentShiftTask.setOnFailed(_ -> {
+            dialogPane.showError("Error", "An error occurred while deleting the current shift. Please try again.", deleteCurrentShiftTask.getException());
+            progressSpinner.setVisible(false);
+        });
+        executor.submit(deleteCurrentShiftTask);
     }
 
     private Node createCalendarEditDialog(Shift s,LocalDate shiftCardDate) {
