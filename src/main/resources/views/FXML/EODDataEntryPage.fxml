@@ -2,6 +2,7 @@
 
 <?import com.dlsc.gemsfx.DialogPane?>
 <?import io.github.palexdev.materialfx.controls.MFXButton?>
+<?import io.github.palexdev.materialfx.controls.MFXProgressSpinner?>
 <?import io.github.palexdev.materialfx.controls.MFXScrollPane?>
 <?import io.github.palexdev.materialfx.controls.MFXTextField?>
 <?import io.github.palexdev.materialfx.font.MFXFontIcon?>
@@ -26,18 +27,18 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane prefHeight="1187.0" prefWidth="1289.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EODDataEntryPageController">
+<StackPane prefHeight="1187.0" prefWidth="1289.0" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EODDataEntryPageController">
    <children>
       <BorderPane prefHeight="200.0" prefWidth="200.0" style="-fx-border-radius: 10; -fx-background-radius: 10; -fx-background-color: TRANSPARENT;">
          <top>
             <BorderPane style="-fx-background-color: #F3F2F7; -fx-background-radius: 10;" BorderPane.alignment="CENTER">
                <padding>
-                  <Insets bottom="12.0" left="10.0" right="10.0" top="10.0" />
+                  <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
                </padding>
                <left>
-                  <FlowPane fx:id="datePickerPane" hgap="5.0" prefHeight="38.0" prefWidth="575.0" prefWrapLength="495.0" snapToPixel="false" vgap="5.0" BorderPane.alignment="CENTER">
+                  <FlowPane fx:id="datePickerPane" hgap="5.0" prefHeight="38.0" prefWidth="575.0" prefWrapLength="495.0" snapToPixel="false" vgap="5.0" BorderPane.alignment="CENTER_LEFT">
                      <children>
-                        <Label prefHeight="32.0" styleClass="headingText" text="NOW SHOWING THE MONTH OF:" textFill="#6e6b7b">
+                        <Label styleClass="headingText" text="NOW SHOWING THE MONTH OF:" textFill="#6e6b7b">
                            <font>
                               <Font size="17.0" />
                            </font>
@@ -96,10 +97,8 @@
                               <Cursor fx:constant="HAND" />
                            </cursor>
                         </Button>
+                        <MFXProgressSpinner fx:id="progressSpinner" radius="7.0" visible="false" />
                      </children>
-                     <padding>
-                        <Insets top="5.0" />
-                     </padding>
                   </FlowPane>
                </left>
                <BorderPane.margin>
