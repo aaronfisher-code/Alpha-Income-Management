@@ -4,7 +4,8 @@ import com.dlsc.gemsfx.DialogPane;
 import com.jfoenix.controls.JFXNodesList;
 import components.CustomDateStringConverter;
 import io.github.palexdev.materialfx.controls.*;
-import javafx.collections.FXCollections;
+import javafx.application.Platform;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
@@ -32,9 +33,12 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.FormatStyle;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executors;
+
 import static com.dlsc.gemsfx.DialogPane.Type.BLANK;
 import static java.time.temporal.ChronoUnit.DAYS;
 
@@ -57,6 +61,7 @@ public class RosterPageController extends PageController {
     @FXML private MFXComboBox<String> repeatUnit;
     @FXML private MFXButton saveButton;
     @FXML private Label employeeSelectValidationLabel, startDateValidationLabel, startTimeValidationLabel, endTimeValidationLabel, tenMinBreaksValidationLabel, thirtyMinBreaksValidationLabel, repeatValueValidationLabel;
+    @FXML private MFXProgressSpinner progressSpinner;
     private MFXDatePicker datePkr;
     private PopOver currentTimePopover;
     private LocalTime startTime,endTime;
@@ -66,11 +71,12 @@ public class RosterPageController extends PageController {
 
     @FXML
     private void initialize() {
-        try{
+        try {
             userService = new UserService();
             rosterService = new RosterService();
             leaveService = new LeaveService();
-        }catch (IOException ex){
+            executor = Executors.newCachedThreadPool();
+        } catch (IOException ex) {
             dialogPane.showError("Failed to initialize services", ex);
         }
     }
@@ -83,25 +89,32 @@ public class RosterPageController extends PageController {
         datePkr.setText(main.getCurrentDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)));
         datePkr.getStyleClass().add("custDatePicker");
         datePkr.getStylesheets().add("/views/CSS/RosterPage.css");
-        List<User> currentUsers = FXCollections.observableArrayList();
-        try {
-            currentUsers = userService.getAllUserEmployments(main.getCurrentStore().getStoreID());
-        } catch (Exception ex) {
-            dialogPane.showError("Error","An error occurred while fetching users", ex);
-        }
-        if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))){
-            for(User u:currentUsers){
-                employeeSelect.getItems().add(u);
+        Task<List<User>> getUsersTask = new Task<>() {
+            @Override
+            protected List<User> call() {
+                return userService.getAllUserEmployments(main.getCurrentStore().getStoreID());
             }
-        }else if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts"))){
-            for(User u:currentUsers){
-                if(u.getUsername().equals(main.getCurrentUser().getUsername())){
-                    employeeSelect.getItems().add(u);
-                }
+        };
+        getUsersTask.setOnSucceeded(_ -> {
+            List<User> currentUsers = getUsersTask.getValue();
+            if (main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))) {
+                employeeSelect.getItems().addAll(currentUsers);
+            } else if (main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts"))) {
+                employeeSelect.getItems().addAll(currentUsers.stream()
+                        .filter(u -> u.getUsername().equals(main.getCurrentUser().getUsername()))
+                        .toList());
+            } else {
+                addList.setVisible(false);
             }
-        }else{
-            addList.setVisible(false);
-        }
+            progressSpinner.setVisible(false);
+            updatePage();
+        });
+        getUsersTask.setOnFailed(_ -> {
+            dialogPane.showError("Error", "An error occurred while fetching users", getUsersTask.getException());
+            progressSpinner.setVisible(false);
+        });
+        progressSpinner.setVisible(true);
+        executor.submit(getUsersTask);
         manageLeaveButton.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Manage Leave")));
         exportDataButton.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Export")));
         openStartTimePicker.setOnAction(_ -> {
@@ -255,32 +268,74 @@ public class RosterPageController extends PageController {
     }
 
     public void updatePage() {
-        List<Shift> allShifts = new ArrayList<>();
-        List<Shift> allModifications = new ArrayList<>();
-        List<LeaveRequest> allLeaveRequests = new ArrayList<>();
-        //Set date in case the value is still null
-        if (datePkr.getValue() == null)
-            datePkr.setValue(main.getCurrentDate());
-        //Get Week start and End dates for search range
-        long weekDay = datePkr.getValue().getDayOfWeek().getValue();
-        LocalDate weekStart = datePkr.getValue().minusDays(weekDay-1);
-        LocalDate weekEnd = datePkr.getValue().plusDays(7-weekDay);
-        try {
-            allShifts = rosterService.getShifts(main.getCurrentStore().getStoreID(),weekStart,weekEnd);
-            allModifications = rosterService.getShiftModifications(main.getCurrentStore().getStoreID(),weekStart,weekEnd);
-            allLeaveRequests = leaveService.getLeaveRequests(main.getCurrentStore().getStoreID(),weekStart,weekEnd);
-        } catch (Exception ex) {
-            dialogPane.showError("Error","An error occurred while fetching shifts", ex);
-        }
-        weekdayBox.getChildren().removeAll(weekdayBox.getChildren());
-        updateDay(datePkr.getValue(), monBox, 1, allShifts,allModifications,allLeaveRequests);
-        updateDay(datePkr.getValue(), tueBox, 2, allShifts,allModifications,allLeaveRequests);
-        updateDay(datePkr.getValue(), wedBox, 3, allShifts,allModifications,allLeaveRequests);
-        updateDay(datePkr.getValue(), thuBox, 4, allShifts,allModifications,allLeaveRequests);
-        updateDay(datePkr.getValue(), friBox, 5, allShifts,allModifications,allLeaveRequests);
-        updateDay(datePkr.getValue(), satBox, 6, allShifts,allModifications,allLeaveRequests);
-        updateDay(datePkr.getValue(), sunBox, 7, allShifts,allModifications,allLeaveRequests);
-        adjustGridSize();
+        progressSpinner.setVisible(true);
+        Task<Void> updatePageTask = new Task<>() {
+            @Override
+            protected Void call() {
+                long weekDay = datePkr.getValue().getDayOfWeek().getValue();
+                LocalDate weekStart = datePkr.getValue().minusDays(weekDay - 1);
+                LocalDate weekEnd = datePkr.getValue().plusDays(7 - weekDay);
+
+                CompletableFuture<List<Shift>> shiftsFuture = CompletableFuture.supplyAsync(() -> {
+                    try {
+                        return rosterService.getShifts(main.getCurrentStore().getStoreID(), weekStart, weekEnd);
+                    } catch (Exception e) {
+                        throw new CompletionException(e);
+                    }
+                }, executor);
+
+                CompletableFuture<List<Shift>> modificationsFuture = CompletableFuture.supplyAsync(() -> {
+                    try {
+                        return rosterService.getShiftModifications(main.getCurrentStore().getStoreID(), weekStart, weekEnd);
+                    } catch (Exception e) {
+                        throw new CompletionException(e);
+                    }
+                }, executor);
+
+                CompletableFuture<List<LeaveRequest>> leaveRequestsFuture = CompletableFuture.supplyAsync(() -> {
+                    try {
+                        return leaveService.getLeaveRequests(main.getCurrentStore().getStoreID(), weekStart, weekEnd);
+                    } catch (Exception e) {
+                        throw new CompletionException(e);
+                    }
+                }, executor);
+
+                CompletableFuture<Void> allFutures = CompletableFuture.allOf(shiftsFuture, modificationsFuture, leaveRequestsFuture);
+
+                allFutures.thenRunAsync(() -> {
+                    try {
+                        List<Shift> allShifts = shiftsFuture.get();
+                        List<Shift> allModifications = modificationsFuture.get();
+                        List<LeaveRequest> allLeaveRequests = leaveRequestsFuture.get();
+
+                        Platform.runLater(() -> {
+                            weekdayBox.getChildren().clear();
+                            updateDay(datePkr.getValue(), monBox, 1, allShifts, allModifications, allLeaveRequests);
+                            updateDay(datePkr.getValue(), tueBox, 2, allShifts, allModifications, allLeaveRequests);
+                            updateDay(datePkr.getValue(), wedBox, 3, allShifts, allModifications, allLeaveRequests);
+                            updateDay(datePkr.getValue(), thuBox, 4, allShifts, allModifications, allLeaveRequests);
+                            updateDay(datePkr.getValue(), friBox, 5, allShifts, allModifications, allLeaveRequests);
+                            updateDay(datePkr.getValue(), satBox, 6, allShifts, allModifications, allLeaveRequests);
+                            updateDay(datePkr.getValue(), sunBox, 7, allShifts, allModifications, allLeaveRequests);
+                            adjustGridSize();
+                            progressSpinner.setVisible(false);
+                        });
+                    } catch (Exception e) {
+                        Platform.runLater(() -> {
+                            dialogPane.showError("Error", "An error occurred while updating the page", e);
+                            progressSpinner.setVisible(false);
+                        });
+                    }
+                }, executor);
+
+                return null;
+            }
+        };
+        updatePageTask.setOnFailed(_ -> {
+            dialogPane.showError("Error", "An error occurred while updating the page", updatePageTask.getException());
+            progressSpinner.setVisible(false);
+        });
+        executor.submit(updatePageTask);
     }
 
     public void weekForward() {
