@@ -2,14 +2,15 @@ package models;
 
 public class Store {
 	private int storeID;
-
 	private String storeName;
+	private double storeHours;
 
 	public Store() {
 	}
 
-	public Store(String storeName){
+	public Store(String storeName, double storeHours) {
 		this.storeName = storeName;
+		this.storeHours = storeHours;
 	}
 
 	public int getStoreID() {
@@ -26,6 +27,14 @@ public class Store {
 
 	public void setStoreName(String storeName) {
 		this.storeName = storeName;
+	}
+
+	public double getStoreHours() {
+		return storeHours;
+	}
+
+	public void setStoreHours(double storeHours) {
+		this.storeHours = storeHours;
 	}
 
 	@Override

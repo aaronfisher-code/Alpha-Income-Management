@@ -118,8 +118,7 @@ public class RosterUtils {
         if(earliestStart.equals(LocalTime.MAX)||latestEnd.equals(LocalTime.MIN)){
             return 0;
         }else {
-            //todo: replace magic number 10 with store specific hours per day
-            return (double) Duration.between(earliestStart, latestEnd).toHours() / 10;
+            return (double) Duration.between(earliestStart, latestEnd).toHours() / main.getCurrentStore().getStoreHours();
         }
     }
 

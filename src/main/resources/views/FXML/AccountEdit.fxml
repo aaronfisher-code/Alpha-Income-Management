@@ -169,7 +169,13 @@
                         </MFXTextField>
                         <Label fx:id="storeNameValidationLabel" text="Please enter a store name" textFill="RED" visible="false">
                            <VBox.margin>
-                              <Insets bottom="-5.0" top="-10.0" />
+                              <Insets bottom="10.0" top="-10.0" />
+                           </VBox.margin>
+                        </Label>
+                        <MFXTextField fx:id="storeHoursField" borderGap="0.0" floatMode="ABOVE" floatingText="Average day length (Hours)" maxWidth="1.7976931348623157E308" minHeight="36.0" />
+                        <Label fx:id="storeHoursValidationLabel" text="Please enter how long the store is open in hours" textFill="RED" visible="false">
+                           <VBox.margin>
+                              <Insets top="-10.0" />
                            </VBox.margin>
                         </Label>
                         <MFXButton fx:id="saveStoreButton" depthLevel="LEVEL3" maxWidth="1.7976931348623157E308" onAction="#addStore" prefHeight="30.0" style="-fx-background-color: #0F60FF;" styleClass="popOverButton" text="Save" textFill="WHITE">

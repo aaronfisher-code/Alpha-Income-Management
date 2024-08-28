@@ -43,8 +43,8 @@ public class EditAccountController extends PageController {
 	@FXML private JFXButton addButton;
 	@FXML private Region contentDarken;
 	@FXML private Button deleteStoreButton,deleteUserButton;
-	@FXML private MFXTextField storeNameField;
-	@FXML private Label editStorePopoverTitle,editUserPopoverTitle,employeeIcon,employeeName,employeeRole,storeNameValidationLabel,usernameValidationLabel,firstNameValidationLabel,lastNameValidationLabel;
+	@FXML private MFXTextField storeNameField,storeHoursField;
+	@FXML private Label editStorePopoverTitle,editUserPopoverTitle,employeeIcon,employeeName,employeeRole,storeNameValidationLabel,usernameValidationLabel,firstNameValidationLabel,lastNameValidationLabel,storeHoursValidationLabel;
 	@FXML private MFXRectangleToggleNode inactiveUserToggle;
 	@FXML private MFXTextField usernameField,firstNameField,lastNameField,roleField;
 	@FXML private ColorPicker profileTextPicker,profileBackgroundPicker;
@@ -60,6 +60,7 @@ public class EditAccountController extends PageController {
 	private FilterView<User> userFilterView = new FilterView<>();
 	private MFXTableView<Store> storesTable = new MFXTableView<>();
 	private MFXTableColumn<Store> storeNameCol;
+	private MFXTableColumn<Store> storeHoursCol;
 	private FilterView<Store> storeFilterView = new FilterView<>();
 	private UserService userService;
 	private StoreService storeService;
@@ -183,8 +184,10 @@ public class EditAccountController extends PageController {
 		storeFilterView.setTextFilterProvider(text -> store -> store.getStoreName().toLowerCase().contains(text));
 		storeNameCol = new MFXTableColumn<>("STORE NAME",false, Comparator.comparing(Store::getStoreName));
 		storeNameCol.setRowCellFactory(_ -> new MFXTableRowCell<>(Store::getStoreName));
+		storeHoursCol = new MFXTableColumn<>("HOURS PER DAY",false, Comparator.comparing(Store::getStoreHours));
+		storeHoursCol.setRowCellFactory(_ -> new MFXTableRowCell<>(Store::getStoreHours));
 		storesTable = new MFXTableView<>();
-		storesTable.getTableColumns().addAll(storeNameCol);
+		storesTable.getTableColumns().addAll(storeNameCol,storeHoursCol);
 		storesTable.getFilters().addAll(
 				new StringFilter<>("Store Name",Store::getStoreName)
 		);
@@ -216,6 +219,7 @@ public class EditAccountController extends PageController {
 		storesTable.virtualFlowInitializedProperty().addListener((_, _, _) -> {addStoreDoubleClickFunction();});
 		storeFilterView.filteredItemsProperty().addListener((_, _, _) -> {addStoreDoubleClickFunction();});
 		ValidatorUtils.setupRegexValidation(storeNameField,storeNameValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveStoreButton);
+		ValidatorUtils.setupRegexValidation(storeHoursField,storeHoursValidationLabel,ValidatorUtils.CASH_REGEX,ValidatorUtils.INT_ERROR,null,saveStoreButton);
 	}
 
 	private void addStoreDoubleClickFunction(){
@@ -474,6 +478,7 @@ public class EditAccountController extends PageController {
 
 	public void openStorePopover(){
 		storeNameField.clear();
+		storeHoursField.clear();
 		editStorePopoverTitle.setText("Add new store");
 		contentDarken.setVisible(true);
 		contentDarken.setOnMouseClicked(_ -> closeStorePopover());
@@ -492,11 +497,13 @@ public class EditAccountController extends PageController {
 		AnimationUtils.slideIn(editPermissionsPopover,425);
 		contentDarken.setOnMouseClicked(_ -> closeUserPopover());
 		storeNameValidationLabel.setVisible(false);
+		storeHoursValidationLabel.setVisible(false);
 	}
 
 	public void openStorePopover(Store store){
 		editStorePopoverTitle.setText("Edit store");
 	 	storeNameField.setText(store.getStoreName());
+		storeHoursField.setText(String.valueOf(store.getStoreHours()));
 		contentDarken.setVisible(true);
 		contentDarken.setOnMouseClicked(_ -> closeStorePopover());
 		saveStoreButton.setOnAction(_ -> editStore(store));
@@ -509,6 +516,7 @@ public class EditAccountController extends PageController {
 		AnimationUtils.slideIn(editStorePopover,425);
 		contentDarken.setVisible(false);
 		storeNameValidationLabel.setVisible(false);
+		storeHoursValidationLabel.setVisible(false);
 	}
 
 	public void closeUserPopover(){
@@ -521,14 +529,17 @@ public class EditAccountController extends PageController {
 
 	public void addStore() {
 		String name = storeNameField.getText();
+		double hours = Double.parseDouble(storeHoursField.getText());
 		if (!storeNameField.isValid()) {
 			storeNameField.requestFocus();
+		}else if (!storeHoursField.isValid()) {
+			storeHoursField.requestFocus();
 		} else {
 			storeSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
 			Task<Void> addStoreTask = new Task<>() {
 				@Override
 				protected Void call() {
-					Store store = new Store(name);
+					Store store = new Store(name, hours);
 					storeService.addStore(store);
 					return null;
 				}
@@ -627,14 +638,18 @@ public class EditAccountController extends PageController {
 
 	public void editStore(Store store) {
 		String name = storeNameField.getText();
+		double hours = Double.parseDouble(storeHoursField.getText());
 		if (!storeNameField.isValid()) {
 			storeNameField.requestFocus();
+		} else if (!storeHoursField.isValid()) {
+			storeHoursField.requestFocus();
 		} else {
 			storeSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
 			Task<Void> editStoreTask = new Task<>() {
 				@Override
 				protected Void call() {
 					store.setStoreName(name);
+					store.setStoreHours(hours);
 					storeService.updateStore(store);
 					return null;
 				}
