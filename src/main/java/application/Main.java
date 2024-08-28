@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDate;
 import java.util.Properties;
+import java.util.concurrent.RejectedExecutionException;
 
 
 public class Main extends Application {
@@ -124,6 +125,10 @@ public class Main extends Application {
 
 	public void handleGlobalException(Thread t, Throwable e) {
 		System.err.println("An unexpected error occurred in thread " + t.getName());
+		if(e instanceof RejectedExecutionException) {
+			System.err.println("Tasks submitted on dead executor, ignoring...: " + e.getMessage());
+			return;
+		}
 		e.printStackTrace(); // Print to console for debugging
 		Platform.runLater(() -> {
 			if (dialogPane != null) {
