@@ -612,7 +612,6 @@ public class RosterPageController extends PageController {
         if (!validateInputs()) {
             return;
         }
-
         progressSpinner.setVisible(true);
         Task<Void> editShiftTask = new Task<>() {
             @Override

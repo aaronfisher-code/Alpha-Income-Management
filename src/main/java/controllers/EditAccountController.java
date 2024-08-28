@@ -6,8 +6,10 @@ import com.jfoenix.controls.JFXNodesList;
 import io.github.palexdev.materialfx.controls.*;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
 import io.github.palexdev.materialfx.filter.StringFilter;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
@@ -24,9 +26,14 @@ import utils.ValidatorUtils;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class EditAccountController extends PageController {
 
@@ -44,6 +51,7 @@ public class EditAccountController extends PageController {
 	@FXML private MFXCheckListView<Store> storeSelector;
 	@FXML private MFXCheckListView<Permission> permissionsSelector;
 	@FXML private MFXButton saveStoreButton,passwordResetButton,saveUserButton;
+	@FXML private MFXProgressSpinner userSpinner, storeSpinner;
 	private MFXTableView<User> accountsTable = new MFXTableView<>();
 	private MFXTableColumn<User> usernameCol;
 	private MFXTableColumn<User> firstNameCol;
@@ -67,6 +75,7 @@ public class EditAccountController extends PageController {
 			 permissionService = new PermissionService();
 			 employmentService = new EmploymentService();
 			 userPermissionService = new UserPermissionService();
+			 executor = Executors.newCachedThreadPool();
 		 } catch (IOException ex) {
 			 dialogPane.showError("Error","An error occurred while initializing the services", ex);
 		 }
@@ -92,7 +101,6 @@ public class EditAccountController extends PageController {
 		userFilterView.setTitle("Current Users");
 		userFilterView.setSubtitle("Double click a user to edit");
 		userFilterView.setTextFilterProvider(text -> user -> user.getFirst_name().toLowerCase().contains(text) || user.getLast_name().toLowerCase().contains(text) || user.getRole().toLowerCase().contains(text));
-		ObservableList<User> allUsers = userFilterView.getFilteredItems();
 		usernameCol = new MFXTableColumn<>("STAFF ID",false, Comparator.comparing(User::getUsername));
 		firstNameCol = new MFXTableColumn<>("FIRST NAME",false, Comparator.comparing(User::getFirst_name));
 		lastNameCol = new MFXTableColumn<>("LAST NAME",false, Comparator.comparing(User::getLast_name));
@@ -109,13 +117,23 @@ public class EditAccountController extends PageController {
 				new StringFilter<>("Last Name",User::getLast_name),
 				new StringFilter<>("Role",User::getRole)
 		);
-		try {
-			List<User> userList = userService.getAllUsers();
-			allUsers = FXCollections.observableArrayList(userList);
+		userSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+		Task<List<User>> fetchUsersTask = new Task<>() {
+			@Override
+			protected List<User> call() {
+				return userService.getAllUsers();
+			}
+		};
+		fetchUsersTask.setOnSucceeded(_ -> {
+			ObservableList<User> allUsers = FXCollections.observableArrayList(fetchUsersTask.getValue());
 			accountsTable.setItems(allUsers);
-		} catch (Exception ex) {
-			dialogPane.showError("Error","An error occurred while fetching users", ex);
-		}
+			userSpinner.setMaxWidth(0);
+		});
+		fetchUsersTask.setOnFailed(_ -> {
+			dialogPane.showError("Error", "An error occurred while fetching users", fetchUsersTask.getException());
+			userSpinner.setMaxWidth(0);
+		});
+		executor.submit(fetchUsersTask);
 		accountsTable.setFooterVisible(true);
 		accountsTable.autosizeColumnsOnInitialization();
 		accountsTable.setMaxWidth(Double.MAX_VALUE);
@@ -128,7 +146,6 @@ public class EditAccountController extends PageController {
 			addUserDoubleClickFunction();});
 		userFilterView.filteredItemsProperty().addListener((_, _, _) -> {
 			addUserDoubleClickFunction();});
-		accountsTable.setItems(allUsers);
 		ValidatorUtils.setupRegexValidation(usernameField,usernameValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveUserButton);
 		ValidatorUtils.setupRegexValidation(firstNameField,firstNameValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveUserButton);
 		ValidatorUtils.setupRegexValidation(lastNameField,lastNameValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveUserButton);
@@ -164,7 +181,6 @@ public class EditAccountController extends PageController {
 		storeFilterView.setTitle("Current Stores");
 		storeFilterView.setSubtitle("Double click a store to edit");
 		storeFilterView.setTextFilterProvider(text -> store -> store.getStoreName().toLowerCase().contains(text));
-		ObservableList<Store> allStores = storeFilterView.getFilteredItems();
 		storeNameCol = new MFXTableColumn<>("STORE NAME",false, Comparator.comparing(Store::getStoreName));
 		storeNameCol.setRowCellFactory(_ -> new MFXTableRowCell<>(Store::getStoreName));
 		storesTable = new MFXTableView<>();
@@ -172,13 +188,23 @@ public class EditAccountController extends PageController {
 		storesTable.getFilters().addAll(
 				new StringFilter<>("Store Name",Store::getStoreName)
 		);
-		try {
-			List<Store> storeList = storeService.getAllStores();
-			allStores = FXCollections.observableArrayList(storeList);
+		storeSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+		Task<List<Store>> fetchStoresTask = new Task<>() {
+			@Override
+			protected List<Store> call() {
+				return storeService.getAllStores();
+			}
+		};
+		fetchStoresTask.setOnSucceeded(_ -> {
+			ObservableList<Store> allStores = FXCollections.observableArrayList(fetchStoresTask.getValue());
 			storesTable.setItems(allStores);
-		} catch (Exception ex) {
-			dialogPane.showError("Error","An error occurred while fetching stores", ex);
-		}
+			storeSpinner.setMaxWidth(0);
+		});
+		fetchStoresTask.setOnFailed(_ -> {
+			dialogPane.showError("Error", "An error occurred while fetching stores", fetchStoresTask.getException());
+			storeSpinner.setMaxWidth(0);
+		});
+		executor.submit(fetchStoresTask);
 		storesTable.setFooterVisible(true);
 		storesTable.autosizeColumnsOnInitialization();
 		storesTable.setMaxWidth(Double.MAX_VALUE);
@@ -189,7 +215,6 @@ public class EditAccountController extends PageController {
 		VBox.setVgrow(storesTable, Priority.ALWAYS);
 		storesTable.virtualFlowInitializedProperty().addListener((_, _, _) -> {addStoreDoubleClickFunction();});
 		storeFilterView.filteredItemsProperty().addListener((_, _, _) -> {addStoreDoubleClickFunction();});
-		storesTable.setItems(allStores);
 		ValidatorUtils.setupRegexValidation(storeNameField,storeNameValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveStoreButton);
 	}
 
@@ -228,21 +253,41 @@ public class EditAccountController extends PageController {
 		employeeRole.setText("");
 		employeeIcon.setStyle("-fx-background-color: #FFFFFF; -fx-text-fill: #FFFFFF;");
 		storeSelector.getSelectionModel().clearSelection();
-		//Refresh Store list for store selector
-		try {
-			List<Store> allStores = storeService.getAllStores();
-			storeSelector.setItems(FXCollections.observableArrayList(allStores));
-		} catch (Exception ex) {
-			dialogPane.showError("Error","An error occurred while fetching stores", ex);
-		}
 		permissionsSelector.getSelectionModel().clearSelection();
-		//Refresh permissions list for permissions selector
-		try {
-			List<Permission> allPermissions = permissionService.getAllPermissions();
-			permissionsSelector.setItems(FXCollections.observableArrayList(allPermissions));
-		} catch (Exception ex) {
-			dialogPane.showError("Error","An error occurred while fetching permissions", ex);
-		}
+		userSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+		CompletableFuture<List<Store>> allStoresFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				return storeService.getAllStores();
+			} catch (Exception ex) {
+				throw new CompletionException(ex);
+			}
+		}, executor);
+		CompletableFuture<List<Permission>> allPermissionsFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				return permissionService.getAllPermissions();
+			} catch (Exception ex) {
+				throw new CompletionException(ex);
+			}
+		}, executor);
+		CompletableFuture.allOf(
+				allStoresFuture,
+				allPermissionsFuture
+		).thenRunAsync(() -> {
+			try {
+				List<Store> allStores = allStoresFuture.get();
+				List<Permission> allPermissions = allPermissionsFuture.get();
+				Platform.runLater(() -> {
+					storeSelector.setItems(FXCollections.observableArrayList(allStores));
+					permissionsSelector.setItems(FXCollections.observableArrayList(allPermissions));
+					userSpinner.setMaxWidth(0);
+				});
+			} catch (Exception ex) {
+				Platform.runLater(() -> {
+					dialogPane.showError("Error", "An error occurred while fetching user information", ex);
+					userSpinner.setMaxWidth(0);
+				});
+			}
+		}, executor);
 		//Add live updates to person card preview
 		firstNameField.textProperty().addListener((_, _, newValue) -> {
 					employeeName.setText(newValue + "." + (lastNameField.getText().isEmpty()?"":lastNameField.getText(0,1)));
@@ -296,56 +341,95 @@ public class EditAccountController extends PageController {
 		profileTextPicker.setValue(Color.valueOf(user.getTextColour()));
 		profileBackgroundPicker.setValue(Color.valueOf(user.getBgColour()));
 		passwordResetButton.setVisible(true);
-		try {
-			if (!userService.isPasswordResetRequested(user.getUsername())) {
-				passwordResetButton.setDisable(true);
-				passwordResetButton.setText("Password reset requested");
-			} else {
-				passwordResetButton.setDisable(false);
-				passwordResetButton.setText("Request Password Reset");
-				passwordResetButton.setOnAction(_ -> resetPassword(user));
-			}
-		} catch (Exception ex) {
-			dialogPane.showError("Error","An error occurred while fetching user information", ex);
-		}
 		employeeName.setText(user.getFirst_name() + "." + user.getLast_name().charAt(0));
 		employeeRole.setText(user.getRole());
 		employeeIcon.setText(user.getFirst_name().substring(0,1));
 		employeeIcon.setStyle("-fx-background-color: " + user.getBgColour()+ "; -fx-text-fill: " + user.getTextColour() + ";");
 		storeSelector.getSelectionModel().clearSelection();
-		//Refresh Store list for store selector
-		try {
-			List<Store> allStores = storeService.getAllStores();
-			storeSelector.setItems(FXCollections.observableArrayList(allStores));
-
-			List<Employment> staffStores = userService.getEmploymentsForUser(user.getUsername());
-			for(Store s:allStores){
-				for(Employment e:staffStores){
-					if(s.getStoreID()==e.getStoreID()){
-						storeSelector.getSelectionModel().selectItem(s);
-					}
-				}
-			}
-		} catch (Exception ex) {
-			dialogPane.showError("Error","An error occurred while fetching employment information", ex);
-		}
 		permissionsSelector.getSelectionModel().clearSelection();
-		//Refresh permissions list for permissions selector
-		try {
-			List<Permission> allPermissions = permissionService.getAllPermissions();
-			permissionsSelector.setItems(FXCollections.observableArrayList(allPermissions));
-
-			List<Permission> userPermissions = userService.getUserPermissions(user.getUsername());
-			for(Permission p:userPermissions){
-				for(Permission p2:allPermissions){
-					if(p.getPermissionID()==p2.getPermissionID()){
-						permissionsSelector.getSelectionModel().selectItem(p2);
-					}
-				}
+		userSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+		CompletableFuture<Boolean> passwordResetFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				return userService.isPasswordResetRequested(user.getUsername());
+			} catch (Exception ex) {
+				throw new CompletionException(ex);
 			}
-		} catch (Exception ex) {
-			dialogPane.showError("Error","An error occurred while fetching permission information", ex);
-		}
+		}, executor);
+		CompletableFuture<List<Store>> allStoresFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				return storeService.getAllStores();
+			} catch (Exception ex) {
+				throw new CompletionException(ex);
+			}
+		}, executor);
+		CompletableFuture<List<Employment>> staffStoresFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				return userService.getEmploymentsForUser(user.getUsername());
+			} catch (Exception ex) {
+				throw new CompletionException(ex);
+			}
+		}, executor);
+		CompletableFuture<List<Permission>> allPermissionsFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				return permissionService.getAllPermissions();
+			} catch (Exception ex) {
+				throw new CompletionException(ex);
+			}
+		}, executor);
+		CompletableFuture<List<Permission>> userPermissionsFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				return userService.getUserPermissions(user.getUsername());
+			} catch (Exception ex) {
+				throw new CompletionException(ex);
+			}
+		}, executor);
+		CompletableFuture.allOf(
+				passwordResetFuture,
+				allStoresFuture,
+				staffStoresFuture,
+				allPermissionsFuture,
+				userPermissionsFuture
+		).thenRunAsync(() -> {
+			try {
+				boolean isPasswordResetRequested = passwordResetFuture.get();
+				List<Store> allStores = allStoresFuture.get();
+				List<Employment> staffStores = staffStoresFuture.get();
+				List<Permission> allPermissions = allPermissionsFuture.get();
+				List<Permission> userPermissions = userPermissionsFuture.get();
+				Platform.runLater(() -> {
+					if (!isPasswordResetRequested) {
+						passwordResetButton.setDisable(true);
+						passwordResetButton.setText("Password reset requested");
+					} else {
+						passwordResetButton.setDisable(false);
+						passwordResetButton.setText("Request Password Reset");
+						passwordResetButton.setOnAction(_ -> resetPassword(user));
+					}
+					storeSelector.setItems(FXCollections.observableArrayList(allStores));
+					for (Store s : allStores) {
+						for (Employment e : staffStores) {
+							if (s.getStoreID() == e.getStoreID()) {
+								storeSelector.getSelectionModel().selectItem(s);
+							}
+						}
+					}
+					permissionsSelector.setItems(FXCollections.observableArrayList(allPermissions));
+					for (Permission p : userPermissions) {
+						for (Permission p2 : allPermissions) {
+							if (p.getPermissionID() == p2.getPermissionID()) {
+								permissionsSelector.getSelectionModel().selectItem(p2);
+							}
+						}
+					}
+					userSpinner.setMaxWidth(0);
+				});
+			} catch (Exception ex) {
+				Platform.runLater(() -> {
+					dialogPane.showError("Error", "An error occurred while fetching user information", ex);
+					userSpinner.setMaxWidth(0);
+				});
+			}
+		}, executor);
 		//Add live updates to person card preview
 		firstNameField.textProperty().addListener((_, _, newValue) -> {
 					employeeName.setText(newValue + "." + (lastNameField.getText().isEmpty()?"":lastNameField.getText(0,1)));
@@ -435,19 +519,30 @@ public class EditAccountController extends PageController {
 		lastNameValidationLabel.setVisible(false);
 	}
 
-	public void addStore(){
+	public void addStore() {
 		String name = storeNameField.getText();
-		if(!storeNameField.isValid()) {
+		if (!storeNameField.isValid()) {
 			storeNameField.requestFocus();
-		}else{
-			try {
-				Store store = new Store(name);
-				storeService.addStore(store);
-			} catch (Exception ex) {
-				dialogPane.showError("Error","An error occurred while adding a store", ex);
-			}
-			dialogPane.showInformation("Success","Store was successfully added to the database");
-			storesView();
+		} else {
+			storeSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+			Task<Void> addStoreTask = new Task<>() {
+				@Override
+				protected Void call() {
+					Store store = new Store(name);
+					storeService.addStore(store);
+					return null;
+				}
+			};
+			addStoreTask.setOnSucceeded(_ -> {
+				dialogPane.showInformation("Success", "Store was successfully added to the database");
+				storesView();
+				storeSpinner.setMaxWidth(0);
+			});
+			addStoreTask.setOnFailed(_ -> {
+				dialogPane.showError("Error", "An error occurred while adding a store", addStoreTask.getException());
+				storeSpinner.setMaxWidth(0);
+			});
+			executor.submit(addStoreTask);
 		}
 	}
 
@@ -456,158 +551,285 @@ public class EditAccountController extends PageController {
 		String fname = firstNameField.getText();
 		String lname = lastNameField.getText();
 		String role = roleField.getText();
-		int r = (int) Math.round(profileTextPicker.getValue().getRed() * 255.0);
-		int g = (int) Math.round(profileTextPicker.getValue().getGreen() * 255.0);
-		int b = (int) Math.round(profileTextPicker.getValue().getBlue() * 255.0);
-		String profileText = String.format("#%02x%02x%02x", r, g, b).toUpperCase();
-		r = (int) Math.round(profileBackgroundPicker.getValue().getRed() * 255.0);
-		g = (int) Math.round(profileBackgroundPicker.getValue().getGreen() * 255.0);
-		b = (int) Math.round(profileBackgroundPicker.getValue().getBlue() * 255.0);
-		String profileBG = String.format("#%02x%02x%02x", r, g, b).toUpperCase();
-		try {
-			if (!firstNameField.isValid()) {
-				firstNameField.requestFocus();
-			} else if (!lastNameField.isValid()) {
-				lastNameField.requestFocus();
-			} else if (userService.getUserByUsername(username)!=null) {
-				dialogPane.showError("Error", "Username already exists, Please choose a different username");
-			} else if (storeSelector.getSelectionModel().getSelection().isEmpty()) {
-				dialogPane.showError("Error", "No store selected, Please select at least one store for the user to work at");
-			}else{
-				User newUser = new User();
-				newUser.setUsername(username);
-				newUser.setFirst_name(fname);
-				newUser.setLast_name(lname);
-				newUser.setRole(role);
-				newUser.setBgColour(profileBG);
-				newUser.setTextColour(profileText);
-				userService.addUser(newUser);
-				for (Store s : storeSelector.getSelectionModel().getSelection().values()) {
-					employmentService.addEmployment(newUser, s);
+		String profileText = getColorString(profileTextPicker.getValue());
+		String profileBG = getColorString(profileBackgroundPicker.getValue());
+		if (!usernameField.isValid()) {
+			usernameField.requestFocus();
+		} else if (!firstNameField.isValid()) {
+			firstNameField.requestFocus();
+		} else if (!lastNameField.isValid()) {
+			lastNameField.requestFocus();
+		} else if (storeSelector.getSelectionModel().getSelection().isEmpty()) {
+			dialogPane.showError("Error", "No store selected, Please select at least one store for the user to work at");
+		} else {
+			userSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+			Task<Void> addUserTask = new Task<>() {
+				@Override
+				protected Void call() throws Exception {
+					// Check if username already exists
+					if (userService.getUserByUsername(username) != null) {
+						throw new Exception("Username already exists");
+					}
+					User newUser = new User();
+					newUser.setUsername(username);
+					newUser.setFirst_name(fname);
+					newUser.setLast_name(lname);
+					newUser.setRole(role);
+					newUser.setBgColour(profileBG);
+					newUser.setTextColour(profileText);
+					userService.addUser(newUser);
+					List<CompletableFuture<Void>> futures = new ArrayList<>();
+					// Add employments in parallel
+					for (Store s : storeSelector.getSelectionModel().getSelection().values()) {
+						CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+							try {
+								employmentService.addEmployment(newUser, s);
+							} catch (Exception e) {
+								throw new CompletionException(e);
+							}
+						}, executor);
+						futures.add(future);
+					}
+					// Add user permissions in parallel
+					for (Permission p : permissionsSelector.getSelectionModel().getSelection().values()) {
+						CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+							try {
+								userPermissionService.addUserPermission(newUser, p);
+							} catch (Exception e) {
+								throw new CompletionException(e);
+							}
+						}, executor);
+						futures.add(future);
+					}
+					// Wait for all futures to complete
+					CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+					return null;
 				}
-				for (Permission p : permissionsSelector.getSelectionModel().getSelection().values()) {
-					userPermissionService.addUserPermission(newUser, p);
-				}
+			};
+			addUserTask.setOnSucceeded(_ -> {
 				dialogPane.showInformation("Success", "User was successfully added to the database");
+				closeUserPopover();
 				usersView();
-			}
-		} catch (Exception ex) {
-			dialogPane.showError("Error","An error occurred while adding a user", ex);
+				userSpinner.setMaxWidth(0);
+			});
+			addUserTask.setOnFailed(_ -> {
+				Throwable exception = addUserTask.getException();
+				if (exception.getMessage().equals("Username already exists")) {
+					dialogPane.showError("Error", "Username already exists, Please choose a different username");
+				} else {
+					dialogPane.showError("Error", "An error occurred while adding a user", exception);
+				}
+				userSpinner.setMaxWidth(0);
+			});
+			executor.submit(addUserTask);
 		}
 	}
 
-	public void editStore(Store store){
+	public void editStore(Store store) {
 		String name = storeNameField.getText();
-		if(!storeNameField.isValid()) {
+		if (!storeNameField.isValid()) {
 			storeNameField.requestFocus();
-		}else{
-			try {
-				store.setStoreName(name);
-				storeService.updateStore(store);
-			} catch (Exception ex) {
-				dialogPane.showError("Error","An error occurred while updating the store", ex);
-			}
-			dialogPane.showInformation("Success","Store was successfully updated");
-			closeStorePopover();
-			storesView();
+		} else {
+			storeSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+			Task<Void> editStoreTask = new Task<>() {
+				@Override
+				protected Void call() {
+					store.setStoreName(name);
+					storeService.updateStore(store);
+					return null;
+				}
+			};
+			editStoreTask.setOnSucceeded(_ -> {
+				dialogPane.showInformation("Success", "Store was successfully updated");
+				closeStorePopover();
+				storesView();
+				storeSpinner.setMaxWidth(0);
+			});
+			editStoreTask.setOnFailed(_ -> {
+				dialogPane.showError("Error", "An error occurred while updating the store", editStoreTask.getException());
+				storeSpinner.setMaxWidth(0);
+			});
+			executor.submit(editStoreTask);
 		}
 	}
 
-	public void editUser(User user){
-	 	LocalDate inactiveDate = null;
-	 	if(inactiveUserToggle.isSelected() && user.getInactiveDate()!=null){
-	 		inactiveDate = user.getInactiveDate();
-		}else if(inactiveUserToggle.isSelected() && user.getInactiveDate()==null){
-	 		inactiveDate = LocalDate.now();
+	public void editUser(User user) {
+		LocalDate inactiveDate = null;
+		if (inactiveUserToggle.isSelected() && user.getInactiveDate() != null) {
+			inactiveDate = user.getInactiveDate();
+		} else if (inactiveUserToggle.isSelected() && user.getInactiveDate() == null) {
+			inactiveDate = LocalDate.now();
 		}
 		String fname = firstNameField.getText();
 		String lname = lastNameField.getText();
 		String role = roleField.getText();
-		int r = (int)Math.round(profileTextPicker.getValue().getRed() * 255.0);
-		int g = (int)Math.round(profileTextPicker.getValue().getGreen() * 255.0);
-		int b = (int)Math.round(profileTextPicker.getValue().getBlue() * 255.0);
-		String profileText = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
-		r = (int)Math.round(profileBackgroundPicker.getValue().getRed() * 255.0);
-		g = (int)Math.round(profileBackgroundPicker.getValue().getGreen() * 255.0);
-		b = (int)Math.round(profileBackgroundPicker.getValue().getBlue() * 255.0);
-		String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
-		if(!firstNameField.isValid()) {
+		String profileText = getColorString(profileTextPicker.getValue());
+		String profileBG = getColorString(profileBackgroundPicker.getValue());
+		if (!firstNameField.isValid()) {
 			firstNameField.requestFocus();
-		}else if(!lastNameField.isValid()) {
+		} else if (!lastNameField.isValid()) {
 			lastNameField.requestFocus();
 		} else if (storeSelector.getSelectionModel().getSelection().isEmpty()) {
 			dialogPane.showError("Error", "No store selected, Please select at least one store for the user to work at");
-		}else{
-			try {
-				user.setFirst_name(fname);
-				user.setLast_name(lname);
-				user.setRole(role);
-				user.setBgColour(profileBG);
-				user.setTextColour(profileText);
-				user.setInactiveDate(inactiveDate);
-				userService.updateUser(user);
-				employmentService.deleteEmploymentsForUser(user);
-				for(Store s:storeSelector.getSelectionModel().getSelection().values()){
-					employmentService.addEmployment(user,s);
+		} else {
+			userSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+			LocalDate finalInactiveDate = inactiveDate;
+			Task<Void> editUserTask = new Task<>() {
+				@Override
+				protected Void call() {
+					// Update user details
+					user.setFirst_name(fname);
+					user.setLast_name(lname);
+					user.setRole(role);
+					user.setBgColour(profileBG);
+					user.setTextColour(profileText);
+					user.setInactiveDate(finalInactiveDate);
+					userService.updateUser(user);
+					List<CompletableFuture<Void>> futures = new ArrayList<>();
+					// Delete existing employments and permissions
+					CompletableFuture<Void> deleteEmploymentsFuture = CompletableFuture.runAsync(() -> {
+						try {
+							employmentService.deleteEmploymentsForUser(user);
+						} catch (Exception e) {
+							throw new CompletionException(e);
+						}
+					}, executor);
+					CompletableFuture<Void> deletePermissionsFuture = CompletableFuture.runAsync(() -> {
+						try {
+							userPermissionService.deletePermissionsForUser(user);
+						} catch (Exception e) {
+							throw new CompletionException(e);
+						}
+					}, executor);
+					// Wait for deletions to complete before adding new ones
+					CompletableFuture.allOf(deleteEmploymentsFuture, deletePermissionsFuture).join();
+					// Add new employments in parallel
+					for (Store s : storeSelector.getSelectionModel().getSelection().values()) {
+						CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+							try {
+								employmentService.addEmployment(user, s);
+							} catch (Exception e) {
+								throw new CompletionException(e);
+							}
+						}, executor);
+						futures.add(future);
+					}
+					// Add new user permissions in parallel
+					for (Permission p : permissionsSelector.getSelectionModel().getSelection().values()) {
+						CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+							try {
+								userPermissionService.addUserPermission(user, p);
+							} catch (Exception e) {
+								throw new CompletionException(e);
+							}
+						}, executor);
+						futures.add(future);
+					}
+					// Wait for all futures to complete
+					CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+					return null;
 				}
-				userPermissionService.deletePermissionsForUser(user);
-				for(Permission p:permissionsSelector.getSelectionModel().getSelection().values()){
-					userPermissionService.addUserPermission(user,p);
-				}
-			} catch (Exception ex) {
-				dialogPane.showError("Error","An error occurred while updating the user", ex);
-			}
-			dialogPane.showInformation("Success","User was successfully updated");
-			closeUserPopover();
-			usersView();
-		}
-	}
-
-	public void resetPassword(User user){
-		try{
-			userService.resetUserPassword(user.getUsername());
-		}catch(Exception ex){
-			dialogPane.showError("Error","An error occurred while updating user password", ex);
-		}
-		passwordResetButton.setText("Password reset requested");
-		passwordResetButton.setDisable(true);
-	}
-
-	public void deleteStore(Store store){
-		 dialogPane.showWarning("Confirm Delete",
-				 "This action will permanently delete the store from all systems,\n" +
-						 "Are you sure you still want to delete this store?").thenAccept(buttonType -> {
-			 if (buttonType.equals(ButtonType.OK)) {
-				 try {
-					 storeService.deleteStore(store);
-				 } catch (Exception ex) {
-					 dialogPane.showError("Error","An error occurred while deleting store", ex);
-				 }
-				 dialogPane.showInformation("Success","Store was successfully deleted");
-				 closeStorePopover();
-				 storesView();
-			 }
-		 });
-	}
-
-	public void deleteUser(User user){
-		dialogPane.showWarning("Confirm Delete",
-                """
-                        This action will permanently delete the user from all systems,
-                        if the archived information for this user must be saved, its instead \
-                        preferred that you mark them as a now inactive user
-
-                        Are you sure you still want to delete this user?""").thenAccept(buttonType -> {
-			if (buttonType.equals(ButtonType.OK)) {
-				try {
-					userService.deleteUser(user.getUsername());
-				} catch (Exception ex) {
-					dialogPane.showError("Error","An error occurred while deleting user", ex);
-				}
-				dialogPane.showInformation("Success","User was successfully deleted");
+			};
+			editUserTask.setOnSucceeded(_ -> {
+				dialogPane.showInformation("Success", "User was successfully updated");
 				closeUserPopover();
 				usersView();
+				userSpinner.setMaxWidth(0);
+			});
+			editUserTask.setOnFailed(_ -> {
+				dialogPane.showError("Error", "An error occurred while updating the user", editUserTask.getException());
+				userSpinner.setMaxWidth(0);
+			});
+			executor.submit(editUserTask);
+		}
+	}
+
+	public void resetPassword(User user) {
+		userSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+		Task<Void> resetPasswordTask = new Task<>() {
+			@Override
+			protected Void call() {
+				userService.resetUserPassword(user.getUsername());
+				return null;
+			}
+		};
+		resetPasswordTask.setOnSucceeded(_ -> {
+			Platform.runLater(() -> {
+				passwordResetButton.setText("Password reset requested");
+				passwordResetButton.setDisable(true);
+				dialogPane.showInformation("Success", "Password reset has been requested for the user");
+			});
+			userSpinner.setMaxWidth(0);
+		});
+		resetPasswordTask.setOnFailed(_ -> {
+			dialogPane.showError("Error", "An error occurred while updating user password", resetPasswordTask.getException());
+			userSpinner.setMaxWidth(0);
+		});
+		executor.submit(resetPasswordTask);
+	}
+
+	public void deleteStore(Store store) {
+		dialogPane.showWarning("Confirm Delete",
+				"This action will permanently delete the store from all systems,\n" +
+						"Are you sure you still want to delete this store?").thenAccept(buttonType -> {
+			if (buttonType.equals(ButtonType.OK)) {
+				storeSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+				Task<Void> deleteStoreTask = new Task<>() {
+					@Override
+					protected Void call() {
+						storeService.deleteStore(store);
+						return null;
+					}
+				};
+				deleteStoreTask.setOnSucceeded(_ -> {
+					dialogPane.showInformation("Success", "Store was successfully deleted");
+					closeStorePopover();
+					storesView();
+					storeSpinner.setMaxWidth(0);
+				});
+				deleteStoreTask.setOnFailed(_ -> {
+					dialogPane.showError("Error", "An error occurred while deleting store", deleteStoreTask.getException());
+					storeSpinner.setMaxWidth(0);
+				});
+				executor.submit(deleteStoreTask);
 			}
 		});
+	}
+
+	public void deleteUser(User user) {
+		dialogPane.showWarning("Confirm Delete",
+				"This action will permanently delete the user from all systems,\n" +
+						"if the archived information for this user must be saved, it's instead \n" +
+						"preferred that you mark them as a now inactive user\n\n" +
+						"Are you sure you still want to delete this user?").thenAccept(buttonType -> {
+			if (buttonType.equals(ButtonType.OK)) {
+				storeSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+				Task<Void> deleteUserTask = new Task<>() {
+					@Override
+					protected Void call() {
+						userService.deleteUser(user.getUsername());
+						return null;
+					}
+				};
+				deleteUserTask.setOnSucceeded(_ -> {
+					dialogPane.showInformation("Success", "User was successfully deleted");
+					closeUserPopover();
+					usersView();
+					storeSpinner.setMaxWidth(0);
+				});
+				deleteUserTask.setOnFailed(_ -> {
+					dialogPane.showError("Error", "An error occurred while deleting user", deleteUserTask.getException());
+					storeSpinner.setMaxWidth(0);
+				});
+				executor.submit(deleteUserTask);
+			}
+		});
+	}
+
+	private String getColorString(Color color) {
+		int r = (int) Math.round(color.getRed() * 255.0);
+		int g = (int) Math.round(color.getGreen() * 255.0);
+		int b = (int) Math.round(color.getBlue() * 255.0);
+		return String.format("#%02x%02x%02x", r, g, b).toUpperCase();
 	}
 }
