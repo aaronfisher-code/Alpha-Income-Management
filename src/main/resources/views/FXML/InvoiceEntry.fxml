@@ -5,6 +5,7 @@
 <?import com.jfoenix.controls.JFXNodesList?>
 <?import io.github.palexdev.materialfx.controls.MFXButton?>
 <?import io.github.palexdev.materialfx.controls.MFXDatePicker?>
+<?import io.github.palexdev.materialfx.controls.MFXProgressSpinner?>
 <?import io.github.palexdev.materialfx.controls.MFXTextField?>
 <?import io.github.palexdev.materialfx.font.MFXFontIcon?>
 <?import java.net.URL?>
@@ -29,7 +30,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane fx:id="backgroundPane" prefHeight="800.0" prefWidth="500.0" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.InvoiceEntryController">
+<StackPane fx:id="backgroundPane" prefHeight="800.0" prefWidth="500.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.InvoiceEntryController">
    <children>
       <BorderPane style="-fx-background-color: TRANSPARENT;">
          <top>
@@ -100,6 +101,7 @@
                               <Cursor fx:constant="HAND" />
                            </cursor>
                         </Button>
+                        <MFXProgressSpinner fx:id="progressSpinner" radius="7.0" visible="false" />
                      </children>
                      <padding>
                         <Insets top="5.0" />
