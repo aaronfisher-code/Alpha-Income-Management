@@ -7,8 +7,12 @@ import models.Invoice;
 import models.CellDataPoint;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Properties;
@@ -35,8 +39,8 @@ public class InvoiceService {
         return headers;
     }
 
-    public Invoice getInvoice(String invoiceId) {
-        String url = apiBaseUrl + "/" + invoiceId;
+    public Invoice getInvoice(String invoiceId) throws UnsupportedEncodingException {
+        String url = apiBaseUrl + "/" + URLEncoder.encode(invoiceId, StandardCharsets.UTF_8);
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         ResponseEntity<Invoice> response = restTemplate.exchange(url, HttpMethod.GET, entity, Invoice.class);
         return response.getBody();
@@ -47,7 +51,8 @@ public class InvoiceService {
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
         try {
-            return objectMapper.readValue(response.getBody(), new TypeReference<List<Invoice>>(){});
+            return objectMapper.readValue(response.getBody(), new TypeReference<>() {
+            });
         } catch (IOException e) {
             throw new RuntimeException("Error parsing JSON response", e);
         }
@@ -65,17 +70,23 @@ public class InvoiceService {
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
         try {
-            return objectMapper.readValue(response.getBody(), new TypeReference<List<Invoice>>(){});
+            return objectMapper.readValue(response.getBody(), new TypeReference<>() {
+            });
         } catch (IOException e) {
             throw new RuntimeException("Error parsing JSON response", e);
         }
     }
 
     public boolean checkDuplicateInvoice(String invoiceId, int storeId, int supplierId) {
-        String url = apiBaseUrl + "/check-duplicate?invoiceId=" + invoiceId + "&storeId=" + storeId + "&supplierId=" + supplierId;
+        String url = UriComponentsBuilder.fromHttpUrl(apiBaseUrl)
+                .path("/check-duplicate")
+                .queryParam("invoiceId", URLEncoder.encode(invoiceId, StandardCharsets.UTF_8))
+                .queryParam("storeId", storeId)
+                .queryParam("supplierId", supplierId)
+                .toUriString();
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         ResponseEntity<Boolean> response = restTemplate.exchange(url, HttpMethod.GET, entity, Boolean.class);
-        return response.getBody();
+        return Boolean.TRUE.equals(response.getBody());
     }
 
     public void addInvoice(Invoice invoice) {
@@ -84,13 +95,13 @@ public class InvoiceService {
     }
 
     public void updateInvoice(Invoice invoice, String originalInvoiceNo) {
-        String url = apiBaseUrl + "/" + originalInvoiceNo;
+        String url = apiBaseUrl + "/" + URLEncoder.encode(originalInvoiceNo, StandardCharsets.UTF_8);
         HttpEntity<Invoice> entity = new HttpEntity<>(invoice, createHeaders());
         restTemplate.exchange(url, HttpMethod.PUT, entity, Void.class);
     }
 
     public void deleteInvoice(String invoiceId, int storeId) {
-        String url = apiBaseUrl + "/" + invoiceId + "?storeId=" + storeId;
+        String url = apiBaseUrl + "/" + URLEncoder.encode(invoiceId, StandardCharsets.UTF_8) + "?storeId=" + storeId;
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
     }

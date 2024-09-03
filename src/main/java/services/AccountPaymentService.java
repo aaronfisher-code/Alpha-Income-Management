@@ -8,6 +8,8 @@ import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Properties;
@@ -52,13 +54,13 @@ public class AccountPaymentService {
     }
 
     public void updateAccountPayment(String originalInvoiceNo, AccountPayment payment) {
-        String url = apiBaseUrl + "/" + originalInvoiceNo;
+        String url = apiBaseUrl + "/" + URLEncoder.encode(originalInvoiceNo, StandardCharsets.UTF_8);
         HttpEntity<AccountPayment> entity = new HttpEntity<>(payment, createHeaders());
         restTemplate.exchange(url, HttpMethod.PUT, entity, Void.class);
     }
 
     public void deleteAccountPayment(int storeId, String invoiceNumber) {
-        String url = apiBaseUrl + "/" + storeId + "/" + invoiceNumber;
+        String url = apiBaseUrl + "/" + storeId + "/" + URLEncoder.encode(invoiceNumber, StandardCharsets.UTF_8);
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
     }

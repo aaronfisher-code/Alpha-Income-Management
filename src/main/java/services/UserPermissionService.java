@@ -7,6 +7,8 @@ import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -44,6 +46,6 @@ public class UserPermissionService {
 
     public void deletePermissionsForUser(User user) {
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
-        restTemplate.exchange(apiBaseUrl + "/" + user.getUsername(), HttpMethod.DELETE, entity, Void.class);
+        restTemplate.exchange(apiBaseUrl + "/" + URLEncoder.encode(user.getUsername(), StandardCharsets.UTF_8), HttpMethod.DELETE, entity, Void.class);
     }
 }

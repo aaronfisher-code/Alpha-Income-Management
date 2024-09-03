@@ -10,6 +10,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 public class EmploymentService {
@@ -43,7 +45,7 @@ public class EmploymentService {
     }
 
     public void deleteEmploymentsForUser(User user) {
-        String url = apiBaseUrl + "/" + user.getUsername();
+        String url = apiBaseUrl + "/" + URLEncoder.encode(user.getUsername(), StandardCharsets.UTF_8);
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
     }

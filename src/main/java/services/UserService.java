@@ -11,6 +11,8 @@ import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Properties;
 
@@ -37,7 +39,7 @@ public class UserService {
     }
 
     public User getUserByUsername(String username) {
-        String url = apiBaseUrl + "/" + username;
+        String url = apiBaseUrl + "/" + URLEncoder.encode(username, StandardCharsets.UTF_8);
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         ResponseEntity<User> response = restTemplate.exchange(url, HttpMethod.GET, entity, User.class);
         return response.getBody();
@@ -47,7 +49,8 @@ public class UserService {
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         ResponseEntity<String> response = restTemplate.exchange(apiBaseUrl, HttpMethod.GET, entity, String.class);
         try {
-            return objectMapper.readValue(response.getBody(), new TypeReference<List<User>>(){});
+            return objectMapper.readValue(response.getBody(), new TypeReference<>() {
+            });
         } catch (IOException e) {
             throw new RuntimeException("Error parsing JSON response", e);
         }
@@ -58,60 +61,64 @@ public class UserService {
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
         try {
-            return objectMapper.readValue(response.getBody(), new TypeReference<List<User>>(){});
+            return objectMapper.readValue(response.getBody(), new TypeReference<>() {
+            });
         } catch (IOException e) {
             throw new RuntimeException("Error parsing JSON response", e);
         }
     }
 
     public List<Employment> getEmploymentsForUser(String username) {
-        String url = apiBaseUrl + "/" + username + "/employments";
+        String url = apiBaseUrl + "/" + URLEncoder.encode(username,StandardCharsets.UTF_8) + "/employments";
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
         try {
-            return objectMapper.readValue(response.getBody(), new TypeReference<List<Employment>>(){});
+            return objectMapper.readValue(response.getBody(), new TypeReference<>() {
+            });
         } catch (IOException e) {
             throw new RuntimeException("Error parsing JSON response", e);
         }
     }
 
     public boolean verifyPassword(String username, String password) {
-        String url = apiBaseUrl + "/" + username + "/verify-password";
+        String url = apiBaseUrl + "/" + URLEncoder.encode(username,StandardCharsets.UTF_8) + "/verify-password";
         HttpEntity<String> entity = new HttpEntity<>(password, createHeaders());
         ResponseEntity<Boolean> response = restTemplate.exchange(url, HttpMethod.POST, entity, Boolean.class);
         return response.getBody();
     }
 
     public void updateUserPassword(String username, String newPassword) {
-        String url = apiBaseUrl + "/" + username + "/password";
+        String url = apiBaseUrl + "/" + URLEncoder.encode(username,StandardCharsets.UTF_8) + "/password";
         HttpEntity<String> entity = new HttpEntity<>(newPassword, createHeaders());
         restTemplate.exchange(url, HttpMethod.PUT, entity, Void.class);
     }
 
     public boolean isPasswordResetRequested(String username) {
-        String url = apiBaseUrl + "/" + username + "/password-reset-requested";
+        String url = apiBaseUrl + "/" + URLEncoder.encode(username,StandardCharsets.UTF_8) + "/password-reset-requested";
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         ResponseEntity<Boolean> response = restTemplate.exchange(url, HttpMethod.GET, entity, Boolean.class);
         return response.getBody();
     }
 
     public List<Permission> getUserPermissions(String username) {
-        String url = apiBaseUrl + "/" + username + "/permissions";
+        String url = apiBaseUrl + "/" + URLEncoder.encode(username,StandardCharsets.UTF_8) + "/permissions";
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
         try {
-            return objectMapper.readValue(response.getBody(), new TypeReference<List<Permission>>(){});
+            return objectMapper.readValue(response.getBody(), new TypeReference<>() {
+            });
         } catch (IOException e) {
             throw new RuntimeException("Error parsing JSON response", e);
         }
     }
 
     public List<Store> getStoresForUser(String username) {
-        String url = apiBaseUrl + "/" + username + "/stores";
+        String url = apiBaseUrl + "/" + URLEncoder.encode(username,StandardCharsets.UTF_8) + "/stores";
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
         try {
-            return objectMapper.readValue(response.getBody(), new TypeReference<List<Store>>(){});
+            return objectMapper.readValue(response.getBody(), new TypeReference<>() {
+            });
         } catch (IOException e) {
             throw new RuntimeException("Error parsing JSON response", e);
         }
@@ -123,19 +130,19 @@ public class UserService {
     }
 
     public void updateUser(User user) {
-        String url = apiBaseUrl + "/" + user.getUsername();
+        String url = apiBaseUrl + "/" + URLEncoder.encode(user.getUsername(), StandardCharsets.UTF_8);
         HttpEntity<User> entity = new HttpEntity<>(user, createHeaders());
         restTemplate.exchange(url, HttpMethod.PUT, entity, Void.class);
     }
 
     public void deleteUser(String username) {
-        String url = apiBaseUrl + "/" + username;
+        String url = apiBaseUrl + "/" + URLEncoder.encode(username,StandardCharsets.UTF_8);
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
     }
 
     public void resetUserPassword(String username) {
-        String url = apiBaseUrl + "/" + username + "/reset-password";
+        String url = apiBaseUrl + "/" + URLEncoder.encode(username,StandardCharsets.UTF_8) + "/reset-password";
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
     }

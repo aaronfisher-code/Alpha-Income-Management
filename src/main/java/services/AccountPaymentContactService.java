@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
@@ -68,7 +70,7 @@ public class AccountPaymentContactService {
     }
 
     public AccountPaymentContactDataPoint getContactByName(String name, int storeId) {
-        String url = apiBaseUrl + "/by-name?name=" + name + "&storeId=" + storeId;
+        String url = apiBaseUrl + "/by-name?name=" + URLEncoder.encode(name, StandardCharsets.UTF_8) + "&storeId=" + storeId;
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         ResponseEntity<BackendAccountPaymentContactDataPoint> response = restTemplate.exchange(
                 url, HttpMethod.GET, entity, BackendAccountPaymentContactDataPoint.class);

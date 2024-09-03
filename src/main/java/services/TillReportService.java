@@ -49,7 +49,8 @@ public class TillReportService {
                 String.class);
 
         try {
-            return objectMapper.readValue(response.getBody(), new TypeReference<List<TillReportDataPoint>>(){});
+            return objectMapper.readValue(response.getBody(), new TypeReference<>() {
+            });
         } catch (IOException e) {
             throw new RuntimeException("Error parsing JSON response", e);
         }
@@ -70,7 +71,8 @@ public class TillReportService {
                 String.class);
 
         try {
-            return objectMapper.readValue(response.getBody(), new TypeReference<List<TillReportDataPoint>>(){});
+            return objectMapper.readValue(response.getBody(), new TypeReference<>() {
+            });
         } catch (IOException e) {
             throw new RuntimeException("Error parsing JSON response", e);
         }

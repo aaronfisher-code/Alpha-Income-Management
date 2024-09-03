@@ -7,6 +7,8 @@ import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
@@ -48,7 +50,7 @@ public class InvoiceSupplierService {
     }
 
     public InvoiceSupplier getInvoiceSupplierByName(String supplierName, int storeId) {
-        String url = apiBaseUrl + "/by-name?supplierName=" + supplierName + "&storeId=" + storeId;
+        String url = apiBaseUrl + "/by-name?supplierName=" + URLEncoder.encode(supplierName, StandardCharsets.UTF_8) + "&storeId=" + storeId;
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         ResponseEntity<BackendInvoiceSupplier> response = restTemplate.exchange(url, HttpMethod.GET, entity, BackendInvoiceSupplier.class);
         return convertToFrontendModel(response.getBody());
