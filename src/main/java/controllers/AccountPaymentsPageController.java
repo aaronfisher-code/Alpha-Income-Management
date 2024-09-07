@@ -358,12 +358,6 @@ public class AccountPaymentsPageController extends DateSelectController{
 	}
 
 	public void openPopover(AccountPayment ap){
-		saveButton.setOnAction(_ -> editPayment(ap));
-		paymentPopoverTitle.setText("Edit account payment");
-		deleteButton.setVisible(true);
-		deleteButton.setOnAction(_ -> deletePayment(ap));
-		contentDarken.setVisible(true);
-		AnimationUtils.slideIn(addPaymentPopover,0);
 		Task<AccountPaymentContactDataPoint> contactsTask = new Task<>() {
 			@Override
 			protected AccountPaymentContactDataPoint call() {
@@ -377,6 +371,19 @@ public class AccountPaymentsPageController extends DateSelectController{
 				dialogPane.showError("Error", "Could not find the contact for this payment", "");
 			}
 			progressSpinner.setVisible(false);
+			saveButton.setOnAction(_ -> editPayment(ap));
+			paymentPopoverTitle.setText("Edit account payment");
+			deleteButton.setVisible(true);
+			deleteButton.setOnAction(_ -> deletePayment(ap));
+			contentDarken.setVisible(true);
+			AnimationUtils.slideIn(addPaymentPopover,0);
+			invoiceNoField.setText(ap.getInvoiceNumber());
+			invoiceDateField.setValue(ap.getInvDate());
+			dueDateField.setValue(ap.getDueDate());
+			descriptionField.setText(ap.getDescription());
+			amountField.setText(String.valueOf(ap.getUnitAmount()));
+			accountAdjustedBox.setSelected(ap.isAccountAdjusted());
+			Platform.runLater(() -> afx.requestFocus());
 		});
 		contactsTask.setOnFailed(_ -> {
 			dialogPane.showError("Error","An error occurred while trying to retrieve the contact information",contactsTask.getException());
@@ -384,13 +391,6 @@ public class AccountPaymentsPageController extends DateSelectController{
 		});
 		progressSpinner.setVisible(true);
 		executor.submit(contactsTask);
-        invoiceNoField.setText(ap.getInvoiceNumber());
-		invoiceDateField.setValue(ap.getInvDate());
-		dueDateField.setValue(ap.getDueDate());
-		descriptionField.setText(ap.getDescription());
-		amountField.setText(String.valueOf(ap.getUnitAmount()));
-		accountAdjustedBox.setSelected(ap.isAccountAdjusted());
-		Platform.runLater(() -> afx.requestFocus());
 	}
 
 	@Override

@@ -447,13 +447,6 @@ public class InvoiceEntryController extends DateSelectController{
 	}
 
 	public void openInvoicePopover(Invoice invoice){
-		saveButton.setOnAction(_ -> editInvoice(invoice));
-		paymentPopoverTitle.setText("Edit Invoice");
-		deleteButton.setVisible(true);
-		deleteButton.setOnAction(_ -> deleteInvoice(invoice));
-		contentDarken.setVisible(true);
-		AnimationUtils.slideIn(addInvoicePopover,0);
-		progressSpinner.setVisible(true);
 		Task<InvoiceSupplier> task = new Task<>() {
 			@Override
 			protected InvoiceSupplier call() {
@@ -464,20 +457,27 @@ public class InvoiceEntryController extends DateSelectController{
 			InvoiceSupplier supplier = task.getValue();
 			invoiceAFX.setValue(supplier);
 			progressSpinner.setVisible(false);
+			saveButton.setOnAction(_ -> editInvoice(invoice));
+			paymentPopoverTitle.setText("Edit Invoice");
+			deleteButton.setVisible(true);
+			deleteButton.setOnAction(_ -> deleteInvoice(invoice));
+			contentDarken.setVisible(true);
+			AnimationUtils.slideIn(addInvoicePopover,0);
+			invoiceNoField.setText(invoice.getInvoiceNo());
+			invoiceDateField.setValue(invoice.getInvoiceDate());
+			dueDateField.setValue(invoice.getDueDate());
+			amountField.setText(String.valueOf(invoice.getUnitAmount()));
+			notesField.setText(invoice.getNotes());
+			expectedUnitAmountLabel.setText("$"+String.format("%.2f",invoice.getImportedInvoiceAmount()));
+			varianceLabel.setText("$"+String.format("%.2f",invoice.getVariance()));
+			Platform.runLater(() -> invoiceAFX.requestFocus());
 		});
 		task.setOnFailed(_ -> {
 			dialogPane.showError("Error", "An error occurred while locating the invoice supplier", task.getException());
 			progressSpinner.setVisible(false);
 		});
 		executor.submit(task);
-		invoiceNoField.setText(invoice.getInvoiceNo());
-		invoiceDateField.setValue(invoice.getInvoiceDate());
-		dueDateField.setValue(invoice.getDueDate());
-		amountField.setText(String.valueOf(invoice.getUnitAmount()));
-		notesField.setText(invoice.getNotes());
-		expectedUnitAmountLabel.setText("$"+String.format("%.2f",invoice.getImportedInvoiceAmount()));
-		varianceLabel.setText("$"+String.format("%.2f",invoice.getVariance()));
-		Platform.runLater(() -> invoiceAFX.requestFocus());
+		progressSpinner.setVisible(true);
 	}
 
 	public void openCreditPopover(){
@@ -497,13 +497,6 @@ public class InvoiceEntryController extends DateSelectController{
 	}
 
 	public void openCreditPopover(Credit credit){
-		creditSaveButton.setOnAction(_ -> editCredit(credit));
-		creditPopoverTitle.setText("Edit Credit");
-		creditDeleteButton.setVisible(true);
-		creditDeleteButton.setOnAction(_ -> deleteCredit(credit));
-		contentDarken.setVisible(true);
-		AnimationUtils.slideIn(addCreditPopover,0);
-		progressSpinner.setVisible(true);
 		Task<InvoiceSupplier> task = new Task<>() {
 			@Override
 			protected InvoiceSupplier call() {
@@ -514,19 +507,26 @@ public class InvoiceEntryController extends DateSelectController{
 			InvoiceSupplier supplier = task.getValue();
 			creditAFX.setValue(supplier);
 			progressSpinner.setVisible(false);
+			creditSaveButton.setOnAction(_ -> editCredit(credit));
+			creditPopoverTitle.setText("Edit Credit");
+			creditDeleteButton.setVisible(true);
+			creditDeleteButton.setOnAction(_ -> deleteCredit(credit));
+			contentDarken.setVisible(true);
+			AnimationUtils.slideIn(addCreditPopover,0);
+			creditNoField.setText(credit.getCreditNo());
+			refInvNoField.setText(credit.getReferenceInvoiceNo());
+			creditDateField.setValue(credit.getCreditDate());
+			creditDateField.setText(credit.getCreditDateString());
+			creditAmountField.setText(String.valueOf(credit.getCreditAmount()));
+			creditNotesField.setText(credit.getNotes());
+			Platform.runLater(() -> creditAFX.requestFocus());
 		});
 		task.setOnFailed(_ -> {
 			dialogPane.showError("Error", "An error occurred while locating the credit supplier", task.getException());
 			progressSpinner.setVisible(false);
 		});
 		executor.submit(task);
-		creditNoField.setText(credit.getCreditNo());
-		refInvNoField.setText(credit.getReferenceInvoiceNo());
-		creditDateField.setValue(credit.getCreditDate());
-		creditDateField.setText(credit.getCreditDateString());
-		creditAmountField.setText(String.valueOf(credit.getCreditAmount()));
-		creditNotesField.setText(credit.getNotes());
-		Platform.runLater(() -> creditAFX.requestFocus());
+		progressSpinner.setVisible(true);
 	}
 
 	public void closeInvoicePopover(){
