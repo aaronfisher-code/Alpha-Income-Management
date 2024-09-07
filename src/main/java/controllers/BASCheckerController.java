@@ -284,32 +284,32 @@ public class BASCheckerController extends DateSelectController{
 	}
 
 	private void updateUI(DataProcessingResult result, BASCheckerDataPoint basData) {
-		cash1.setText(String.format("%.2f", result.getCashTotal()));
-		eftpos1.setText(String.format("%.2f", result.getEftposTotal()));
-		amex1.setText(String.format("%.2f", result.getAmexTotal()));
-		googleSquare1.setText(String.format("%.2f", result.getGoogleSquareTotal()));
-		cheque1.setText(String.format("%.2f", result.getChequesTotal()));
-		medicare1.setText(String.format("%.2f", result.getMedicareTotal()));
-		medicareSpreadsheet.setText(String.format("%.2f", result.getMedicareTotal()));
+		cash1.setText(String.format("%.2f", result.cashTotal()));
+		eftpos1.setText(String.format("%.2f", result.eftposTotal()));
+		amex1.setText(String.format("%.2f", result.amexTotal()));
+		googleSquare1.setText(String.format("%.2f", result.googleSquareTotal()));
+		cheque1.setText(String.format("%.2f", result.chequesTotal()));
+		medicare1.setText(String.format("%.2f", result.medicareTotal()));
+		medicareSpreadsheet.setText(String.format("%.2f", result.medicareTotal()));
 		total1.setText(String.format("%.2f", result.getTotalIncome()));
-		gst1.setText(String.format("%.2f", result.getGstTotal()));
-		gst3.setText(String.format("%.2f", result.getGstTotal()));
+		gst1.setText(String.format("%.2f", result.gstTotal()));
+		gst3.setText(String.format("%.2f", result.gstTotal()));
 
-		if (result.getRunningTillBalance() < 0) {
-			tillBalance.setText(String.format("%.2f", result.getRunningTillBalance()));
-		} else if (result.getRunningTillBalance() > 0) {
+		if (result.runningTillBalance() < 0) {
+			tillBalance.setText(String.format("%.2f", result.runningTillBalance()));
+		} else if (result.runningTillBalance() > 0) {
 			tillBalance.setText("0.00");
 		} else {
 			tillBalance.setText("");
 		}
 
 		spreadsheetCheck1.setText(String.format("%.2f", result.getTotalIncome()));
-		spreadsheetCheck2.setText(String.format("%.2f", result.getTotalSales()));
-		spreadsheetCheck3.setText(String.format("%.2f", result.getTotalSales() - result.getTotalIncome()));
+		spreadsheetCheck2.setText(String.format("%.2f", result.totalSales()));
+		spreadsheetCheck3.setText(String.format("%.2f", result.totalSales() - result.getTotalIncome()));
 
-		cogsCheck1.setText(String.format("%.2f", result.getInvoiceTotal()));
-		cogsCheck2.setText(String.format("%.2f", result.getCogsCheck2()));
-		cogsCheck3.setText(String.format("%.2f", result.getInvoiceTotal() - result.getCogsCheck2()));
+		cogsCheck1.setText(String.format("%.2f", result.invoiceTotal()));
+		cogsCheck2.setText(String.format("%.2f", result.cogsCheck2()));
+		cogsCheck3.setText(String.format("%.2f", result.invoiceTotal() - result.cogsCheck2()));
 
 		// Update BASChecker values
 		if (basData == null) {
@@ -473,60 +473,15 @@ public class BASCheckerController extends DateSelectController{
 		updateMonthSelectorField();
 		updateValues();
 	}
+
+	private record DataProcessingResult(double cashTotal, double eftposTotal, double amexTotal,
+										double googleSquareTotal, double chequesTotal, double medicareTotal,
+										double gstTotal, double runningTillBalance, double totalSales,
+										double grossProfit, double invoiceTotal, double sohGrowth, double cogsCheck2) {
+		public double getTotalIncome() {
+				return cashTotal + eftposTotal + amexTotal + googleSquareTotal + chequesTotal + medicareTotal;
+			}
+		}
 }
 
-class DataProcessingResult {
-	private final double cashTotal;
-	private final double eftposTotal;
-	private final double amexTotal;
-	private final double googleSquareTotal;
-	private final double chequesTotal;
-	private final double medicareTotal;
-	private final double gstTotal;
-	private final double runningTillBalance;
-	private final double totalSales;
-	private final double grossProfit;
-	private final double invoiceTotal;
-	private final double sohGrowth;
-	private final double cogsCheck2;
 
-	// Constructor
-	public DataProcessingResult(double cashTotal, double eftposTotal, double amexTotal,
-								double googleSquareTotal, double chequesTotal, double medicareTotal,
-								double gstTotal, double runningTillBalance, double totalSales,
-								double grossProfit, double invoiceTotal, double sohGrowth,
-								double cogsCheck2) {
-		this.cashTotal = cashTotal;
-		this.eftposTotal = eftposTotal;
-		this.amexTotal = amexTotal;
-		this.googleSquareTotal = googleSquareTotal;
-		this.chequesTotal = chequesTotal;
-		this.medicareTotal = medicareTotal;
-		this.gstTotal = gstTotal;
-		this.runningTillBalance = runningTillBalance;
-		this.totalSales = totalSales;
-		this.grossProfit = grossProfit;
-		this.invoiceTotal = invoiceTotal;
-		this.sohGrowth = sohGrowth;
-		this.cogsCheck2 = cogsCheck2;
-	}
-
-	// Getters
-	public double getCashTotal() { return cashTotal; }
-	public double getEftposTotal() { return eftposTotal; }
-	public double getAmexTotal() { return amexTotal; }
-	public double getGoogleSquareTotal() { return googleSquareTotal; }
-	public double getChequesTotal() { return chequesTotal; }
-	public double getMedicareTotal() { return medicareTotal; }
-	public double getGstTotal() { return gstTotal; }
-	public double getRunningTillBalance() { return runningTillBalance; }
-	public double getTotalSales() { return totalSales; }
-	public double getGrossProfit() { return grossProfit; }
-	public double getInvoiceTotal() { return invoiceTotal; }
-	public double getSohGrowth() { return sohGrowth; }
-	public double getCogsCheck2() { return cogsCheck2; }
-
-	public double getTotalIncome() {
-		return cashTotal + eftposTotal + amexTotal + googleSquareTotal + chequesTotal + medicareTotal;
-	}
-}
