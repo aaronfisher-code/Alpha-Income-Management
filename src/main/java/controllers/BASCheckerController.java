@@ -455,9 +455,8 @@ public class BASCheckerController extends DateSelectController{
 			}
 		}, executor).thenAcceptAsync(result -> {
 			saveProgressSpinner.setMaxWidth(0);
-			if (result instanceof Exception) {
-				Exception ex = (Exception) result;
-				dialogPane.showError("Error", "Error saving BAS data", ex);
+			if (result instanceof Exception ex) {
+                dialogPane.showError("Error", "Error saving BAS data", ex);
 			} else {
 				DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss a");
 				errorLabel.setVisible(true);
