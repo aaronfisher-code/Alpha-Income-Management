@@ -3,6 +3,7 @@
 <?import com.dlsc.gemsfx.DialogPane?>
 <?import io.github.palexdev.materialfx.controls.MFXButton?>
 <?import io.github.palexdev.materialfx.controls.MFXCheckbox?>
+<?import io.github.palexdev.materialfx.controls.MFXProgressSpinner?>
 <?import io.github.palexdev.materialfx.controls.MFXTextField?>
 <?import io.github.palexdev.materialfx.font.MFXFontIcon?>
 <?import java.net.URL?>
@@ -104,6 +105,7 @@
                               <Cursor fx:constant="HAND" />
                            </cursor>
                         </Button>
+                        <MFXProgressSpinner fx:id="progressSpinner" radius="7.0" visible="false" />
                      </children>
                      <padding>
                         <Insets top="5.0" />
@@ -352,6 +354,7 @@
                   <HBox alignment="CENTER_LEFT" spacing="20.0" style="-fx-background-color: WHITE; -fx-background-radius: 10;">
                      <children>
                         <MFXButton fx:id="saveButton" buttonType="RAISED" depthLevel="LEVEL3" minHeight="30.0" minWidth="150.0" prefHeight="40.0" style="-fx-background-color: #0F60FF;" text="Save" textFill="WHITE" />
+                        <MFXProgressSpinner fx:id="saveProgressSpinner" maxWidth="0.0" radius="7.0" />
                         <Label fx:id="errorLabel" text="Please ensure all values are entered correctly!" textFill="RED" visible="false" />
                      </children>
                      <padding>
