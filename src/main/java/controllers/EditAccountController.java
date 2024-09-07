@@ -401,7 +401,7 @@ public class EditAccountController extends PageController {
 				List<Permission> allPermissions = allPermissionsFuture.get();
 				List<Permission> userPermissions = userPermissionsFuture.get();
 				Platform.runLater(() -> {
-					if (!isPasswordResetRequested) {
+					if (isPasswordResetRequested) {
 						passwordResetButton.setDisable(true);
 						passwordResetButton.setText("Password reset requested");
 					} else {
@@ -427,6 +427,46 @@ public class EditAccountController extends PageController {
 					}
 					userSpinner.setMaxWidth(0);
 				});
+				//Add live updates to person card preview
+				firstNameField.textProperty().addListener((_, _, newValue) -> {
+							employeeName.setText(newValue + "." + (lastNameField.getText().isEmpty()?"":lastNameField.getText(0,1)));
+							employeeIcon.setText(newValue.isEmpty()?"":newValue.substring(0,1));
+						}
+				);
+				lastNameField.textProperty().addListener((_, _, newValue) ->
+						employeeName.setText(firstNameField.getText() + "." + (newValue.isEmpty()?"":newValue.substring(0,1))));
+				roleField.textProperty().addListener((_, _, newValue) ->
+						employeeRole.setText(newValue));
+				profileBackgroundPicker.valueProperty().addListener((_, _, newValue) -> {
+							int r = (int)Math.round(newValue.getRed() * 255.0);
+							int g = (int)Math.round(newValue.getGreen() * 255.0);
+							int b = (int)Math.round(newValue.getBlue() * 255.0);
+							String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
+							r = (int)Math.round(profileTextPicker.getValue().getRed() * 255.0);
+							g = (int)Math.round(profileTextPicker.getValue().getGreen() * 255.0);
+							b = (int)Math.round(profileTextPicker.getValue().getBlue() * 255.0);
+							String profileText = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
+							employeeIcon.setStyle("-fx-background-color: " + profileBG + ";" + "-fx-text-fill: " + profileText + ";");
+						}
+				);
+				profileTextPicker.valueProperty().addListener((_, _, newValue) -> {
+							int r = (int)Math.round(newValue.getRed() * 255.0);
+							int g = (int)Math.round(newValue.getGreen() * 255.0);
+							int b = (int)Math.round(newValue.getBlue() * 255.0);
+							String profileText = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
+							r = (int)Math.round(profileBackgroundPicker.getValue().getRed() * 255.0);
+							g = (int)Math.round(profileBackgroundPicker.getValue().getGreen() * 255.0);
+							b = (int)Math.round(profileBackgroundPicker.getValue().getBlue() * 255.0);
+							String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
+							employeeIcon.setStyle("-fx-background-color: " + profileBG + ";" + "-fx-text-fill: " + profileText + ";");
+						}
+				);
+				contentDarken.setVisible(true);
+				contentDarken.setOnMouseClicked(_ -> closeUserPopover());
+				saveUserButton.setOnAction(_ -> editUser(user));
+				deleteUserButton.setOnAction(_ -> deleteUser(user));
+				deleteUserButton.setVisible(true);
+				AnimationUtils.slideIn(editUserPopover,0);
 			} catch (Exception ex) {
 				Platform.runLater(() -> {
 					dialogPane.showError("Error", "An error occurred while fetching user information", ex);
@@ -434,46 +474,6 @@ public class EditAccountController extends PageController {
 				});
 			}
 		}, executor);
-		//Add live updates to person card preview
-		firstNameField.textProperty().addListener((_, _, newValue) -> {
-					employeeName.setText(newValue + "." + (lastNameField.getText().isEmpty()?"":lastNameField.getText(0,1)));
-					employeeIcon.setText(newValue.isEmpty()?"":newValue.substring(0,1));
-				}
-		);
-		lastNameField.textProperty().addListener((_, _, newValue) ->
-				employeeName.setText(firstNameField.getText() + "." + (newValue.isEmpty()?"":newValue.substring(0,1))));
-		roleField.textProperty().addListener((_, _, newValue) ->
-				employeeRole.setText(newValue));
-		profileBackgroundPicker.valueProperty().addListener((_, _, newValue) -> {
-					int r = (int)Math.round(newValue.getRed() * 255.0);
-					int g = (int)Math.round(newValue.getGreen() * 255.0);
-					int b = (int)Math.round(newValue.getBlue() * 255.0);
-					String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
-					r = (int)Math.round(profileTextPicker.getValue().getRed() * 255.0);
-					g = (int)Math.round(profileTextPicker.getValue().getGreen() * 255.0);
-					b = (int)Math.round(profileTextPicker.getValue().getBlue() * 255.0);
-					String profileText = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
-					employeeIcon.setStyle("-fx-background-color: " + profileBG + ";" + "-fx-text-fill: " + profileText + ";");
-				}
-		);
-		profileTextPicker.valueProperty().addListener((_, _, newValue) -> {
-					int r = (int)Math.round(newValue.getRed() * 255.0);
-					int g = (int)Math.round(newValue.getGreen() * 255.0);
-					int b = (int)Math.round(newValue.getBlue() * 255.0);
-					String profileText = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
-					r = (int)Math.round(profileBackgroundPicker.getValue().getRed() * 255.0);
-					g = (int)Math.round(profileBackgroundPicker.getValue().getGreen() * 255.0);
-					b = (int)Math.round(profileBackgroundPicker.getValue().getBlue() * 255.0);
-					String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
-					employeeIcon.setStyle("-fx-background-color: " + profileBG + ";" + "-fx-text-fill: " + profileText + ";");
-				}
-		);
-		contentDarken.setVisible(true);
-		contentDarken.setOnMouseClicked(_ -> closeUserPopover());
-		saveUserButton.setOnAction(_ -> editUser(user));
-		deleteUserButton.setOnAction(_ -> deleteUser(user));
-		deleteUserButton.setVisible(true);
-		AnimationUtils.slideIn(editUserPopover,0);
 	}
 
 	public void openStorePopover(){
