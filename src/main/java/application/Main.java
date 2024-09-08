@@ -150,7 +150,6 @@ public class Main extends Application {
 		this.currentUser = newUser;
 	}
 
-
 	public Stage getStg(){
 		return stg;
 	}
