@@ -43,9 +43,7 @@ public class EODService {
     public List<EODDataPoint> getEODDataPoints(int storeId, LocalDate startDate, LocalDate endDate) {
         String url = String.format("%s?storeId=%d&startDate=%s&endDate=%s",
                 apiBaseUrl, storeId, startDate, endDate);
-
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
-
         ResponseEntity<List<EODDataPoint>> response = restTemplate.exchange(
                 url,
                 HttpMethod.GET,
