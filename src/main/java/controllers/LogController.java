@@ -1,5 +1,8 @@
 package controllers;
 
+import io.github.palexdev.materialfx.controls.MFXProgressBar;
+import javafx.application.Platform;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
@@ -14,6 +17,7 @@ import models.User;
 import services.UserService;
 
 import java.io.IOException;
+import java.util.concurrent.Executors;
 
 public class LogController extends PageController {
 
@@ -25,12 +29,14 @@ public class LogController extends PageController {
     @FXML private Button maximize, minimize, close;
     @FXML private StackPane backgroundPane;
     @FXML private HBox windowControls;
+    @FXML private MFXProgressBar progressBar;
     private UserService userService;
 
     @FXML
     private void initialize() {
         try {
             userService = new UserService();
+            executor = Executors.newCachedThreadPool();
         }catch (IOException ex) {
             dialogPane.showError("Failed to initialize user service", ex);
         }
@@ -66,75 +72,121 @@ public class LogController extends PageController {
     }
 
     public void userLogin() {
-        String status;
         String username = this.username.getText();
         String password = this.password.getText();
         if (username.isEmpty()) {
             logInError.setText("Please enter a valid username");
-            status = "Error";
-        } else {
-            try {
+            return;
+        }
+        progressBar.setVisible(true);
+        Task<String> loginTask = new Task<>() {
+            @Override
+            protected String call() {
                 User user = userService.getUserByUsername(username);
                 if (user == null) {
-                    logInError.setText("Unrecognized username");
-                    status = "Error";
+                    return "Unrecognized";
                 } else if (user.getPassword() == null) {
-                    status = "PasswordReset";
-                    setNewPasswordView(user);
+                    return "PasswordReset";
                 } else if (userService.verifyPassword(user.getUsername(), password)) {
-                    status = "Success";
+                    return "Success";
                 } else {
-                    status = "Error";
+                    return "Error";
                 }
-            } catch (Exception ex) {
-                dialogPane.showError("Failed to login", ex);
-                status = "Exception";
             }
+        };
+        loginTask.setOnSucceeded(_ -> {
+            progressBar.setVisible(false);
+            String status = loginTask.getValue();
+            handleLoginResult(status, username);
+        });
+        loginTask.setOnFailed(_ -> {
+            progressBar.setVisible(false);
+            dialogPane.showError("Error", "Failed to login", loginTask.getException());
+        });
+        executor.submit(loginTask);
+    }
+
+    private void handleLoginResult(String status, String username) {
+        switch (status) {
+            case "Unrecognized":
+                logInError.setText("Unrecognized username");
+                break;
+            case "PasswordReset":
+                try {
+                    User user = userService.getUserByUsername(username);
+                    setNewPasswordView(user);
+                } catch (Exception ex) {
+                    dialogPane.showError("Failed to set new password view", ex);
+                }
+                break;
+            case "Success":
+                loadUserAndChangeScene(username);
+                break;
+            default:
+                logInError.setText("Login error, please ensure your username and password are correct");
+                break;
         }
-        if (status.equals("Success")) {
-            try {
+    }
+
+    private void loadUserAndChangeScene(String username) {
+        Task<User> loadUserTask = new Task<>() {
+            @Override
+            protected User call() {
                 User currentUser = userService.getUserByUsername(username);
                 currentUser.setPermissions(userService.getUserPermissions(username));
-                main.setCurrentUser(currentUser);
+                return currentUser;
+            }
+        };
+        loadUserTask.setOnSucceeded(_ -> {
+            progressBar.setVisible(false);
+            main.setCurrentUser(loadUserTask.getValue());
+            try {
                 main.changeScene("/views/FXML/MainMenu.fxml");
             } catch (IOException ex) {
-                dialogPane.showError("Failed to login", ex);
+                dialogPane.showError("Failed to change scene", ex);
             }
-        } else {
-            logInError.setText("Login error, please ensure your username and password are correct");
-        }
+        });
+        loadUserTask.setOnFailed(_ -> {
+            progressBar.setVisible(false);
+            dialogPane.showError("Error","Failed to load user data", loadUserTask.getException());
+        });
+        progressBar.setVisible(true);
+        executor.submit(loadUserTask);
     }
 
     public void userLoginWithPassword(User user) {
-        String status;
         if (!password.getText().equals(confirmPassword.getText())) {
             logInError.setText("Passwords don't match");
-            status = "Error";
-        } else {
-            try {
+            return;
+        }
+        progressBar.setVisible(true);
+        Task<Void> updatePasswordTask = new Task<>() {
+            @Override
+            protected Void call() {
                 userService.updateUserPassword(user.getUsername(), password.getText());
-                status = "Success";
-            } catch (Exception ex) {
-                dialogPane.showError("Failed to login", ex);
-                status = "Exception";
+                return null;
             }
-        }
-        if (status.equals("Success")) {
-            try {
-                user.setPermissions(userService.getUserPermissions(user.getUsername()));
-                main.setCurrentUser(user);
-                main.changeScene("/views/FXML/MainMenu.fxml");
-            } catch (IOException ex) {
-                dialogPane.showError("Failed to login", ex);
-            }
-        }
+        };
+        updatePasswordTask.setOnSucceeded(_ -> {
+            progressBar.setVisible(false);
+            loadUserAndChangeScene(user.getUsername());
+        });
+
+        updatePasswordTask.setOnFailed(_ -> {
+            progressBar.setVisible(false);
+            dialogPane.showError("Error","Failed to update password", updatePasswordTask.getException());
+        });
+
+        executor.submit(updatePasswordTask);
     }
 
     public void setNewPasswordView(User user) {
-        confirmPasswordLabel.setVisible(true);
-        confirmPassword.setVisible(true);
-        login.setOnAction(_ -> userLoginWithPassword(user));
-        subtitle.setText("Please set a new password for this account before signing in");
+        Platform.runLater(() -> {
+            confirmPasswordLabel.setVisible(true);
+            confirmPassword.setVisible(true);
+            login.setOnAction(_ -> userLoginWithPassword(user));
+            subtitle.setText("Please set a new password for this account before signing in");
+        });
     }
 
     private void colourWindowButton(Button b, String backgroundHex, String strokeHex) {

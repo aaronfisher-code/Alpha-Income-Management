@@ -31,6 +31,18 @@
     -fx-font-smoothing-type: gray;
 }
 
+.mfx-progress-bar .bar1{
+    -mfx-color: #0F60FF;
+    -fx-fill: #0F60FF;
+}
 
+.mfx-progress-bar .bar2{
+    -mfx-color: #0F60FF;
+    -fx-fill: #0F60FF;
+}
+
+.mfx-progress-bar .track{
+    -fx-fill: WHITE;
+}
 
 
