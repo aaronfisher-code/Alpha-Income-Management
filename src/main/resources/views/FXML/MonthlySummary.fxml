@@ -2,6 +2,7 @@
 
 <?import com.dlsc.gemsfx.DialogPane?>
 <?import io.github.palexdev.materialfx.controls.MFXButton?>
+<?import io.github.palexdev.materialfx.controls.MFXProgressSpinner?>
 <?import io.github.palexdev.materialfx.controls.MFXTextField?>
 <?import io.github.palexdev.materialfx.font.MFXFontIcon?>
 <?import java.net.URL?>
@@ -244,6 +245,7 @@
                               <Cursor fx:constant="HAND" />
                            </cursor>
                         </Button>
+                        <MFXProgressSpinner fx:id="progressSpinner" radius="7.0" visible="false" />
                      </children>
                      <padding>
                         <Insets top="5.0" />
