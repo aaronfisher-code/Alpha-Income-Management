@@ -294,6 +294,10 @@ public class MonthlySummaryController extends DateSelectController{
 	}
 
 	public void exportData() {
+		if(currentEODDataPoints.isEmpty() || currentTillReportDataPoints.isEmpty()){
+			dialogPane.showWarning("No data","No data to export");
+			return;
+		}
 		cancelCurrentTaskIfRunning();
 		progressSpinner.setVisible(true);
 		Task<String> exportTask = new Task<>() {
