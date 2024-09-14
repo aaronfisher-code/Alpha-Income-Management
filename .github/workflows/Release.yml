@@ -68,17 +68,6 @@ jobs:
           git tag v${{ steps.increment_version.outputs.new_version }}
           git push --tags
 
-      - name: Create GitHub Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ steps.increment_version.outputs.new_version }}
-          release_name: Release ${{ steps.increment_version.outputs.new_version }}
-          draft: false
-          prerelease: false
-
       - name: Set up Node
         uses: actions/setup-node@v2
         with:
@@ -116,38 +105,45 @@ jobs:
           prerelease: true
           title: "jDeploy Package Info"
           files: ./jdeploy/github-release-files/package-info.json
-      - name: Upload Files to Github Release for Tag
-        uses: xresloader/upload-to-github-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create Release and Upload Assets
+        uses: actions/github-script@v6
         with:
-          file: "./jdeploy/github-release-files/*"
-          overwrite: true
-      - name: Update release body (for tag release)
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REF_NAME: "v${{ steps.increment_version.outputs.new_version }}"
-          GITHUB_REPOSITORY: ${{ github.repository }}
-
-        run: |
-          set -e
-          BODY=$(cat ./jdeploy/github-release-files/jdeploy-release-notes.md)
-
-          RELEASE_RESULT=$(curl -s \
-          -H "Accept: application/vnd.github+json" \
-          -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-          -H "X-GitHub-Api-Version: 2022-11-28" \
-          https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/v${{ steps.increment_version.outputs.new_version }})
-          RELEASE_ID=$( jq -r  '.id' <<< "${RELEASE_RESULT}" ) 
-          OLD_BODY=$(jq -r '.body' <<< "${RELEASE_RESULT}" )
-          NEW_BODY=$(GITHUB_RELEASE_BODY="$OLD_BODY" JDEPLOY_RELEASE_NOTES="$BODY" npx 'jdeploy@${{ inputs.jdeploy_version }}' github-build-release-body)
-          BODY_JSON="{\"body\": $(echo "$NEW_BODY" | jq -sR .)}"
-          echo "Release ID is ${RELEASE_ID}"
-          curl \
-          -X PATCH \
-          -H "Accept: application/vnd.github+json" \
-          -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-          -H "X-GitHub-Api-Version: 2022-11-28" \
-          https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID} \
-          -d "$BODY_JSON"
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const fs = require('fs').promises;
+            const { repo } = context;
+            const version = 'v${{ steps.increment_version.outputs.new_version }}';
+            
+            // Create release
+            const release = await github.rest.repos.createRelease({
+              ...repo,
+              tag_name: version,
+              name: `Release ${version}`,
+              draft: false,
+              prerelease: false
+            });
+            
+            // Upload assets
+            const files = await fs.readdir('./jdeploy/github-release-files');
+            for (const file of files) {
+              const filePath = `./jdeploy/github-release-files/${file}`;
+              const stats = await fs.stat(filePath);
+              if (stats.isFile()) {
+                await github.rest.repos.uploadReleaseAsset({
+                  ...repo,
+                  release_id: release.data.id,
+                  name: file,
+                  data: await fs.readFile(filePath)
+                });
+              }
+            }
+            
+            // Update release body
+            const oldBody = release.data.body || '';
+            const jdeployNotes = await fs.readFile('./jdeploy/github-release-files/jdeploy-release-notes.md', 'utf8');
+            const newBody = `${oldBody}\n\n${jdeployNotes}`;
+            await github.rest.repos.updateRelease({
+              ...repo,
+              release_id: release.data.id,
+              body: newBody
+            });
