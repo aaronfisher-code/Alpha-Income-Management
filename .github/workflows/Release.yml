@@ -97,6 +97,10 @@ jobs:
           GITHUB_REPOSITORY=${{ github.repository }} npx 'jdeploy@${{ inputs.jdeploy_version }}' github-prepare-release
         env:
           GH_TOKEN: ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}
+      - name: Replace 'master' in release notes
+        run: |
+          sed -i 's/master/v${{ steps.increment_version.outputs.new_version }}/g' ./jdeploy/github-release-files/jdeploy-release-notes.md
+        shell: bash
       - name: Publish package-info.json to Github
         uses: marvinpinto/action-automatic-releases@latest
         with:
