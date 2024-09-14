@@ -15,6 +15,7 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import models.Store;
 import models.User;
+import utils.LogRedirector;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,7 +39,7 @@ public class Main extends Application {
 
 	@Override
 	public void init() throws Exception {
-//		LogRedirector.redirectOutputToFile("app.log");
+		LogRedirector.redirectOutputToFile("app.log");
 		Thread.setDefaultUncaughtExceptionHandler(this::handleGlobalException);
 		System.out.println("Application initializing...");
 

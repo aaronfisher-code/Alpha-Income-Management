@@ -160,6 +160,7 @@
                 <version>3.3.0</version>
                 <configuration>
                     <outputDirectory>${jpackageInputDirectory}</outputDirectory>
+                    <finalName>${project.artifactId}</finalName>
                     <archive>
                         <manifest>
                             <addClasspath>true</addClasspath>
@@ -203,67 +204,67 @@
                     <parameters>true</parameters>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>com.github.akman</groupId>
-                <artifactId>jpackage-maven-plugin</artifactId>
-                <version>0.1.5</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>jpackage</goal>
-                        </goals>
-                        <configuration>
-                            <name>Alpha-Income</name>
-                            <appversion>${project.version}</appversion>
-                            <copyright>Unrestricted freeware</copyright>
-                            <description>Alpha Income Management</description>
-                            <vendor>Rainbow Health Pharmacy</vendor>
-                            <icon>${project.basedir}/src/main/resources/images/icon.ico</icon>
-                            <modulepath>
-                                <dependencysets>
-                                    <dependencyset>
-                                        <includeoutput>false</includeoutput>
-                                        <excludeautomatic>true</excludeautomatic>
-                                        <includes>
-                                            <include>glob:**/*.jar</include>
-                                        </includes>
-                                    </dependencyset>
-                                </dependencysets>
-                            </modulepath>
-                            <addmodules>
-                                <addmodule>jdk.crypto.cryptoki</addmodule>
-                                <addmodule>jdk.crypto.ec</addmodule>
-                                <addmodule>java.sql</addmodule>
-                                <addmodule>java.naming</addmodule>
-                                <addmodule>java.net.http</addmodule>
-                                <addmodule>java.instrument</addmodule>
-                                <addmodule>javafx.controls</addmodule>
-                                <addmodule>javafx.fxml</addmodule>
-                                <addmodule>javafx.base</addmodule>
-                                <addmodule>javafx.graphics</addmodule>
-                                <addmodule>javafx.media</addmodule>
-                            </addmodules>
-                            <input>${jpackageInputDirectory}</input>
-                            <mainjar>Alpha-Income-${project.version}.jar</mainjar>
-                            <mainclass>application.Main</mainclass>
-                            <winmenu>true</winmenu>
-                            <winperuserinstall>true</winperuserinstall>
-                            <winshortcut>true</winshortcut>
-                            <type>MSI</type>
-                            <verbose>true</verbose>
-                            <javaoptions>-Xms256m -Xmx1024m -Dprism.order=es2,d3d,sw -Dprism.lcdtext=false</javaoptions>
-                        </configuration>
-                    </execution>
-                </executions>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.ow2.asm</groupId>
-                        <artifactId>asm</artifactId>
-                        <version>9.5</version>
-                    </dependency>
-                </dependencies>
-            </plugin>
+<!--            <plugin>-->
+<!--                <groupId>com.github.akman</groupId>-->
+<!--                <artifactId>jpackage-maven-plugin</artifactId>-->
+<!--                <version>0.1.5</version>-->
+<!--                <executions>-->
+<!--                    <execution>-->
+<!--                        <phase>package</phase>-->
+<!--                        <goals>-->
+<!--                            <goal>jpackage</goal>-->
+<!--                        </goals>-->
+<!--                        <configuration>-->
+<!--                            <name>Alpha-Income</name>-->
+<!--                            <appversion>${project.version}</appversion>-->
+<!--                            <copyright>Unrestricted freeware</copyright>-->
+<!--                            <description>Alpha Income Management</description>-->
+<!--                            <vendor>Rainbow Health Pharmacy</vendor>-->
+<!--                            <icon>${project.basedir}/src/main/resources/images/icon.ico</icon>-->
+<!--                            <modulepath>-->
+<!--                                <dependencysets>-->
+<!--                                    <dependencyset>-->
+<!--                                        <includeoutput>false</includeoutput>-->
+<!--                                        <excludeautomatic>true</excludeautomatic>-->
+<!--                                        <includes>-->
+<!--                                            <include>glob:**/*.jar</include>-->
+<!--                                        </includes>-->
+<!--                                    </dependencyset>-->
+<!--                                </dependencysets>-->
+<!--                            </modulepath>-->
+<!--                            <addmodules>-->
+<!--                                <addmodule>jdk.crypto.cryptoki</addmodule>-->
+<!--                                <addmodule>jdk.crypto.ec</addmodule>-->
+<!--                                <addmodule>java.sql</addmodule>-->
+<!--                                <addmodule>java.naming</addmodule>-->
+<!--                                <addmodule>java.net.http</addmodule>-->
+<!--                                <addmodule>java.instrument</addmodule>-->
+<!--                                <addmodule>javafx.controls</addmodule>-->
+<!--                                <addmodule>javafx.fxml</addmodule>-->
+<!--                                <addmodule>javafx.base</addmodule>-->
+<!--                                <addmodule>javafx.graphics</addmodule>-->
+<!--                                <addmodule>javafx.media</addmodule>-->
+<!--                            </addmodules>-->
+<!--                            <input>${jpackageInputDirectory}</input>-->
+<!--                            <mainjar>${project.artifactId}.jar</mainjar>-->
+<!--                            <mainclass>application.Main</mainclass>-->
+<!--                            <winmenu>true</winmenu>-->
+<!--                            <winperuserinstall>true</winperuserinstall>-->
+<!--                            <winshortcut>true</winshortcut>-->
+<!--                            <type>MSI</type>-->
+<!--                            <verbose>true</verbose>-->
+<!--                            <javaoptions>-Xms256m -Xmx1024m -Dprism.order=es2,d3d,sw -Dprism.lcdtext=false</javaoptions>-->
+<!--                        </configuration>-->
+<!--                    </execution>-->
+<!--                </executions>-->
+<!--                <dependencies>-->
+<!--                    <dependency>-->
+<!--                        <groupId>org.ow2.asm</groupId>-->
+<!--                        <artifactId>asm</artifactId>-->
+<!--                        <version>9.5</version>-->
+<!--                    </dependency>-->
+<!--                </dependencies>-->
+<!--            </plugin>-->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>versions-maven-plugin</artifactId>
