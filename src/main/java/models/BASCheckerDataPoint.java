@@ -1,7 +1,5 @@
 package models;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.time.LocalDate;
 
 public class BASCheckerDataPoint {
@@ -24,30 +22,7 @@ public class BASCheckerDataPoint {
     private boolean gstCorrect;
     private double basDailyScript;
 
-    public BASCheckerDataPoint(ResultSet resultSet){
-        try {
-            this.date = resultSet.getDate("date").toLocalDate();
-            this.storeID = resultSet.getInt("storeID");
-            this.cashAdjustment = resultSet.getDouble("cashAdjustment");
-            this.eftposAdjustment = resultSet.getDouble("eftposAdjustment");
-            this.amexAdjustment = resultSet.getDouble("amexAdjustment");
-            this.googleSquareAdjustment = resultSet.getDouble("googleSquareAdjustment");
-            this.chequeAdjustment = resultSet.getDouble("chequesAdjustment");
-            this.medicareAdjustment = resultSet.getDouble("medicareAdjustment");
-            this.totalIncomeAdjustment = resultSet.getDouble("totalIncomeAdjustment");
-            this.cashCorrect = resultSet.getBoolean("cashCorrect");
-            this.eftposCorrect = resultSet.getBoolean("eftposCorrect");
-            this.amexCorrect = resultSet.getBoolean("amexCorrect");
-            this.googleSquareCorrect = resultSet.getBoolean("googleSquareCorrect");
-            this.chequeCorrect = resultSet.getBoolean("chequesCorrect");
-            this.medicareCorrect = resultSet.getBoolean("medicareCorrect");
-            this.totalIncomeCorrect = resultSet.getBoolean("totalIncomeCorrect");
-            this.gstCorrect = resultSet.getBoolean("gstCorrect");
-            this.basDailyScript = resultSet.getDouble("basDailyScript");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+    public BASCheckerDataPoint(){}
 
     public LocalDate getDate() {
         return date;
@@ -192,5 +167,4 @@ public class BASCheckerDataPoint {
     public void setBasDailyScript(double basDailyScript) {
         this.basDailyScript = basDailyScript;
     }
-
 }

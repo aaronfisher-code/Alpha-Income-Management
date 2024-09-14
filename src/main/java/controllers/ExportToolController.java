@@ -1,21 +1,15 @@
 package controllers;
 
 import application.Main;
-import com.jfoenix.controls.JFXComboBox;
-import com.jfoenix.controls.JFXDatePicker;
-import com.jfoenix.controls.JFXTextField;
 import io.github.palexdev.materialfx.controls.MFXComboBox;
 import io.github.palexdev.materialfx.controls.MFXTextField;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
-import javafx.scene.layout.AnchorPane;
 import models.Shift;
 import models.User;
 
 import javax.swing.*;
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -25,11 +19,10 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Calendar;
 
 import static java.time.temporal.ChronoUnit.DAYS;
 
-public class ExportToolController extends Controller {
+public class ExportToolController extends PageController {
 
 
     @FXML
@@ -41,14 +34,10 @@ public class ExportToolController extends Controller {
     private Connection con = null;
     PreparedStatement preparedStatement = null;
     ResultSet resultSet = null;
-    private Main main;
     private Shift shift;
     private RosterPageController parent;
     private LocalDate date;
     private boolean noEntries;
-
-    @Override
-    public void setMain(Main main) { this.main = main; }
 
     public void setParent(RosterPageController m) {
         this.parent = m;
@@ -131,7 +120,8 @@ public class ExportToolController extends Controller {
             resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
                 for(int i = 0; i<daysBetween; i++){
-                    s=new Shift(resultSet);
+//                    s=new Shift(resultSet);
+                    s = new Shift();
                     boolean repeatShiftDay = (s.isRepeating() && DAYS.between(s.getShiftStartDate(), sDate.plusDays(i)) % s.getDaysPerRepeat() == 0 && DAYS.between(s.getShiftStartDate(), sDate.plusDays(i)) >= 0);
                     boolean equalDay = s.getShiftStartDate().equals(sDate.plusDays(i));
                     boolean pastEnd = s.getShiftEndDate() != null && s.getShiftEndDate().isBefore(sDate.plusDays(i));
@@ -183,7 +173,7 @@ public class ExportToolController extends Controller {
             preparedStatement = con.prepareStatement(sql);
             resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
-                allUsers.add(new User(resultSet));
+//                allUsers.add(new User(resultSet));
             }
         } catch (SQLException ex) {
             System.err.println(ex.getMessage());

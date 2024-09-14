@@ -5,6 +5,7 @@ import application.Main;
 import io.github.palexdev.materialfx.controls.MFXFilterComboBox;
 import io.github.palexdev.materialfx.controls.MFXScrollPane;
 import javafx.animation.*;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
@@ -24,52 +25,38 @@ import javafx.scene.shape.SVGPath;
 import javafx.util.Duration;
 import models.Store;
 import org.controlsfx.control.PopOver;
+import services.UserService;
 import utils.AnimationUtils;
 
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
 
-public class MainMenuController extends Controller {
+public class MainMenuController extends PageController {
 
-    @FXML
-    private Label userNameLabel,  userLabel, logoLabel;
-    @FXML
-    private VBox sidebar,buttonPane;
-    @FXML
-    private Button targetGraphButton,eodDataEntryButton,accountPaymentsButton,rosterButton,accountsButton,
+    @FXML private Label userNameLabel,  userLabel, logoLabel;
+    @FXML private VBox sidebar,buttonPane;
+    @FXML private Button targetGraphButton,eodDataEntryButton,accountPaymentsButton,rosterButton,accountsButton,
             invoiceTrackingButton,basCheckerButton,budgetExpensesButton,monthlySummaryButton,settingsButton;
-    @FXML
-    private BorderPane contentPane,topPane;
-    @FXML
-    private HBox controlBox,userNameBox,windowControls;
-    @FXML
-    private Button maximize,minimize,close;
-    @FXML
-    private MFXFilterComboBox storeSearchCombo;
-    @FXML
-    private MFXScrollPane sidebarScroll;
-    @FXML
-    private Region contentDarken;
-
-    private Connection con = null;
-    PreparedStatement preparedStatement = null;
-    ResultSet resultSet = null;
-    private Main main;
+    @FXML private BorderPane contentPane,topPane;
+    @FXML private HBox controlBox,userNameBox,windowControls;
+    @FXML private Button maximize,minimize,close;
+    @FXML private MFXFilterComboBox storeSearchCombo;
+    @FXML private MFXScrollPane sidebarScroll;
+    @FXML private Region contentDarken;
     private PopOver currentUserPopover;
-    private Controller currentPageController;
+    private PageController currentPageController;
+    private UserService userService;
 
-    public void setMain(Main main) {
-        this.main = main;
-    }
-
-    public void setConnection(Connection c) {
-        this.con = c;
+    @FXML
+    private void initialize() {
+        try{
+            userService = new UserService();
+        }catch (IOException ex){
+            dialogPane.showError("Failed to initialize user service", ex);
+        }
     }
 
     public void fill() {
@@ -77,20 +64,15 @@ public class MainMenuController extends Controller {
         userLabel.setText(String.valueOf(main.getCurrentUser().getFirst_name().charAt(0)));
         userLabel.setStyle("-fx-background-color: " + main.getCurrentUser().getBgColour() + ";");
         userLabel.setTextFill(Paint.valueOf(main.getCurrentUser().getTextColour()));
-        String sql = "SELECT * FROM employments JOIN stores a on a.storeID = employments.storeID where username = ?";
         try {
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setString(1, main.getCurrentUser().getUsername());
-            resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                storeSearchCombo.getItems().add(new Store(resultSet));
+            for (Store store : userService.getStoresForUser(main.getCurrentUser().getUsername())) {
+                storeSearchCombo.getItems().add(store);
             }
-        } catch (SQLException ex) {
-            System.err.println(ex.getMessage());
+        } catch (Exception ex) {
+            dialogPane.showError("Error loading stores", ex);
         }
         storeSearchCombo.setOnAction(_ -> main.setCurrentStore((Store) storeSearchCombo.getSelectedItem()));
         storeSearchCombo.selectFirst();
-
         Map<Button, String> buttonPermissions = new HashMap<>();
         buttonPermissions.put(eodDataEntryButton, "EOD - View");
         buttonPermissions.put(accountPaymentsButton, "Account Payments - View");
@@ -108,34 +90,28 @@ public class MainMenuController extends Controller {
                 }
             });
         });
-
         for(Node b:buttonPane.getChildren()){
             if(b.getAccessibleRole() == AccessibleRole.BUTTON){
                 Button a = (Button) b;
                 a.addEventHandler(MouseEvent.MOUSE_ENTERED,
-                        e -> slide(150L, 20, a));
+                        _ -> slide(150L, 20, a));
 
                 a.addEventHandler(MouseEvent.MOUSE_EXITED,
-                        e -> slide(150L, 15, a));
+                        _ -> slide(150L, 15, a));
             }
 
-        };
-
+        }
         this.main.getBs().setMoveControl(topPane);
-
-        close.setOnAction(a -> this.main.getStg().close());
-        close.setOnMouseEntered(a-> colourWindowButton(close,"#c42b1c","#FFFFFF"));
-        close.setOnMouseExited(a-> colourWindowButton(close,"#FFFFFF","#000000"));
-
-        minimize.setOnAction(a -> this.main.getStg().setIconified(true));
-        minimize.setOnMouseEntered(a-> colourWindowButton(minimize,"#f5f5f5","#000000"));
-        minimize.setOnMouseExited(a-> colourWindowButton(minimize,"#FFFFFF","#000000"));
-
-        maximize.setOnAction(a -> this.main.getBs().maximizeStage());
-        maximize.setOnMouseEntered(a-> colourWindowButton(maximize,"#f5f5f5","#000000"));
-        maximize.setOnMouseExited(a-> colourWindowButton(maximize,"#FFFFFF","#000000"));
-
-        this.main.getBs().maximizedProperty().addListener(e->
+        close.setOnAction(_ -> this.main.getStg().close());
+        close.setOnMouseEntered(_ -> colourWindowButton(close,"#c42b1c","#FFFFFF"));
+        close.setOnMouseExited(_ -> colourWindowButton(close,"#FFFFFF","#000000"));
+        minimize.setOnAction(_ -> this.main.getStg().setIconified(true));
+        minimize.setOnMouseEntered(_ -> colourWindowButton(minimize,"#f5f5f5","#000000"));
+        minimize.setOnMouseExited(_ -> colourWindowButton(minimize,"#FFFFFF","#000000"));
+        maximize.setOnAction(_ -> this.main.getBs().maximizeStage());
+        maximize.setOnMouseEntered(_ -> colourWindowButton(maximize,"#f5f5f5","#000000"));
+        maximize.setOnMouseExited(_ -> colourWindowButton(maximize,"#FFFFFF","#000000"));
+        this.main.getBs().maximizedProperty().addListener(_ ->
         {
             if(this.main.getBs().isMaximized()){
                 SVGPath newIcon = (SVGPath) maximize.getGraphic();
@@ -151,12 +127,8 @@ public class MainMenuController extends Controller {
                 windowControls.setPrefHeight(30);
             }
         });
-
-
         loadTargetGraphs();
     }
-
-
 
     public void extendMenu(){
         AnimationUtils.changeSize(sidebar,260);
@@ -196,7 +168,7 @@ public class MainMenuController extends Controller {
             {
                 setCycleDuration(Duration.millis(duration));
             }
-            double previousPadding = targetButton.getPadding().getLeft();
+            final double previousPadding = targetButton.getPadding().getLeft();
 
             @Override
             protected void interpolate(double progress) {
@@ -224,7 +196,6 @@ public class MainMenuController extends Controller {
         DropShadow d = new DropShadow(BlurType.THREE_PASS_BOX, Color.web("#0F60FF",1.0),10.0,0.0,0.0,0.0);
         d.setHeight(21);
         d.setWidth(21);
-
         if(b.getContentDisplay() == ContentDisplay.LEFT){
             b.setStyle("-fx-background-color: #0F60FF;");
             b.setEffect(d);
@@ -247,14 +218,11 @@ public class MainMenuController extends Controller {
             try {
                 userMenuContent = loader.load();
             } catch (IOException e) {
-                e.printStackTrace();
+                dialogPane.showError("Failed to open user menu", e);
             }
             UserContentMenuController rdc = loader.getController();
             rdc.setMain(main);
-            rdc.setConnection(con);
-            rdc.setParent(this);
             rdc.fill();
-
             userMenu.setOpacity(1);
             userMenu.setContentNode(userMenuContent);
             userMenu.setArrowSize(0);
@@ -270,8 +238,6 @@ public class MainMenuController extends Controller {
                     main.getStg().getX()+controlBox.getLayoutX()+userNameBox.getWidth()+storeSearchCombo.getWidth()+10,
                     main.getStg().getY()+controlBox.getLayoutY()+userNameBox.getHeight()+10);
         }
-
-
     }
 
     private void colourWindowButton(Button b, String backgroundHex, String strokeHex){
@@ -293,43 +259,39 @@ public class MainMenuController extends Controller {
     public void loadMonthlySummary(){changePage(monthlySummaryButton,"/views/FXML/MonthlySummary.fxml");}
     public void loadSettings(){changePage(settingsButton,"/views/FXML/SettingsPage.fxml");}
 
-
-
     public void changePage(Button b, String fxml){
-        storeSearchCombo.setOnAction(event -> {
+        storeSearchCombo.setOnAction(_ -> {
             main.setCurrentStore((Store) storeSearchCombo.getSelectedItem());
             changePage(b,fxml);
         });
         formatSelected(b);
-        FXMLLoader loader = new FXMLLoader(getClass().getResource(fxml));
-        StackPane pageContent = null;
-        try {
-            pageContent = loader.load();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        currentPageController = loader.getController();
-        currentPageController.setMain(main);
-        currentPageController.setConnection(con);
-        contentPane.setCenter(pageContent);
-        currentPageController.fill();
+        updatePageFXML(fxml);
     }
 
     public void changePage(String fxml){
-        storeSearchCombo.setOnAction(event -> {
+        storeSearchCombo.setOnAction(_ -> {
             main.setCurrentStore((Store) storeSearchCombo.getSelectedItem());
             changePage(fxml);
         });
+        updatePageFXML(fxml);
+    }
+
+    private void updatePageFXML(String fxml) {
+        if (currentPageController != null && currentPageController.getExecutor() != null && !currentPageController.getExecutor().isShutdown())
+            currentPageController.shutdownExecutor();
         FXMLLoader loader = new FXMLLoader(getClass().getResource(fxml));
         StackPane pageContent = null;
         try {
             pageContent = loader.load();
         } catch (IOException e) {
-            e.printStackTrace();
+            dialogPane.showError("Failed to load page", e);
         }
         currentPageController = loader.getController();
         currentPageController.setMain(main);
-        currentPageController.setConnection(con);
+        main.setDialogPane(currentPageController.getDialogPane());
+        Platform.runLater(() -> {
+            Thread.currentThread().setUncaughtExceptionHandler(main::handleGlobalException);
+        });
         contentPane.setCenter(pageContent);
         currentPageController.fill();
     }

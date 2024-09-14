@@ -1,7 +1,6 @@
 package controllers;
 
 import strategies.LineGraphTargetStrategy;
-import application.Main;
 import components.CurvedFittedAreaChart;
 import components.WeekdayAxis;
 import components.MonthAxis;
@@ -20,52 +19,20 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import models.TargetDataPoint;
-import models.User;
-
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.Locale;
 import java.util.stream.Stream;
 
-public class GraphTileController extends Controller{
-	
-    private Connection con = null;
-    PreparedStatement preparedStatement = null;
-    ResultSet resultSet = null;
-    private Main main;
-    private TargetGraphsPageController parent;
-    private User selectedUser;
+public class GraphTileController extends PageController {
 
+    @FXML private StackPane graphPane;
+    @FXML private VBox legend;
+	@FXML private Label graphTitle;
+	@FXML private MFXButton swapViewButton;
+	@FXML private Label target1VarianceLabel, target2VarianceLabel;
 	private LineGraphTargetStrategy strategy;
-
-    @FXML
-	private StackPane graphPane;
-    @FXML
-	private VBox legend;
-	@FXML
-	private Label graphTitle;
-	@FXML
-	private MFXButton swapViewButton;
-	@FXML
-	private Label target1VarianceLabel, target2VarianceLabel;
-	
-    @FXML
-	private void initialize() {}
-
-	@Override
-	public void setMain(Main main) {
-		this.main = main;
-	}
-	
-	public void setConnection(Connection c) {
-		this.con = c;
-	}
-
-	public void setParent(TargetGraphsPageController p){this.parent = p;}
 
 	public void setStrategy(LineGraphTargetStrategy strategy){
 		this.strategy = strategy;
@@ -77,12 +44,11 @@ public class GraphTileController extends Controller{
 	}
 
 	public void updateVariance(){
-		double currentActual = (strategy.getActualSeries().getData().size()>0)?strategy.getActualSeries().getData().get(strategy.getActualSeries().getData().size()-1).getYValue().doubleValue():0;
-		double currentTarget1 = (strategy.getActualSeries().getData().size()>0)?strategy.getTarget1Series().getData().get(strategy.getActualSeries().getData().size()-1).getYValue().doubleValue():0;
-		double currentTarget2 = (strategy.getActualSeries().getData().size()>0)?strategy.getTarget2Series().getData().get(strategy.getActualSeries().getData().size()-1).getYValue().doubleValue():0;
+		double currentActual = (!strategy.getActualSeries().getData().isEmpty())?strategy.getActualSeries().getData().getLast().getYValue().doubleValue():0;
+		double currentTarget1 = (!strategy.getActualSeries().getData().isEmpty())?strategy.getTarget1Series().getData().get(strategy.getActualSeries().getData().size()-1).getYValue().doubleValue():0;
+		double currentTarget2 = (!strategy.getActualSeries().getData().isEmpty())?strategy.getTarget2Series().getData().get(strategy.getActualSeries().getData().size()-1).getYValue().doubleValue():0;
 		double target1Variance = currentTarget1 - currentActual;
 		double target2Variance = currentTarget2 - currentActual;
-
 		if(target1Variance>0){
 			if(strategy.isDollarFormat()){
 				target1VarianceLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(target1Variance) + " left until you hit Target 1!");
@@ -96,7 +62,6 @@ public class GraphTileController extends Controller{
 				target1VarianceLabel.setText(String.format("%.0f", -target1Variance) + " over Target 1!");
 			}
 		}
-
 		if(target2Variance>0){
 			if(strategy.isDollarFormat()){
 				target2VarianceLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(target2Variance) + " left until you hit Target 2!");
@@ -123,7 +88,7 @@ public class GraphTileController extends Controller{
 			target1VarianceLabel.setVisible(false);
 			target2VarianceLabel.setVisible(false);
 		}else{
-			swapViewButton.setOnAction(event -> setTableView());
+			swapViewButton.setOnAction(_ -> setTableView());
 		}
 	}
 
@@ -132,34 +97,30 @@ public class GraphTileController extends Controller{
 		graphPane.getChildren().add(fillTable());
 		legend.setVisible(false);
 		updateVariance();
-		swapViewButton.setOnAction(event -> setGraphView());
+		swapViewButton.setOnAction(_ -> setGraphView());
 	}
 
-	public MFXTableView fillTable(){
-		MFXTableView dataTable = new MFXTableView<TargetDataPoint>();
-		MFXTableColumn dateCol;
-		MFXTableColumn actualValueCol;
-		MFXTableColumn target1ValueCol;
-		MFXTableColumn target2ValueCol;
-		dateCol = new MFXTableColumn<>("Date",false, Comparator.comparing(TargetDataPoint::getDate));
+	public MFXTableView<TargetDataPoint> fillTable(){
+		MFXTableView<TargetDataPoint> dataTable = new MFXTableView<>();
+		MFXTableColumn<TargetDataPoint> dateCol;
+		MFXTableColumn<TargetDataPoint> actualValueCol;
+		MFXTableColumn<TargetDataPoint> target1ValueCol;
+		MFXTableColumn<TargetDataPoint> target2ValueCol;
+		dateCol = new MFXTableColumn<>("Date", false, Comparator.comparing(TargetDataPoint::getDate));
 		actualValueCol = new MFXTableColumn<>("Actual",false, Comparator.comparing(TargetDataPoint::getActual));
 		target1ValueCol = new MFXTableColumn<>("Target 1",false, Comparator.comparing(TargetDataPoint::getTarget1));
 		target2ValueCol = new MFXTableColumn<>("Target 2",false, Comparator.comparing(TargetDataPoint::getTarget2));
-
-		dateCol.setRowCellFactory(store -> new MFXTableRowCell<>(TargetDataPoint::getDateString));
-		actualValueCol.setRowCellFactory(store -> new MFXTableRowCell<>(TargetDataPoint::getActual));
-		target1ValueCol.setRowCellFactory(store -> new MFXTableRowCell<>(TargetDataPoint::getTarget1));
-		target2ValueCol.setRowCellFactory(store -> new MFXTableRowCell<>(TargetDataPoint::getTarget2));
-
+		dateCol.setRowCellFactory(_ -> new MFXTableRowCell<>(TargetDataPoint::getDateString));
+		actualValueCol.setRowCellFactory(_ -> new MFXTableRowCell<>(TargetDataPoint::getActual));
+		target1ValueCol.setRowCellFactory(_ -> new MFXTableRowCell<>(TargetDataPoint::getTarget1));
+		target2ValueCol.setRowCellFactory(_ -> new MFXTableRowCell<>(TargetDataPoint::getTarget2));
 		dataTable.getTableColumns().addAll(dateCol, actualValueCol, target1ValueCol, target2ValueCol);
-
-		//Create list of datapoints from series
+		//Create list of data points from series
 		XYChart.Series<Number,Number> actualSeries = strategy.getActualSeries();
 		XYChart.Series<Number,Number> target1Series = strategy.getTarget1Series();
 		XYChart.Series<Number,Number> target2Series = strategy.getTarget2Series();
-
 		ObservableList<TargetDataPoint> dataPoints = FXCollections.observableArrayList();
-		//Add datapoints to table
+		//Add data points to table
 		for(int i = 0; i < target2Series.getData().size(); i++) {
 			LocalDate date = strategy.getStartDate().plusDays(i);
 			String actual = "";
@@ -172,9 +133,7 @@ public class GraphTileController extends Controller{
 			TargetDataPoint dataPoint = new TargetDataPoint(date, actual, target1, target2);
 			dataPoints.add(dataPoint);
 		}
-
 		dataTable.setItems(dataPoints);
-
 		dataTable.setMaxHeight(Double.MAX_VALUE);
 		dataTable.setMaxWidth(Double.MAX_VALUE);
 		dataTable.setFooterVisible(false);
@@ -182,20 +141,16 @@ public class GraphTileController extends Controller{
 	}
 	public StackPane fillGraph(String title, Boolean showYAxis){
 		graphTitle.setText(title);
-
 		//defining a series
 		XYChart.Series<Number,Number> actualSeries = strategy.getActualSeries();
 		XYChart.Series<Number,Number> target1Series = strategy.getTarget1Series();
 		XYChart.Series<Number,Number> target2Series = strategy.getTarget2Series();
-
 		NumberAxis yAxis = new NumberAxis();
-
 		double maxY = Stream.of(actualSeries, target1Series, target2Series)
 				.flatMap(series -> series.getData().stream())
 				.mapToDouble(data -> data.getYValue().doubleValue())
 				.max()
 				.orElse(0.0);
-
 		yAxis.setLabel(strategy.getAxisLabel());
 		yAxis.setTickLabelsVisible(showYAxis);
 		yAxis.setTickMarkVisible(showYAxis);
@@ -204,8 +159,7 @@ public class GraphTileController extends Controller{
 		yAxis.setLowerBound(0);
 		yAxis.setUpperBound(Math.ceil(maxY / calculateTickUnit(maxY*1.25)) * calculateTickUnit(maxY*1.25));
 		yAxis.setTickUnit(calculateTickUnit(maxY*1.25));
-
-		ValueAxis xAxis;
+		ValueAxis<Number> xAxis;
 		CurvedFittedAreaChart areaChart;
 		if(strategy.getLength()<=7) {
 			actualSeries = strategy.getActualSeries();
@@ -241,25 +195,20 @@ public class GraphTileController extends Controller{
 			xAxis.setUpperBound(strategy.getLength()+1);
 			areaChart = new CurvedFittedAreaChart((NumberAxis) xAxis, yAxis);
 		}
-
 		LineChart<Number,Number> target1Chart = new LineChart<>(xAxis, yAxis);
 		LineChart<Number,Number> target2Chart = new LineChart<>(xAxis, yAxis);
-
-
 		actualSeries.setName("Actual");
 		target1Series.setName("Target 1");
 		target2Series.setName("Target 2");
 		areaChart.getData().add(actualSeries);
 		target1Chart.getData().add(target1Series);
 		target2Chart.getData().add(target2Series);
-
 		areaChart.setHorizontalGridLinesVisible(false);
 		areaChart.setVerticalGridLinesVisible(false);
 		areaChart.setAnimated(false);
 		areaChart.setCreateSymbols(false);
 		areaChart.setLegendVisible(false);
 		areaChart.setStyle("-fx-stroke: #0F60FF;" + "-fx-stroke-width: 3px;");
-
 		target1Chart.setHorizontalGridLinesVisible(false);
 		target1Chart.setVerticalGridLinesVisible(false);
 		target1Chart.setAnimated(false);
@@ -267,7 +216,6 @@ public class GraphTileController extends Controller{
 		target1Chart.setLegendVisible(false);
 		target1Chart.setStyle("-fx-stroke: #FFBD29;" + "-fx-stroke-width: 2px;");
 		target1Chart.getStylesheets().add("views/CSS/Target1LineChart.css");
-
 		target2Chart.setHorizontalGridLinesVisible(false);
 		target2Chart.setVerticalGridLinesVisible(false);
 		target2Chart.setAnimated(false);
@@ -275,10 +223,8 @@ public class GraphTileController extends Controller{
 		target2Chart.setLegendVisible(false);
 		target2Chart.setStyle("-fx-stroke: #FF298D;" + "-fx-stroke-width: 2px;");
 		target2Chart.getStylesheets().add("views/CSS/Target2LineChart.css");
-
 		StackPane finalPane = layerCharts(target2Chart, target1Chart, areaChart);
 		finalPane.setFocusTraversable(false);
-
 		return finalPane;
 	}
 
@@ -296,16 +242,14 @@ public class GraphTileController extends Controller{
 		return normalizedTickUnit * scaleFactor;
 	}
 
-	public XYChart.Series<Number, Number> incrementXValues(XYChart.Series<Number, Number> originalSeries) {
+	public void incrementXValues(XYChart.Series<Number, Number> originalSeries) {
 		XYChart.Series<Number, Number> newSeries = new XYChart.Series<>();
 		newSeries.setName(originalSeries.getName());
-
 		for (XYChart.Data<Number, Number> data : originalSeries.getData()) {
 			Number newXValue = data.getXValue().doubleValue() + 1;
 			Number yValue = data.getYValue();
 			newSeries.getData().add(new XYChart.Data<>(newXValue, yValue));
 		}
-		return newSeries;
 	}
 
 	@SafeVarargs
@@ -313,7 +257,6 @@ public class GraphTileController extends Controller{
 		for (int i = 1; i < charts.length; i++) {
 			configureOverlayChart(charts[i]);
 		}
-
 		StackPane stackpane = new StackPane();
 		stackpane.getChildren().addAll(charts);
 		return stackpane;

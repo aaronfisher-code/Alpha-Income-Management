@@ -1,15 +1,11 @@
 package controllers;
 
-
-import application.Main;
-//import com.jfoenix.controls.JFXDatePicker;
 import com.dlsc.gemsfx.DialogPane;
 import com.jfoenix.controls.JFXNodesList;
-//import io.github.palexdev.materialfx.controls.MFXDatePicker;
 import components.CustomDateStringConverter;
 import io.github.palexdev.materialfx.controls.*;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
+import javafx.application.Platform;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
@@ -23,130 +19,106 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import models.LeaveRequest;
 import models.Shift;
+import models.SpecialDateObj;
 import models.User;
 import org.controlsfx.control.PopOver;
-import org.controlsfx.control.tableview2.filter.filtereditor.SouthFilter;
+import services.LeaveService;
+import services.RosterService;
+import services.UserService;
 import utils.AnimationUtils;
 import utils.ValidatorUtils;
-
 import java.io.IOException;
-import java.sql.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executors;
 
 import static com.dlsc.gemsfx.DialogPane.Type.BLANK;
 import static java.time.temporal.ChronoUnit.DAYS;
 
 
-public class RosterPageController extends Controller {
+public class RosterPageController extends PageController {
 
+    @FXML private Label popoverLabel;
+    @FXML private MFXDatePicker startDate;
+    @FXML private VBox monBox, tueBox, wedBox, thuBox, friBox, satBox, sunBox, editShiftPopover;
+    @FXML private GridPane weekdayBox;
+    @FXML private JFXNodesList addList;
+    @FXML private GridPane shiftCardGrid;
+    @FXML private FlowPane datePickerPane;
+    @FXML private Region contentDarken;
+    @FXML private MFXTextField startTimeField,endTimeField,repeatValue,thirtyMinBreaks,tenMinBreaks;
+    @FXML private Button openStartTimePicker,openEndTimePicker,deleteButton,manageLeaveButton,exportDataButton;
+    @FXML private MFXFilterComboBox<User> employeeSelect;
+    @FXML private MFXToggleButton repeatingShiftToggle;
+    @FXML private Label repeatLabel;
+    @FXML private MFXComboBox<String> repeatUnit;
+    @FXML private MFXButton saveButton;
+    @FXML private Label employeeSelectValidationLabel, startDateValidationLabel, startTimeValidationLabel, endTimeValidationLabel, tenMinBreaksValidationLabel, thirtyMinBreaksValidationLabel, repeatValueValidationLabel;
+    @FXML private MFXProgressSpinner progressSpinner;
     private MFXDatePicker datePkr;
-    @FXML
-    private Label popoverLabel;
-    @FXML
-    private MFXDatePicker startDate;
-    @FXML
-    private VBox monBox, tueBox, wedBox, thuBox, friBox, satBox, sunBox, editShiftPopover;
-    @FXML
-    private GridPane weekdayBox;
-    @FXML
-    private JFXNodesList addList;
-    @FXML
-    private GridPane shiftCardGrid;
-    @FXML
-    private FlowPane datePickerPane;
-    @FXML
-    private Region contentDarken;
-    @FXML
-    private StackPane startTimePicker;
-    @FXML
-    private MFXTextField startTimeField,endTimeField,repeatValue,thirtyMinBreaks,tenMinBreaks;
-    @FXML
-    private Button openStartTimePicker,openEndTimePicker,deleteButton,manageLeaveButton,exportDataButton;
-    @FXML
-    private MFXFilterComboBox employeeSelect;
-    @FXML
-    private MFXToggleButton repeatingShiftToggle;
-    @FXML
-    private Label repeatLabel;
-    @FXML
-    private MFXComboBox repeatUnit;
-    @FXML
-    private MFXButton saveButton;
-    @FXML
-    private DialogPane dialogPane;
-    @FXML
-    private Label employeeSelectValidationLabel, startDateValidationLabel, startTimeValidationLabel, endTimeValidationLabel, tenMinBreaksValidationLabel, thirtyMinBreaksValidationLabel, repeatValueValidationLabel;
-
-
-    private Connection con = null;
-    PreparedStatement preparedStatement = null;
-    ResultSet resultSet = null;
-    private Main main;
     private PopOver currentTimePopover;
     private LocalTime startTime,endTime;
-    private DialogPane.Dialog<Object> dialog;
+    private UserService userService;
+    private RosterService rosterService;
+    private LeaveService leaveService;
 
-    public void setMain(Main main) {
-        this.main = main;
-    }
-
-    public void setConnection(Connection c) {
-        this.con = c;
-    }
-
-    public DialogPane.Dialog<Object> getDialog() {
-        return dialog;
+    @FXML
+    private void initialize() {
+        try {
+            userService = new UserService();
+            rosterService = new RosterService();
+            leaveService = new LeaveService();
+            executor = Executors.newCachedThreadPool();
+        } catch (IOException ex) {
+            dialogPane.showError("Failed to initialize services", ex);
+        }
     }
 
     public void fill() {
         datePkr = new MFXDatePicker();
-        datePkr.setOnAction(e -> updatePage());
+        datePkr.setOnAction(_ -> updatePage());
         datePickerPane.getChildren().add(1,datePkr);
         datePkr.setValue(main.getCurrentDate());
         datePkr.setText(main.getCurrentDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)));
         datePkr.getStyleClass().add("custDatePicker");
         datePkr.getStylesheets().add("/views/CSS/RosterPage.css");
-        ObservableList<User> currentUsers = FXCollections.observableArrayList();
-        String sql = "SELECT * FROM accounts JOIN employments e on accounts.username = e.username WHERE storeID = ? AND inactiveDate IS NULL ";
-        try {
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-            resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                currentUsers.add(new User(resultSet));
+        Task<List<User>> getUsersTask = new Task<>() {
+            @Override
+            protected List<User> call() {
+                return userService.getAllUserEmployments(main.getCurrentStore().getStoreID());
             }
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
-        }
-
-        if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))){
-            for(User u:currentUsers){
-                employeeSelect.getItems().add(u);
+        };
+        getUsersTask.setOnSucceeded(_ -> {
+            List<User> currentUsers = getUsersTask.getValue();
+            if (main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))) {
+                employeeSelect.getItems().addAll(currentUsers);
+            } else if (main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts"))) {
+                employeeSelect.getItems().addAll(currentUsers.stream()
+                        .filter(u -> u.getUsername().equals(main.getCurrentUser().getUsername()))
+                        .toList());
+            } else {
+                addList.setVisible(false);
             }
-        }else if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts"))){
-            for(User u:currentUsers){
-                if(u.getUsername().equals(main.getCurrentUser().getUsername())){
-                    employeeSelect.getItems().add(u);
-                }
-            }
-        }else{
-            addList.setVisible(false);
-        }
-
-
+            progressSpinner.setVisible(false);
+        });
+        getUsersTask.setOnFailed(_ -> {
+            dialogPane.showError("Error", "An error occurred while fetching users", getUsersTask.getException());
+            progressSpinner.setVisible(false);
+        });
+        progressSpinner.setVisible(true);
+        executor.submit(getUsersTask);
         manageLeaveButton.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Manage Leave")));
         exportDataButton.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Export")));
-
-        //TODO fix dateTime parsing from strings on till computer
-        openStartTimePicker.setOnAction(actionEvent -> {
+        openStartTimePicker.setOnAction(_ -> {
             if(!startTimeField.getText().isEmpty()){
                 try{
                     startTime = LocalTime.parse(startTimeField.getText().toLowerCase(), DateTimeFormatter.ofPattern("h:mm a"));
@@ -158,7 +130,7 @@ public class RosterPageController extends Controller {
             }
             openTimePicker(startTimeField,startTime);
         });
-        openEndTimePicker.setOnAction(actionEvent -> {
+        openEndTimePicker.setOnAction(_ -> {
             if(!endTimeField.getText().isEmpty()) {
                 try {
                     endTime = LocalTime.parse(endTimeField.getText().toLowerCase(), DateTimeFormatter.ofPattern("h:mm a"));
@@ -173,7 +145,7 @@ public class RosterPageController extends Controller {
         repeatUnit.getItems().add("Days");
         repeatUnit.getItems().add("Weeks");
         repeatingShiftToggle.setMainColor(Color.web("#0F60FF"));
-        repeatingShiftToggle.setOnAction(event -> {
+        repeatingShiftToggle.setOnAction(_ -> {
             if(repeatingShiftToggle.isSelected()){
                 repeatLabel.setDisable(false);
                 repeatValue.setDisable(false);
@@ -185,7 +157,6 @@ public class RosterPageController extends Controller {
             }
         });
         addList.setRotate(180);
-
         ValidatorUtils.setupRegexValidation(employeeSelect,employeeSelectValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveButton);
         ValidatorUtils.setupRegexValidation(startDate,startDateValidationLabel,ValidatorUtils.DATE_REGEX,ValidatorUtils.DATE_ERROR,null,saveButton);
         ValidatorUtils.setupRegexValidation(startTimeField,startTimeValidationLabel,ValidatorUtils.TIME_REGEX,ValidatorUtils.TIME_ERROR,null,saveButton);
@@ -193,29 +164,33 @@ public class RosterPageController extends Controller {
         ValidatorUtils.setupRegexValidation(tenMinBreaks,tenMinBreaksValidationLabel,ValidatorUtils.INT_REGEX,ValidatorUtils.INT_ERROR,null,saveButton);
         ValidatorUtils.setupRegexValidation(thirtyMinBreaks,thirtyMinBreaksValidationLabel,ValidatorUtils.INT_REGEX,ValidatorUtils.INT_ERROR,null,saveButton);
         ValidatorUtils.setupRegexValidation(repeatValue,repeatValueValidationLabel,ValidatorUtils.INT_REGEX,ValidatorUtils.INT_ERROR,null,saveButton);
+        ValidatorUtils.setupRegexValidation(repeatUnit,repeatValueValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveButton);
         startDate.setConverterSupplier(() -> new CustomDateStringConverter("dd/MM/yyyy"));
         datePkr.setConverterSupplier(() -> new CustomDateStringConverter("dd/MM/yyyy"));
         updatePage();
     }
 
-    public void updateDay(LocalDate date, VBox shiftContainer, int dayOfWeek, ArrayList<Shift> allShifts,ArrayList<Shift> allModifications,ArrayList<LeaveRequest> allLeaveRequests) {
+    public void updateDay(LocalDate date, VBox shiftContainer, int dayOfWeek, List<Shift> allShifts,List<Shift> allModifications,List<LeaveRequest> allLeaveRequests,List<SpecialDateObj> specialDates) {
         //empty the contents of the current day VBox
         shiftContainer.getChildren().removeAll(shiftContainer.getChildren());
         long weekDay = date.getDayOfWeek().getValue();
-
         //Create Day Header card
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/RosterDayCard.fxml"));
         VBox rosterDayCard = null;
         try {
             rosterDayCard = loader.load();
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException ex) {
+            dialogPane.showError("Error","An error occurred while loading the day card", ex);
         }
         RosterDayCardController rdc = loader.getController();
         rdc.setMain(main);
-        rdc.setConnection(con);
         rdc.setDate(date.minusDays(weekDay - dayOfWeek));
         rdc.setParent(this);
+        for(SpecialDateObj sd: specialDates){
+            if(sd.getEventDate().equals(date.minusDays(weekDay - dayOfWeek))){
+                rdc.setSpecialDate(sd);
+            }
+        }
         rdc.fill();
         if (rdc.getDate() == date) {
             //add blue selection formatting if date is current
@@ -223,7 +198,6 @@ public class RosterPageController extends Controller {
         }
         HBox.setHgrow(rosterDayCard, Priority.ALWAYS);
         weekdayBox.add(rosterDayCard,dayOfWeek-1,0);
-
         //Create Shift Cards
         for (Shift s : allShifts) {
             boolean repeatShiftDay = (s.isRepeating() && DAYS.between(s.getShiftStartDate(), date.minusDays(weekDay - dayOfWeek)) % s.getDaysPerRepeat() == 0 && DAYS.between(s.getShiftStartDate(), date.minusDays(weekDay - dayOfWeek)) >= 0);
@@ -238,15 +212,13 @@ public class RosterPageController extends Controller {
                         shiftIsModified=true;
                     }
                 }
-                if(!shiftIsModified || (shiftIsModified&&updatedShift.getShiftStartDate()!=null&&updatedShift.getShiftStartDate().equals(date.minusDays(weekDay - dayOfWeek)))){
+                if(!shiftIsModified || (updatedShift.getShiftStartDate()!=null&&updatedShift.getShiftStartDate().equals(date.minusDays(weekDay - dayOfWeek)))){
                     try {
                         loader = new FXMLLoader(getClass().getResource("/views/FXML/ShiftCard.fxml"));
                         StackPane shiftCard = loader.load();
                         ShiftCardController sc = loader.getController();
                         sc.setMain(main);
-                        sc.setConnection(con);
                         sc.setShift(updatedShift);
-                        sc.setParent(this);
                         sc.fill();
                         //Check for leave requests
                         for(LeaveRequest lr: allLeaveRequests){
@@ -262,16 +234,15 @@ public class RosterPageController extends Controller {
                         Shift finalS = updatedShift;
                         if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && finalS.getUsername().equals(main.getCurrentUser().getUsername()))||
                                 main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))){
-                            shiftCard.setOnMouseClicked(event -> openPopover(finalS,sc.getDate()));
+                            shiftCard.setOnMouseClicked(_ -> openPopover(finalS,sc.getDate()));
                         }
                         shiftContainer.getChildren().add(shiftCard);
                     } catch (Exception ex) {
-                        System.err.println(ex.getMessage());
+                        dialogPane.showError("Error","An error occurred while loading the shift card", ex);
                     }
                 }
             }
         }
-
         for(Shift m: allModifications){
             if(m.getShiftStartDate()!=null&&m.getShiftStartDate().equals(date.minusDays(weekDay - dayOfWeek))&&(!(m.getShiftStartDate().equals(m.getOriginalDate())))){
                 try {
@@ -279,9 +250,7 @@ public class RosterPageController extends Controller {
                     StackPane shiftCard = loader.load();
                     ShiftCardController sc = loader.getController();
                     sc.setMain(main);
-                    sc.setConnection(con);
                     sc.setShift(m);
-                    sc.setParent(this);
                     sc.fill();
                     //Check for leave requests
                     for(LeaveRequest lr: allLeaveRequests){
@@ -294,87 +263,90 @@ public class RosterPageController extends Controller {
                     sc.setDate(date.minusDays(weekDay - dayOfWeek));
                     if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && m.getUsername().equals(main.getCurrentUser().getUsername()))||
                             main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))){
-                        shiftCard.setOnMouseClicked(event -> openPopover(m,sc.getDate()));
+                        shiftCard.setOnMouseClicked(_ -> openPopover(m,sc.getDate()));
                     }
                     shiftContainer.getChildren().add(shiftCard);
                 } catch (Exception ex) {
-                    System.err.println(ex.getMessage());
+                    dialogPane.showError("Error","An error occurred while loading the shift card", ex);
                 }
             }
         }
     }
 
     public void updatePage() {
-        ArrayList<Shift> allShifts = new ArrayList<>();
-        ArrayList<Shift> allModifications = new ArrayList<>();
-        ArrayList<LeaveRequest> allLeaveRequests = new ArrayList<>();
+        progressSpinner.setVisible(true);
+        Task<Void> updatePageTask = new Task<>() {
+            @Override
+            protected Void call() throws Exception {
+                long weekDay = datePkr.getValue().getDayOfWeek().getValue();
+                LocalDate weekStart = datePkr.getValue().minusDays(weekDay - 1);
+                LocalDate weekEnd = datePkr.getValue().plusDays(7 - weekDay);
 
-        //Set date in case the value is still null
-        if (datePkr.getValue() == null)
-            datePkr.setValue(main.getCurrentDate());
+                CompletableFuture<List<Shift>> shiftsFuture = CompletableFuture.supplyAsync(() -> {
+                    try {
+                        return rosterService.getShifts(main.getCurrentStore().getStoreID(), weekStart, weekEnd);
+                    } catch (Exception e) {
+                        throw new CompletionException(e);
+                    }
+                }, executor);
 
-        //Get Week start and End dates for search range
-        long weekDay = datePkr.getValue().getDayOfWeek().getValue();
-        LocalDate weekStart = datePkr.getValue().minusDays(weekDay-1);
-        LocalDate weekEnd = datePkr.getValue().plusDays(7-weekDay);
+                CompletableFuture<List<Shift>> modificationsFuture = CompletableFuture.supplyAsync(() -> {
+                    try {
+                        return rosterService.getShiftModifications(main.getCurrentStore().getStoreID(), weekStart, weekEnd);
+                    } catch (Exception e) {
+                        throw new CompletionException(e);
+                    }
+                }, executor);
 
-        String sql = "SELECT * FROM shifts JOIN accounts a on a.username = shifts.username " +
-                    "WHERE storeID = ? AND" +
-                    "(shifts.repeating=TRUE AND (isNull(shiftEndDate) OR shiftEndDate>=?) AND shiftStartDate<=?)"+
-                    "OR (shifts.repeating=false AND shiftStartDate>=? AND shiftStartDate<=?)"+
-                    "ORDER BY shiftStartTime, a.first_name";
-        try {
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-            preparedStatement.setDate(2, Date.valueOf(weekStart));
-            preparedStatement.setDate(3, Date.valueOf(weekEnd));
-            preparedStatement.setDate(4, Date.valueOf(weekStart));
-            preparedStatement.setDate(5, Date.valueOf(weekEnd));
-            resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                allShifts.add(new Shift(resultSet));
+                CompletableFuture<List<LeaveRequest>> leaveRequestsFuture = CompletableFuture.supplyAsync(() -> {
+                    try {
+                        return leaveService.getLeaveRequests(main.getCurrentStore().getStoreID(), weekStart, weekEnd);
+                    } catch (Exception e) {
+                        throw new CompletionException(e);
+                    }
+                }, executor);
+
+                CompletableFuture<List<SpecialDateObj>> specialDatesFuture = CompletableFuture.supplyAsync(() -> {
+                    try {
+                        return rosterService.getSpecialDates(weekStart, weekEnd);
+                    } catch (Exception e) {
+                        // Return an empty list instead of throwing an exception
+                        return new ArrayList<>();
+                    }
+                }, executor);
+
+                try {
+                    List<Shift> allShifts = shiftsFuture.get();
+                    List<Shift> allModifications = modificationsFuture.get();
+                    List<LeaveRequest> allLeaveRequests = leaveRequestsFuture.get();
+                    List<SpecialDateObj> specialDates = specialDatesFuture.get();
+
+                    Platform.runLater(() -> {
+                        weekdayBox.getChildren().clear();
+                        updateDay(datePkr.getValue(), monBox, 1, allShifts, allModifications, allLeaveRequests, specialDates);
+                        updateDay(datePkr.getValue(), tueBox, 2, allShifts, allModifications, allLeaveRequests, specialDates);
+                        updateDay(datePkr.getValue(), wedBox, 3, allShifts, allModifications, allLeaveRequests, specialDates);
+                        updateDay(datePkr.getValue(), thuBox, 4, allShifts, allModifications, allLeaveRequests, specialDates);
+                        updateDay(datePkr.getValue(), friBox, 5, allShifts, allModifications, allLeaveRequests, specialDates);
+                        updateDay(datePkr.getValue(), satBox, 6, allShifts, allModifications, allLeaveRequests, specialDates);
+                        updateDay(datePkr.getValue(), sunBox, 7, allShifts, allModifications, allLeaveRequests, specialDates);
+                        adjustGridSize();
+                    });
+                } catch (Exception e) {
+                    throw new Exception("Error updating page: " + e.getMessage(), e);
+                }
+                return null;
             }
-
-            sql = "SELECT * FROM shiftmodifications JOIN accounts a on a.username = shiftmodifications.username " +
-                    "WHERE storeID = ? AND "+
-                    "modificationID in (select max(modificationID) from shiftmodifications group by shift_id, originalDate) AND" +
-                    "((shiftmodifications.shiftStartDate>=? AND shiftmodifications.shiftStartDate<=?) OR (shiftmodifications.originalDate>=? AND shiftmodifications.originalDate<=?))";
-
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-            preparedStatement.setDate(2, Date.valueOf(weekStart));
-            preparedStatement.setDate(3, Date.valueOf(weekEnd));
-            preparedStatement.setDate(4, Date.valueOf(weekStart));
-            preparedStatement.setDate(5, Date.valueOf(weekEnd));
-            resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                allModifications.add(new Shift(resultSet));;
-            }
-
-
-            sql = "SELECT * FROM leaverequests JOIN accounts a on a.username = leaverequests.employeeID WHERE storeID = ? AND (leaveStartDate<=?) OR (leaveEndDate>=?)";
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-            preparedStatement.setDate(2, Date.valueOf(weekEnd));
-            preparedStatement.setDate(3, Date.valueOf(weekStart));
-            resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                allLeaveRequests.add(new LeaveRequest(resultSet));
-            }
-        } catch (SQLException ex) {
-            System.err.println(ex.getMessage());
-        }
-
-        weekdayBox.getChildren().removeAll(weekdayBox.getChildren());
-        updateDay(datePkr.getValue(), monBox, 1, allShifts,allModifications,allLeaveRequests);
-        updateDay(datePkr.getValue(), tueBox, 2, allShifts,allModifications,allLeaveRequests);
-        updateDay(datePkr.getValue(), wedBox, 3, allShifts,allModifications,allLeaveRequests);
-        updateDay(datePkr.getValue(), thuBox, 4, allShifts,allModifications,allLeaveRequests);
-        updateDay(datePkr.getValue(), friBox, 5, allShifts,allModifications,allLeaveRequests);
-        updateDay(datePkr.getValue(), satBox, 6, allShifts,allModifications,allLeaveRequests);
-        updateDay(datePkr.getValue(), sunBox, 7, allShifts,allModifications,allLeaveRequests);
-
-        adjustGridSize();
+        };
+        updatePageTask.setOnSucceeded(_ -> {
+            progressSpinner.setVisible(false);
+        });
+        updatePageTask.setOnFailed(_ -> {
+            Throwable exception = updatePageTask.getException();
+            dialogPane.showError("Error", "An error occurred while updating the page", exception);
+            progressSpinner.setVisible(false);
+        });
+        executor.submit(updatePageTask);
     }
 
     public void weekForward() {
@@ -387,7 +359,6 @@ public class RosterPageController extends Controller {
 
     public void setDatePkr(LocalDate date) {
         datePkr.setValue(date);
-//        updatePage();
     }
 
     public void openPopover(){
@@ -396,6 +367,7 @@ public class RosterPageController extends Controller {
         contentDarken.setVisible(true);
         AnimationUtils.slideIn(editShiftPopover,0);
         employeeSelect.setValue(null);
+        employeeSelect.clearSelection();
         startDate.setValue(null);
         startTimeField.setText("");
         endTimeField.setText("");
@@ -406,8 +378,10 @@ public class RosterPageController extends Controller {
         repeatUnit.setDisable(true);
         repeatLabel.setDisable(true);
         repeatValue.setText("");
+        repeatUnit.clearSelection();
         repeatUnit.setValue(null);
-        saveButton.setOnAction(actionEvent -> addShift(null,null,null,false));
+        repeatUnit.setText("");
+        saveButton.setOnAction(_ -> addShift(null,null,null,false));
     }
 
     public void openPopover(Shift s,LocalDate shiftCardDate){
@@ -415,17 +389,11 @@ public class RosterPageController extends Controller {
         deleteButton.setVisible(true);
         contentDarken.setVisible(true);
         AnimationUtils.slideIn(editShiftPopover,0);
-        String sql = "SELECT * FROM accounts WHERE username = ?";
         try {
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setString(1, s.getUsername());
-            resultSet = preparedStatement.executeQuery();
-            if(resultSet.next())
-                employeeSelect.setValue(new User(resultSet));
-        } catch (SQLException ex) {
-            System.err.println(ex.getMessage());
+            employeeSelect.setValue(userService.getUserByUsername(s.getUsername()));
+        } catch (Exception ex) {
+            dialogPane.showError("Error","An error occurred while fetching user", ex);
         }
-
         startDate.setValue(shiftCardDate);
         startTimeField.setText(s.getShiftStartTime().format(DateTimeFormatter.ofPattern("h:mm a", Locale.US)));
         endTimeField.setText(s.getShiftEndTime().format(DateTimeFormatter.ofPattern("h:mm a", Locale.US)));
@@ -437,12 +405,18 @@ public class RosterPageController extends Controller {
             repeatUnit.setDisable(false);
             repeatLabel.setDisable(false);
             repeatValue.setText(String.valueOf(s.getDaysPerRepeat()));
-            repeatUnit.setValue("Days");
+            repeatUnit.selectFirst();
+        }else{
+            repeatingShiftToggle.setSelected(false);
+            repeatValue.setDisable(true);
+            repeatUnit.setDisable(true);
+            repeatLabel.setDisable(true);
+            repeatValue.setText("");
+            repeatUnit.clearSelection();
         }
-
-        saveButton.setOnAction(actionEvent -> {
+        saveButton.setOnAction(_ -> {
             if(s.isRepeating()){
-                dialog = new DialogPane.Dialog(dialogPane, BLANK);
+                dialog = new DialogPane.Dialog<>(dialogPane, BLANK);
                 dialog.setPadding(false);
                 dialog.setContent(createCalendarEditDialog(s,shiftCardDate));
                 dialogPane.showDialog(dialog);
@@ -450,9 +424,8 @@ public class RosterPageController extends Controller {
                 editShift(s);
             }
         });
-
-        deleteButton.setOnAction(actionEvent -> {
-            dialog = new DialogPane.Dialog(dialogPane, BLANK);
+        deleteButton.setOnAction(_ -> {
+            dialog = new DialogPane.Dialog<>(dialogPane, BLANK);
             dialog.setPadding(false);
             dialog.setContent(createCalendarDeleteDialog(s,shiftCardDate));
             dialogPane.showDialog(dialog);
@@ -480,15 +453,13 @@ public class RosterPageController extends Controller {
             VBox timePickerContent = null;
             try {
                 timePickerContent = loader.load();
-            } catch (IOException e) {
-                e.printStackTrace();
+            } catch (IOException ex) {
+                dialogPane.showError("Error","An error occurred while loading the time picker", ex);
             }
             TimePickerContentController rdc = loader.getController();
             rdc.setMain(main);
-            rdc.setConnection(con);
             rdc.fill();
             rdc.setCurrentTime(time);
-
             timePickerMenu.setOpacity(1);
             timePickerMenu.setContentNode(timePickerContent);
             timePickerMenu.setArrowSize(0);
@@ -501,7 +472,7 @@ public class RosterPageController extends Controller {
             timePickerMenu.setArrowIndent(0);
             timePickerMenu.show(parent);
             currentTimePopover =timePickerMenu;
-            timePickerMenu.setOnHidden(event -> {
+            timePickerMenu.setOnHidden(_ -> {
                 rdc.updateTime();
                 parent.setText(rdc.getTimeString());
             });
@@ -509,199 +480,282 @@ public class RosterPageController extends Controller {
         }
     }
 
-    public void addShift(Shift previousShift, LocalDate manualStartDate, LocalDate originalShiftDate, boolean deleteShift){
-        //Validate inputs
-        if(!employeeSelect.isValid()){employeeSelect.requestFocus();}
-        else if(!startDate.isValid()){startDate.requestFocus();}
-        else if(!startTimeField.isValid()){startTimeField.requestFocus();}
-        else if(!endTimeField.isValid()){endTimeField.requestFocus();}
-        else if(!thirtyMinBreaks.isValid()){thirtyMinBreaks.requestFocus();}
-        else if(!tenMinBreaks.isValid()){tenMinBreaks.requestFocus();}
-        else if(!repeatValue.isValid()){repeatValue.requestFocus();}
-        else if(LocalTime.parse(startTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US )).isAfter(LocalTime.parse(endTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US )))){
+    public void addShift(Shift previousShift, LocalDate manualStartDate, LocalDate originalShiftDate, boolean deleteShift) {
+        if (!validateInputs()) {
+            return;
+        }
+        progressSpinner.setVisible(true);
+        Task<Void> addShiftTask = new Task<>() {
+            @Override
+            protected Void call() {
+                User selectedUser = employeeSelect.getValue();
+                LocalDate shiftDate = manualStartDate == null ? startDate.getValue() : manualStartDate;
+                if (deleteShift) {
+                    shiftDate = null;
+                }
+                Shift newShift = createShiftFromInputs(selectedUser.getUsername(), shiftDate);
+                if (previousShift != null) {
+                    Shift modification = createModificationFromShift(newShift, previousShift.getShiftID(), originalShiftDate);
+                    rosterService.addShiftModification(modification);
+                } else {
+                    rosterService.addShift(newShift);
+                }
+                return null;
+            }
+        };
+        addShiftTask.setOnSucceeded(_ -> {
+            updatePage();
+            if (manualStartDate == null) {
+                dialogPane.showInformation("Success", "Shift created successfully");
+            } else if (previousShift != null) {
+                if (deleteShift) {
+                    dialogPane.showInformation("Success", "Shift deleted successfully");
+                } else {
+                    dialogPane.showInformation("Success", "Shift edited successfully");
+                }
+            }
+            progressSpinner.setVisible(false);
+        });
+        addShiftTask.setOnFailed(_ -> {
+            dialogPane.showError("Error", "An error occurred while saving the shift. Please try again.", addShiftTask.getException());
+            progressSpinner.setVisible(false);
+        });
+        executor.submit(addShiftTask);
+    }
+
+    private boolean validateInputs() {
+        if (!employeeSelect.isValid()) {
+            employeeSelect.requestFocus();
+            return false;
+        }
+        if (!startDate.isValid()) {
+            startDate.requestFocus();
+            return false;
+        }
+        if (!startTimeField.isValid()) {
+            startTimeField.requestFocus();
+            return false;
+        }
+        if (!endTimeField.isValid()) {
+            endTimeField.requestFocus();
+            return false;
+        }
+        if (!thirtyMinBreaks.isValid()) {
+            thirtyMinBreaks.requestFocus();
+            return false;
+        }
+        if (!tenMinBreaks.isValid()) {
+            tenMinBreaks.requestFocus();
+            return false;
+        }
+        if (!repeatValue.isValid()) {
+            repeatValue.requestFocus();
+            return false;
+        }
+        if(repeatingShiftToggle.isSelected() && repeatUnit.getValue() == null) {
+            repeatUnit.validate();
+            repeatUnit.requestFocus();
+            return false;
+        }
+        LocalTime startTime = LocalTime.parse(startTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
+        LocalTime endTime = LocalTime.parse(endTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
+        if (startTime.isAfter(endTime)) {
             startTimeField.requestFocus();
             startTimeValidationLabel.setText("Start time must be before end time");
             startTimeValidationLabel.setVisible(true);
-        }else {
-            startTimeValidationLabel.setVisible(false);
-            String usrname = ((User) employeeSelect.getValue()).getUsername();
-            LocalDate sDate = manualStartDate==null?startDate.getValue():manualStartDate;
-            if(deleteShift){
-                sDate = null;
-            }
-            LocalTime sTime = LocalTime.parse(startTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
-            LocalTime eTime = LocalTime.parse(endTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
-            int thirtyMin = 0;
-            int tenMin = 0;
-            int daysPerRepeat = 1;
-            if (!thirtyMinBreaks.getText().equals("")) {thirtyMin = Integer.parseInt(thirtyMinBreaks.getText());}
-            if (!tenMinBreaks.getText().equals("")) {tenMin = Integer.parseInt(tenMinBreaks.getText());}
-            if(repeatingShiftToggle.isSelected()){
-                int multiplier = ((repeatUnit.getValue().toString().equals("Weeks")) ? 7 : 1);
-                daysPerRepeat = Integer.parseInt(repeatValue.getText()) * multiplier;
-            }
-            try {
-                String sql = "";
-                if(previousShift!=null){
-                    sql = "INSERT INTO shiftModifications(storeID, username,shiftStartTime,shiftEndTime,shiftStartDate,thirtyMinBreaks,tenMinBreaks,repeating,daysPerRepeat,shift_id,originalDate) VALUES(?,?,?,?,?,?,?,?,?,?,?)";
-                    preparedStatement = con.prepareStatement(sql);
-                    preparedStatement.setInt(10, previousShift.getShiftID());
-                    preparedStatement.setDate(11, Date.valueOf(originalShiftDate));
-                }else{
-                    sql = "INSERT INTO shifts(storeID, username,shiftStartTime,shiftEndTime,shiftStartDate,thirtyMinBreaks,tenMinBreaks,repeating,daysPerRepeat) VALUES(?,?,?,?,?,?,?,?,?)";
-                    preparedStatement = con.prepareStatement(sql);
+            return false;
+        }
+        startTimeValidationLabel.setVisible(false);
+        return true;
+    }
+
+    private Shift createShiftFromInputs(String username, LocalDate shiftDate) {
+        LocalTime startTime = LocalTime.parse(startTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
+        LocalTime endTime = LocalTime.parse(endTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
+        int thirtyMin = thirtyMinBreaks.getText().isEmpty() ? 0 : Integer.parseInt(thirtyMinBreaks.getText());
+        int tenMin = tenMinBreaks.getText().isEmpty() ? 0 : Integer.parseInt(tenMinBreaks.getText());
+        int daysPerRepeat = 1;
+        if (repeatingShiftToggle.isSelected()) {
+            int multiplier = repeatUnit.getValue().equals("Weeks") ? 7 : 1;
+            daysPerRepeat = Integer.parseInt(repeatValue.getText()) * multiplier;
+        }
+        Shift shift = new Shift();
+        shift.setStoreID(main.getCurrentStore().getStoreID());
+        shift.setUsername(username);
+        shift.setShiftStartTime(startTime);
+        shift.setShiftEndTime(endTime);
+        shift.setShiftStartDate(shiftDate);
+        shift.setThirtyMinBreaks(thirtyMin);
+        shift.setTenMinBreaks(tenMin);
+        shift.setRepeating(repeatingShiftToggle.isSelected());
+        shift.setDaysPerRepeat(daysPerRepeat);
+        return shift;
+    }
+
+    private Shift createModificationFromShift(Shift shift, int originalShiftId, LocalDate originalDate) {
+        Shift modification = new Shift();
+        modification.setStoreID(shift.getStoreID());
+        modification.setUsername(shift.getUsername());
+        modification.setShiftStartTime(shift.getShiftStartTime());
+        modification.setShiftEndTime(shift.getShiftEndTime());
+        modification.setShiftStartDate(shift.getShiftStartDate());
+        modification.setThirtyMinBreaks(shift.getThirtyMinBreaks());
+        modification.setTenMinBreaks(shift.getTenMinBreaks());
+        modification.setRepeating(shift.isRepeating());
+        modification.setDaysPerRepeat(shift.getDaysPerRepeat());
+        modification.setShiftID(originalShiftId);
+        modification.setOriginalDate(originalDate);
+        return modification;
+    }
+
+    public void editShift(Shift s) {
+        if (!validateInputs()) {
+            return;
+        }
+        progressSpinner.setVisible(true);
+        Task<Void> editShiftTask = new Task<>() {
+            @Override
+            protected Void call() {
+                String usrname = employeeSelect.getValue().getUsername();
+                LocalDate sDate = startDate.getValue();
+                LocalTime sTime = LocalTime.parse(startTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
+                LocalTime eTime = LocalTime.parse(endTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
+                int thirtyMin = thirtyMinBreaks.getText().isEmpty() ? 0 : Integer.parseInt(thirtyMinBreaks.getText());
+                int tenMin = tenMinBreaks.getText().isEmpty() ? 0 : Integer.parseInt(tenMinBreaks.getText());
+                int daysPerRepeat = 1;
+                if (repeatingShiftToggle.isSelected()) {
+                    int multiplier = repeatUnit.getSelectedItem().equals("Weeks") ? 7 : 1;
+                    daysPerRepeat = Integer.parseInt(repeatValue.getText()) * multiplier;
                 }
-                preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-                preparedStatement.setString(2, usrname);
-                preparedStatement.setTime(3, Time.valueOf(sTime));
-                preparedStatement.setTime(4, Time.valueOf(eTime));
-                if(sDate!=null)
-                    preparedStatement.setDate(5, Date.valueOf(sDate));
-                else
-                    preparedStatement.setDate(5, null);
-                preparedStatement.setInt(6, thirtyMin);
-                preparedStatement.setInt(7, tenMin);
-                preparedStatement.setBoolean(8, repeatingShiftToggle.isSelected());
-                preparedStatement.setInt(9, daysPerRepeat);
-                preparedStatement.executeUpdate();
-                updatePage();
-                if(manualStartDate==null) {
-                    dialogPane.showInformation("Success", "Shift created succesfully");
-                }else if(previousShift!=null){
-                    updatePage();
-                    if(deleteShift){
-                        dialogPane.showInformation("Success", "Shift deleted succesfully");
-                    }else {
-                        dialogPane.showInformation("Success", "Shift edited succesfully");
-                    }
-                }
-            } catch (SQLException ex) {
-                System.err.println(ex.getMessage());
+                s.setUsername(usrname);
+                s.setShiftStartTime(sTime);
+                s.setShiftEndTime(eTime);
+                s.setShiftStartDate(sDate);
+                s.setThirtyMinBreaks(thirtyMin);
+                s.setTenMinBreaks(tenMin);
+                s.setRepeating(repeatingShiftToggle.isSelected());
+                s.setDaysPerRepeat(daysPerRepeat);
+                rosterService.updateShift(s);
+                rosterService.deleteShiftModifications(s.getShiftID());
+                return null;
             }
-        }
+        };
+        editShiftTask.setOnSucceeded(_ -> {
+            updatePage();
+            dialogPane.showInformation("Success", "Shifts edited successfully");
+            progressSpinner.setVisible(false);
+        });
+        editShiftTask.setOnFailed(_ -> {
+            dialogPane.showError("Error", "An error occurred while saving the shift. Please try again.", editShiftTask.getException());
+            progressSpinner.setVisible(false);
+        });
+        executor.submit(editShiftTask);
     }
 
-    public void editShift(Shift s){
-        //Validate inputs
-        if(!employeeSelect.isValid()){employeeSelect.requestFocus();}
-        else if(!startDate.isValid()){startDate.requestFocus();}
-        else if(!startTimeField.isValid()){startTimeField.requestFocus();}
-        else if(!endTimeField.isValid()){endTimeField.requestFocus();}
-        else if(!thirtyMinBreaks.isValid()){thirtyMinBreaks.requestFocus();}
-        else if(!tenMinBreaks.isValid()){tenMinBreaks.requestFocus();}
-        else if(!repeatValue.isValid()){repeatValue.requestFocus();}
-        else if(LocalTime.parse(startTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US )).isAfter(LocalTime.parse(endTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US )))){
-            startTimeField.requestFocus();
-            startTimeValidationLabel.setText("Start time must be before end time");
-            startTimeValidationLabel.setVisible(true);
-        }else {
-            startTimeValidationLabel.setVisible(false);
-            String usrname = ((User) employeeSelect.getValue()).getUsername();
-            LocalDate sDate = startDate.getValue();
-            LocalTime sTime = LocalTime.parse(startTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
-            LocalTime eTime = LocalTime.parse(endTimeField.getText().toUpperCase(),DateTimeFormatter.ofPattern("h:mm a" , Locale.US ));
-            int thirtyMin = 0;
-            int tenMin = 0;
-            int daysPerRepeat = 1;
-            if (!thirtyMinBreaks.getText().equals("")) {thirtyMin = Integer.parseInt(thirtyMinBreaks.getText());}
-            if (!tenMinBreaks.getText().equals("")) {tenMin = Integer.parseInt(tenMinBreaks.getText());}
-            if(repeatingShiftToggle.isSelected()){
-                int multiplier = ((repeatUnit.getValue().toString().equals("Weeks")) ? 7 : 1);
-                daysPerRepeat = Integer.parseInt(repeatValue.getText()) * multiplier;
+    public void deleteShift(Shift s) {
+        progressSpinner.setVisible(true);
+        Task<Void> deleteShiftTask = new Task<>() {
+            @Override
+            protected Void call() {
+                rosterService.deleteShift(s.getShiftID());
+                rosterService.deleteShiftModifications(s.getShiftID());
+                return null;
             }
+        };
+        deleteShiftTask.setOnSucceeded(_ -> {
+            updatePage();
+            dialogPane.showInformation("Success", "Shift deleted successfully");
+            progressSpinner.setVisible(false);
+        });
+        deleteShiftTask.setOnFailed(_ -> {
+            dialogPane.showError("Error", "An error occurred while deleting the shift. Please try again.", deleteShiftTask.getException());
+            progressSpinner.setVisible(false);
+        });
+        executor.submit(deleteShiftTask);
+    }
 
-            String sql = "UPDATE shifts SET username=?,shiftStartTime=?,shiftEndTime=?,shiftStartDate=?,thirtyMinBreaks=?,tenMinBreaks=?,repeating=?,daysPerRepeat=? WHERE shift_id=?";
-            try {
-                preparedStatement = con.prepareStatement(sql);
-                preparedStatement.setString(1, usrname);
-                preparedStatement.setTime(2, Time.valueOf(sTime));
-                preparedStatement.setTime(3, Time.valueOf(eTime));
-                preparedStatement.setDate(4, Date.valueOf(sDate));
-                preparedStatement.setInt(5, thirtyMin);
-                preparedStatement.setInt(6, tenMin);
-                preparedStatement.setBoolean(7, repeatingShiftToggle.isSelected());
-                preparedStatement.setInt(8, daysPerRepeat);
-                preparedStatement.setInt(9, s.getShiftID());
-                preparedStatement.executeUpdate();
-
-                sql = "DELETE FROM shiftmodifications WHERE shift_id = ?";
-                preparedStatement = con.prepareStatement(sql);
-                preparedStatement.setInt(1, s.getShiftID());
-                preparedStatement.executeUpdate();
-
-                updatePage();
-                dialogPane.showInformation("Success", "Shifts edited succesfully");
-            } catch (SQLException ex) {
-                System.err.println(ex.getMessage());
+    public void editFutureShifts(Shift s, LocalDate shiftCardDate) {
+        progressSpinner.setVisible(true);
+        Task<Void> editFutureShiftsTask = new Task<>() {
+            @Override
+            protected Void call() {
+                rosterService.updateShiftEndDate(s.getShiftID(), shiftCardDate.minusDays(1));
+                addShift(null, shiftCardDate, null, false);
+                return null;
             }
-        }
-    }
-
-    public void deleteShift(Shift s){
-        String sql = "DELETE FROM shifts WHERE shift_id = ?";
-        try {
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setInt(1, s.getShiftID());
-            preparedStatement.executeUpdate();
-
-            sql = "DELETE FROM shiftmodifications WHERE shift_id = ?";
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setInt(1, s.getShiftID());
-            preparedStatement.executeUpdate();
-
+        };
+        editFutureShiftsTask.setOnSucceeded(_ -> {
             updatePage();
-            dialogPane.showInformation("Success", "Shift deleted succesfully");
-        } catch (SQLException ex) {
-            System.err.println(ex.getMessage());
-        }
+            dialogPane.showInformation("Success", "Future shifts have been updated successfully.");
+            progressSpinner.setVisible(false);
+        });
+        editFutureShiftsTask.setOnFailed(_ -> {
+            dialogPane.showError("Error", "An error occurred while updating future shifts. Please try again.", editFutureShiftsTask.getException());
+            progressSpinner.setVisible(false);
+        });
+        executor.submit(editFutureShiftsTask);
     }
 
-    public void editFutureShifts(Shift s,LocalDate shiftCardDate){
-        //end original shift
-        String sql = "UPDATE shifts SET shiftEndDate=? WHERE shift_id=?";
-        try {
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setDate(1, Date.valueOf(shiftCardDate.minusDays(1)));
-            preparedStatement.setInt(2,s.getShiftID());
-            preparedStatement.executeUpdate();
-            //start new shift with new data
-            addShift(null,shiftCardDate,null,false);
+    public void deleteFutureShifts(Shift s, LocalDate shiftCardDate) {
+        progressSpinner.setVisible(true);
+        Task<Void> deleteFutureShiftsTask = new Task<>() {
+            @Override
+            protected Void call() {
+                rosterService.updateShiftEndDate(s.getShiftID(), shiftCardDate.minusDays(1));
+                rosterService.deleteShiftModifications(s.getShiftID(), shiftCardDate.minusDays(1));
+                return null;
+            }
+        };
+        deleteFutureShiftsTask.setOnSucceeded(_ -> {
             updatePage();
-        } catch (SQLException ex) {
-            System.err.println(ex.getMessage());
-        }
+            dialogPane.showInformation("Success", "Shifts deleted successfully");
+            progressSpinner.setVisible(false);
+        });
+        deleteFutureShiftsTask.setOnFailed(_ -> {
+            dialogPane.showError("Error", "An error occurred while deleting the shifts. Please try again.", deleteFutureShiftsTask.getException());
+            progressSpinner.setVisible(false);
+        });
+        executor.submit(deleteFutureShiftsTask);
     }
 
-    public void deleteFutureShifts(Shift s,LocalDate shiftCardDate){
-        //end original shift
-        String sql = "UPDATE shifts SET shiftEndDate=? WHERE shift_id=?";
-        try {
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setDate(1, Date.valueOf(shiftCardDate.minusDays(1)));
-            preparedStatement.setInt(2,s.getShiftID());
-            preparedStatement.executeUpdate();
-
-            //Delete modifications where original date is after new end date
-            sql = "DELETE FROM shiftmodifications WHERE shift_id = ? AND originalDate > ?";
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setInt(1, s.getShiftID());
-            preparedStatement.setDate(2, Date.valueOf(shiftCardDate.minusDays(1)));
-            preparedStatement.executeUpdate();
-
+    public void editCurrentShift(Shift s, LocalDate shiftCardDate) {
+        progressSpinner.setVisible(true);
+        Task<Void> editCurrentShiftTask = new Task<>() {
+            @Override
+            protected Void call() {
+                addShift(s, startDate.getValue(), s.getOriginalDate() == null ? shiftCardDate : s.getOriginalDate(), false);
+                return null;
+            }
+        };
+        editCurrentShiftTask.setOnSucceeded(_ -> {
             updatePage();
-            dialogPane.showInformation("Success", "Shifts deleted succesfully");
-        } catch (SQLException ex) {
-            System.err.println(ex.getMessage());
-        }
+            progressSpinner.setVisible(false);
+        });
+        editCurrentShiftTask.setOnFailed(_ -> {
+            dialogPane.showError("Error", "An error occurred while editing the current shift. Please try again.", editCurrentShiftTask.getException());
+            progressSpinner.setVisible(false);
+        });
+        executor.submit(editCurrentShiftTask);
     }
 
-    public void editCurrentShift(Shift s,LocalDate shiftCardDate){
-        addShift(s,startDate.getValue(),s.getOriginalDate()==null?shiftCardDate:s.getOriginalDate(),false);
-        updatePage();
-    }
-
-    public void deleteCurrentShift(Shift s,LocalDate shiftCardDate){
-        addShift(s,LocalDate.now(),s.getOriginalDate()==null?shiftCardDate:s.getOriginalDate(),true);
+    public void deleteCurrentShift(Shift s, LocalDate shiftCardDate) {
+        progressSpinner.setVisible(true);
+        Task<Void> deleteCurrentShiftTask = new Task<>() {
+            @Override
+            protected Void call() {
+                addShift(s, LocalDate.now(), s.getOriginalDate() == null ? shiftCardDate : s.getOriginalDate(), true);
+                return null;
+            }
+        };
+        deleteCurrentShiftTask.setOnSucceeded(_ -> {
+            updatePage();
+            progressSpinner.setVisible(false);
+        });
+        deleteCurrentShiftTask.setOnFailed(_ -> {
+            dialogPane.showError("Error", "An error occurred while deleting the current shift. Please try again.", deleteCurrentShiftTask.getException());
+            progressSpinner.setVisible(false);
+        });
+        executor.submit(deleteCurrentShiftTask);
     }
 
     private Node createCalendarEditDialog(Shift s,LocalDate shiftCardDate) {
@@ -710,13 +764,12 @@ public class RosterPageController extends Controller {
         try {
             calendarEditDialog = loader.load();
 
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException ex) {
+            dialogPane.showError("Error","An error occurred while loading the edit dialog", ex);
         }
         CalendarEditDialogController dialogController = loader.getController();
         dialogController.fill(s,shiftCardDate);
         dialogController.setParent(this);
-        dialogController.setConnection(this.con);
         return calendarEditDialog;
     }
 
@@ -726,13 +779,12 @@ public class RosterPageController extends Controller {
         try {
             calendarDeleteDialog = loader.load();
 
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException ex) {
+            dialogPane.showError("Error","An error occurred while loading the delete dialog", ex);
         }
         CalendarDeleteDialogController dialogController = loader.getController();
         dialogController.fill(s,shiftCardDate);
         dialogController.setParent(this);
-        dialogController.setConnection(this.con);
         return calendarDeleteDialog;
     }
 
@@ -742,16 +794,14 @@ public class RosterPageController extends Controller {
         try {
             rosterDayEdit = loader.load();
 
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException ex) {
+            dialogPane.showError("Error","An error occurred while loading the edit dialog", ex);
         }
         EditRosterDayController dialogController = loader.getController();
         dialogController.setParent(this);
-        dialogController.setConnection(this.con);
-        dialogController.setDate(date);
+        dialogController.setRosterDayDate(date);
         dialogController.fill();
-
-        dialog = new DialogPane.Dialog(dialogPane, BLANK);
+        dialog = new DialogPane.Dialog<>(dialogPane, BLANK);
         dialog.setPadding(false);
         dialog.setContent(rosterDayEdit);
         dialogPane.showDialog(dialog);
@@ -771,7 +821,6 @@ public class RosterPageController extends Controller {
         Parent root = loader.load();
         c = loader.getController();
         c.setMain(main);
-        c.setConnection(con);
         c.fill();
         c.setParent(this);
         exportToolStage.setTitle("Export roster info to clipboard");

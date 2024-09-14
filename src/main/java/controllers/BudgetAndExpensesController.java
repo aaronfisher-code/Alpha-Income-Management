@@ -1,70 +1,49 @@
 package controllers;
 
-import application.Main;
 import io.github.palexdev.materialfx.controls.MFXButton;
+import io.github.palexdev.materialfx.controls.MFXProgressSpinner;
 import io.github.palexdev.materialfx.controls.MFXTextField;
+import javafx.application.Platform;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.*;
-import org.controlsfx.control.PopOver;
+import models.BudgetAndExpensesDataPoint;
+import services.AccountPaymentService;
+import services.BudgetExpensesService;
 import utils.RosterUtils;
+import utils.TableUtils;
 import utils.ValidatorUtils;
 
 import java.io.IOException;
-import java.sql.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
-import java.time.format.TextStyle;
 import java.util.Arrays;
-import java.util.Locale;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
 
 public class BudgetAndExpensesController extends DateSelectController{
 
-	private PopOver currentDatePopover;
+	@FXML private MFXTextField numDaysField,numOpenDaysField,numPartialDaysField,dailyRentField,totalAvgField,monthlyRentField,dailyOutgoingsField,monthlyLoanField,monthlyWagesField;
+	@FXML private MFXTextField cpaIncomeXero, cpaIncomeSpreadsheet,cpaIncomeVariance,lanternPayIncomeXero,lanternPayIncomeSpreadsheet,lanternPayIncomeVariance,otherIncomeXero,otherIncomeSpreadsheet,otherIncomeVariance,atoGSTrefundXero;
+	@FXML private MFXButton saveButton;
+	@FXML private Label errorLabel;
+    @FXML private GridPane endOfMonthTable;
+	@FXML private MFXProgressSpinner progressSpinner,saveProgressSpinner;
+	private BudgetExpensesService budgetExpensesService;
+	private AccountPaymentService accountPaymentService;
 
 	@FXML
-	private StackPane monthSelector;
-	@FXML
-	private MFXTextField monthSelectorField;
-	@FXML
-	private FlowPane datePickerPane;
-	@FXML
-	private StackPane backgroundPane;
-
-	@FXML
-	private MFXTextField numDaysField,numOpenDaysField,numPartialDaysField,dailyRentField,totalAvgField,monthlyRentField,dailyOutgoingsField,monthlyLoanField,monthlyWagesField;
-
-	@FXML
-	private MFXTextField cpaIncomeXero, cpaIncomeSpreadsheet,cpaIncomeVariance,lanternPayIncomeXero,lanternPayIncomeSpreadsheet,lanternPayIncomeVariance,otherIncomeXero,otherIncomeSpreadsheet,otherIncomeVariance,atoGSTrefundXero;
-
-	@FXML
-	private MFXButton saveButton;
-
-	@FXML
-	private Label errorLabel;
-
-	@FXML
-	private GridPane dailyExpensesTable, endOfMonthTable;
-	private Connection con = null;
-    PreparedStatement preparedStatement = null;
-    ResultSet resultSet = null;
-    private Main main;
-
-	@FXML
-	private void initialize() {}
-
-	@Override
-	public void setMain(Main main) {
-		this.main = main;
-	}
-
-	public void setConnection(Connection c) {
-		this.con = c;
+	private void initialize() {
+		try{
+			budgetExpensesService = new BudgetExpensesService();
+			accountPaymentService = new AccountPaymentService();
+			executor = Executors.newCachedThreadPool();
+		}catch (IOException e){
+			dialogPane.showError("Error", "Error initializing budget and expenses service", e);
+		}
 	}
 
 	@Override
@@ -84,130 +63,111 @@ public class BudgetAndExpensesController extends DateSelectController{
 		setDate(main.getCurrentDate());
 	}
 
-	public void updateValues(){
+	public void updateValues() {
 		errorLabel.setText("");
 		errorLabel.setVisible(false);
 		errorLabel.setStyle("-fx-text-fill: red");
 		YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
-		RosterUtils rosterUtils = new RosterUtils(con,main,yearMonthObject);
+
+		progressSpinner.setVisible(true);
+
+		CompletableFuture<RosterUtils> rosterUtilsFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				return new RosterUtils(main, yearMonthObject);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		}, executor);
+
+		CompletableFuture<BudgetAndExpensesDataPoint> budgetDataFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				return budgetExpensesService.getBudgetExpensesData(main.getCurrentStore().getStoreID(), yearMonthObject);
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}, executor);
+
+		CompletableFuture<Double> cpaPaymentFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				return accountPaymentService.getTotalPayment(main.getCurrentStore().getStoreID(), yearMonthObject, AccountPaymentService.PaymentType.CPA);
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}, executor);
+
+		CompletableFuture<Double> tacPaymentFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				return accountPaymentService.getTotalPayment(main.getCurrentStore().getStoreID(), yearMonthObject, AccountPaymentService.PaymentType.TAC);
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}, executor);
+
+		CompletableFuture<Double> otherPaymentFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				return accountPaymentService.getTotalPayment(main.getCurrentStore().getStoreID(), yearMonthObject, AccountPaymentService.PaymentType.OTHER);
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}, executor);
+
+		CompletableFuture.allOf(rosterUtilsFuture, budgetDataFuture, cpaPaymentFuture, tacPaymentFuture, otherPaymentFuture)
+				.thenRunAsync(() -> {
+					try {
+						RosterUtils rosterUtils = rosterUtilsFuture.get();
+						BudgetAndExpensesDataPoint data = budgetDataFuture.get();
+						double totalCPAPayment = cpaPaymentFuture.get();
+						double totalTACPayment = tacPaymentFuture.get();
+						double totalOtherPayment = otherPaymentFuture.get();
+
+						Platform.runLater(() -> {
+							updateUIWithData(rosterUtils, data, totalCPAPayment, totalTACPayment, totalOtherPayment);
+							TableUtils.formatTextFields(endOfMonthTable, this::updateTotals);
+							updateTotals();
+							progressSpinner.setVisible(false);
+						});
+					} catch (Exception e) {
+						Platform.runLater(() -> {
+							dialogPane.showError("Error", "Error loading budget and expenses data", e);
+							progressSpinner.setVisible(false);
+						});
+					}
+				}, executor);
+	}
+
+	private void updateUIWithData(RosterUtils rosterUtils, BudgetAndExpensesDataPoint data,
+								  double totalCPAPayment, double totalTACPayment, double totalOtherPayment) {
 		int daysInMonth = rosterUtils.getTotalDays();
 		int openDays = rosterUtils.getOpenDays();
 		int partialDays = rosterUtils.getPartialDays();
-		numDaysField.setText(daysInMonth+" days");
-		numOpenDaysField.setText(openDays+" days");
-		numPartialDaysField.setText(partialDays+" days");
-		String sql = null;
-		try {
-			sql = "SELECT * FROM budgetandexpenses WHERE storeID = ? AND MONTH(date) = ? AND YEAR(date) = ?";
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-			preparedStatement.setInt(2, main.getCurrentDate().getMonthValue());
-			preparedStatement.setInt(3, main.getCurrentDate().getYear());
-			resultSet = preparedStatement.executeQuery();
-			//check if resultset returns no results
-			if (resultSet == null || !resultSet.next()) {
-				//Daily expenses calculator
-				monthlyRentField.setText("");
-				dailyRentField.setText("");
-				dailyOutgoingsField.setText("");
-				totalAvgField.setText("");
-				monthlyLoanField.setText("");
-				monthlyWagesField.setText("");
-
-				//End of month figures
-				cpaIncomeXero.setText("");
-				lanternPayIncomeXero.setText("");
-				otherIncomeXero.setText("");
-				atoGSTrefundXero.setText("");
-			}else{
-				//Daily expenses calculator
-				double monthlyRent = resultSet.getDouble("monthlyRent");
-				monthlyRentField.setText(String.format("%.2f", monthlyRent));
-				dailyRentField.setText(String.format("%.2f", monthlyRent/daysInMonth));
-				dailyOutgoingsField.setText(String.format("%.2f", resultSet.getDouble("dailyOutgoings")));
-				totalAvgField.setText(String.format("%.2f", resultSet.getDouble("dailyOutgoings")+(monthlyRent/daysInMonth)));
-				monthlyLoanField.setText(String.format("%.2f", resultSet.getDouble("monthlyLoan")));
-				monthlyWagesField.setText(String.format("%.2f", resultSet.getDouble("monthlyWages")));
-
-				//End of month figures
-				cpaIncomeXero.setText(String.format("%.2f", resultSet.getDouble("6CPAIncome")));
-				lanternPayIncomeXero.setText(String.format("%.2f", resultSet.getDouble("LanternPayIncome")));
-				otherIncomeXero.setText(String.format("%.2f", resultSet.getDouble("OtherIncome")));
-				atoGSTrefundXero.setText(String.format("%.2f", resultSet.getDouble("ATO_GST_BAS_refund")));
-			}
-
-			sql = "SELECT SUM(ap.unitAmount) AS TotalPayment " +
-					"FROM accountpayments ap " +
-					"INNER JOIN accountpaymentcontacts apc ON apc.idaccountPaymentContacts = ap.contactID " +
-					"WHERE apc.contactName LIKE ? " +
-					"AND MONTH(ap.invoiceDate) = ? AND YEAR(ap.invoiceDate) = ? " +
-					"AND ap.storeID = ?";
-
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setString(1, "%CPA%");
-			preparedStatement.setInt(2, main.getCurrentDate().getMonthValue());
-			preparedStatement.setInt(3, main.getCurrentDate().getYear());
-			preparedStatement.setInt(4, main.getCurrentStore().getStoreID());
-			resultSet = preparedStatement.executeQuery();
-			if (resultSet == null || !resultSet.next()) {
-				cpaIncomeSpreadsheet.setText("");
-			}else{
-				cpaIncomeSpreadsheet.setText(String.format("%.2f", resultSet.getDouble("TotalPayment")));
-			}
-
-			preparedStatement.setString(1, "%TAC%");
-			resultSet = preparedStatement.executeQuery();
-			if (resultSet == null || !resultSet.next()) {
-				lanternPayIncomeSpreadsheet.setText("");
-			}else{
-				lanternPayIncomeSpreadsheet.setText(String.format("%.2f", resultSet.getDouble("TotalPayment")));
-			}
-
-			sql = "SELECT SUM(ap.unitAmount) AS TotalPayment " +
-					"FROM accountpayments ap " +
-					"INNER JOIN accountpaymentcontacts apc ON apc.idaccountPaymentContacts = ap.contactID " +
-					"WHERE apc.contactName NOT LIKE ? AND apc.contactName NOT LIKE ?" +
-					"AND MONTH(ap.invoiceDate) = ? AND YEAR(ap.invoiceDate) = ? " +
-					"AND ap.storeID = ?";
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setString(1, "%CPA%");
-			preparedStatement.setString(2, "%TAC%");
-			preparedStatement.setInt(3, main.getCurrentDate().getMonthValue());
-			preparedStatement.setInt(4, main.getCurrentDate().getYear());
-			preparedStatement.setInt(5, main.getCurrentStore().getStoreID());
-			resultSet = preparedStatement.executeQuery();
-			if (resultSet == null || !resultSet.next()) {
-				otherIncomeSpreadsheet.setText("");
-			}else{
-				otherIncomeSpreadsheet.setText(String.format("%.2f", resultSet.getDouble("TotalPayment")));
-			}
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
+		numDaysField.setText(daysInMonth + " days");
+		numOpenDaysField.setText(openDays + " days");
+		numPartialDaysField.setText(partialDays + " days");
+		if (data == null) {
+			Arrays.asList(monthlyRentField, dailyRentField, dailyOutgoingsField, totalAvgField,
+					monthlyLoanField, monthlyWagesField, cpaIncomeXero, lanternPayIncomeXero,
+					otherIncomeXero, atoGSTrefundXero).forEach(field -> field.setText(""));
+		} else {
+			double monthlyRent = data.getMonthlyRent();
+			monthlyRentField.setText(String.format("%.2f", monthlyRent));
+			dailyRentField.setText(String.format("%.2f", monthlyRent / daysInMonth));
+			dailyOutgoingsField.setText(String.format("%.2f", data.getDailyOutgoings()));
+			totalAvgField.setText(String.format("%.2f", data.getDailyOutgoings() + (monthlyRent / daysInMonth)));
+			monthlyLoanField.setText(String.format("%.2f", data.getMonthlyLoan()));
+			monthlyWagesField.setText(String.format("%.2f", data.getMonthlyWages()));
+			cpaIncomeXero.setText(String.format("%.2f", data.getCpaIncome()));
+			lanternPayIncomeXero.setText(String.format("%.2f", data.getLanternIncome()));
+			otherIncomeXero.setText(String.format("%.2f", data.getOtherIncome()));
+			atoGSTrefundXero.setText(String.format("%.2f", data.getAtoGSTrefund()));
 		}
-
-//		formatTextFields(dailyExpensesTable);
-		formatTextFields(endOfMonthTable);
-
-		updateTotals();
-	}
-
-	private void formatTextFields(GridPane table) {
-		for(Node n: table.getChildren()){
-			if(n instanceof MFXTextField){
-				((MFXTextField) n).setLeadingIcon(new Label("$"));
-				((MFXTextField) n).setAlignment(Pos.CENTER_RIGHT);
-				((MFXTextField) n).delegateFocusedProperty().addListener((obs, oldVal, newVal) -> {
-					if (((MFXTextField) n).isValid()) {
-						updateTotals();
-					}
-				});
-			}
-		}
+		cpaIncomeSpreadsheet.setText(totalCPAPayment == 0.0 ? "" : String.format("%.2f", totalCPAPayment));
+		lanternPayIncomeSpreadsheet.setText(totalTACPayment == 0.0 ? "" : String.format("%.2f", totalTACPayment));
+		otherIncomeSpreadsheet.setText(totalOtherPayment == 0.0 ? "" : String.format("%.2f", totalOtherPayment));
 	}
 
 	public void updateTotals(){
 		if(monthlyRentField.isValid()) {
-			if (monthlyRentField.getText().equals(""))
+			if (monthlyRentField.getText().isEmpty())
 				monthlyRentField.setText("0.00");
 			else {
 				monthlyRentField.setText(String.format("%.2f", Double.parseDouble(monthlyRentField.getText())));
@@ -215,7 +175,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 			dailyRentField.setText(String.format("%.2f", Double.parseDouble(monthlyRentField.getText())/Integer.parseInt(numDaysField.getText().split(" ")[0])));
 		}
 		if(dailyOutgoingsField.isValid()) {
-			if (dailyOutgoingsField.getText().equals(""))
+			if (dailyOutgoingsField.getText().isEmpty())
 				dailyOutgoingsField.setText("0.00");
 			else {
 				dailyOutgoingsField.setText(String.format("%.2f", Double.parseDouble(dailyOutgoingsField.getText())));
@@ -225,143 +185,85 @@ public class BudgetAndExpensesController extends DateSelectController{
 			totalAvgField.setText(String.format("%.2f", Double.parseDouble(dailyOutgoingsField.getText())+(Double.parseDouble(monthlyRentField.getText())/Integer.parseInt(numDaysField.getText().split(" ")[0]))));
 		}
 		if(monthlyLoanField.isValid()) {
-			if (monthlyLoanField.getText().equals(""))
+			if (monthlyLoanField.getText().isEmpty())
 				monthlyLoanField.setText("0.00");
 			else {
 				monthlyLoanField.setText(String.format("%.2f", Double.parseDouble(monthlyLoanField.getText())));
 			}
 		}
 		if(monthlyWagesField.isValid()) {
-			if (monthlyWagesField.getText().equals(""))
+			if (monthlyWagesField.getText().isEmpty())
 				monthlyWagesField.setText("0.00");
 			else {
 				monthlyWagesField.setText(String.format("%.2f", Double.parseDouble(monthlyWagesField.getText())));
 			}
 		}
 		if(cpaIncomeXero.isValid()) {
-			if (cpaIncomeXero.getText().equals(""))
-				cpaIncomeXero.setText("0.00");
-			else {
-				cpaIncomeXero.setText(String.format("%.2f", Double.parseDouble(cpaIncomeXero.getText())));
-			}
+			cpaIncomeXero.setText(cpaIncomeXero.getText().isEmpty()?"0.00":String.format("%.2f", Double.parseDouble(cpaIncomeXero.getText())));
+			cpaIncomeSpreadsheet.setText(cpaIncomeSpreadsheet.getText().isEmpty()?"0.00":String.format("%.2f", Double.parseDouble(cpaIncomeSpreadsheet.getText())));
 			cpaIncomeVariance.setText(String.format("%.2f", Double.parseDouble(cpaIncomeXero.getText())-Double.parseDouble(cpaIncomeSpreadsheet.getText())));
 		}
 		if(lanternPayIncomeXero.isValid()) {
-			if (lanternPayIncomeXero.getText().equals(""))
-				lanternPayIncomeXero.setText("0.00");
-			else {
-				lanternPayIncomeXero.setText(String.format("%.2f", Double.parseDouble(lanternPayIncomeXero.getText())));
-			}
+			lanternPayIncomeXero.setText(lanternPayIncomeXero.getText().isEmpty()?"0.00":String.format("%.2f", Double.parseDouble(lanternPayIncomeXero.getText())));
+			lanternPayIncomeSpreadsheet.setText(lanternPayIncomeSpreadsheet.getText().isEmpty()?"0.00":String.format("%.2f", Double.parseDouble(lanternPayIncomeSpreadsheet.getText())));
 			lanternPayIncomeVariance.setText(String.format("%.2f", Double.parseDouble(lanternPayIncomeXero.getText())-Double.parseDouble(lanternPayIncomeSpreadsheet.getText())));
 		}
 		if(otherIncomeXero.isValid()) {
-			if (otherIncomeXero.getText().equals(""))
-				otherIncomeXero.setText("0.00");
-			else {
-				otherIncomeXero.setText(String.format("%.2f", Double.parseDouble(otherIncomeXero.getText())));
-			}
+			otherIncomeXero.setText(otherIncomeXero.getText().isEmpty()?"0.00":String.format("%.2f", Double.parseDouble(otherIncomeXero.getText())));
+			otherIncomeSpreadsheet.setText(otherIncomeSpreadsheet.getText().isEmpty()?"0.00":String.format("%.2f", Double.parseDouble(otherIncomeSpreadsheet.getText())));
 			otherIncomeVariance.setText(String.format("%.2f", Double.parseDouble(otherIncomeXero.getText())-Double.parseDouble(otherIncomeSpreadsheet.getText())));
 		}
-//		if(atoGSTrefundXero.isValid()) {
-//			if (atoGSTrefundXero.getText().equals(""))
-//				atoGSTrefundXero.setText("0.00");
-//			else {
-//				atoGSTrefundXero.setText(String.format("%.2f", Double.parseDouble(atoGSTrefundXero.getText())));
-//			}
-//			atoGSTrefundVariance.setText(String.format("%.2f", Double.parseDouble(atoGSTrefundXero.getText())-Double.parseDouble(atoGSTrefundSpreadsheet.getText())));
-//		}
 	}
 
-	public void save(){
+	public void save() {
 		updateTotals();
-		//Validate all fields
-		if(!monthlyRentField.isValid()||!dailyOutgoingsField.isValid()||!monthlyLoanField.isValid()||!cpaIncomeXero.isValid()||!lanternPayIncomeXero.isValid()||!otherIncomeXero.isValid()||!atoGSTrefundXero.isValid()||!monthlyWagesField.isValid()){
+		// Validate all fields
+		if (!monthlyRentField.isValid() || !dailyOutgoingsField.isValid() || !monthlyLoanField.isValid() ||
+				!cpaIncomeXero.isValid() || !lanternPayIncomeXero.isValid() || !otherIncomeXero.isValid() ||
+				!atoGSTrefundXero.isValid() || !monthlyWagesField.isValid()) {
 			errorLabel.setText("Please ensure all fields are valid");
 			errorLabel.setVisible(true);
 			return;
 		}
-		Date date = Date.valueOf(LocalDate.of(main.getCurrentDate().getYear(),main.getCurrentDate().getMonth(),1));
-		String sql = "INSERT INTO budgetAndExpenses (date,storeID,monthlyRent,dailyOutgoings,monthlyLoan,6CPAIncome,LanternPayIncome,OtherIncome,ATO_GST_BAS_refund,monthlyWages) VALUES (?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE monthlyRent=?,dailyOutgoings=?,monthlyLoan=?,6CPAIncome=?,LanternPayIncome=?,OtherIncome=?,ATO_GST_BAS_refund=?,monthlyWages=?";
-		try{
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setDate(1,date);
-			preparedStatement.setInt(2,main.getCurrentStore().getStoreID());
-			preparedStatement.setDouble(3,Double.parseDouble(monthlyRentField.getText()));
-			preparedStatement.setDouble(4,Double.parseDouble(dailyOutgoingsField.getText()));
-			preparedStatement.setDouble(5,Double.parseDouble(monthlyLoanField.getText()));
-			preparedStatement.setDouble(6,Double.parseDouble(cpaIncomeXero.getText()));
-			preparedStatement.setDouble(7,Double.parseDouble(lanternPayIncomeXero.getText()));
-			preparedStatement.setDouble(8,Double.parseDouble(otherIncomeXero.getText()));
-			preparedStatement.setDouble(9,Double.parseDouble(atoGSTrefundXero.getText()));
-			preparedStatement.setDouble(10,Double.parseDouble(monthlyRentField.getText()));
-			preparedStatement.setDouble(11,Double.parseDouble(monthlyRentField.getText()));
-			preparedStatement.setDouble(12,Double.parseDouble(dailyOutgoingsField.getText()));
-			preparedStatement.setDouble(13,Double.parseDouble(monthlyLoanField.getText()));
-			preparedStatement.setDouble(14,Double.parseDouble(cpaIncomeXero.getText()));
-			preparedStatement.setDouble(15,Double.parseDouble(lanternPayIncomeXero.getText()));
-			preparedStatement.setDouble(16,Double.parseDouble(otherIncomeXero.getText()));
-			preparedStatement.setDouble(17,Double.parseDouble(atoGSTrefundXero.getText()));
-			preparedStatement.setDouble(18,Double.parseDouble(monthlyWagesField.getText()));
-			preparedStatement.executeUpdate();
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("h:mm:ss a");
-		errorLabel.setVisible(true);
-		errorLabel.setText("Successfully saved at "+LocalTime.now().format(formatter));
-		errorLabel.setStyle("-fx-text-fill: black");
-	}
 
+		saveProgressSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
 
-	public void monthForward() {
-		setDate(main.getCurrentDate().plusMonths(1));
-	}
-
-	public void monthBackward() {
-		setDate(main.getCurrentDate().minusMonths(1));
+		Task<Void> saveTask = new Task<>() {
+			@Override
+			protected Void call() {
+				BudgetAndExpensesDataPoint newData = new BudgetAndExpensesDataPoint();
+				newData.setDate(LocalDate.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth(), 1));
+				newData.setStoreID(main.getCurrentStore().getStoreID());
+				newData.setMonthlyRent(Double.parseDouble(monthlyRentField.getText()));
+				newData.setDailyOutgoings(Double.parseDouble(dailyOutgoingsField.getText()));
+				newData.setMonthlyLoan(Double.parseDouble(monthlyLoanField.getText()));
+				newData.setCpaIncome(Double.parseDouble(cpaIncomeXero.getText()));
+				newData.setLanternIncome(Double.parseDouble(lanternPayIncomeXero.getText()));
+				newData.setOtherIncome(Double.parseDouble(otherIncomeXero.getText()));
+				newData.setAtoGSTrefund(Double.parseDouble(atoGSTrefundXero.getText()));
+				newData.setMonthlyWages(Double.parseDouble(monthlyWagesField.getText()));
+				budgetExpensesService.updateBudgetExpensesData(newData);
+				return null;
+			}
+		};
+		saveTask.setOnSucceeded(_ -> {
+			saveProgressSpinner.setMaxWidth(0);
+			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("h:mm:ss a");
+			errorLabel.setVisible(true);
+			errorLabel.setText("Successfully saved at " + LocalTime.now().format(formatter));
+			errorLabel.setStyle("-fx-text-fill: black");
+		});
+		saveTask.setOnFailed(_ -> {
+			saveProgressSpinner.setMaxWidth(0);
+			dialogPane.showError("Error", "Error saving budget and expenses data", saveTask.getException());
+		});
+		executor.submit(saveTask);
 	}
 
 	@Override
 	public void setDate(LocalDate date) {
 		main.setCurrentDate(date);
-		String fieldText = main.getCurrentDate().getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
-		fieldText += ", ";
-		fieldText += main.getCurrentDate().getYear();
-		monthSelectorField.setText(fieldText);
+		updateMonthSelectorField();
 		updateValues();
-	}
-
-	public void openMonthSelector(){
-		if(currentDatePopover!=null&&currentDatePopover.isShowing()){
-			currentDatePopover.hide();
-		}else {
-			PopOver monthSelectorMenu = new PopOver();
-			FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/MonthYearSelectorContent.fxml"));
-			VBox monthSelectorMenuContent = null;
-			try {
-				monthSelectorMenuContent = loader.load();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			MonthYearSelectorContentController rdc = loader.getController();
-			rdc.setMain(main);
-			rdc.setConnection(con);
-			rdc.setParent(this);
-			rdc.fill();
-
-			monthSelectorMenu.setOpacity(1);
-			monthSelectorMenu.setContentNode(monthSelectorMenuContent);
-			monthSelectorMenu.setArrowSize(0);
-			monthSelectorMenu.setAnimated(true);
-			monthSelectorMenu.setArrowLocation(PopOver.ArrowLocation.TOP_CENTER);
-			monthSelectorMenu.setAutoHide(true);
-			monthSelectorMenu.setDetachable(false);
-			monthSelectorMenu.setHideOnEscape(true);
-			monthSelectorMenu.setCornerRadius(10);
-			monthSelectorMenu.setArrowIndent(0);
-			monthSelectorMenu.show(monthSelector);
-			currentDatePopover=monthSelectorMenu;
-			monthSelectorField.requestFocus();
-		}
 	}
 }

@@ -1,18 +1,17 @@
 package controllers;
 
-import application.Main;
 import com.dlsc.gemsfx.FilterView;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXNodesList;
 import io.github.palexdev.materialfx.controls.*;
 import io.github.palexdev.materialfx.controls.cell.MFXTableRowCell;
 import io.github.palexdev.materialfx.filter.StringFilter;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
-import javafx.scene.AccessibleRole;
-import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
@@ -20,132 +19,98 @@ import models.Permission;
 import models.Store;
 import models.User;
 import models.Employment;
+import services.*;
 import utils.AnimationUtils;
+import utils.GUIUtils;
 import utils.ValidatorUtils;
 
 import java.io.IOException;
-import java.sql.*;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 
-public class EditAccountController extends Controller{
+public class EditAccountController extends PageController {
 
-	@FXML
-	private StackPane backgroundPane;
-
-	@FXML
-	private BorderPane usersButton,storesButton;
-
-	@FXML
-	private VBox controlBox,editStorePopover,editUserPopover,editPermissionsPopover;
-
-	@FXML
-	private JFXNodesList addList;
-
-	@FXML
-	private JFXButton addButton;
-
-	@FXML
-	private Region contentDarken;
-
-	@FXML
-	private Button deleteStoreButton,deleteUserButton;
-
-	@FXML
-	private MFXTextField storeNameField;
-
-	@FXML
-	private Label editStorePopoverTitle,editUserPopoverTitle,employeeIcon,employeeName,employeeRole,storeNameValidationLabel,usernameValidationLabel,firstNameValidationLabel,lastNameValidationLabel;
-
-	@FXML
-	private MFXRectangleToggleNode inactiveUserToggle;
-
-	@FXML
-	private MFXTextField usernameField,firstNameField,lastNameField,roleField;
-
-	@FXML
-	private ColorPicker profileTextPicker,profileBackgroundPicker;
-
-	@FXML
-	private MFXCheckListView<Store> storeSelector;
-
-	@FXML
-	private MFXCheckListView<Permission> permissionsSelector;
-
-	@FXML
-	private MFXButton saveStoreButton,passwordResetButton,staffPermissionsButton,saveUserButton;
-
-	private MFXTableView<User> accountsTable = new MFXTableView<User>();
+	@FXML private BorderPane usersButton,storesButton;
+	@FXML private VBox controlBox,editStorePopover,editUserPopover,editPermissionsPopover;
+	@FXML private JFXNodesList addList;
+	@FXML private JFXButton addButton;
+	@FXML private Region contentDarken;
+	@FXML private Button deleteStoreButton,deleteUserButton;
+	@FXML private MFXTextField storeNameField,storeHoursField;
+	@FXML private Label editStorePopoverTitle,editUserPopoverTitle,employeeIcon,employeeName,employeeRole,storeNameValidationLabel,usernameValidationLabel,firstNameValidationLabel,lastNameValidationLabel,storeHoursValidationLabel;
+	@FXML private MFXRectangleToggleNode inactiveUserToggle;
+	@FXML private MFXTextField usernameField,firstNameField,lastNameField,roleField;
+	@FXML private ColorPicker profileTextPicker,profileBackgroundPicker;
+	@FXML private MFXCheckListView<Store> storeSelector;
+	@FXML private MFXCheckListView<Permission> permissionsSelector;
+	@FXML private MFXButton saveStoreButton,passwordResetButton,saveUserButton;
+	@FXML private MFXProgressSpinner userSpinner, storeSpinner;
+	private MFXTableView<User> accountsTable = new MFXTableView<>();
 	private MFXTableColumn<User> usernameCol;
 	private MFXTableColumn<User> firstNameCol;
 	private MFXTableColumn<User> lastNameCol;
 	private MFXTableColumn<User> roleCol;
 	private FilterView<User> userFilterView = new FilterView<>();
-
-	private MFXTableView<Store> storesTable = new MFXTableView<Store>();
+	private MFXTableView<Store> storesTable = new MFXTableView<>();
 	private MFXTableColumn<Store> storeNameCol;
+	private MFXTableColumn<Store> storeHoursCol;
 	private FilterView<Store> storeFilterView = new FilterView<>();
-	
-	
-    private Connection con = null;
-    PreparedStatement preparedStatement = null;
-    ResultSet resultSet = null;
-    private Main main;
-    private User selectedUser;
-
-	private ObservableList<User> allUsers = FXCollections.observableArrayList();
-	private ObservableList<Store> allStores = FXCollections.observableArrayList();
-	private ObservableList<Permission> allPermissions = FXCollections.observableArrayList();
+	private UserService userService;
+	private StoreService storeService;
+	private PermissionService permissionService;
+	private EmploymentService employmentService;
+	private UserPermissionService userPermissionService;
 	
 	 @FXML
-	private void initialize() throws IOException {}
-
-	@Override
-	public void setMain(Main main) {
-		this.main = main;
-	}
-	
-	public void setConnection(Connection c) {
-		this.con = c;
-	}
+	private void initialize() {
+		 try {
+			 userService = new UserService();
+			 storeService = new StoreService();
+			 permissionService = new PermissionService();
+			 employmentService = new EmploymentService();
+			 userPermissionService = new UserPermissionService();
+			 executor = Executors.newCachedThreadPool();
+		 } catch (IOException ex) {
+			 dialogPane.showError("Error","An error occurred while initializing the services", ex);
+		 }
+	 }
 
 	@Override
 	public void fill() {usersView();}
 
 	public void usersView(){
-		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Users - Edit"))) {
-			addList.setVisible(true);
-		}else{
-			addList.setVisible(false);
-		}
-		 //Change inactive user text depending on if its selected or not
-		inactiveUserToggle.selectedProperty().addListener(actionEvent -> {
+        addList.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Users - Edit")));
+		 //Change inactive user text depending on if it's selected or not
+		inactiveUserToggle.selectedProperty().addListener(_ -> {
 			if (inactiveUserToggle.isSelected()) {
 				inactiveUserToggle.setText("Inactive");
 			} else {
 				inactiveUserToggle.setText("Active");
 			}
 		});
-		formatTabSelect(usersButton);
-		formatTabDeselect(storesButton);
-		addButton.setOnAction(e -> openUserPopover());
-
-
+		GUIUtils.formatTabSelect(usersButton);
+		GUIUtils.formatTabDeselect(storesButton);
+		addButton.setOnAction(_ -> openUserPopover());
 		userFilterView = new FilterView<>();
 		userFilterView.setTitle("Current Users");
 		userFilterView.setSubtitle("Double click a user to edit");
 		userFilterView.setTextFilterProvider(text -> user -> user.getFirst_name().toLowerCase().contains(text) || user.getLast_name().toLowerCase().contains(text) || user.getRole().toLowerCase().contains(text));
-		allUsers = userFilterView.getFilteredItems();
 		usernameCol = new MFXTableColumn<>("STAFF ID",false, Comparator.comparing(User::getUsername));
 		firstNameCol = new MFXTableColumn<>("FIRST NAME",false, Comparator.comparing(User::getFirst_name));
 		lastNameCol = new MFXTableColumn<>("LAST NAME",false, Comparator.comparing(User::getLast_name));
 		roleCol = new MFXTableColumn<>("ROLE",false, Comparator.comparing(User::getRole));
-		usernameCol.setRowCellFactory(user -> new MFXTableRowCell<>(User::getUsername));
-		firstNameCol.setRowCellFactory(user -> new MFXTableRowCell<>(User::getFirst_name));
-		lastNameCol.setRowCellFactory(user -> new MFXTableRowCell<>(User::getLast_name));
-		roleCol.setRowCellFactory(user -> new MFXTableRowCell<>(User::getRole));
-		accountsTable = new MFXTableView<User>();
+		usernameCol.setRowCellFactory(_ -> new MFXTableRowCell<>(User::getUsername));
+		firstNameCol.setRowCellFactory(_ -> new MFXTableRowCell<>(User::getFirst_name));
+		lastNameCol.setRowCellFactory(_ -> new MFXTableRowCell<>(User::getLast_name));
+		roleCol.setRowCellFactory(_ -> new MFXTableRowCell<>(User::getRole));
+		accountsTable = new MFXTableView<>();
 		accountsTable.getTableColumns().addAll(usernameCol,firstNameCol,lastNameCol,roleCol);
 		accountsTable.getFilters().addAll(
 				new StringFilter<>("Username",User::getUsername),
@@ -153,38 +118,41 @@ public class EditAccountController extends Controller{
 				new StringFilter<>("Last Name",User::getLast_name),
 				new StringFilter<>("Role",User::getRole)
 		);
-
-		String sql = null;
-		sql = "SELECT * FROM accounts";
-		try {
-			preparedStatement = con.prepareStatement(sql);
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				userFilterView.getItems().add(new User(resultSet));
+		userSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+		Task<List<User>> fetchUsersTask = new Task<>() {
+			@Override
+			protected List<User> call() {
+				return userService.getAllUsers();
 			}
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
-		}
+		};
+		fetchUsersTask.setOnSucceeded(_ -> {
+			ObservableList<User> allUsers = FXCollections.observableArrayList(fetchUsersTask.getValue());
+			accountsTable.setItems(allUsers);
+			userSpinner.setMaxWidth(0);
+		});
+		fetchUsersTask.setOnFailed(_ -> {
+			dialogPane.showError("Error", "An error occurred while fetching users", fetchUsersTask.getException());
+			userSpinner.setMaxWidth(0);
+		});
+		executor.submit(fetchUsersTask);
 		accountsTable.setFooterVisible(true);
 		accountsTable.autosizeColumnsOnInitialization();
 		accountsTable.setMaxWidth(Double.MAX_VALUE);
 		accountsTable.setMaxHeight(Double.MAX_VALUE);
-		userFilterView.setPadding(new Insets(20,20,10,20));//top,right,bottom,left
-
+		userFilterView.setPadding(new Insets(20,20,10,20));//top,right,bottom,lef
 		controlBox.getChildren().removeAll(controlBox.getChildren());
 		controlBox.getChildren().addAll(userFilterView,accountsTable);
-
 		VBox.setVgrow(accountsTable, Priority.ALWAYS);
-		accountsTable.virtualFlowInitializedProperty().addListener((observable, oldValue, newValue) -> {addUserDoubleClickfunction();});
-		userFilterView.filteredItemsProperty().addListener((observable, oldValue, newValue) -> {addUserDoubleClickfunction();});
-		accountsTable.setItems(allUsers);
-
+		accountsTable.virtualFlowInitializedProperty().addListener((_, _, _) -> {
+			addUserDoubleClickFunction();});
+		userFilterView.filteredItemsProperty().addListener((_, _, _) -> {
+			addUserDoubleClickFunction();});
 		ValidatorUtils.setupRegexValidation(usernameField,usernameValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveUserButton);
 		ValidatorUtils.setupRegexValidation(firstNameField,firstNameValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveUserButton);
 		ValidatorUtils.setupRegexValidation(lastNameField,lastNameValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveUserButton);
 	}
 
-	private void addUserDoubleClickfunction(){
+	private void addUserDoubleClickFunction(){
 		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Users - Edit"))) {
 			for (Map.Entry<Integer, MFXTableRow<User>> entry : accountsTable.getCells().entrySet()) {
 				entry.getValue().setOnMouseClicked(event -> {
@@ -206,55 +174,52 @@ public class EditAccountController extends Controller{
 	}
 
 	public void storesView(){
-		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Stores - Edit"))) {
-			addList.setVisible(true);
-		}else{
-			addList.setVisible(false);
-		}
-		formatTabSelect(storesButton);
-		formatTabDeselect(usersButton);
-		addButton.setOnAction(e -> openStorePopover());
-
+        addList.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Stores - Edit")));
+		GUIUtils.formatTabSelect(storesButton);
+		GUIUtils.formatTabDeselect(usersButton);
+		addButton.setOnAction(_ -> openStorePopover());
 		storeFilterView = new FilterView<>();
 		storeFilterView.setTitle("Current Stores");
 		storeFilterView.setSubtitle("Double click a store to edit");
 		storeFilterView.setTextFilterProvider(text -> store -> store.getStoreName().toLowerCase().contains(text));
-		allStores = storeFilterView.getFilteredItems();
 		storeNameCol = new MFXTableColumn<>("STORE NAME",false, Comparator.comparing(Store::getStoreName));
-		storeNameCol.setRowCellFactory(store -> new MFXTableRowCell<>(Store::getStoreName));
-		storesTable = new MFXTableView<Store>();
-		storesTable.getTableColumns().addAll(storeNameCol);
+		storeNameCol.setRowCellFactory(_ -> new MFXTableRowCell<>(Store::getStoreName));
+		storeHoursCol = new MFXTableColumn<>("HOURS PER DAY",false, Comparator.comparing(Store::getStoreHours));
+		storeHoursCol.setRowCellFactory(_ -> new MFXTableRowCell<>(Store::getStoreHours));
+		storesTable = new MFXTableView<>();
+		storesTable.getTableColumns().addAll(storeNameCol,storeHoursCol);
 		storesTable.getFilters().addAll(
 				new StringFilter<>("Store Name",Store::getStoreName)
 		);
-
-		String sql = null;
-		sql = "SELECT * FROM stores";
-		try {
-			preparedStatement = con.prepareStatement(sql);
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				storeFilterView.getItems().add(new Store(resultSet));
+		storeSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+		Task<List<Store>> fetchStoresTask = new Task<>() {
+			@Override
+			protected List<Store> call() {
+				return storeService.getAllStores();
 			}
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
-		}
+		};
+		fetchStoresTask.setOnSucceeded(_ -> {
+			ObservableList<Store> allStores = FXCollections.observableArrayList(fetchStoresTask.getValue());
+			storesTable.setItems(allStores);
+			storeSpinner.setMaxWidth(0);
+		});
+		fetchStoresTask.setOnFailed(_ -> {
+			dialogPane.showError("Error", "An error occurred while fetching stores", fetchStoresTask.getException());
+			storeSpinner.setMaxWidth(0);
+		});
+		executor.submit(fetchStoresTask);
 		storesTable.setFooterVisible(true);
 		storesTable.autosizeColumnsOnInitialization();
 		storesTable.setMaxWidth(Double.MAX_VALUE);
 		storesTable.setMaxHeight(Double.MAX_VALUE);
 		storeFilterView.setPadding(new Insets(20,20,10,20));//top,right,bottom,left
-
 		controlBox.getChildren().removeAll(controlBox.getChildren());
 		controlBox.getChildren().addAll(storeFilterView,storesTable);
-
 		VBox.setVgrow(storesTable, Priority.ALWAYS);
-		storesTable.virtualFlowInitializedProperty().addListener((observable, oldValue, newValue) -> {addStoreDoubleClickFunction();});
-		storeFilterView.filteredItemsProperty().addListener((observable, oldValue, newValue) -> {addStoreDoubleClickFunction();});
-		storesTable.setItems(allStores);
-
+		storesTable.virtualFlowInitializedProperty().addListener((_, _, _) -> {addStoreDoubleClickFunction();});
+		storeFilterView.filteredItemsProperty().addListener((_, _, _) -> {addStoreDoubleClickFunction();});
 		ValidatorUtils.setupRegexValidation(storeNameField,storeNameValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,saveStoreButton);
-
+		ValidatorUtils.setupRegexValidation(storeHoursField,storeHoursValidationLabel,ValidatorUtils.CASH_REGEX,ValidatorUtils.INT_ERROR,null,saveStoreButton);
 	}
 
 	private void addStoreDoubleClickFunction(){
@@ -291,49 +256,53 @@ public class EditAccountController extends Controller{
 		employeeName.setText("");
 		employeeRole.setText("");
 		employeeIcon.setStyle("-fx-background-color: #FFFFFF; -fx-text-fill: #FFFFFF;");
-
 		storeSelector.getSelectionModel().clearSelection();
-		//Refresh Store list for store selector
-		allStores = FXCollections.observableArrayList();
-		String sql = null;
-		sql = "SELECT * FROM stores";
-		try {
-			preparedStatement = con.prepareStatement(sql);
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				allStores.add(new Store(resultSet));
-			}
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
-		}
-		storeSelector.setItems(allStores);
-
 		permissionsSelector.getSelectionModel().clearSelection();
-		//Refresh permissions list for permissions selector
-		allPermissions = FXCollections.observableArrayList();
-		sql = "SELECT * FROM permissions";
-		try {
-			preparedStatement = con.prepareStatement(sql);
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				allPermissions.add(new Permission(resultSet));
+		userSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+		CompletableFuture<List<Store>> allStoresFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				return storeService.getAllStores();
+			} catch (Exception ex) {
+				throw new CompletionException(ex);
 			}
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
-		}
-		permissionsSelector.setItems(allPermissions);
-
+		}, executor);
+		CompletableFuture<List<Permission>> allPermissionsFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				return permissionService.getAllPermissions();
+			} catch (Exception ex) {
+				throw new CompletionException(ex);
+			}
+		}, executor);
+		CompletableFuture.allOf(
+				allStoresFuture,
+				allPermissionsFuture
+		).thenRunAsync(() -> {
+			try {
+				List<Store> allStores = allStoresFuture.get();
+				List<Permission> allPermissions = allPermissionsFuture.get();
+				Platform.runLater(() -> {
+					storeSelector.setItems(FXCollections.observableArrayList(allStores));
+					permissionsSelector.setItems(FXCollections.observableArrayList(allPermissions));
+					userSpinner.setMaxWidth(0);
+				});
+			} catch (Exception ex) {
+				Platform.runLater(() -> {
+					dialogPane.showError("Error", "An error occurred while fetching user information", ex);
+					userSpinner.setMaxWidth(0);
+				});
+			}
+		}, executor);
 		//Add live updates to person card preview
-		firstNameField.textProperty().addListener((observable, oldValue, newValue) -> {
+		firstNameField.textProperty().addListener((_, _, newValue) -> {
 					employeeName.setText(newValue + "." + (lastNameField.getText().isEmpty()?"":lastNameField.getText(0,1)));
 					employeeIcon.setText(newValue.isEmpty()?"":newValue.substring(0,1));
 				}
 		);
-		lastNameField.textProperty().addListener((observable, oldValue, newValue) ->
+		lastNameField.textProperty().addListener((_, _, newValue) ->
 				employeeName.setText(firstNameField.getText() + "." + (newValue.isEmpty()?"":newValue.substring(0,1))));
-		roleField.textProperty().addListener((observable, oldValue, newValue) ->
+		roleField.textProperty().addListener((_, _, newValue) ->
 				employeeRole.setText(newValue));
-		profileBackgroundPicker.valueProperty().addListener((observable, oldValue, newValue) -> {
+		profileBackgroundPicker.valueProperty().addListener((_, _, newValue) -> {
 					int r = (int)Math.round(newValue.getRed() * 255.0);
 					int g = (int)Math.round(newValue.getGreen() * 255.0);
 					int b = (int)Math.round(newValue.getBlue() * 255.0);
@@ -345,7 +314,7 @@ public class EditAccountController extends Controller{
 					employeeIcon.setStyle("-fx-background-color: " + profileBG + ";" + "-fx-text-fill: " + profileText + ";");
 				}
 		);
-		profileTextPicker.valueProperty().addListener((observable, oldValue, newValue) -> {
+		profileTextPicker.valueProperty().addListener((_, _, newValue) -> {
 					int r = (int)Math.round(newValue.getRed() * 255.0);
 					int g = (int)Math.round(newValue.getGreen() * 255.0);
 					int b = (int)Math.round(newValue.getBlue() * 255.0);
@@ -357,11 +326,9 @@ public class EditAccountController extends Controller{
 					employeeIcon.setStyle("-fx-background-color: " + profileBG + ";" + "-fx-text-fill: " + profileText + ";");
 				}
 		);
-
-
 		contentDarken.setVisible(true);
-		contentDarken.setOnMouseClicked(event -> closeUserPopover());
-		saveUserButton.setOnAction(event -> addUser());
+		contentDarken.setOnMouseClicked(_ -> closeUserPopover());
+		saveUserButton.setOnAction(_ -> addUser());
 		AnimationUtils.slideIn(editUserPopover,0);
 	}
 
@@ -378,165 +345,169 @@ public class EditAccountController extends Controller{
 		profileTextPicker.setValue(Color.valueOf(user.getTextColour()));
 		profileBackgroundPicker.setValue(Color.valueOf(user.getBgColour()));
 		passwordResetButton.setVisible(true);
-
-		String sql = "SELECT username, password FROM accounts where username = ?";
-		try {
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setString(1, user.getUsername());
-			resultSet = preparedStatement.executeQuery();
-			while(resultSet.next()){
-				if(resultSet.getString("password")==null){
-					passwordResetButton.setDisable(true);
-					passwordResetButton.setText("Password reset requested");
-				}else{
-					passwordResetButton.setDisable(false);
-					passwordResetButton.setText("Request Password Reset");
-					passwordResetButton.setOnAction(actionEvent -> resetPassword(user));
-				}
-			}
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-
-		employeeName.setText(user.getFirst_name() + "." + user.getLast_name().substring(0,1));
+		employeeName.setText(user.getFirst_name() + "." + user.getLast_name().charAt(0));
 		employeeRole.setText(user.getRole());
 		employeeIcon.setText(user.getFirst_name().substring(0,1));
 		employeeIcon.setStyle("-fx-background-color: " + user.getBgColour()+ "; -fx-text-fill: " + user.getTextColour() + ";");
-
 		storeSelector.getSelectionModel().clearSelection();
-		//Refresh Store list for store selector
-		allStores = FXCollections.observableArrayList();
-		ObservableList<Employment> staffStores = FXCollections.observableArrayList();
-		try {
-			sql = "SELECT * FROM stores";
-			preparedStatement = con.prepareStatement(sql);
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				allStores.add(new Store(resultSet));
-			}
-			storeSelector.setItems(allStores);
-
-			sql = "SELECT * FROM employments WHERE username = ?";
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setString(1, user.getUsername());
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				staffStores.add(new Employment(resultSet));
-			}
-
-			for(Store s:allStores){
-				for(Employment e:staffStores){
-					if(s.getStoreID()==e.getStoreID()){
-						storeSelector.getSelectionModel().selectItem(s);
-					}
-				}
-			}
-
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
-		}
-
 		permissionsSelector.getSelectionModel().clearSelection();
-		//Refresh permissions list for permissions selector
-		allPermissions = FXCollections.observableArrayList();
-		try {
-			sql = "SELECT * FROM permissions";
-			preparedStatement = con.prepareStatement(sql);
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				allPermissions.add(new Permission(resultSet));
+		userSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+		CompletableFuture<Boolean> passwordResetFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				return userService.isPasswordResetRequested(user.getUsername());
+			} catch (Exception ex) {
+				throw new CompletionException(ex);
 			}
-			permissionsSelector.setItems(allPermissions);
-
-			sql = "SELECT * FROM userpermissions WHERE userID = ?";
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setString(1, user.getUsername());
-			resultSet = preparedStatement.executeQuery();
-			while (resultSet.next()) {
-				for(Permission p:allPermissions){
-					if(p.getPermissionID()==resultSet.getInt("permissionID")){
-						permissionsSelector.getSelectionModel().selectItem(p);
+		}, executor);
+		CompletableFuture<List<Store>> allStoresFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				return storeService.getAllStores();
+			} catch (Exception ex) {
+				throw new CompletionException(ex);
+			}
+		}, executor);
+		CompletableFuture<List<Employment>> staffStoresFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				return userService.getEmploymentsForUser(user.getUsername());
+			} catch (Exception ex) {
+				throw new CompletionException(ex);
+			}
+		}, executor);
+		CompletableFuture<List<Permission>> allPermissionsFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				return permissionService.getAllPermissions();
+			} catch (Exception ex) {
+				throw new CompletionException(ex);
+			}
+		}, executor);
+		CompletableFuture<List<Permission>> userPermissionsFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				return userService.getUserPermissions(user.getUsername());
+			} catch (Exception ex) {
+				throw new CompletionException(ex);
+			}
+		}, executor);
+		CompletableFuture.allOf(
+				passwordResetFuture,
+				allStoresFuture,
+				staffStoresFuture,
+				allPermissionsFuture,
+				userPermissionsFuture
+		).thenRunAsync(() -> {
+			try {
+				boolean isPasswordResetRequested = passwordResetFuture.get();
+				List<Store> allStores = allStoresFuture.get();
+				List<Employment> staffStores = staffStoresFuture.get();
+				List<Permission> allPermissions = allPermissionsFuture.get();
+				List<Permission> userPermissions = userPermissionsFuture.get();
+				Platform.runLater(() -> {
+					if (isPasswordResetRequested) {
+						passwordResetButton.setDisable(true);
+						passwordResetButton.setText("Password reset requested");
+					} else {
+						passwordResetButton.setDisable(false);
+						passwordResetButton.setText("Request Password Reset");
+						passwordResetButton.setOnAction(_ -> resetPassword(user));
 					}
-				}
+					storeSelector.setItems(FXCollections.observableArrayList(allStores));
+					for (Store s : allStores) {
+						for (Employment e : staffStores) {
+							if (s.getStoreID() == e.getStoreID()) {
+								storeSelector.getSelectionModel().selectItem(s);
+							}
+						}
+					}
+					permissionsSelector.setItems(FXCollections.observableArrayList(allPermissions));
+					for (Permission p : userPermissions) {
+						for (Permission p2 : allPermissions) {
+							if (p.getPermissionID() == p2.getPermissionID()) {
+								permissionsSelector.getSelectionModel().selectItem(p2);
+							}
+						}
+					}
+					userSpinner.setMaxWidth(0);
+				});
+				//Add live updates to person card preview
+				firstNameField.textProperty().addListener((_, _, newValue) -> {
+							employeeName.setText(newValue + "." + (lastNameField.getText().isEmpty()?"":lastNameField.getText(0,1)));
+							employeeIcon.setText(newValue.isEmpty()?"":newValue.substring(0,1));
+						}
+				);
+				lastNameField.textProperty().addListener((_, _, newValue) ->
+						employeeName.setText(firstNameField.getText() + "." + (newValue.isEmpty()?"":newValue.substring(0,1))));
+				roleField.textProperty().addListener((_, _, newValue) ->
+						employeeRole.setText(newValue));
+				profileBackgroundPicker.valueProperty().addListener((_, _, newValue) -> {
+							int r = (int)Math.round(newValue.getRed() * 255.0);
+							int g = (int)Math.round(newValue.getGreen() * 255.0);
+							int b = (int)Math.round(newValue.getBlue() * 255.0);
+							String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
+							r = (int)Math.round(profileTextPicker.getValue().getRed() * 255.0);
+							g = (int)Math.round(profileTextPicker.getValue().getGreen() * 255.0);
+							b = (int)Math.round(profileTextPicker.getValue().getBlue() * 255.0);
+							String profileText = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
+							employeeIcon.setStyle("-fx-background-color: " + profileBG + ";" + "-fx-text-fill: " + profileText + ";");
+						}
+				);
+				profileTextPicker.valueProperty().addListener((_, _, newValue) -> {
+							int r = (int)Math.round(newValue.getRed() * 255.0);
+							int g = (int)Math.round(newValue.getGreen() * 255.0);
+							int b = (int)Math.round(newValue.getBlue() * 255.0);
+							String profileText = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
+							r = (int)Math.round(profileBackgroundPicker.getValue().getRed() * 255.0);
+							g = (int)Math.round(profileBackgroundPicker.getValue().getGreen() * 255.0);
+							b = (int)Math.round(profileBackgroundPicker.getValue().getBlue() * 255.0);
+							String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
+							employeeIcon.setStyle("-fx-background-color: " + profileBG + ";" + "-fx-text-fill: " + profileText + ";");
+						}
+				);
+				contentDarken.setVisible(true);
+				contentDarken.setOnMouseClicked(_ -> closeUserPopover());
+				saveUserButton.setOnAction(_ -> editUser(user));
+				deleteUserButton.setOnAction(_ -> deleteUser(user));
+				deleteUserButton.setVisible(true);
+				AnimationUtils.slideIn(editUserPopover,0);
+			} catch (Exception ex) {
+				Platform.runLater(() -> {
+					dialogPane.showError("Error", "An error occurred while fetching user information", ex);
+					userSpinner.setMaxWidth(0);
+				});
 			}
-		} catch (SQLException throwables) {
-			throwables.printStackTrace();
-		}
-
-		//Add live updates to person card preview
-		firstNameField.textProperty().addListener((observable, oldValue, newValue) -> {
-					employeeName.setText(newValue + "." + (lastNameField.getText().isEmpty()?"":lastNameField.getText(0,1)));
-					employeeIcon.setText(newValue.isEmpty()?"":newValue.substring(0,1));
-				}
-		);
-		lastNameField.textProperty().addListener((observable, oldValue, newValue) ->
-				employeeName.setText(firstNameField.getText() + "." + (newValue.isEmpty()?"":newValue.substring(0,1))));
-		roleField.textProperty().addListener((observable, oldValue, newValue) ->
-				employeeRole.setText(newValue));
-		profileBackgroundPicker.valueProperty().addListener((observable, oldValue, newValue) -> {
-					int r = (int)Math.round(newValue.getRed() * 255.0);
-					int g = (int)Math.round(newValue.getGreen() * 255.0);
-					int b = (int)Math.round(newValue.getBlue() * 255.0);
-					String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
-					r = (int)Math.round(profileTextPicker.getValue().getRed() * 255.0);
-					g = (int)Math.round(profileTextPicker.getValue().getGreen() * 255.0);
-					b = (int)Math.round(profileTextPicker.getValue().getBlue() * 255.0);
-					String profileText = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
-					employeeIcon.setStyle("-fx-background-color: " + profileBG + ";" + "-fx-text-fill: " + profileText + ";");
-				}
-		);
-		profileTextPicker.valueProperty().addListener((observable, oldValue, newValue) -> {
-					int r = (int)Math.round(newValue.getRed() * 255.0);
-					int g = (int)Math.round(newValue.getGreen() * 255.0);
-					int b = (int)Math.round(newValue.getBlue() * 255.0);
-					String profileText = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
-					r = (int)Math.round(profileBackgroundPicker.getValue().getRed() * 255.0);
-					g = (int)Math.round(profileBackgroundPicker.getValue().getGreen() * 255.0);
-					b = (int)Math.round(profileBackgroundPicker.getValue().getBlue() * 255.0);
-					String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
-					employeeIcon.setStyle("-fx-background-color: " + profileBG + ";" + "-fx-text-fill: " + profileText + ";");
-				}
-		);
-
-
-		contentDarken.setVisible(true);
-		contentDarken.setOnMouseClicked(event -> closeUserPopover());
-		saveUserButton.setOnAction(event -> editUser(user));
-		deleteUserButton.setOnAction(event -> deleteUser(user));
-		deleteUserButton.setVisible(true);
-		AnimationUtils.slideIn(editUserPopover,0);
+		}, executor);
 	}
 
 	public void openStorePopover(){
 		storeNameField.clear();
+		storeHoursField.clear();
 		editStorePopoverTitle.setText("Add new store");
 		contentDarken.setVisible(true);
-		contentDarken.setOnMouseClicked(event -> closeStorePopover());
-		saveStoreButton.setOnAction(event -> addStore());
+		contentDarken.setOnMouseClicked(_ -> closeStorePopover());
+		saveStoreButton.setOnAction(_ -> addStore());
 		deleteStoreButton.setVisible(false);
 		AnimationUtils.slideIn(editStorePopover,0);
 	}
 
 	public void openPermissionsPopover(){
 		contentDarken.setVisible(true);
-		contentDarken.setOnMouseClicked(event -> closePermissionsPopover());
+		contentDarken.setOnMouseClicked(_ -> closePermissionsPopover());
 		AnimationUtils.slideIn(editPermissionsPopover,0);
 	}
 
 	public void closePermissionsPopover(){
 		AnimationUtils.slideIn(editPermissionsPopover,425);
-		contentDarken.setOnMouseClicked(event -> closeUserPopover());
+		contentDarken.setOnMouseClicked(_ -> closeUserPopover());
 		storeNameValidationLabel.setVisible(false);
+		storeHoursValidationLabel.setVisible(false);
 	}
-
 
 	public void openStorePopover(Store store){
 		editStorePopoverTitle.setText("Edit store");
 	 	storeNameField.setText(store.getStoreName());
+		storeHoursField.setText(String.valueOf(store.getStoreHours()));
 		contentDarken.setVisible(true);
-		contentDarken.setOnMouseClicked(event -> closeStorePopover());
-		saveStoreButton.setOnAction(event -> editStore(store));
-		deleteStoreButton.setOnAction(event -> deleteStore(store));
+		contentDarken.setOnMouseClicked(_ -> closeStorePopover());
+		saveStoreButton.setOnAction(_ -> editStore(store));
+		deleteStoreButton.setOnAction(_ -> deleteStore(store));
 		deleteStoreButton.setVisible(true);
 		AnimationUtils.slideIn(editStorePopover,0);
 	}
@@ -545,6 +516,7 @@ public class EditAccountController extends Controller{
 		AnimationUtils.slideIn(editStorePopover,425);
 		contentDarken.setVisible(false);
 		storeNameValidationLabel.setVisible(false);
+		storeHoursValidationLabel.setVisible(false);
 	}
 
 	public void closeUserPopover(){
@@ -555,28 +527,34 @@ public class EditAccountController extends Controller{
 		lastNameValidationLabel.setVisible(false);
 	}
 
-	public void addStore(){
+	public void addStore() {
 		String name = storeNameField.getText();
-		if(!storeNameField.isValid()) {
+		double hours = Double.parseDouble(storeHoursField.getText());
+		if (!storeNameField.isValid()) {
 			storeNameField.requestFocus();
-		}else{
-			String sql = "INSERT INTO stores(storeName) VALUES(?)";
-			try {
-				preparedStatement = con.prepareStatement(sql);
-				preparedStatement.setString(1, name);
-				preparedStatement.executeUpdate();
-			} catch (SQLException ex) {
-				System.err.println(ex.getMessage());
-			}
-			Dialog<String> dialog = new Dialog<String>();
-			dialog.setTitle("Success");
-			ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-			dialog.setContentText("Store was succesfully added to database");
-			dialog.getDialogPane().getButtonTypes().add(type);
-			dialog.showAndWait();
-			storesView();
+		}else if (!storeHoursField.isValid()) {
+			storeHoursField.requestFocus();
+		} else {
+			storeSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+			Task<Void> addStoreTask = new Task<>() {
+				@Override
+				protected Void call() {
+					Store store = new Store(name, hours);
+					storeService.addStore(store);
+					return null;
+				}
+			};
+			addStoreTask.setOnSucceeded(_ -> {
+				dialogPane.showInformation("Success", "Store was successfully added to the database");
+				storesView();
+				storeSpinner.setMaxWidth(0);
+			});
+			addStoreTask.setOnFailed(_ -> {
+				dialogPane.showError("Error", "An error occurred while adding a store", addStoreTask.getException());
+				storeSpinner.setMaxWidth(0);
+			});
+			executor.submit(addStoreTask);
 		}
-
 	}
 
 	public void addUser() {
@@ -584,293 +562,289 @@ public class EditAccountController extends Controller{
 		String fname = firstNameField.getText();
 		String lname = lastNameField.getText();
 		String role = roleField.getText();
-		int r = (int) Math.round(profileTextPicker.getValue().getRed() * 255.0);
-		int g = (int) Math.round(profileTextPicker.getValue().getGreen() * 255.0);
-		int b = (int) Math.round(profileTextPicker.getValue().getBlue() * 255.0);
-		String profileText = String.format("#%02x%02x%02x", r, g, b).toUpperCase();
-		r = (int) Math.round(profileBackgroundPicker.getValue().getRed() * 255.0);
-		g = (int) Math.round(profileBackgroundPicker.getValue().getGreen() * 255.0);
-		b = (int) Math.round(profileBackgroundPicker.getValue().getBlue() * 255.0);
-		String profileBG = String.format("#%02x%02x%02x", r, g, b).toUpperCase();
+		String profileText = getColorString(profileTextPicker.getValue());
+		String profileBG = getColorString(profileBackgroundPicker.getValue());
+		if (!usernameField.isValid()) {
+			usernameField.requestFocus();
+		} else if (!firstNameField.isValid()) {
+			firstNameField.requestFocus();
+		} else if (!lastNameField.isValid()) {
+			lastNameField.requestFocus();
+		} else if (storeSelector.getSelectionModel().getSelection().isEmpty()) {
+			dialogPane.showError("Error", "No store selected, Please select at least one store for the user to work at");
+		} else {
+			userSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+			Task<Void> addUserTask = new Task<>() {
+				@Override
+				protected Void call() throws Exception {
+					// Check if username already exists
+					if (userService.getUserByUsername(username) != null) {
+						throw new Exception("Username already exists");
+					}
+					User newUser = new User();
+					newUser.setUsername(username);
+					newUser.setFirst_name(fname);
+					newUser.setLast_name(lname);
+					newUser.setRole(role);
+					newUser.setBgColour(profileBG);
+					newUser.setTextColour(profileText);
+					userService.addUser(newUser);
+					List<CompletableFuture<Void>> futures = new ArrayList<>();
+					// Add employments in parallel
+					for (Store s : storeSelector.getSelectionModel().getSelection().values()) {
+						CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+							try {
+								employmentService.addEmployment(newUser, s);
+							} catch (Exception e) {
+								throw new CompletionException(e);
+							}
+						}, executor);
+						futures.add(future);
+					}
+					// Add user permissions in parallel
+					for (Permission p : permissionsSelector.getSelectionModel().getSelection().values()) {
+						CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+							try {
+								userPermissionService.addUserPermission(newUser, p);
+							} catch (Exception e) {
+								throw new CompletionException(e);
+							}
+						}, executor);
+						futures.add(future);
+					}
+					// Wait for all futures to complete
+					CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+					return null;
+				}
+			};
+			addUserTask.setOnSucceeded(_ -> {
+				dialogPane.showInformation("Success", "User was successfully added to the database");
+				closeUserPopover();
+				usersView();
+				userSpinner.setMaxWidth(0);
+			});
+			addUserTask.setOnFailed(_ -> {
+				Throwable exception = addUserTask.getException();
+				if (exception.getMessage().equals("Username already exists")) {
+					dialogPane.showError("Error", "Username already exists, Please choose a different username");
+				} else {
+					dialogPane.showError("Error", "An error occurred while adding a user", exception);
+				}
+				userSpinner.setMaxWidth(0);
+			});
+			executor.submit(addUserTask);
+		}
+	}
 
+	public void editStore(Store store) {
+		String name = storeNameField.getText();
+		double hours = Double.parseDouble(storeHoursField.getText());
+		if (!storeNameField.isValid()) {
+			storeNameField.requestFocus();
+		} else if (!storeHoursField.isValid()) {
+			storeHoursField.requestFocus();
+		} else {
+			storeSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+			Task<Void> editStoreTask = new Task<>() {
+				@Override
+				protected Void call() {
+					store.setStoreName(name);
+					store.setStoreHours(hours);
+					storeService.updateStore(store);
+					return null;
+				}
+			};
+			editStoreTask.setOnSucceeded(_ -> {
+				dialogPane.showInformation("Success", "Store was successfully updated");
+				closeStorePopover();
+				storesView();
+				storeSpinner.setMaxWidth(0);
+			});
+			editStoreTask.setOnFailed(_ -> {
+				dialogPane.showError("Error", "An error occurred while updating the store", editStoreTask.getException());
+				storeSpinner.setMaxWidth(0);
+			});
+			executor.submit(editStoreTask);
+		}
+	}
+
+	public void editUser(User user) {
+		LocalDate inactiveDate = null;
+		if (inactiveUserToggle.isSelected() && user.getInactiveDate() != null) {
+			inactiveDate = user.getInactiveDate();
+		} else if (inactiveUserToggle.isSelected() && user.getInactiveDate() == null) {
+			inactiveDate = LocalDate.now();
+		}
+		String fname = firstNameField.getText();
+		String lname = lastNameField.getText();
+		String role = roleField.getText();
+		String profileText = getColorString(profileTextPicker.getValue());
+		String profileBG = getColorString(profileBackgroundPicker.getValue());
 		if (!firstNameField.isValid()) {
 			firstNameField.requestFocus();
 		} else if (!lastNameField.isValid()) {
 			lastNameField.requestFocus();
-		} else if (doesUsernameExist(username)) {
-			// Show an error dialog that the username already exists
-			Dialog<String> dialog = new Dialog<>();
-			dialog.setTitle("Error");
-			ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-			dialog.setContentText("Username already exists. Please choose a different username.");
-			dialog.getDialogPane().getButtonTypes().add(type);
-			dialog.showAndWait();
 		} else if (storeSelector.getSelectionModel().getSelection().isEmpty()) {
-			Dialog<String> dialog = new Dialog<>();
-			dialog.setTitle("Error");
-			ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-			dialog.setContentText("Please select at least one store for the user to work at");
-			dialog.getDialogPane().getButtonTypes().add(type);
-			dialog.showAndWait();
-		}else{
-			String sql = "INSERT INTO accounts(username,first_name,last_name,role,profileBG,profileText) VALUES(?,?,?,?,?,?)";
-			try {
-				preparedStatement = con.prepareStatement(sql);
-				preparedStatement.setString(1, username);
-				preparedStatement.setString(2, fname);
-				preparedStatement.setString(3, lname);
-				preparedStatement.setString(4, role);
-				preparedStatement.setString(5, profileBG);
-				preparedStatement.setString(6, profileText);
-				preparedStatement.executeUpdate();
-				for (Store s : storeSelector.getSelectionModel().getSelection().values()) {
-					sql = "INSERT INTO employments(username,storeID) VALUES(?,?)";
-					preparedStatement = con.prepareStatement(sql);
-					preparedStatement.setString(1, username);
-					preparedStatement.setInt(2, s.getStoreID());
-					preparedStatement.executeUpdate();
+			dialogPane.showError("Error", "No store selected, Please select at least one store for the user to work at");
+		} else {
+			userSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+			LocalDate finalInactiveDate = inactiveDate;
+			Task<Void> editUserTask = new Task<>() {
+				@Override
+				protected Void call() {
+					// Update user details
+					user.setFirst_name(fname);
+					user.setLast_name(lname);
+					user.setRole(role);
+					user.setBgColour(profileBG);
+					user.setTextColour(profileText);
+					user.setInactiveDate(finalInactiveDate);
+					userService.updateUser(user);
+					List<CompletableFuture<Void>> futures = new ArrayList<>();
+					// Delete existing employments and permissions
+					CompletableFuture<Void> deleteEmploymentsFuture = CompletableFuture.runAsync(() -> {
+						try {
+							employmentService.deleteEmploymentsForUser(user);
+						} catch (Exception e) {
+							throw new CompletionException(e);
+						}
+					}, executor);
+					CompletableFuture<Void> deletePermissionsFuture = CompletableFuture.runAsync(() -> {
+						try {
+							userPermissionService.deletePermissionsForUser(user);
+						} catch (Exception e) {
+							throw new CompletionException(e);
+						}
+					}, executor);
+					// Wait for deletions to complete before adding new ones
+					CompletableFuture.allOf(deleteEmploymentsFuture, deletePermissionsFuture).join();
+					// Add new employments in parallel
+					for (Store s : storeSelector.getSelectionModel().getSelection().values()) {
+						CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+							try {
+								employmentService.addEmployment(user, s);
+							} catch (Exception e) {
+								throw new CompletionException(e);
+							}
+						}, executor);
+						futures.add(future);
+					}
+					// Add new user permissions in parallel
+					for (Permission p : permissionsSelector.getSelectionModel().getSelection().values()) {
+						CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+							try {
+								userPermissionService.addUserPermission(user, p);
+							} catch (Exception e) {
+								throw new CompletionException(e);
+							}
+						}, executor);
+						futures.add(future);
+					}
+					// Wait for all futures to complete
+					CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+					return null;
 				}
-				for (Permission p : permissionsSelector.getSelectionModel().getSelection().values()) {
-					sql = "INSERT INTO userpermissions(userID,permissionID) VALUES(?,?)";
-					preparedStatement = con.prepareStatement(sql);
-					preparedStatement.setString(1, username);
-					preparedStatement.setInt(2, p.getPermissionID());
-					preparedStatement.executeUpdate();
-				}
-				Dialog<String> dialog = new Dialog<>();
-				dialog.setTitle("Success");
-				ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-				dialog.setContentText("User was successfully added to the database");
-				dialog.getDialogPane().getButtonTypes().add(type);
-				dialog.showAndWait();
-				usersView();
-			} catch (SQLException ex) {
-				System.err.println(ex.getMessage());
-			}
-		}
-	}
-
-	public void editStore(Store store){
-		String name = storeNameField.getText();
-		if(!storeNameField.isValid()) {
-			storeNameField.requestFocus();
-		}else{
-			String sql = "UPDATE stores SET storeName = ? WHERE storeID = ?";
-			try {
-				preparedStatement = con.prepareStatement(sql);
-				preparedStatement.setString(1, name);
-				preparedStatement.setInt(2, store.getStoreID());
-				preparedStatement.executeUpdate();
-			} catch (SQLException ex) {
-				System.err.println(ex.getMessage());
-			}
-			Dialog<String> dialog = new Dialog<>();
-			dialog.setTitle("Success");
-			ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-			dialog.setContentText("Store was succesfully updated");
-			dialog.getDialogPane().getButtonTypes().add(type);
-			dialog.showAndWait();
-			closeStorePopover();
-			storesView();
-		}
-
-	}
-
-	public void editUser(User user){
-	 	Date inactiveDate = null;
-	 	if(inactiveUserToggle.isSelected() && user.getInactiveDate()!=null){
-	 		inactiveDate = Date.valueOf(user.getInactiveDate());
-		}else if(inactiveUserToggle.isSelected() && user.getInactiveDate()==null){
-	 		inactiveDate = Date.valueOf(LocalDate.now());
-		}
-
-		String fname = firstNameField.getText();
-		String lname = lastNameField.getText();
-		String role = roleField.getText();
-		int r = (int)Math.round(profileTextPicker.getValue().getRed() * 255.0);
-		int g = (int)Math.round(profileTextPicker.getValue().getGreen() * 255.0);
-		int b = (int)Math.round(profileTextPicker.getValue().getBlue() * 255.0);
-		String profileText = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
-		r = (int)Math.round(profileBackgroundPicker.getValue().getRed() * 255.0);
-		g = (int)Math.round(profileBackgroundPicker.getValue().getGreen() * 255.0);
-		b = (int)Math.round(profileBackgroundPicker.getValue().getBlue() * 255.0);
-		String profileBG = String.format("#%02x%02x%02x" , r, g, b).toUpperCase();
-
-		if(!firstNameField.isValid()) {
-			firstNameField.requestFocus();
-		}else if(!lastNameField.isValid()) {
-			lastNameField.requestFocus();
-		} else if (storeSelector.getSelectionModel().getSelection().isEmpty()) {
-			Dialog<String> dialog = new Dialog<>();
-			dialog.setTitle("Error");
-			ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-			dialog.setContentText("Please select at least one store for the user to work at");
-			dialog.getDialogPane().getButtonTypes().add(type);
-			dialog.showAndWait();
-		}else{
-			String sql = "UPDATE accounts SET first_name = ?,last_name = ?,role = ?, profileBG = ?, profileText = ?,inactiveDate = ? WHERE username = ?";
-			try {
-				preparedStatement = con.prepareStatement(sql);
-				preparedStatement.setString(1, fname);
-				preparedStatement.setString(2, lname);
-				preparedStatement.setString(3, role);
-				preparedStatement.setString(4, profileBG);
-				preparedStatement.setString(5, profileText);
-				preparedStatement.setDate(6, inactiveDate);
-				preparedStatement.setString(7, user.getUsername());
-				preparedStatement.executeUpdate();
-
-				sql = "DELETE from employments WHERE username = ?";
-				preparedStatement = con.prepareStatement(sql);
-				preparedStatement.setString(1, user.getUsername());
-				preparedStatement.executeUpdate();
-				for(Store s:storeSelector.getSelectionModel().getSelection().values()){
-					sql = "INSERT INTO employments(username,storeID) VALUES(?,?)";
-					preparedStatement = con.prepareStatement(sql);
-					preparedStatement.setString(1, user.getUsername());
-					preparedStatement.setInt(2, s.getStoreID());
-					preparedStatement.executeUpdate();
-				}
-				sql = "DELETE from userpermissions WHERE userID = ?";
-				preparedStatement = con.prepareStatement(sql);
-				preparedStatement.setString(1, user.getUsername());
-				preparedStatement.executeUpdate();
-				for(Permission p:permissionsSelector.getSelectionModel().getSelection().values()){
-					sql = "INSERT INTO userpermissions(userID,permissionID) VALUES(?,?)";
-					preparedStatement = con.prepareStatement(sql);
-					preparedStatement.setString(1, user.getUsername());
-					preparedStatement.setInt(2, p.getPermissionID());
-					preparedStatement.executeUpdate();
-				}
-			} catch (SQLException ex) {
-				System.err.println(ex.getMessage());
-			}
-			Dialog<String> dialog = new Dialog<>();
-			dialog.setTitle("Success");
-			ButtonType type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-			dialog.setContentText("User was succesfully updated");
-			dialog.getDialogPane().getButtonTypes().add(type);
-			dialog.showAndWait();
-			closeUserPopover();
-			usersView();
-		}
-	}
-
-	public void resetPassword(User user){
-		String sql = "UPDATE accounts SET password = ? WHERE username = ?";
-		try {
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setString(1, null);
-			preparedStatement.setString(2, user.getUsername());
-			preparedStatement.executeUpdate();
-		} catch (SQLException ex) {
-			System.err.println(ex.getMessage());
-		}
-		passwordResetButton.setText("Password reset requested");
-		passwordResetButton.setDisable(true);
-	}
-
-	public void deleteStore(Store store){
-	 	Alert alert = new Alert(Alert.AlertType.WARNING);
-		alert.setTitle("Confirm Deletion");
-		alert.setContentText("This action will permanently delete the store from all systems, are you sure?");
-		ButtonType okButton = new ButtonType("Yes", ButtonBar.ButtonData.YES);
-		ButtonType noButton = new ButtonType("No", ButtonBar.ButtonData.NO);
-		alert.getButtonTypes().setAll(okButton, noButton);
-		alert.showAndWait().ifPresent(type -> {
-			if (type == okButton) {
-				String sql = "DELETE from stores WHERE storeID = ?";
-				try {
-					preparedStatement = con.prepareStatement(sql);
-					preparedStatement.setInt(1, store.getStoreID());
-					preparedStatement.executeUpdate();
-				} catch (SQLException ex) {
-					System.err.println(ex.getMessage());
-				}
-				Dialog<String> dialog = new Dialog<>();
-				dialog.setTitle("Success");
-				type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-				dialog.setContentText("Store was succesfully deleted");
-				dialog.getDialogPane().getButtonTypes().add(type);
-				dialog.showAndWait();
-				closeStorePopover();
-				storesView();
-			} else if (type == noButton) {
-			}
-		});
-	}
-
-	public void deleteUser(User user){
-		Alert alert = new Alert(Alert.AlertType.WARNING);
-		alert.setTitle("Confirm Deletion");
-		alert.setContentText("This action will permanently delete the user from all systems,\n" +
-							 "if the archived information for this user must be saved, its instead " +
-							 "preferred that you mark them as a now inactive user\n\n" +
-							 "Are you sure you still want to delete this user?");
-		ButtonType okButton = new ButtonType("Yes", ButtonBar.ButtonData.YES);
-		ButtonType noButton = new ButtonType("No", ButtonBar.ButtonData.NO);
-		alert.getButtonTypes().setAll(okButton, noButton);
-		alert.showAndWait().ifPresent(type -> {
-			if (type == okButton) {
-				String sql = "DELETE from accounts WHERE username = ?";
-				try {
-					preparedStatement = con.prepareStatement(sql);
-					preparedStatement.setString(1, user.getUsername());
-					preparedStatement.executeUpdate();
-				} catch (SQLException ex) {
-					System.err.println(ex.getMessage());
-				}
-				Dialog<String> dialog = new Dialog<>();
-				dialog.setTitle("Success");
-				type = new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE);
-				dialog.setContentText("User was succesfully deleted");
-				dialog.getDialogPane().getButtonTypes().add(type);
-				dialog.showAndWait();
+			};
+			editUserTask.setOnSucceeded(_ -> {
+				dialogPane.showInformation("Success", "User was successfully updated");
 				closeUserPopover();
 				usersView();
-			} else if (type == noButton) {
+				userSpinner.setMaxWidth(0);
+			});
+			editUserTask.setOnFailed(_ -> {
+				dialogPane.showError("Error", "An error occurred while updating the user", editUserTask.getException());
+				userSpinner.setMaxWidth(0);
+			});
+			executor.submit(editUserTask);
+		}
+	}
+
+	public void resetPassword(User user) {
+		userSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+		Task<Void> resetPasswordTask = new Task<>() {
+			@Override
+			protected Void call() {
+				userService.resetUserPassword(user.getUsername());
+				return null;
+			}
+		};
+		resetPasswordTask.setOnSucceeded(_ -> {
+			Platform.runLater(() -> {
+				passwordResetButton.setText("Password reset requested");
+				passwordResetButton.setDisable(true);
+				dialogPane.showInformation("Success", "Password reset has been requested for the user");
+			});
+			userSpinner.setMaxWidth(0);
+		});
+		resetPasswordTask.setOnFailed(_ -> {
+			dialogPane.showError("Error", "An error occurred while updating user password", resetPasswordTask.getException());
+			userSpinner.setMaxWidth(0);
+		});
+		executor.submit(resetPasswordTask);
+	}
+
+	public void deleteStore(Store store) {
+		dialogPane.showWarning("Confirm Delete",
+				"This action will permanently delete the store from all systems,\n" +
+						"Are you sure you still want to delete this store?").thenAccept(buttonType -> {
+			if (buttonType.equals(ButtonType.OK)) {
+				storeSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+				Task<Void> deleteStoreTask = new Task<>() {
+					@Override
+					protected Void call() {
+						storeService.deleteStore(store);
+						return null;
+					}
+				};
+				deleteStoreTask.setOnSucceeded(_ -> {
+					dialogPane.showInformation("Success", "Store was successfully deleted");
+					closeStorePopover();
+					storesView();
+					storeSpinner.setMaxWidth(0);
+				});
+				deleteStoreTask.setOnFailed(_ -> {
+					dialogPane.showError("Error", "An error occurred while deleting store", deleteStoreTask.getException());
+					storeSpinner.setMaxWidth(0);
+				});
+				executor.submit(deleteStoreTask);
 			}
 		});
 	}
 
-	public void formatTabSelect(BorderPane b){
-		for (Node n:b.getChildren()) {
-			if(n.getAccessibleRole() == AccessibleRole.TEXT){
-				Label a = (Label) n;
-				a.setStyle("-fx-text-fill: #0F60FF");
+	public void deleteUser(User user) {
+		dialogPane.showWarning("Confirm Delete",
+				"This action will permanently delete the user from all systems,\n" +
+						"if the archived information for this user must be saved, it's instead \n" +
+						"preferred that you mark them as a now inactive user\n\n" +
+						"Are you sure you still want to delete this user?").thenAccept(buttonType -> {
+			if (buttonType.equals(ButtonType.OK)) {
+				storeSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+				Task<Void> deleteUserTask = new Task<>() {
+					@Override
+					protected Void call() {
+						userService.deleteUser(user.getUsername());
+						return null;
+					}
+				};
+				deleteUserTask.setOnSucceeded(_ -> {
+					dialogPane.showInformation("Success", "User was successfully deleted");
+					closeUserPopover();
+					usersView();
+					storeSpinner.setMaxWidth(0);
+				});
+				deleteUserTask.setOnFailed(_ -> {
+					dialogPane.showError("Error", "An error occurred while deleting user", deleteUserTask.getException());
+					storeSpinner.setMaxWidth(0);
+				});
+				executor.submit(deleteUserTask);
 			}
-			if(n.getAccessibleRole() == AccessibleRole.PARENT){
-				Region a = (Region) n;
-				a.setStyle("-fx-background-color: #0F60FF");
-			}
-		}
+		});
 	}
 
-	public void formatTabDeselect(BorderPane b){
-		for (Node n:b.getChildren()) {
-			if(n.getAccessibleRole() == AccessibleRole.TEXT){
-				Label a = (Label) n;
-				a.setStyle("-fx-text-fill: #6e6b7b");
-			}
-			if(n.getAccessibleRole() == AccessibleRole.PARENT){
-				Region a = (Region) n;
-				a.setStyle("");
-			}
-		}
-	}
-
-	public boolean doesUsernameExist(String username) {
-		String sql = "SELECT COUNT(*) FROM accounts WHERE username = ?";
-		try {
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setString(1, username);
-			resultSet = preparedStatement.executeQuery();
-			if (resultSet.next()) {
-				return resultSet.getInt(1) > 0;
-			}
-		} catch (SQLException ex) {
-			System.err.println(ex.getMessage());
-		}
-		return false;
+	private String getColorString(Color color) {
+		int r = (int) Math.round(color.getRed() * 255.0);
+		int g = (int) Math.round(color.getGreen() * 255.0);
+		int b = (int) Math.round(color.getBlue() * 255.0);
+		return String.format("#%02x%02x%02x", r, g, b).toUpperCase();
 	}
 }

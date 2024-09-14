@@ -1,5 +1,8 @@
 package controllers;
 
+import io.github.palexdev.materialfx.controls.MFXProgressBar;
+import javafx.application.Platform;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
@@ -10,62 +13,48 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.SVGPath;
 import javafx.scene.text.Text;
-import models.Permission;
 import models.User;
+import services.UserService;
 
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
+import java.util.concurrent.Executors;
 
-import application.Main;
-import org.mindrot.jbcrypt.BCrypt;
-
-public class LogController extends Controller {
+public class LogController extends PageController {
 
     @FXML private Label logInError, confirmPasswordLabel;
     @FXML private Text subtitle;
     @FXML private TextField username;
     @FXML private PasswordField password, confirmPassword;
-    @FXML private Button login, create_acc;
+    @FXML private Button login;
     @FXML private Button maximize, minimize, close;
     @FXML private StackPane backgroundPane;
     @FXML private HBox windowControls;
+    @FXML private MFXProgressBar progressBar;
+    private UserService userService;
 
-    private Connection con = null;
-    PreparedStatement preparedStatement = null;
-    ResultSet resultSet = null;
-    private Main main = null;
-
-    public void setMain(Main main) {
-        this.main = main;
-    }
-
-    @Override
-    public void setConnection(Connection c) {
-        this.con = c;
+    @FXML
+    private void initialize() {
+        try {
+            userService = new UserService();
+            executor = Executors.newCachedThreadPool();
+        }catch (IOException ex) {
+            dialogPane.showError("Failed to initialize user service", ex);
+        }
     }
 
     @Override
     public void fill() {
-
         this.main.getBs().setMoveControl(backgroundPane);
-
-        close.setOnAction(a -> this.main.getStg().close());
-        close.setOnMouseEntered(a -> colourWindowButton(close, "#c42b1c", "#FFFFFF"));
-        close.setOnMouseExited(a -> colourWindowButton(close, "#FFFFFF", "#000000"));
-
-        minimize.setOnAction(a -> this.main.getStg().setIconified(true));
-        minimize.setOnMouseEntered(a -> colourWindowButton(minimize, "#f5f5f5", "#000000"));
-        minimize.setOnMouseExited(a -> colourWindowButton(minimize, "#FFFFFF", "#000000"));
-
-        maximize.setOnAction(a -> this.main.getBs().maximizeStage());
-        maximize.setOnMouseEntered(a -> colourWindowButton(maximize, "#f5f5f5", "#000000"));
-        maximize.setOnMouseExited(a -> colourWindowButton(maximize, "#FFFFFF", "#000000"));
-
-        this.main.getBs().maximizedProperty().addListener(e -> {
+        close.setOnAction(_ -> this.main.getStg().close());
+        close.setOnMouseEntered(_ -> colourWindowButton(close, "#c42b1c", "#FFFFFF"));
+        close.setOnMouseExited(_ -> colourWindowButton(close, "#FFFFFF", "#000000"));
+        minimize.setOnAction(_ -> this.main.getStg().setIconified(true));
+        minimize.setOnMouseEntered(_ -> colourWindowButton(minimize, "#f5f5f5", "#000000"));
+        minimize.setOnMouseExited(_ -> colourWindowButton(minimize, "#FFFFFF", "#000000"));
+        maximize.setOnAction(_ -> this.main.getBs().maximizeStage());
+        maximize.setOnMouseEntered(_ -> colourWindowButton(maximize, "#f5f5f5", "#000000"));
+        maximize.setOnMouseExited(_ -> colourWindowButton(maximize, "#FFFFFF", "#000000"));
+        this.main.getBs().maximizedProperty().addListener(_ -> {
             if (this.main.getBs().isMaximized()) {
                 SVGPath newIcon = (SVGPath) maximize.getGraphic();
                 newIcon.setContent("M13 0H6a2 2 0 0 0-2 2 2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2 2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm0 13V4a2 2 0 0 0-2-2H5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1zM3 4a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4z\n");
@@ -83,90 +72,121 @@ public class LogController extends Controller {
     }
 
     public void userLogin() {
-        String status = "Success";
-        String usrname = username.getText();
-        String pswd = password.getText();
-        if (usrname.isEmpty()) {
+        String username = this.username.getText();
+        String password = this.password.getText();
+        if (username.isEmpty()) {
             logInError.setText("Please enter a valid username");
-            status = "Error";
-        } else {
-            // query
-            String sql = "SELECT * FROM accounts WHERE username = ?";
-            try {
-                preparedStatement = con.prepareStatement(sql);
-                preparedStatement.setString(1, usrname);
-                resultSet = preparedStatement.executeQuery();
-                if (resultSet == null || !resultSet.next()) {
-                    logInError.setText("Unrecognized username");
-                    status = "Error";
-                } else {
-                    User user = new User(resultSet);
-                    if (user.getPassword() == null) {
-                        status = "PasswordReset";
-                        setNewPasswordView(user);
-                    } else if (BCrypt.checkpw(password.getText(), user.getPassword())) {
-                        status = "Success";
-                    } else {
-                        status = "Error";
-                    }
-                }
-            } catch (SQLException ex) {
-                System.err.println(ex.getMessage());
-                status = "Exception";
-            }
+            return;
         }
+        progressBar.setVisible(true);
+        Task<String> loginTask = new Task<>() {
+            @Override
+            protected String call() {
+                User user = userService.getUserByUsername(username);
+                if (user == null) {
+                    return "Unrecognized";
+                } else if (user.getPassword() == null) {
+                    return "PasswordReset";
+                } else if (userService.verifyPassword(user.getUsername(), password)) {
+                    return "Success";
+                } else {
+                    return "Error";
+                }
+            }
+        };
+        loginTask.setOnSucceeded(_ -> {
+            progressBar.setVisible(false);
+            String status = loginTask.getValue();
+            handleLoginResult(status, username);
+        });
+        loginTask.setOnFailed(_ -> {
+            progressBar.setVisible(false);
+            dialogPane.showError("Error", "Failed to login", loginTask.getException());
+        });
+        executor.submit(loginTask);
+    }
 
-        if (status.equals("Success")) {
+    private void handleLoginResult(String status, String username) {
+        switch (status) {
+            case "Unrecognized":
+                logInError.setText("Unrecognized username");
+                break;
+            case "PasswordReset":
+                try {
+                    User user = userService.getUserByUsername(username);
+                    setNewPasswordView(user);
+                } catch (Exception ex) {
+                    dialogPane.showError("Failed to set new password view", ex);
+                }
+                break;
+            case "Success":
+                loadUserAndChangeScene(username);
+                break;
+            default:
+                logInError.setText("Login error, please ensure your username and password are correct");
+                break;
+        }
+    }
+
+    private void loadUserAndChangeScene(String username) {
+        Task<User> loadUserTask = new Task<>() {
+            @Override
+            protected User call() {
+                User currentUser = userService.getUserByUsername(username);
+                currentUser.setPermissions(userService.getUserPermissions(username));
+                return currentUser;
+            }
+        };
+        loadUserTask.setOnSucceeded(_ -> {
+            progressBar.setVisible(false);
+            main.setCurrentUser(loadUserTask.getValue());
             try {
-                main.setCurrentUser(new User(resultSet));
-                main.getCurrentUser().setPermissions(getUserPermissions(main.getCurrentUser()));
                 main.changeScene("/views/FXML/MainMenu.fxml");
             } catch (IOException ex) {
-                System.err.println("Failed login");
-                System.err.println(ex.getMessage());
+                dialogPane.showError("Failed to change scene", ex);
             }
-        } else {
-            logInError.setText("Login error, please ensure your username and password are correct");
-        }
+        });
+        loadUserTask.setOnFailed(_ -> {
+            progressBar.setVisible(false);
+            dialogPane.showError("Error","Failed to load user data", loadUserTask.getException());
+        });
+        progressBar.setVisible(true);
+        executor.submit(loadUserTask);
     }
 
     public void userLoginWithPassword(User user) {
-        String status = "Success";
         if (!password.getText().equals(confirmPassword.getText())) {
             logInError.setText("Passwords don't match");
-            status = "Error";
-        } else {
-            String sql = "UPDATE accounts SET password = ? WHERE username = ?";
-            try {
-                preparedStatement = con.prepareStatement(sql);
-                String hashedPassword = BCrypt.hashpw(password.getText(), BCrypt.gensalt());
-                preparedStatement.setString(1, hashedPassword);
-                preparedStatement.setString(2, user.getUsername());
-                preparedStatement.executeUpdate();
-                status = "Success";
-            } catch (SQLException ex) {
-                System.err.println(ex.getMessage());
-                status = "Exception";
-            }
+            return;
         }
+        progressBar.setVisible(true);
+        Task<Void> updatePasswordTask = new Task<>() {
+            @Override
+            protected Void call() {
+                userService.updateUserPassword(user.getUsername(), password.getText());
+                return null;
+            }
+        };
+        updatePasswordTask.setOnSucceeded(_ -> {
+            progressBar.setVisible(false);
+            loadUserAndChangeScene(user.getUsername());
+        });
 
-        if (status.equals("Success")) {
-            try {
-                main.setCurrentUser(user);
-                main.getCurrentUser().setPermissions(getUserPermissions(main.getCurrentUser()));
-                main.changeScene("/views/FXML/MainMenu.fxml");
-            } catch (IOException ex) {
-                System.err.println("Failed login");
-                System.err.println(ex.getMessage());
-            }
-        }
+        updatePasswordTask.setOnFailed(_ -> {
+            progressBar.setVisible(false);
+            dialogPane.showError("Error","Failed to update password", updatePasswordTask.getException());
+        });
+
+        executor.submit(updatePasswordTask);
     }
 
     public void setNewPasswordView(User user) {
-        confirmPasswordLabel.setVisible(true);
-        confirmPassword.setVisible(true);
-        login.setOnAction(actionEvent -> userLoginWithPassword(user));
-        subtitle.setText("Please set a new password for this account before signing in");
+        Platform.runLater(() -> {
+            confirmPasswordLabel.setVisible(true);
+            confirmPassword.setVisible(true);
+            login.setOnAction(_ -> userLoginWithPassword(user));
+            subtitle.setText("Please set a new password for this account before signing in");
+        });
     }
 
     private void colourWindowButton(Button b, String backgroundHex, String strokeHex) {
@@ -174,21 +194,5 @@ public class LogController extends Controller {
         SVGPath icon = (SVGPath) b.getGraphic();
         icon.setFill(Paint.valueOf(strokeHex));
         icon.setStroke(Paint.valueOf(strokeHex));
-    }
-
-    public ArrayList<Permission> getUserPermissions(User user) {
-        String sql = "SELECT * FROM permissions WHERE permissionID IN (SELECT permissionID FROM userpermissions WHERE userID = ?)";
-        ArrayList<Permission> permissions = new ArrayList<>();
-        try {
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setString(1, user.getUsername());
-            resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                permissions.add(new Permission(resultSet));
-            }
-        } catch (SQLException ex) {
-            System.err.println(ex.getMessage());
-        }
-        return permissions;
     }
 }

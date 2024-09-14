@@ -2,15 +2,17 @@ package strategies;
 
 import application.Main;
 import controllers.TargetGraphsPageController;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.scene.chart.XYChart;
 import models.TillReportDataPoint;
+import services.TargetService;
+import services.TillReportService;
 import utils.RosterUtils;
 
+import java.io.IOException;
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 public class OTCDollarPerCustomerStrategy implements LineGraphTargetStrategy {
 
@@ -26,53 +28,37 @@ public class OTCDollarPerCustomerStrategy implements LineGraphTargetStrategy {
     public double target2;
     public LocalDate startDate;
     public LocalDate endDate;
-
     public TargetGraphsPageController parent;
 
-    public Connection con;
-
-    public PreparedStatement preparedStatement;
-
     public Main main;
-
-    public ResultSet resultSet;
-    private ObservableList<TillReportDataPoint> currentTillReportDataPoints = FXCollections.observableArrayList();
+    private List<TillReportDataPoint> currentTillReportDataPoints;
     private RosterUtils rosterUtils;
+    private TillReportService tillReportService;
+    private TargetService targetService;
 
     public OTCDollarPerCustomerStrategy(LocalDate startDate, LocalDate endDate, TargetGraphsPageController parent) {
         this.length = (int) ChronoUnit.DAYS.between(startDate, endDate);
         this.startDate = startDate;
         this.endDate = endDate;
         this.parent = parent;
-        this.con = parent.getConnection();
-        this.preparedStatement = parent.getPreparedStatement();
         this.main = parent.getMain();
-        this.resultSet = parent.getResultSet();
-        this.rosterUtils = new RosterUtils(con, main, startDate, endDate);
 
-        String sql;
         try {
-            sql = "SELECT * FROM tillreportdatapoints where storeID = ? AND assignedDate>=? AND assignedDate<=? AND `key` = ?";
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-            preparedStatement.setDate(2, Date.valueOf(startDate));
-            preparedStatement.setDate(3, Date.valueOf(endDate));
-            preparedStatement.setString(4, "Avg. OTC Sales Per Customer");
-            resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                currentTillReportDataPoints.add(new TillReportDataPoint(resultSet));
-            }
-            sql = "SELECT * FROM targets where storeID = ? AND targetName = ?";
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-            preparedStatement.setString(2, "otcDollarPerCustomer");
-            resultSet = preparedStatement.executeQuery();
-            if (resultSet.next()) {
-                target1 = resultSet.getDouble("target1");
-                target2 = resultSet.getDouble("target2");
-            }
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            this.tillReportService = new TillReportService();
+            this.targetService = new TargetService();
+            this.rosterUtils = new RosterUtils(main, startDate, endDate);
+            double[] targets = targetService.getTargets(main.getCurrentStore().getStoreID(), "otcDollarPerCustomer");
+            this.target1 = targets[0];
+            this.target2 = targets[1];
+
+            this.currentTillReportDataPoints = tillReportService.getTillReportDataPointsByKey(
+                    main.getCurrentStore().getStoreID(),
+                    startDate,
+                    endDate,
+                    "Avg. OTC Sales Per Customer"
+            );
+        } catch (SQLException | IOException e) {
+            parent.throwError(e);
         }
     }
 

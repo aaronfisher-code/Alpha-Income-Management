@@ -1,15 +1,18 @@
 package models;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class EODDataPoint {
 
 	private boolean existsInDB = false;
+	@JsonFormat(pattern = "yyyy-MM-dd")
 	private LocalDate date;
 	private int storeID;
 	private double cashAmount;
@@ -25,28 +28,7 @@ public class EODDataPoint {
 	private double runningTillBalance;
 	private String notes = "";
 
-	public EODDataPoint(ResultSet resultSet) {
-		try {
-			this.date = resultSet.getDate("date").toLocalDate();
-			this.storeID = resultSet.getInt("storeID");
-			this.cashAmount = resultSet.getDouble("cash");
-			this.eftposAmount = resultSet.getDouble("eftpos");
-			this.amexAmount = resultSet.getDouble("amex");
-			this.googleSquareAmount = resultSet.getDouble("googleSquare");
-			this.chequeAmount = resultSet.getDouble("cheque");
-			this.medschecks = resultSet.getInt("medschecks");
-			this.scriptsOnFile = resultSet.getInt("scriptsOnFile");
-			this.stockOnHandAmount = resultSet.getDouble("stockOnHand");
-			this.smsPatients = resultSet.getInt("smsPatients");
-			if(resultSet.getString("notes")!=null)
-				this.notes = resultSet.getString("notes");
-			existsInDB = true;
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-	}
-
-
+	public EODDataPoint() {}
 
 	public EODDataPoint(LocalDate previousDay) {
 		date = previousDay;
@@ -70,7 +52,6 @@ public class EODDataPoint {
 		this.notes = notes;
 	}
 
-
 	public void calculateTillBalances(double totalTakings, double previousRunningTillBalance){
 		this.tillBalance = cashAmount+eftposAmount+amexAmount+googleSquareAmount+chequeAmount-totalTakings;
 		this.runningTillBalance = previousRunningTillBalance+tillBalance;
@@ -83,7 +64,6 @@ public class EODDataPoint {
 	public void setDate(LocalDate date) {this.date = date;}
 	public double getCashAmount() {return cashAmount;}
 	public String getCashAmountString(){return (cashAmount == 0)?"":NumberFormat.getCurrencyInstance(Locale.US).format(cashAmount);}
-
 	public void setCashAmount(double cashAmount) {this.cashAmount = cashAmount;}
 	public double getEftposAmount() {return eftposAmount;}
 	public String getEftposAmountString(){return (eftposAmount == 0)?"":NumberFormat.getCurrencyInstance(Locale.US).format(eftposAmount);}
@@ -118,5 +98,8 @@ public class EODDataPoint {
 	public String getNotes() {return notes;}
 	public void setNotes(String notes) {this.notes = notes;}
 	public Boolean isInDB(){return existsInDB;}
-
+	public int getStoreID() {return storeID;}
+	public void setStoreID(int storeID) {this.storeID = storeID;}
+	public boolean isExistsInDB() {return existsInDB;}
+	public void setExistsInDB(boolean existsInDB) {this.existsInDB = existsInDB;}
 }

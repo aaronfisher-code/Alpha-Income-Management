@@ -1,50 +1,37 @@
 package controllers;
 
-import application.Main;
 import io.github.palexdev.materialfx.controls.MFXTextField;
 import javafx.fxml.FXML;
-import models.Invoice;
+import models.InvoiceSupplier;
+import services.InvoiceSupplierService;
 
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 
-public class AddNewSupplierDialogController {
+public class AddNewSupplierDialogController extends Controller {
 
-    private Connection con = null;
-    PreparedStatement preparedStatement = null;
-    ResultSet resultSet = null;
-    private Main main;
+	@FXML private MFXTextField newContactField;
 	private InvoiceEntryController parent;
+	private InvoiceSupplierService invoiceSupplierService;
 
 	@FXML
-	private MFXTextField newContactField;
-
-	@FXML
-	private void initialize() throws IOException {}
-
-	public void setMain(Main main) {
-		this.main = main;
-	}
-	
-	public void setConnection(Connection c) {
-		this.con = c;
+	private void initialize() {
+		try {
+			invoiceSupplierService = new InvoiceSupplierService();
+		} catch (IOException e) {
+			parent.getDialogPane().showError("Error initializing supplier service",e);
+		}
 	}
 
 	public void setParent(InvoiceEntryController d) {this.parent = d;}
 
 	public void addContact(){
-	 	String supplierName = newContactField.getText();
-		String sql = "INSERT INTO invoiceSuppliers(supplierName,storeID) VALUES(?,?)";
 		try {
-			preparedStatement = con.prepareStatement(sql);
-			preparedStatement.setString(1, supplierName);
-			preparedStatement.setInt(2,main.getCurrentStore().getStoreID());
-			preparedStatement.executeUpdate();
-		} catch (SQLException ex) {
-			System.err.println(ex.getMessage());
+			InvoiceSupplier newInvoiceSupplier = new InvoiceSupplier();
+			newInvoiceSupplier.setSupplierName(newContactField.getText());
+			newInvoiceSupplier.setStoreID(main.getCurrentStore().getStoreID());
+			invoiceSupplierService.addInvoiceSupplier(newInvoiceSupplier);
+		} catch (Exception ex) {
+			parent.getDialogPane().showError("Error", "Error adding new supplier", ex);
 		}
 		parent.getDialog().cancel();
 		parent.fillContactList();
@@ -53,6 +40,4 @@ public class AddNewSupplierDialogController {
 	public void closeDialog(){
 		parent.getDialog().cancel();
 	}
-
-
 }

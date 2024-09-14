@@ -1,13 +1,9 @@
 package controllers;
 
-import application.Main;
 import javafx.animation.Animation;
 import javafx.animation.Transition;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.scene.Cursor;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.effect.BlurType;
 import javafx.scene.effect.DropShadow;
@@ -15,40 +11,20 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
 import javafx.util.Duration;
 import models.Shift;
-
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
-public class ShiftCardController extends Controller{
+public class ShiftCardController extends PageController {
 
 	@FXML private StackPane backgroundPane;
 	@FXML private Label employeeIcon,employeeName,employeeRole,startTime,endTime,startAMPM,endAMPM,leaveLabel;
 	@FXML private Region blurBG;
-
-	private Main main;
 	private Shift shift;
 	private LocalDate shiftCardDate;
-	private RosterPageController parent;
-	PreparedStatement preparedStatement= null;
-	ResultSet resultSet = null;
 
 	public ShiftCardController() {}
-
-	@Override
-	public void setMain(Main newMain) {
-		this.main = newMain;
-	}
-
-	@Override
-	public void setConnection(Connection conDB) {}
 
 	public void setShift(Shift newShift) {
 		this.shift = newShift;
@@ -59,10 +35,6 @@ public class ShiftCardController extends Controller{
 	}
 
 	public LocalDate getDate(){return this.shiftCardDate;}
-
-	public void setParent(RosterPageController parent){
-		this.parent = parent;
-	}
 
 	@Override
 	public void fill() {
@@ -77,7 +49,6 @@ public class ShiftCardController extends Controller{
 		employeeIcon.setText(String.valueOf(shift.getFirst_name().charAt(0)));
 		employeeIcon.setStyle("-fx-background-color: " + shift.getProfileBG() + ";-fx-background-radius: 26px;");
 		employeeIcon.setTextFill(Paint.valueOf(shift.getProfileText()));
-
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("hh:mm");
 		startTime.setText(shift.getShiftStartTime().format(formatter));
 		endTime.setText(shift.getShiftEndTime().format(formatter));
@@ -113,7 +84,6 @@ public class ShiftCardController extends Controller{
 	public void hoverOn(){
 		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && shift.getUsername().equals(main.getCurrentUser().getUsername()))||
 				main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))) {
-//		backgroundPane.setStyle("-fx-background-color: #dee9ff; -fx-background-radius: 5;");
 			DropShadow d = new DropShadow(BlurType.THREE_PASS_BOX, Color.web("#000000", 0.8), 5.56, 0.0, 0.0, 2.0);
 			d.setHeight(24);
 			d.setWidth(24);
@@ -125,7 +95,6 @@ public class ShiftCardController extends Controller{
 	public void hoverOff(){
 		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && shift.getUsername().equals(main.getCurrentUser().getUsername()))||
 				main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))) {
-//		backgroundPane.setStyle("-fx-background-color: #FFFFFF; -fx-background-radius: 5;");
 			DropShadow d = new DropShadow(BlurType.THREE_PASS_BOX, Color.web("#000000", 0.1), 10, 0.0, 0.0, 4.0);
 			d.setHeight(24);
 			d.setWidth(24);
@@ -139,7 +108,7 @@ public class ShiftCardController extends Controller{
 			{
 				setCycleDuration(Duration.millis(duration));
 			}
-			double previousMargin = targetButton.getTranslateY();
+			final double previousMargin = targetButton.getTranslateY();
 
 			@Override
 			protected void interpolate(double progress) {
@@ -149,7 +118,6 @@ public class ShiftCardController extends Controller{
 				targetButton.setTranslateY(current);
 			}
 		};
-
 		animation.playFromStart();
 	}
 }

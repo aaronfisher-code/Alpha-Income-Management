@@ -1,14 +1,12 @@
 package models;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.github.palexdev.materialfx.controls.MFXButton;
-import javafx.scene.control.Button;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.text.NumberFormat;
-import java.time.LocalDate;
 import java.util.Locale;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class AccountPaymentContactDataPoint {
 
 
@@ -20,21 +18,18 @@ public class AccountPaymentContactDataPoint {
 	private double totalValue;
 	private MFXButton deleteButton;
 
-	public AccountPaymentContactDataPoint(ResultSet resultSet) {
-		try {
-			this.contactID = resultSet.getInt("idaccountPaymentContacts");
-			this.contactName = resultSet.getString("contactName");
-			this.accountCode = resultSet.getString("accountCode");
-			this.storeID = resultSet.getInt("storeID");
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-	}
+	public AccountPaymentContactDataPoint() {}
 
 	public AccountPaymentContactDataPoint(int contactID,String contactName, int storeID){
 		this.contactID = contactID;
 		this.contactName = contactName;
 		this.storeID = storeID;
+	}
+
+	public AccountPaymentContactDataPoint(String contactName, int storeID, String accountCode) {
+		this.contactName = contactName;
+		this.storeID = storeID;
+		this.accountCode = accountCode;
 	}
 
 	public int getContactID() {return contactID;}
@@ -44,6 +39,10 @@ public class AccountPaymentContactDataPoint {
 	public String getContactName() {return contactName;}
 
 	public void setContactName(String contactName) {this.contactName = contactName;}
+
+	public int getStoreID() {return storeID;}
+
+	public void setStoreID(int storeID) {this.storeID = storeID;}
 
 	public double getTotalValue() {return totalValue;}
 
@@ -62,5 +61,14 @@ public class AccountPaymentContactDataPoint {
 	@Override
 	public String toString() {
 		return contactName;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (obj instanceof AccountPaymentContactDataPoint) {
+			AccountPaymentContactDataPoint other = (AccountPaymentContactDataPoint) obj;
+			return this.contactID == other.contactID;
+		}
+		return false;
 	}
 }

@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.dlsc.gemsfx.DialogPane?>
 <?import com.jfoenix.controls.JFXButton?>
 <?import com.jfoenix.controls.JFXNodesList?>
 <?import io.github.palexdev.materialfx.controls.MFXButton?>
 <?import io.github.palexdev.materialfx.controls.MFXCheckListView?>
+<?import io.github.palexdev.materialfx.controls.MFXProgressSpinner?>
 <?import io.github.palexdev.materialfx.controls.MFXRectangleToggleNode?>
 <?import io.github.palexdev.materialfx.controls.MFXScrollPane?>
 <?import io.github.palexdev.materialfx.controls.MFXTextField?>
@@ -41,21 +43,30 @@
                <children>
                   <BorderPane fx:id="usersButton" onMouseClicked="#usersView" prefHeight="200.0" prefWidth="200.0" styleClass="periodTabSelect">
                      <center>
-                        <Label text="USERS" textFill="#0f60ff" BorderPane.alignment="CENTER" />
+                        <Label contentDisplay="RIGHT" text="USERS" textFill="#0f60ff" translateX="2.0" BorderPane.alignment="CENTER">
+                           <graphic>
+                              <MFXProgressSpinner fx:id="userSpinner" maxWidth="0.0" radius="7.0" />
+                           </graphic>
+                           <BorderPane.margin>
+                              <Insets />
+                           </BorderPane.margin></Label>
                      </center>
-                     <bottom>
-                        <Region maxWidth="1.7976931348623157E308" prefHeight="5.0" style="-fx-background-color: #0F60FF;" BorderPane.alignment="CENTER" />
-                     </bottom>
                      <GridPane.margin>
                         <Insets />
                      </GridPane.margin>
                      <cursor>
                         <Cursor fx:constant="HAND" />
                      </cursor>
+                     <bottom>
+                        <Region maxWidth="1.7976931348623157E308" prefHeight="5.0" style="-fx-background-color: #0F60FF;" BorderPane.alignment="CENTER" />
+                     </bottom>
                   </BorderPane>
                   <BorderPane fx:id="storesButton" onMouseClicked="#storesView" prefHeight="200.0" prefWidth="200.0" styleClass="periodTabSelect" GridPane.columnIndex="1">
                      <center>
-                        <Label text="STORES" textFill="#6e6b7b" BorderPane.alignment="CENTER" />
+                        <Label contentDisplay="RIGHT" text="STORES" textFill="#6e6b7b" translateX="2.0" BorderPane.alignment="CENTER">
+                           <graphic>
+                              <MFXProgressSpinner fx:id="storeSpinner" maxWidth="0.0" radius="7.0" />
+                           </graphic></Label>
                      </center>
                      <bottom>
                         <Region maxWidth="1.7976931348623157E308" prefHeight="5.0" BorderPane.alignment="CENTER" />
@@ -158,7 +169,13 @@
                         </MFXTextField>
                         <Label fx:id="storeNameValidationLabel" text="Please enter a store name" textFill="RED" visible="false">
                            <VBox.margin>
-                              <Insets bottom="-5.0" top="-10.0" />
+                              <Insets bottom="10.0" top="-10.0" />
+                           </VBox.margin>
+                        </Label>
+                        <MFXTextField fx:id="storeHoursField" borderGap="0.0" floatMode="ABOVE" floatingText="Average day length (Hours)" maxWidth="1.7976931348623157E308" minHeight="36.0" />
+                        <Label fx:id="storeHoursValidationLabel" text="Please enter how long the store is open in hours" textFill="RED" visible="false">
+                           <VBox.margin>
+                              <Insets top="-10.0" />
                            </VBox.margin>
                         </Label>
                         <MFXButton fx:id="saveStoreButton" depthLevel="LEVEL3" maxWidth="1.7976931348623157E308" onAction="#addStore" prefHeight="30.0" style="-fx-background-color: #0F60FF;" styleClass="popOverButton" text="Save" textFill="WHITE">
@@ -389,6 +406,7 @@
             </VBox>
          </children>
       </VBox>
+      <DialogPane fx:id="dialogPane" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" />
    </children>
    <stylesheets>
       <URL value="@../CSS/application.css" />

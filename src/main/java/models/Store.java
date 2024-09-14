@@ -1,23 +1,16 @@
 package models;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.time.LocalDate;
-
 public class Store {
 	private int storeID;
-
 	private String storeName;
+	private double storeHours;
 
-	public Store(ResultSet resultSet) {
-		try {
-			if(resultSet.getString("storeID")!=null)
-				this.storeID = resultSet.getInt("storeID");
-			if(resultSet.getString("storeName")!=null)
-				this.storeName = resultSet.getString("storeName");
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+	public Store() {
+	}
+
+	public Store(String storeName, double storeHours) {
+		this.storeName = storeName;
+		this.storeHours = storeHours;
 	}
 
 	public int getStoreID() {
@@ -34,6 +27,14 @@ public class Store {
 
 	public void setStoreName(String storeName) {
 		this.storeName = storeName;
+	}
+
+	public double getStoreHours() {
+		return storeHours;
+	}
+
+	public void setStoreHours(double storeHours) {
+		this.storeHours = storeHours;
 	}
 
 	@Override

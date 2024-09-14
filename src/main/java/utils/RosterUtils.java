@@ -1,48 +1,41 @@
 package utils;
-import application.Main;
-import controllers.RosterDayCardController;
-import controllers.ShiftCardController;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
-import models.LeaveRequest;
 import models.Shift;
+import models.LeaveRequest;
+import services.LeaveService;
+import services.RosterService;
+import application.Main;
 
 import java.io.IOException;
-import java.sql.*;
 import java.time.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import static java.time.temporal.ChronoUnit.DAYS;
 
 public class RosterUtils {
 
-    Main main;
-    Connection conn;
-    PreparedStatement preparedStatement;
-    ResultSet resultSet;
+    private Main main;
+    private RosterService rosterService;
+    private LeaveService leaveService;
+    private YearMonth yearMonth;
 
-    YearMonth yearMonth;
+    private List<Shift> allShifts = new ArrayList<>();
+    private List<Shift> allModifications = new ArrayList<>();
+    private List<LeaveRequest> allLeaveRequests = new ArrayList<>();
 
-    ArrayList<Shift> allShifts = new ArrayList<>();
-    ArrayList<Shift> allModifications = new ArrayList<>();
-    ArrayList<LeaveRequest> allLeaveRequests = new ArrayList<>();
+    private Map<LocalDate, Double> dayDurationMap = new HashMap<>();
 
-    Map<LocalDate, Double> dayDurationMap = new HashMap<>();
-
-    public RosterUtils(Connection conn, Main main, LocalDate startDate, LocalDate endDate){
-        this.conn = conn;
+    public RosterUtils(Main main, LocalDate startDate, LocalDate endDate) throws IOException {
         this.main = main;
+        this.rosterService = new RosterService();
+        this.leaveService = new LeaveService();
 
         fillDayDurations(startDate, endDate);
     }
-    public RosterUtils(Connection conn, Main main, YearMonth yearMonth){
-        this.conn = conn;
+
+    public RosterUtils(Main main, YearMonth yearMonth) throws IOException {
         this.main = main;
+        this.rosterService = new RosterService();
+        this.leaveService = new LeaveService();
         this.yearMonth = yearMonth;
 
         LocalDate monthStart = yearMonth.atDay(1);
@@ -51,58 +44,16 @@ public class RosterUtils {
     }
 
     private void fillDayDurations(LocalDate startDate, LocalDate endDate){
-        String sql = "SELECT * FROM shifts JOIN accounts a on a.username = shifts.username " +
-                "WHERE storeID = ? AND" +
-                "(shifts.repeating=TRUE AND (isNull(shiftEndDate) OR shiftEndDate>=?) AND shiftStartDate<=?)"+
-                "OR (shifts.repeating=false AND shiftStartDate>=? AND shiftStartDate<=?)"+
-                "ORDER BY shiftStartTime, a.first_name";
-        try {
-            preparedStatement = conn.prepareStatement(sql);
-            preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-            preparedStatement.setDate(2, Date.valueOf(startDate));
-            preparedStatement.setDate(3, Date.valueOf(endDate));
-            preparedStatement.setDate(4, Date.valueOf(startDate));
-            preparedStatement.setDate(5, Date.valueOf(endDate));
-            resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                allShifts.add(new Shift(resultSet));
-            }
-
-            sql = "SELECT * FROM shiftmodifications JOIN accounts a on a.username = shiftmodifications.username " +
-                    "WHERE storeID = ? AND "+
-                    "modificationID in (select max(modificationID) from shiftmodifications group by shift_id, originalDate) AND" +
-                    "((shiftmodifications.shiftStartDate>=? AND shiftmodifications.shiftStartDate<=?) OR (shiftmodifications.originalDate>=? AND shiftmodifications.originalDate<=?))";
-
-            preparedStatement = conn.prepareStatement(sql);
-            preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-            preparedStatement.setDate(2, Date.valueOf(startDate));
-            preparedStatement.setDate(3, Date.valueOf(endDate));
-            preparedStatement.setDate(4, Date.valueOf(startDate));
-            preparedStatement.setDate(5, Date.valueOf(endDate));
-            resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                allModifications.add(new Shift(resultSet));;
-            }
-
-            sql = "SELECT * FROM leaverequests JOIN accounts a on a.username = leaverequests.employeeID WHERE storeID = ? AND (leaveStartDate<=?) OR (leaveEndDate>=?)";
-            preparedStatement = conn.prepareStatement(sql);
-            preparedStatement.setInt(1, main.getCurrentStore().getStoreID());
-            preparedStatement.setDate(2, Date.valueOf(startDate));
-            preparedStatement.setDate(3, Date.valueOf(endDate));
-            resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                allLeaveRequests.add(new LeaveRequest(resultSet));
-            }
-        } catch (SQLException ex) {
-            System.err.println(ex.getMessage());
-        }
+        allShifts = rosterService.getShifts(main.getCurrentStore().getStoreID(), startDate, endDate);
+        allModifications = rosterService.getShiftModifications(main.getCurrentStore().getStoreID(), startDate, endDate);
+        allLeaveRequests = leaveService.getLeaveRequests(main.getCurrentStore().getStoreID(), startDate, endDate);
 
         for (LocalDate day = startDate; day.isBefore(endDate.plusDays(1)); day = day.plusDays(1)) {
             dayDurationMap.put(day, loadDayDuration(day));
         }
     }
 
-    public double getDayDuration(LocalDate day){
+    public double getDayDuration(LocalDate day) {
         return dayDurationMap.get(day);
     }
 
@@ -167,48 +118,30 @@ public class RosterUtils {
         if(earliestStart.equals(LocalTime.MAX)||latestEnd.equals(LocalTime.MIN)){
             return 0;
         }else {
-            //todo: replace magic number 10 with store specific hours per day
-            return (double) Duration.between(earliestStart, latestEnd).toHours() / 10;
+            return (double) Duration.between(earliestStart, latestEnd).toHours() / main.getCurrentStore().getStoreHours();
         }
     }
 
-    public int getOpenDays(){
-        int openDays = 0;
-        for(LocalDate day = yearMonth.atDay(1); day.isBefore(yearMonth.atEndOfMonth().plusDays(1)); day = day.plusDays(1)){
-            if(getDayDuration(day)>0){
-                openDays++;
-            }
-        }
-        return openDays;
+    public int getOpenDays() {
+        return (int) dayDurationMap.values().stream().filter(duration -> duration > 0).count();
     }
 
-    public double getOpenDuration(){
-        double openDuration = 0;
-        for(LocalDate day = yearMonth.atDay(1); day.isBefore(yearMonth.atEndOfMonth().plusDays(1)); day = day.plusDays(1)){
-            openDuration+=getDayDuration(day);
-        }
-        return openDuration;
+    public double getOpenDuration() {
+        return dayDurationMap.values().stream().mapToDouble(Double::doubleValue).sum();
     }
 
-    public int getPartialDays(){
-        int partialDays = 0;
-        for(LocalDate day = yearMonth.atDay(1); day.isBefore(yearMonth.atEndOfMonth().plusDays(1)); day = day.plusDays(1)){
-            if(getDayDuration(day)>0&&getDayDuration(day)<0.5){
-                partialDays++;
-            }
-        }
-        return partialDays;
+    public int getPartialDays() {
+        return (int) dayDurationMap.values().stream().filter(duration -> duration > 0 && duration < 0.5).count();
     }
 
-    public int getTotalDays(){
+    public int getTotalDays() {
         return yearMonth.lengthOfMonth();
     }
 
-    public double getDuration(LocalDate startDate, LocalDate endDate){
-        double duration = 0;
-        for(LocalDate day = startDate; day.isBefore(endDate.plusDays(1)); day = day.plusDays(1)){
-            duration+=getDayDuration(day);
-        }
-        return duration;
+    public double getDuration(LocalDate startDate, LocalDate endDate) {
+        return dayDurationMap.entrySet().stream()
+                .filter(entry -> !entry.getKey().isBefore(startDate) && !entry.getKey().isAfter(endDate))
+                .mapToDouble(Map.Entry::getValue)
+                .sum();
     }
 }

@@ -1,8 +1,5 @@
 package models;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.ResultSetMetaData;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -27,49 +24,7 @@ public class Invoice {
 
 	private boolean invoiceExists, importExists, creditExists;
 
-	public Invoice(ResultSet resultSet) {
-		try {
-			this.supplierName = resultSet.getString("supplierName");
-			this.supplierID = resultSet.getInt("supplierID");
-			this.invoiceNo = resultSet.getString("invoiceNo");
-			this.invoiceDate = resultSet.getDate("invoiceDate").toLocalDate();
-			this.dueDate = resultSet.getDate("dueDate").toLocalDate();
-			this.description = resultSet.getString("description");
-			this.unitAmount = resultSet.getDouble("unitAmount");
-			this.storeID = resultSet.getInt("storeID");
-			this.notes = resultSet.getString("notes");
-			this.importedInvoiceAmount = resultSet.getDouble("amount");
-
-			// Check if the column "total_credits" exists
-			if (columnExists(resultSet, "total_credits")) {
-				this.credits = resultSet.getDouble("total_credits");
-			} else {
-				this.credits = 0.0; // or some default value
-			}
-
-			if (resultSet.getObject("unitAmount") != null) {
-				this.invoiceExists = true;
-			}
-			if (resultSet.getObject("amount") != null) {
-				this.variance = unitAmount - importedInvoiceAmount;
-				importExists = true;
-			}
-			this.totalAfterCredits = unitAmount - credits;
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-	}
-
-	private boolean columnExists(ResultSet rs, String columnName) throws SQLException {
-		ResultSetMetaData rsMetaData = rs.getMetaData();
-		int columnCount = rsMetaData.getColumnCount();
-		for (int i = 1; i <= columnCount; i++) {
-			if (columnName.equals(rsMetaData.getColumnName(i))) {
-				return true;
-			}
-		}
-		return false;
-	}
+	public Invoice(){}
 
 	public String getSupplierName() {
 		return supplierName;
@@ -195,6 +150,46 @@ public class Invoice {
 
 	public void setNotes(String notes) {
 		this.notes = notes;
+	}
+
+	public int getStoreID() {
+		return storeID;
+	}
+
+	public void setStoreID(int storeID) {
+		this.storeID = storeID;
+	}
+
+	public int getSupplierID() {
+		return supplierID;
+	}
+
+	public void setSupplierID(int supplierID) {
+		this.supplierID = supplierID;
+	}
+
+	public boolean isInvoiceExists() {
+		return invoiceExists;
+	}
+
+	public void setInvoiceExists(boolean invoiceExists) {
+		this.invoiceExists = invoiceExists;
+	}
+
+	public boolean isImportExists() {
+		return importExists;
+	}
+
+	public void setImportExists(boolean importExists) {
+		this.importExists = importExists;
+	}
+
+	public boolean isCreditExists() {
+		return creditExists;
+	}
+
+	public void setCreditExists(boolean creditExists) {
+		this.creditExists = creditExists;
 	}
 
 }
