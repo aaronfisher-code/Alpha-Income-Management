@@ -41,4 +41,5 @@ jobs:
       - name: Build App Installer Bundles
         uses: shannah/jdeploy@master
         with:
-          github_token: ${{ github.token }}
+          github_token: ${{ secrets.REPO_AUTH_TOKEN }}
+          target_repository: 'aaronfisher-code/Alpha-Income-Releases'
