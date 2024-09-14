@@ -16,3 +16,5 @@
 *.xml
 .idea/dataSources.local.xml
 *.properties
+jdeploy
+jdeploy-bundle
