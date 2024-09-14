@@ -204,6 +204,28 @@
                     <parameters>true</parameters>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>com.google.code.maven-replacer-plugin</groupId>
+                <artifactId>replacer</artifactId>
+                <version>1.5.3</version>
+                <executions>
+                    <execution>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>replace</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <file>${project.basedir}/package.json</file>
+                    <replacements>
+                        <replacement>
+                            <token>"version": ".*"</token>
+                            <value>"version": "${project.version}"</value>
+                        </replacement>
+                    </replacements>
+                </configuration>
+            </plugin>
 <!--            <plugin>-->
 <!--                <groupId>com.github.akman</groupId>-->
 <!--                <artifactId>jpackage-maven-plugin</artifactId>-->
