@@ -122,7 +122,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           file: "./jdeploy/github-release-files/*"
-          tags: true
           overwrite: true
       - name: Update release body (for tag release)
         shell: bash
