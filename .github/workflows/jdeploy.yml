@@ -10,8 +10,7 @@ on:
 
 jobs:
   build:
-
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v3
@@ -21,6 +20,21 @@ jobs:
           java-version: '22'
           distribution: 'temurin'
           cache: maven
+      - name: Download Wix
+        uses: i3h/download-release-asset@v1
+        with:
+          owner: wixtoolset
+          repo: wix3
+          tag: wix3112rtm
+          file: wix311-binaries.zip
+      - name: Decompress Wix
+        uses: DuckSoft/extract-7z-action@v1.0
+        with:
+          pathSource: wix311-binaries.zip
+          pathTarget: ./target/wix
+      - name: Add Wix to Path
+        run: echo "$HOME/target/wix" >> $GITHUB_PATH
+      - uses: actions/checkout@v2
       - name: Build with Maven
         run: mvn -B package --file pom.xml
 
