@@ -7,6 +7,10 @@ on:
         description: 'Version to release'
         required: true
         default: 'auto'
+      jdeploy_version:
+        description: 'The version of jDeploy to use'
+        required: false
+        default: '4.0.51'
 
 jobs:
   build:
@@ -36,6 +40,19 @@ jobs:
           echo "::set-output name=new_version::$new_version"
         shell: bash
 
+      - name: Create application.properties
+        run: |
+          echo "DB_URL=${{ secrets.DB_URL }}" > src/main/resources/application.properties
+          echo "DB_USERNAME=${{ secrets.DB_USER }}" >> src/main/resources/application.properties
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> src/main/resources/application.properties
+          echo "api.base.url=${{ secrets.API_BASE_URL }}" >> src/main/resources/application.properties
+          echo "api.token=${{ secrets.API_TOKEN }}" >> src/main/resources/application.properties
+          echo "VERSION=${{ steps.increment_version.outputs.new_version }}" >> src/main/resources/application.properties
+        shell: bash
+
+      - name: Build with Maven
+        run: mvn -B package --file pom.xml
+
       - name: Commit version change
         run: |
           git config --global user.name 'github-actions[bot]'
@@ -61,3 +78,55 @@ jobs:
           release_name: Release ${{ steps.increment_version.outputs.new_version }}
           draft: false
           prerelease: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Prepare Installer Bundles
+        run: |
+          npm pkg set version="${{ steps.increment_version.outputs.new_version }}"
+          npm pkg set jdeploy.jdeployVersion='${{ inputs.jdeploy_version }}'
+          npm pkg set jdeploy.commitHash="${{ github.sha }}"
+          npm pkg set jdeploy.gitTag="v${{ steps.increment_version.outputs.new_version }}"
+          npx 'jdeploy@${{ inputs.jdeploy_version }}' github-prepare-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Files to Github Release
+        uses: xresloader/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: "./jdeploy/github-release-files/*"
+          update_latest_release: true
+          overwrite: true
+
+      - name: Update release body
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REF_NAME: v${{ steps.increment_version.outputs.new_version }}
+        run: |
+          set -e
+          BODY=$(cat ./jdeploy/github-release-files/jdeploy-release-notes.md)
+
+          RELEASE_RESULT=$(curl -s \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME})
+          RELEASE_ID=$( jq -r  '.id' <<< "${RELEASE_RESULT}" ) 
+          OLD_BODY=$(jq -r '.body' <<< "${RELEASE_RESULT}" )
+          NEW_BODY=$(GITHUB_RELEASE_BODY="$OLD_BODY" JDEPLOY_RELEASE_NOTES="$BODY" npx 'jdeploy@${{ inputs.jdeploy_version }}' github-build-release-body)
+          BODY_JSON="{\"body\": $(echo "$NEW_BODY" | jq -sR .)}"
+          echo "Release ID is ${RELEASE_ID}"
+          curl \
+          -X PATCH \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID} \
+          -d "$BODY_JSON"
+        shell: bash
