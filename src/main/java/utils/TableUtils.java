@@ -61,6 +61,35 @@ public class TableUtils {
         }
     }
 
+    public enum formatStyle {
+        CURRENCY, PERCENTAGE, DECIMAL, INTEGER
+    }
+
+    public static void formatTextField(MFXTextField textField, Runnable updateTotals, formatStyle style) {
+        textField.delegateFocusedProperty().addListener((_, _, _) -> {
+            if (textField.isValid()) {
+                updateTotals.run();
+            }
+        });
+        switch (style) {
+            case CURRENCY -> {
+                textField.setLeadingIcon(new Label("$"));
+                textField.setAlignment(Pos.CENTER_RIGHT);
+            }
+            case PERCENTAGE -> {
+                textField.setTrailingIcon(new Label("%"));
+                textField.setMeasureUnitGap(2);
+                textField.setAlignment(Pos.CENTER_RIGHT);
+            }
+            case DECIMAL -> {
+                textField.setAlignment(Pos.CENTER_RIGHT);
+            }
+            case INTEGER -> {
+                textField.setAlignment(Pos.CENTER_RIGHT);
+            }
+        }
+    }
+
     public static void resizeTableColumns(TableView<?> table, TableColumn<?, ?> extendedCol) {
         table.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
         table.setMaxWidth(Double.MAX_VALUE);

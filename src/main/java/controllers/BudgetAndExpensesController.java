@@ -9,8 +9,10 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.layout.*;
 import models.BudgetAndExpensesDataPoint;
+import models.TillReportDataPoint;
 import services.AccountPaymentService;
 import services.BudgetExpensesService;
+import services.TillReportService;
 import utils.RosterUtils;
 import utils.TableUtils;
 import utils.ValidatorUtils;
@@ -21,6 +23,7 @@ import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 
@@ -32,14 +35,22 @@ public class BudgetAndExpensesController extends DateSelectController{
 	@FXML private Label errorLabel;
     @FXML private GridPane endOfMonthTable;
 	@FXML private MFXProgressSpinner progressSpinner,saveProgressSpinner;
+	@FXML private MFXTextField noOfScriptsLast, noOfScriptsGrowth1, noOfScriptsTarget1, noOfScriptsGrowth2, noOfScriptsTarget2;
+	@FXML private MFXTextField otcCustomerLast, otcCustomerGrowth1, otcCustomerTarget1, otcCustomerGrowth2, otcCustomerTarget2;
+	@FXML private MFXTextField gpDollarLast, gpDollarGrowth1, gpDollarTarget1, gpDollarGrowth2, gpDollarTarget2;
+	@FXML private MFXTextField scriptsOnFileLast, scriptsOnFileGrowth1, scriptsOnFileTarget1, scriptsOnFileGrowth2, scriptsOnFileTarget2;
+	@FXML private MFXTextField medschecksLast, medschecksGrowth1, medschecksTarget1, medschecksGrowth2, medschecksTarget2;
+	@FXML private MFXTextField clinicalInterventionsLast, clinicalInterventionsGrowth1, clinicalInterventionsTarget1, clinicalInterventionsGrowth2, clinicalInterventionsTarget2;
 	private BudgetExpensesService budgetExpensesService;
 	private AccountPaymentService accountPaymentService;
+	private TillReportService tillReportService;
 
 	@FXML
 	private void initialize() {
 		try{
 			budgetExpensesService = new BudgetExpensesService();
 			accountPaymentService = new AccountPaymentService();
+			tillReportService = new TillReportService();
 			executor = Executors.newCachedThreadPool();
 		}catch (IOException e){
 			dialogPane.showError("Error", "Error initializing budget and expenses service", e);
@@ -68,6 +79,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 		errorLabel.setVisible(false);
 		errorLabel.setStyle("-fx-text-fill: red");
 		YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
+		YearMonth lastYearMonthObject = yearMonthObject.minusYears(1);
 
 		progressSpinner.setVisible(true);
 
@@ -111,7 +123,40 @@ public class BudgetAndExpensesController extends DateSelectController{
 			}
 		}, executor);
 
-		CompletableFuture.allOf(rosterUtilsFuture, budgetDataFuture, cpaPaymentFuture, tacPaymentFuture, otherPaymentFuture)
+		CompletableFuture<Double> lastYearScriptCountFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				List<TillReportDataPoint> tillReportData = tillReportService.getTillReportDataPointsByKey(
+						main.getCurrentStore().getStoreID(),
+						lastYearMonthObject.atDay(1),
+						lastYearMonthObject.atEndOfMonth(),
+						"Script Count"
+				);
+				return tillReportData.stream()
+						.mapToDouble(TillReportDataPoint::getQuantity)
+						.sum();
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}, executor);
+
+		CompletableFuture<Double> lastYearOtcCustomerFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				List<TillReportDataPoint> tillReportData = tillReportService.getTillReportDataPointsByKey(
+						main.getCurrentStore().getStoreID(),
+						lastYearMonthObject.atDay(1),
+						lastYearMonthObject.atEndOfMonth(),
+						"Avg. OTC Sales Per Customer"
+				);
+				return tillReportData.stream()
+						.mapToDouble(TillReportDataPoint::getAmount)
+						.sum();
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}, executor);
+
+		CompletableFuture.allOf(rosterUtilsFuture, budgetDataFuture, cpaPaymentFuture,
+						tacPaymentFuture, otherPaymentFuture, lastYearScriptCountFuture, lastYearOtcCustomerFuture)
 				.thenRunAsync(() -> {
 					try {
 						RosterUtils rosterUtils = rosterUtilsFuture.get();
@@ -119,9 +164,24 @@ public class BudgetAndExpensesController extends DateSelectController{
 						double totalCPAPayment = cpaPaymentFuture.get();
 						double totalTACPayment = tacPaymentFuture.get();
 						double totalOtherPayment = otherPaymentFuture.get();
+						double lastYearScriptCount = lastYearScriptCountFuture.get();
+						double lastYearOtcCustomer = lastYearOtcCustomerFuture.get();
 
 						Platform.runLater(() -> {
 							updateUIWithData(rosterUtils, data, totalCPAPayment, totalTACPayment, totalOtherPayment);
+							noOfScriptsLast.setText(String.format("%.0f", lastYearScriptCount));
+
+							otcCustomerLast.setText(String.format("%.2f", lastYearOtcCustomer));
+							TableUtils.formatTextField(noOfScriptsLast, this::updateTotals, TableUtils.formatStyle.INTEGER);
+							TableUtils.formatTextField(noOfScriptsGrowth1, this::updateTotals, TableUtils.formatStyle.PERCENTAGE);
+							TableUtils.formatTextField(noOfScriptsTarget1, this::updateTotals, TableUtils.formatStyle.INTEGER);
+							TableUtils.formatTextField(noOfScriptsGrowth2, this::updateTotals, TableUtils.formatStyle.PERCENTAGE);
+							TableUtils.formatTextField(noOfScriptsTarget2, this::updateTotals, TableUtils.formatStyle.INTEGER);
+							TableUtils.formatTextField(otcCustomerLast, this::updateTotals, TableUtils.formatStyle.CURRENCY);
+							TableUtils.formatTextField(otcCustomerGrowth1, this::updateTotals, TableUtils.formatStyle.PERCENTAGE);
+							TableUtils.formatTextField(otcCustomerTarget1, this::updateTotals, TableUtils.formatStyle.CURRENCY);
+							TableUtils.formatTextField(otcCustomerGrowth2, this::updateTotals, TableUtils.formatStyle.PERCENTAGE);
+							TableUtils.formatTextField(otcCustomerTarget2, this::updateTotals, TableUtils.formatStyle.CURRENCY);
 							TableUtils.formatTextFields(endOfMonthTable, this::updateTotals);
 							updateTotals();
 							progressSpinner.setVisible(false);
