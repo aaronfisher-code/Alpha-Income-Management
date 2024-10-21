@@ -9,9 +9,11 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.layout.*;
 import models.BudgetAndExpensesDataPoint;
+import models.EODDataPoint;
 import models.TillReportDataPoint;
 import services.AccountPaymentService;
 import services.BudgetExpensesService;
+import services.EODService;
 import services.TillReportService;
 import utils.RosterUtils;
 import utils.TableUtils;
@@ -23,6 +25,7 @@ import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
@@ -40,10 +43,10 @@ public class BudgetAndExpensesController extends DateSelectController{
 	@FXML private MFXTextField gpDollarLast, gpDollarGrowth1, gpDollarTarget1, gpDollarGrowth2, gpDollarTarget2;
 	@FXML private MFXTextField scriptsOnFileLast, scriptsOnFileGrowth1, scriptsOnFileTarget1, scriptsOnFileGrowth2, scriptsOnFileTarget2;
 	@FXML private MFXTextField medschecksLast, medschecksGrowth1, medschecksTarget1, medschecksGrowth2, medschecksTarget2;
-	@FXML private MFXTextField clinicalInterventionsLast, clinicalInterventionsGrowth1, clinicalInterventionsTarget1, clinicalInterventionsGrowth2, clinicalInterventionsTarget2;
 	private BudgetExpensesService budgetExpensesService;
 	private AccountPaymentService accountPaymentService;
 	private TillReportService tillReportService;
+	private EODService eodService;
 
 	@FXML
 	private void initialize() {
@@ -51,6 +54,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 			budgetExpensesService = new BudgetExpensesService();
 			accountPaymentService = new AccountPaymentService();
 			tillReportService = new TillReportService();
+			eodService = new EODService();
 			executor = Executors.newCachedThreadPool();
 		}catch (IOException e){
 			dialogPane.showError("Error", "Error initializing budget and expenses service", e);
@@ -149,14 +153,99 @@ public class BudgetAndExpensesController extends DateSelectController{
 				);
 				return tillReportData.stream()
 						.mapToDouble(TillReportDataPoint::getAmount)
+						.average().getAsDouble();
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}, executor);
+
+		CompletableFuture<Double> lastYearGrossProfitFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				double grossProfit;
+				double zDispenseGovtContribution;
+				double totalGovtContribution;
+
+				// Gross Profit ($) + Z Dispense govt contribution - Total govt contribution, (I + W - G)
+				List<TillReportDataPoint> tillReportData = tillReportService.getTillReportDataPointsByKey(
+						main.getCurrentStore().getStoreID(),
+						lastYearMonthObject.atDay(1),
+						lastYearMonthObject.atEndOfMonth(),
+						"Gross Profit ($)"
+				);
+
+				grossProfit = tillReportData.stream()
+						.mapToDouble(TillReportDataPoint::getAmount)
 						.sum();
+
+				tillReportData = tillReportService.getTillReportDataPointsByKey(
+						main.getCurrentStore().getStoreID(),
+						lastYearMonthObject.atDay(1),
+						lastYearMonthObject.atEndOfMonth(),
+						"Govt Recovery"
+				);
+
+				zDispenseGovtContribution = tillReportData.stream()
+						.mapToDouble(TillReportDataPoint::getAmount)
+						.sum();
+
+				tillReportData = tillReportService.getTillReportDataPointsByKey(
+						main.getCurrentStore().getStoreID(),
+						lastYearMonthObject.atDay(1),
+						lastYearMonthObject.atEndOfMonth(),
+						"Total Government Contribution"
+				);
+
+				totalGovtContribution = tillReportData.stream()
+						.mapToDouble(TillReportDataPoint::getAmount)
+						.sum();
+
+				return grossProfit + zDispenseGovtContribution - totalGovtContribution;
+
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}, executor);
+
+		CompletableFuture<Integer> lastYearScriptsOnFileFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				List<EODDataPoint> eodData = eodService.getEODDataPoints(
+						main.getCurrentStore().getStoreID(),
+						lastYearMonthObject.atDay(1),
+						lastYearMonthObject.atEndOfMonth()
+				);
+
+				return eodData.stream()
+						.sorted(Comparator.comparing(EODDataPoint::getDate).reversed())
+						.filter(dataPoint -> dataPoint.getScriptsOnFile() > 0)
+						.findFirst()
+						.map(EODDataPoint::getScriptsOnFile)
+						.orElse(0);
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}, executor);
+
+		CompletableFuture<Integer> lastYearMedsChecksFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				List<EODDataPoint> eodData = eodService.getEODDataPoints(
+						main.getCurrentStore().getStoreID(),
+						lastYearMonthObject.atDay(1),
+						lastYearMonthObject.atEndOfMonth()
+				);
+
+				return eodData.stream()
+						.sorted(Comparator.comparing(EODDataPoint::getDate).reversed())
+						.filter(dataPoint -> dataPoint.getMedschecks() > 0)
+						.findFirst()
+						.map(EODDataPoint::getMedschecks)
+						.orElse(0);
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}
 		}, executor);
 
 		CompletableFuture.allOf(rosterUtilsFuture, budgetDataFuture, cpaPaymentFuture,
-						tacPaymentFuture, otherPaymentFuture, lastYearScriptCountFuture, lastYearOtcCustomerFuture)
+						tacPaymentFuture, otherPaymentFuture, lastYearScriptCountFuture, lastYearOtcCustomerFuture, lastYearGrossProfitFuture, lastYearScriptsOnFileFuture, lastYearMedsChecksFuture)
 				.thenRunAsync(() -> {
 					try {
 						RosterUtils rosterUtils = rosterUtilsFuture.get();
@@ -166,22 +255,22 @@ public class BudgetAndExpensesController extends DateSelectController{
 						double totalOtherPayment = otherPaymentFuture.get();
 						double lastYearScriptCount = lastYearScriptCountFuture.get();
 						double lastYearOtcCustomer = lastYearOtcCustomerFuture.get();
+						double lastYearGrossProfit = lastYearGrossProfitFuture.get();
+						int lastYearScriptsOnFile = lastYearScriptsOnFileFuture.get();
+						int lastYearMedsChecks = lastYearMedsChecksFuture.get();
 
 						Platform.runLater(() -> {
 							updateUIWithData(rosterUtils, data, totalCPAPayment, totalTACPayment, totalOtherPayment);
 							noOfScriptsLast.setText(String.format("%.0f", lastYearScriptCount));
-
 							otcCustomerLast.setText(String.format("%.2f", lastYearOtcCustomer));
-							TableUtils.formatTextField(noOfScriptsLast, this::updateTotals, TableUtils.formatStyle.INTEGER);
-							TableUtils.formatTextField(noOfScriptsGrowth1, this::updateTotals, TableUtils.formatStyle.PERCENTAGE);
-							TableUtils.formatTextField(noOfScriptsTarget1, this::updateTotals, TableUtils.formatStyle.INTEGER);
-							TableUtils.formatTextField(noOfScriptsGrowth2, this::updateTotals, TableUtils.formatStyle.PERCENTAGE);
-							TableUtils.formatTextField(noOfScriptsTarget2, this::updateTotals, TableUtils.formatStyle.INTEGER);
-							TableUtils.formatTextField(otcCustomerLast, this::updateTotals, TableUtils.formatStyle.CURRENCY);
-							TableUtils.formatTextField(otcCustomerGrowth1, this::updateTotals, TableUtils.formatStyle.PERCENTAGE);
-							TableUtils.formatTextField(otcCustomerTarget1, this::updateTotals, TableUtils.formatStyle.CURRENCY);
-							TableUtils.formatTextField(otcCustomerGrowth2, this::updateTotals, TableUtils.formatStyle.PERCENTAGE);
-							TableUtils.formatTextField(otcCustomerTarget2, this::updateTotals, TableUtils.formatStyle.CURRENCY);
+							gpDollarLast.setText(String.format("%.2f", lastYearGrossProfit));
+							scriptsOnFileLast.setText(String.valueOf(lastYearScriptsOnFile));
+							medschecksLast.setText(String.valueOf(lastYearMedsChecks));
+							formatIntegerTargetFields(noOfScriptsLast, noOfScriptsGrowth1, noOfScriptsTarget1, noOfScriptsGrowth2, noOfScriptsTarget2);
+							formatCurrencyTargetFields(otcCustomerLast, otcCustomerGrowth1, otcCustomerTarget1, otcCustomerGrowth2, otcCustomerTarget2);
+							formatCurrencyTargetFields(gpDollarLast, gpDollarGrowth1, gpDollarTarget1, gpDollarGrowth2, gpDollarTarget2);
+							formatIntegerTargetFields(scriptsOnFileLast, scriptsOnFileGrowth1, scriptsOnFileTarget1, scriptsOnFileGrowth2, scriptsOnFileTarget2);
+							formatIntegerTargetFields(medschecksLast, medschecksGrowth1, medschecksTarget1, medschecksGrowth2, medschecksTarget2);
 							TableUtils.formatTextFields(endOfMonthTable, this::updateTotals);
 							updateTotals();
 							progressSpinner.setVisible(false);
@@ -193,6 +282,22 @@ public class BudgetAndExpensesController extends DateSelectController{
 						});
 					}
 				}, executor);
+	}
+
+	private void formatCurrencyTargetFields(MFXTextField lastYearField, MFXTextField growth1Field, MFXTextField target1Field, MFXTextField growth2Field, MFXTextField target2Field) {
+		TableUtils.formatTextField(lastYearField, this::updateTotals, TableUtils.formatStyle.CURRENCY);
+		TableUtils.formatTextField(growth1Field, this::updateTotals, TableUtils.formatStyle.PERCENTAGE);
+		TableUtils.formatTextField(target1Field, this::updateTotals, TableUtils.formatStyle.CURRENCY);
+		TableUtils.formatTextField(growth2Field, this::updateTotals, TableUtils.formatStyle.PERCENTAGE);
+		TableUtils.formatTextField(target2Field, this::updateTotals, TableUtils.formatStyle.CURRENCY);
+	}
+
+	private void formatIntegerTargetFields(MFXTextField lastYearField, MFXTextField growth1Field, MFXTextField target1Field, MFXTextField growth2Field, MFXTextField target2Field) {
+		TableUtils.formatTextField(lastYearField, this::updateTotals, TableUtils.formatStyle.INTEGER);
+		TableUtils.formatTextField(growth1Field, this::updateTotals, TableUtils.formatStyle.PERCENTAGE);
+		TableUtils.formatTextField(target1Field, this::updateTotals, TableUtils.formatStyle.INTEGER);
+		TableUtils.formatTextField(growth2Field, this::updateTotals, TableUtils.formatStyle.PERCENTAGE);
+		TableUtils.formatTextField(target2Field, this::updateTotals, TableUtils.formatStyle.INTEGER);
 	}
 
 	private void updateUIWithData(RosterUtils rosterUtils, BudgetAndExpensesDataPoint data,
