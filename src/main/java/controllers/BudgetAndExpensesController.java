@@ -8,13 +8,8 @@ import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.layout.*;
-import models.BudgetAndExpensesDataPoint;
-import models.EODDataPoint;
-import models.TillReportDataPoint;
-import services.AccountPaymentService;
-import services.BudgetExpensesService;
-import services.EODService;
-import services.TillReportService;
+import models.*;
+import services.*;
 import utils.RosterUtils;
 import utils.TableUtils;
 import utils.ValidatorUtils;
@@ -39,14 +34,20 @@ public class BudgetAndExpensesController extends DateSelectController{
     @FXML private GridPane endOfMonthTable;
 	@FXML private MFXProgressSpinner progressSpinner,saveProgressSpinner;
 	@FXML private MFXTextField noOfScriptsLast, noOfScriptsGrowth1, noOfScriptsTarget1, noOfScriptsGrowth2, noOfScriptsTarget2;
+	private boolean noOfScriptsTarget1UseGrowth, noOfScriptsTarget2UseGrowth;
 	@FXML private MFXTextField otcCustomerLast, otcCustomerGrowth1, otcCustomerTarget1, otcCustomerGrowth2, otcCustomerTarget2;
+	private boolean otcCustomerTarget1UseGrowth, otcCustomerTarget2UseGrowth;
 	@FXML private MFXTextField gpDollarLast, gpDollarGrowth1, gpDollarTarget1, gpDollarGrowth2, gpDollarTarget2;
+	private boolean gpDollarTarget1UseGrowth, gpDollarTarget2UseGrowth;
 	@FXML private MFXTextField scriptsOnFileLast, scriptsOnFileGrowth1, scriptsOnFileTarget1, scriptsOnFileGrowth2, scriptsOnFileTarget2;
+	private boolean scriptsOnFileTarget1UseGrowth, scriptsOnFileTarget2UseGrowth;
 	@FXML private MFXTextField medschecksLast, medschecksGrowth1, medschecksTarget1, medschecksGrowth2, medschecksTarget2;
+	private boolean medschecksTarget1UseGrowth, medschecksTarget2UseGrowth;
 	private BudgetExpensesService budgetExpensesService;
 	private AccountPaymentService accountPaymentService;
 	private TillReportService tillReportService;
 	private EODService eodService;
+	private TargetService targetService;
 
 	@FXML
 	private void initialize() {
@@ -55,6 +56,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 			accountPaymentService = new AccountPaymentService();
 			tillReportService = new TillReportService();
 			eodService = new EODService();
+			targetService = new TargetService();
 			executor = Executors.newCachedThreadPool();
 		}catch (IOException e){
 			dialogPane.showError("Error", "Error initializing budget and expenses service", e);
@@ -266,11 +268,11 @@ public class BudgetAndExpensesController extends DateSelectController{
 							gpDollarLast.setText(String.format("%.2f", lastYearGrossProfit));
 							scriptsOnFileLast.setText(String.valueOf(lastYearScriptsOnFile));
 							medschecksLast.setText(String.valueOf(lastYearMedsChecks));
-							formatIntegerTargetFields(noOfScriptsLast, noOfScriptsGrowth1, noOfScriptsTarget1, noOfScriptsGrowth2, noOfScriptsTarget2);
-							formatCurrencyTargetFields(otcCustomerLast, otcCustomerGrowth1, otcCustomerTarget1, otcCustomerGrowth2, otcCustomerTarget2);
-							formatCurrencyTargetFields(gpDollarLast, gpDollarGrowth1, gpDollarTarget1, gpDollarGrowth2, gpDollarTarget2);
-							formatIntegerTargetFields(scriptsOnFileLast, scriptsOnFileGrowth1, scriptsOnFileTarget1, scriptsOnFileGrowth2, scriptsOnFileTarget2);
-							formatIntegerTargetFields(medschecksLast, medschecksGrowth1, medschecksTarget1, medschecksGrowth2, medschecksTarget2);
+							formatIntegerTargetFields(noOfScriptsLast, noOfScriptsGrowth1, noOfScriptsTarget1, noOfScriptsGrowth2, noOfScriptsTarget2, noOfScriptsTarget1UseGrowth, noOfScriptsTarget2UseGrowth);
+							formatCurrencyTargetFields(otcCustomerLast, otcCustomerGrowth1, otcCustomerTarget1, otcCustomerGrowth2, otcCustomerTarget2, otcCustomerTarget1UseGrowth, otcCustomerTarget2UseGrowth);
+							formatCurrencyTargetFields(gpDollarLast, gpDollarGrowth1, gpDollarTarget1, gpDollarGrowth2, gpDollarTarget2, gpDollarTarget1UseGrowth, gpDollarTarget2UseGrowth);
+							formatIntegerTargetFields(scriptsOnFileLast, scriptsOnFileGrowth1, scriptsOnFileTarget1, scriptsOnFileGrowth2, scriptsOnFileTarget2, scriptsOnFileTarget1UseGrowth, scriptsOnFileTarget2UseGrowth);
+							formatIntegerTargetFields(medschecksLast, medschecksGrowth1, medschecksTarget1, medschecksGrowth2, medschecksTarget2, medschecksTarget1UseGrowth, medschecksTarget2UseGrowth);
 							TableUtils.formatTextFields(endOfMonthTable, this::updateTotals);
 							updateTotals();
 							progressSpinner.setVisible(false);
@@ -284,20 +286,86 @@ public class BudgetAndExpensesController extends DateSelectController{
 				}, executor);
 	}
 
-	private void formatCurrencyTargetFields(MFXTextField lastYearField, MFXTextField growth1Field, MFXTextField target1Field, MFXTextField growth2Field, MFXTextField target2Field) {
-		TableUtils.formatTextField(lastYearField, this::updateTotals, TableUtils.formatStyle.CURRENCY);
-		TableUtils.formatTextField(growth1Field, this::updateTotals, TableUtils.formatStyle.PERCENTAGE);
-		TableUtils.formatTextField(target1Field, this::updateTotals, TableUtils.formatStyle.CURRENCY);
-		TableUtils.formatTextField(growth2Field, this::updateTotals, TableUtils.formatStyle.PERCENTAGE);
-		TableUtils.formatTextField(target2Field, this::updateTotals, TableUtils.formatStyle.CURRENCY);
-	}
-
-	private void formatIntegerTargetFields(MFXTextField lastYearField, MFXTextField growth1Field, MFXTextField target1Field, MFXTextField growth2Field, MFXTextField target2Field) {
+	private void formatIntegerTargetFields(MFXTextField lastYearField, MFXTextField growth1Field, MFXTextField target1Field, MFXTextField growth2Field, MFXTextField target2Field, boolean useGrowth1, boolean useGrowth2) {
+		// Apply the standard formatting
 		TableUtils.formatTextField(lastYearField, this::updateTotals, TableUtils.formatStyle.INTEGER);
 		TableUtils.formatTextField(growth1Field, this::updateTotals, TableUtils.formatStyle.PERCENTAGE);
 		TableUtils.formatTextField(target1Field, this::updateTotals, TableUtils.formatStyle.INTEGER);
 		TableUtils.formatTextField(growth2Field, this::updateTotals, TableUtils.formatStyle.PERCENTAGE);
 		TableUtils.formatTextField(target2Field, this::updateTotals, TableUtils.formatStyle.INTEGER);
+
+		setupTargetPairListeners(lastYearField, growth1Field, target1Field, TableUtils.formatStyle.INTEGER, useGrowth1);
+		setupTargetPairListeners(target1Field, growth2Field, target2Field, TableUtils.formatStyle.INTEGER, useGrowth2);
+	}
+
+	private void formatCurrencyTargetFields(MFXTextField lastYearField, MFXTextField growth1Field, MFXTextField target1Field, MFXTextField growth2Field, MFXTextField target2Field, boolean useGrowth1, boolean useGrowth2) {
+		TableUtils.formatTextField(lastYearField, this::updateTotals, TableUtils.formatStyle.CURRENCY);
+		TableUtils.formatTextField(growth1Field, this::updateTotals, TableUtils.formatStyle.PERCENTAGE);
+		TableUtils.formatTextField(target1Field, this::updateTotals, TableUtils.formatStyle.CURRENCY);
+		TableUtils.formatTextField(growth2Field, this::updateTotals, TableUtils.formatStyle.PERCENTAGE);
+		TableUtils.formatTextField(target2Field, this::updateTotals, TableUtils.formatStyle.CURRENCY);
+
+		setupTargetPairListeners(lastYearField, growth1Field, target1Field, TableUtils.formatStyle.CURRENCY, useGrowth1);
+		setupTargetPairListeners(target1Field, growth2Field, target2Field, TableUtils.formatStyle.CURRENCY, useGrowth2);
+	}
+
+	private void setupTargetPairListeners(MFXTextField baseField, MFXTextField growthField, MFXTextField targetField, TableUtils.formatStyle format, boolean useGrowth) {
+		growthField.textProperty().addListener((_, oldValue, newValue) -> {
+			if (!newValue.equals(oldValue)) {
+				if (!growthField.isFocused() || !newValue.isEmpty()) {
+					updateTargetFromGrowth(baseField, growthField, targetField, format, useGrowth);
+				}
+			}
+		});
+
+		targetField.textProperty().addListener((_, oldValue, newValue) -> {
+			if (!newValue.equals(oldValue)) {
+				if (!targetField.isFocused() || !newValue.isEmpty()) {
+					updateGrowthFromTarget(baseField, growthField, targetField, useGrowth);
+				}
+			}
+		});
+	}
+
+	private void updateTargetFromGrowth(MFXTextField baseField, MFXTextField growthField, MFXTextField targetField, TableUtils.formatStyle format, boolean useGrowth) {
+		try {
+			if (!baseField.getText().isEmpty() && !growthField.getText().isEmpty()) {
+				String growthText = growthField.getText().replace("%", "").trim();
+				double baseValue = Double.parseDouble(baseField.getText());
+				double growth = Double.parseDouble(growthText) / 100; // Convert percentage to decimal
+				double target = baseValue * (1 + growth);
+				useGrowth = true;
+
+				// Format based on the field type
+				if (format == TableUtils.formatStyle.INTEGER) {
+					targetField.setText(String.format("%.0f", target));
+				} else if (format == TableUtils.formatStyle.CURRENCY) {
+					targetField.setText(String.format("%.2f", target));
+				}
+			}
+		} catch (NumberFormatException ex) {
+			if (growthField.isFocused()) {
+				targetField.setText("");
+			}
+		}
+	}
+
+	private void updateGrowthFromTarget(MFXTextField baseField, MFXTextField growthField, MFXTextField targetField, boolean useGrowth) {
+		try {
+			if (!baseField.getText().isEmpty() && !targetField.getText().isEmpty()) {
+				double baseValue = Double.parseDouble(baseField.getText());
+				double target = Double.parseDouble(targetField.getText());
+				if (baseValue != 0) {
+					double growth = ((target / baseValue) - 1) * 100; // Convert to percentage
+					growthField.setText(String.format("%.1f", growth));
+					useGrowth = false;
+				}
+			}
+		} catch (NumberFormatException ex) {
+			if (targetField.isFocused()) {
+				growthField.setText("");
+			}
+		}
 	}
 
 	private void updateUIWithData(RosterUtils rosterUtils, BudgetAndExpensesDataPoint data,
@@ -385,7 +453,10 @@ public class BudgetAndExpensesController extends DateSelectController{
 		// Validate all fields
 		if (!monthlyRentField.isValid() || !dailyOutgoingsField.isValid() || !monthlyLoanField.isValid() ||
 				!cpaIncomeXero.isValid() || !lanternPayIncomeXero.isValid() || !otherIncomeXero.isValid() ||
-				!atoGSTrefundXero.isValid() || !monthlyWagesField.isValid()) {
+				!atoGSTrefundXero.isValid() || !monthlyWagesField.isValid() || !noOfScriptsTarget1.isValid() ||
+				!noOfScriptsTarget2.isValid() || !otcCustomerTarget1.isValid() || !otcCustomerTarget2.isValid() ||
+				!gpDollarTarget1.isValid() || !gpDollarTarget2.isValid() || !scriptsOnFileTarget1.isValid() ||
+				!scriptsOnFileTarget2.isValid() || !medschecksTarget1.isValid() || !medschecksTarget2.isValid()) {
 			errorLabel.setText("Please ensure all fields are valid");
 			errorLabel.setVisible(true);
 			return;
@@ -408,6 +479,68 @@ public class BudgetAndExpensesController extends DateSelectController{
 				newData.setAtoGSTrefund(Double.parseDouble(atoGSTrefundXero.getText()));
 				newData.setMonthlyWages(Double.parseDouble(monthlyWagesField.getText()));
 				budgetExpensesService.updateBudgetExpensesData(newData);
+
+				DBTargetDatapoint noOfScriptsTargetData = new DBTargetDatapoint(
+						LocalDate.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth(), 1),
+						"NoOfScripts",
+						Double.parseDouble(noOfScriptsGrowth1.getText()),
+						Double.parseDouble(noOfScriptsTarget1.getText()),
+						noOfScriptsTarget1UseGrowth,
+						Double.parseDouble(noOfScriptsGrowth2.getText()),
+						Double.parseDouble(noOfScriptsTarget2.getText()),
+						noOfScriptsTarget2UseGrowth
+				);
+
+				DBTargetDatapoint otcCustomerTargetData = new DBTargetDatapoint(
+						LocalDate.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth(), 1),
+						"OTCCustomer",
+						Double.parseDouble(otcCustomerGrowth1.getText()),
+						Double.parseDouble(otcCustomerTarget1.getText()),
+						otcCustomerTarget1UseGrowth,
+						Double.parseDouble(otcCustomerGrowth2.getText()),
+						Double.parseDouble(otcCustomerTarget2.getText()),
+						otcCustomerTarget2UseGrowth
+				);
+
+				DBTargetDatapoint gpDollarTargetData = new DBTargetDatapoint(
+						LocalDate.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth(), 1),
+						"GPDollar",
+						Double.parseDouble(gpDollarGrowth1.getText()),
+						Double.parseDouble(gpDollarTarget1.getText()),
+						gpDollarTarget1UseGrowth,
+						Double.parseDouble(gpDollarGrowth2.getText()),
+						Double.parseDouble(gpDollarTarget2.getText()),
+						gpDollarTarget2UseGrowth
+				);
+
+				DBTargetDatapoint scriptsOnFileTargetData = new DBTargetDatapoint(
+						LocalDate.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth(), 1),
+						"ScriptsOnFile",
+						Double.parseDouble(scriptsOnFileGrowth1.getText()),
+						Double.parseDouble(scriptsOnFileTarget1.getText()),
+						scriptsOnFileTarget1UseGrowth,
+						Double.parseDouble(scriptsOnFileGrowth2.getText()),
+						Double.parseDouble(scriptsOnFileTarget2.getText()),
+						scriptsOnFileTarget2UseGrowth
+				);
+
+				DBTargetDatapoint medschecksTargetData = new DBTargetDatapoint(
+						LocalDate.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth(), 1),
+						"Medschecks",
+						Double.parseDouble(medschecksGrowth1.getText()),
+						Double.parseDouble(medschecksTarget1.getText()),
+						medschecksTarget1UseGrowth,
+						Double.parseDouble(medschecksGrowth2.getText()),
+						Double.parseDouble(medschecksTarget2.getText()),
+						medschecksTarget2UseGrowth
+				);
+
+				targetService.updateTargetData(noOfScriptsTargetData);
+				targetService.updateTargetData(otcCustomerTargetData);
+				targetService.updateTargetData(gpDollarTargetData);
+				targetService.updateTargetData(scriptsOnFileTargetData);
+				targetService.updateTargetData(medschecksTargetData);
+
 				return null;
 			}
 		};

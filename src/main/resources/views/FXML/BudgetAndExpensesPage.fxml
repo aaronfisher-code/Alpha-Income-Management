@@ -22,7 +22,7 @@
 <?import javafx.scene.paint.Color?>
 <?import javafx.scene.text.Font?>
 
-<StackPane fx:id="backgroundPane" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.BudgetAndExpensesController">
+<StackPane fx:id="backgroundPane" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.BudgetAndExpensesController">
    <children>
       <BorderPane prefWidth="955.0" style="-fx-background-color: TRANSPARENT;">
          <padding>
@@ -320,12 +320,12 @@
                               <MFXTextField fx:id="otherIncomeSpreadsheet" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="2" GridPane.rowIndex="3" />
                               <MFXTextField fx:id="otherIncomeVariance" allowEdit="false" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" selectable="false" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="3" GridPane.rowIndex="3" />
                               <MFXTextField fx:id="atoGSTrefundXero" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="1" GridPane.rowIndex="4" />
-                              <Label maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-color: #d8d8d8;" GridPane.columnIndex="2" GridPane.rowIndex="4">
+                              <Label maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" GridPane.columnIndex="2" GridPane.rowIndex="4">
                                  <padding>
                                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                  </padding>
                               </Label>
-                              <Label maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-color: #d8d8d8;" GridPane.columnIndex="3" GridPane.rowIndex="4">
+                              <Label maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" GridPane.columnIndex="3" GridPane.rowIndex="4">
                                  <padding>
                                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                  </padding>
@@ -408,31 +408,31 @@
                                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                  </padding>
                               </Label>
-                              <MFXTextField fx:id="noOfScriptsLast" editable="false" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                              <MFXTextField fx:id="noOfScriptsLast" editable="false" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                               <MFXTextField fx:id="noOfScriptsGrowth1" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="2" GridPane.rowIndex="1" />
-                              <MFXTextField fx:id="noOfScriptsTarget1" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="3" GridPane.rowIndex="1" />
+                              <MFXTextField fx:id="noOfScriptsTarget1" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="altText" GridPane.columnIndex="3" GridPane.rowIndex="1" />
                               <MFXTextField fx:id="noOfScriptsGrowth2" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="4" GridPane.rowIndex="1" />
-                              <MFXTextField fx:id="noOfScriptsTarget2" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="5" GridPane.rowIndex="1" />
-                              <MFXTextField fx:id="otcCustomerLast" editable="false" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                              <MFXTextField fx:id="noOfScriptsTarget2" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="altText" GridPane.columnIndex="5" GridPane.rowIndex="1" />
+                              <MFXTextField fx:id="otcCustomerLast" editable="false" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="1" GridPane.rowIndex="2" />
                               <MFXTextField fx:id="otcCustomerGrowth1" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="2" GridPane.rowIndex="2" />
-                              <MFXTextField fx:id="otcCustomerTarget1" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="3" GridPane.rowIndex="2" />
+                              <MFXTextField fx:id="otcCustomerTarget1" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="altText" GridPane.columnIndex="3" GridPane.rowIndex="2" />
                               <MFXTextField fx:id="otcCustomerGrowth2" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="4" GridPane.rowIndex="2" />
-                              <MFXTextField fx:id="otcCustomerTarget2" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="5" GridPane.rowIndex="2" />
-                              <MFXTextField fx:id="gpDollarLast" editable="false" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                              <MFXTextField fx:id="otcCustomerTarget2" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="altText" GridPane.columnIndex="5" GridPane.rowIndex="2" />
+                              <MFXTextField fx:id="gpDollarLast" editable="false" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="1" GridPane.rowIndex="3" />
                               <MFXTextField fx:id="gpDollarGrowth1" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="2" GridPane.rowIndex="3" />
-                              <MFXTextField fx:id="gpDollarTarget1" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="3" GridPane.rowIndex="3" />
+                              <MFXTextField fx:id="gpDollarTarget1" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="altText" GridPane.columnIndex="3" GridPane.rowIndex="3" />
                               <MFXTextField fx:id="gpDollarGrowth2" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="4" GridPane.rowIndex="3" />
-                              <MFXTextField fx:id="gpDollarTarget2" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="5" GridPane.rowIndex="3" />
-                              <MFXTextField fx:id="scriptsOnFileLast" editable="false" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+                              <MFXTextField fx:id="gpDollarTarget2" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="altText" GridPane.columnIndex="5" GridPane.rowIndex="3" />
+                              <MFXTextField fx:id="scriptsOnFileLast" editable="false" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="1" GridPane.rowIndex="4" />
                               <MFXTextField fx:id="scriptsOnFileGrowth1" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="2" GridPane.rowIndex="4" />
-                              <MFXTextField fx:id="scriptsOnFileTarget1" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="3" GridPane.rowIndex="4" />
+                              <MFXTextField fx:id="scriptsOnFileTarget1" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="altText" GridPane.columnIndex="3" GridPane.rowIndex="4" />
                               <MFXTextField fx:id="scriptsOnFileGrowth2" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="4" GridPane.rowIndex="4" />
-                              <MFXTextField fx:id="scriptsOnFileTarget2" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="5" GridPane.rowIndex="4" />
-                              <MFXTextField fx:id="medschecksLast" editable="false" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="1" GridPane.rowIndex="5" />
+                              <MFXTextField fx:id="scriptsOnFileTarget2" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="altText" GridPane.columnIndex="5" GridPane.rowIndex="4" />
+                              <MFXTextField fx:id="medschecksLast" editable="false" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="1" GridPane.rowIndex="5" />
                               <MFXTextField fx:id="medschecksGrowth1" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="2" GridPane.rowIndex="5" />
-                              <MFXTextField fx:id="medschecksTarget1" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="3" GridPane.rowIndex="5" />
+                              <MFXTextField fx:id="medschecksTarget1" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="altText" GridPane.columnIndex="3" GridPane.rowIndex="5" />
                               <MFXTextField fx:id="medschecksGrowth2" floatMode="DISABLED" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" GridPane.columnIndex="4" GridPane.rowIndex="5" />
-                              <MFXTextField fx:id="medschecksTarget2" editable="false" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="disableText" GridPane.columnIndex="5" GridPane.rowIndex="5" />
+                              <MFXTextField fx:id="medschecksTarget2" floatMode="DISABLED" focusTraversable="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-border-radius: 0;" styleClass="altText" GridPane.columnIndex="5" GridPane.rowIndex="5" />
                            </children>
                            <padding>
                               <Insets bottom="15.0" left="10.0" right="10.0" top="15.0" />
