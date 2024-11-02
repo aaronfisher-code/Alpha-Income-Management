@@ -4,9 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import models.BudgetAndExpensesDataPoint;
 import models.DBTargetDatapoint;
+import models.EODDataPoint;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 import utils.DatabaseConnectionManager;
 
@@ -15,6 +18,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.List;
 import java.util.Properties;
 
 public class TargetService {
@@ -55,6 +61,19 @@ public class TargetService {
             }
         }
         return new double[]{0, 0};
+    }
+
+    public List<DBTargetDatapoint> getTargetData(int storeId, YearMonth yearMonth) {
+        String url = apiBaseUrl + "?storeId=" + storeId + "&yearMonth=" + yearMonth;
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+
+        ResponseEntity<List<DBTargetDatapoint>> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                new ParameterizedTypeReference<>() {}
+        );
+        return response.getBody();
     }
 
     public void updateTargetData(DBTargetDatapoint data) {

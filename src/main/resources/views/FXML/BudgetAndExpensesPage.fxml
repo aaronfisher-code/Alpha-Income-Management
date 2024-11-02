@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.dlsc.gemsfx.DialogPane?>
 <?import io.github.palexdev.materialfx.controls.MFXButton?>
 <?import io.github.palexdev.materialfx.controls.MFXProgressSpinner?>
 <?import io.github.palexdev.materialfx.controls.MFXScrollPane?>
@@ -22,7 +23,7 @@
 <?import javafx.scene.paint.Color?>
 <?import javafx.scene.text.Font?>
 
-<StackPane fx:id="backgroundPane" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.BudgetAndExpensesController">
+<StackPane fx:id="backgroundPane" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.BudgetAndExpensesController">
    <children>
       <BorderPane prefWidth="955.0" style="-fx-background-color: TRANSPARENT;">
          <padding>
@@ -454,6 +455,7 @@
             </MFXScrollPane>
          </center>
       </BorderPane>
+      <DialogPane fx:id="dialogPane" />
    </children>
    <stylesheets>
       <URL value="@../CSS/application.css" />
