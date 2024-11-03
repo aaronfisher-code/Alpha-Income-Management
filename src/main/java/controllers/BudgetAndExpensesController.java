@@ -68,7 +68,21 @@ public class BudgetAndExpensesController extends DateSelectController{
 	public void fill() {
 		for (MFXTextField mfxTextField : Arrays.asList(monthlyRentField, dailyOutgoingsField, monthlyLoanField, monthlyWagesField, cpaIncomeXero, lanternPayIncomeXero, otherIncomeXero, atoGSTrefundXero)) {
 			if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Budget - Edit"))) {
-				ValidatorUtils.setupRegexValidation(mfxTextField,errorLabel,ValidatorUtils.CASH_EMPTY_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
+				ValidatorUtils.setupRegexValidation(mfxTextField,errorLabel,ValidatorUtils.CASH_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
+			}else{
+				mfxTextField.setDisable(true);
+			}
+		}
+		for(MFXTextField mfxTextField: Arrays.asList(noOfScriptsGrowth1,noOfScriptsGrowth2,otcCustomerGrowth1,otcCustomerGrowth2,gpDollarGrowth1,gpDollarGrowth2,scriptsOnFileGrowth1,scriptsOnFileGrowth2,medschecksGrowth1,medschecksGrowth2)){
+			if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Budget - Edit"))) {
+				ValidatorUtils.setupRegexValidation(mfxTextField, errorLabel, ValidatorUtils.CASH_REGEX, ValidatorUtils.CASH_ERROR, "", saveButton);
+			}else{
+				mfxTextField.setDisable(true);
+			}
+		}
+		for(MFXTextField mfxTextField:Arrays.asList(noOfScriptsTarget1,noOfScriptsTarget2,otcCustomerTarget1,otcCustomerTarget2,gpDollarTarget1,gpDollarTarget2,scriptsOnFileTarget1,scriptsOnFileTarget2,medschecksTarget1,medschecksTarget2)){
+			if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Budget - Edit"))) {
+				ValidatorUtils.setupRegexValidation(mfxTextField, errorLabel, ValidatorUtils.CASH_REGEX, ValidatorUtils.CASH_ERROR, "", saveButton);
 			}else{
 				mfxTextField.setDisable(true);
 			}

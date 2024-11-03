@@ -20,7 +20,7 @@ import static io.github.palexdev.materialfx.validation.Validated.INVALID_PSEUDO_
 public class ValidatorUtils {
     public final static String CASH_REGEX = "-?[0-9]+\\.?[0-9]?[0-9]?";
     public final static String CASH_EMPTY_REGEX = "^(-?[0-9]+\\.?[0-9]?[0-9]?)?$";
-    public final static String CASH_ERROR = "Please enter a valid dollar amount";
+    public final static String CASH_ERROR = "Please enter a valid amount";
     public final static String BLANK_REGEX = "(.|\\s)*\\S(.|\\s)*";
     public final static String BLANK_ERROR = "This field must not be blank";
     public final static String INT_REGEX = "-?[0-9]*";
