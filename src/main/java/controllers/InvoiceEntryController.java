@@ -910,9 +910,7 @@ public class InvoiceEntryController extends DateSelectController{
 					FileInputStream file = new FileInputStream(newfile);
 					HSSFWorkbook workbook = new HSSFWorkbook(file);
 					WorkbookProcessor wbp = new WorkbookProcessor(workbook);
-					for (CellDataPoint cdp : wbp.getDataPoints()) {
-						invoiceService.importInvoiceData(main.getCurrentStore().getStoreID(), cdp);
-					}
+					invoiceService.importInvoiceData(main.getCurrentStore().getStoreID(), wbp.getDataPoints());
 					return null;
 				}
 			};
