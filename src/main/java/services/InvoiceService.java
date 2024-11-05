@@ -119,7 +119,7 @@ public class InvoiceService {
 
         // Process each batch
         for (List<CellDataPoint> batch : batches) {
-            String url = apiBaseUrl + "/import-data-batch?storeId=" + storeId;
+            String url = apiBaseUrl + "/import-data?storeId=" + storeId;
             HttpEntity<List<CellDataPoint>> entity = new HttpEntity<>(batch, createHeaders());
             restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
         }
