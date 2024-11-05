@@ -1,16 +1,19 @@
 package services;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import models.BudgetAndExpensesDataPoint;
 import models.DBTargetDatapoint;
 import models.EODDataPoint;
+import models.Shift;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 import utils.DatabaseConnectionManager;
 
 import java.io.IOException;
@@ -45,24 +48,6 @@ public class TargetService {
         return headers;
     }
 
-    public double[] getTargets(int storeId, String targetName) throws SQLException {
-        String sql = "SELECT * FROM targets WHERE storeID = ? AND targetName = ?";
-        try (Connection connection = DatabaseConnectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setInt(1, storeId);
-            preparedStatement.setString(2, targetName);
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                if (resultSet.next()) {
-                    return new double[]{
-                            resultSet.getDouble("target1"),
-                            resultSet.getDouble("target2")
-                    };
-                }
-            }
-        }
-        return new double[]{0, 0};
-    }
-
     public List<DBTargetDatapoint> getTargetData(int storeId, YearMonth yearMonth) {
         String url = apiBaseUrl + "?storeId=" + storeId + "&yearMonth=" + yearMonth;
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
@@ -79,5 +64,27 @@ public class TargetService {
     public void updateTargetData(DBTargetDatapoint data) {
         HttpEntity<DBTargetDatapoint> entity = new HttpEntity<>(data, createHeaders());
         restTemplate.exchange(apiBaseUrl, HttpMethod.POST, entity, Void.class);
+    }
+
+    public List<DBTargetDatapoint> getTargetsByKey(int storeId, String key, LocalDate startDate, LocalDate endDate) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(apiBaseUrl + "/targets-by-key")
+                .queryParam("storeId", storeId)
+                .queryParam("key", key)
+                .queryParam("startDate", startDate)
+                .queryParam("endDate", endDate);
+
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        ResponseEntity<String> response = restTemplate.exchange(
+                builder.toUriString(),
+                HttpMethod.GET,
+                entity,
+                String.class);
+
+        try {
+            return objectMapper.readValue(response.getBody(), new TypeReference<>() {
+            });
+        } catch (IOException e) {
+            throw new RuntimeException("Error parsing JSON response", e);
+        }
     }
 }
