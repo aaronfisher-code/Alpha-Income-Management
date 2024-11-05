@@ -15,3 +15,11 @@
 .altText{
     -fx-background-color: #F9F9F9;
 }
+
+.mfx-text-field {
+    -fx-border-radius: 0 !important;
+}
+
+.mfx-text-field .text-field {
+    -fx-border-radius: 0 !important;
+}
