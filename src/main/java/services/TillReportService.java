@@ -13,6 +13,7 @@ import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
@@ -78,8 +79,18 @@ public class TillReportService {
         }
     }
 
-    public void importTillReportDataPoint(TillReportDataPoint dataPoint) {
-        HttpEntity<TillReportDataPoint> entity = new HttpEntity<>(dataPoint, createHeaders());
-        restTemplate.exchange(apiBaseUrl + "/import", HttpMethod.POST, entity, Void.class);
+    public void importTillReportData(List<TillReportDataPoint> dataPoints) {
+        int batchSize = 1000;
+        List<List<TillReportDataPoint>> batches = new ArrayList<>();
+        // Split into batches
+        for (int i = 0; i < dataPoints.size(); i += batchSize) {
+            int endIndex = Math.min(i + batchSize, dataPoints.size());
+            batches.add(dataPoints.subList(i, endIndex));
+        }
+        // Process each batch
+        for (List<TillReportDataPoint> batch : batches) {
+            HttpEntity<List<TillReportDataPoint>> entity = new HttpEntity<>(batch, createHeaders());
+            restTemplate.exchange(apiBaseUrl + "/import", HttpMethod.POST, entity, Void.class);
+        }
     }
 }

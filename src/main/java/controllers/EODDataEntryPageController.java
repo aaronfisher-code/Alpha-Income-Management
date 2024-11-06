@@ -21,6 +21,7 @@ import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Locale;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -170,10 +171,12 @@ public class EODDataEntryPageController extends DateSelectController{
 					FileInputStream file = new FileInputStream(newfile);
 					HSSFWorkbook workbook = new HSSFWorkbook(file);
 					WorkbookProcessor wbp = new WorkbookProcessor(workbook);
+					List<TillReportDataPoint> importedData = new ArrayList<>();
 					for (CellDataPoint cdp : wbp.getDataPoints()) {
 						TillReportDataPoint tdp = new TillReportDataPoint(cdp, wbp, targetDate, main.getCurrentStore().getStoreID());
-						tillReportService.importTillReportDataPoint(tdp);
+						importedData.add(tdp);
 					}
+					tillReportService.importTillReportData(importedData);
 					return null;
 				}
 			};
