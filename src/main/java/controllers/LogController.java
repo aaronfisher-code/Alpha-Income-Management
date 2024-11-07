@@ -165,6 +165,9 @@ public class LogController extends PageController {
         Platform.runLater(() -> {
             confirmPasswordLabel.setVisible(true);
             confirmPassword.setVisible(true);
+            username.setOnAction(_ -> userLoginWithPassword(currentUser));
+            password.setOnAction(_ -> userLoginWithPassword(currentUser));
+            confirmPassword.setOnAction(_ -> userLoginWithPassword(currentUser));
             login.setOnAction(_ -> userLoginWithPassword(currentUser));
             subtitle.setText("Please set a new password for this account before signing in");
         });
