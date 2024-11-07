@@ -100,13 +100,6 @@ public class UserService {
         restTemplate.exchange(url, HttpMethod.PUT, entity, Void.class);
     }
 
-    public boolean isPasswordResetRequested(int userID) {
-        String url = apiBaseUrl + "/" + URLEncoder.encode(String.valueOf(userID),StandardCharsets.UTF_8) + "/password-reset-requested";
-        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
-        ResponseEntity<Boolean> response = restTemplate.exchange(url, HttpMethod.GET, entity, Boolean.class);
-        return response.getBody();
-    }
-
     public List<Permission> getUserPermissions(int userID) {
         String url = apiBaseUrl + "/" + URLEncoder.encode(String.valueOf(userID),StandardCharsets.UTF_8) + "/permissions";
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());

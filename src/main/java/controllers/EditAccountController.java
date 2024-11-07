@@ -350,13 +350,6 @@ public class EditAccountController extends PageController {
 		storeSelector.getSelectionModel().clearSelection();
 		permissionsSelector.getSelectionModel().clearSelection();
 		userSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
-		CompletableFuture<Boolean> passwordResetFuture = CompletableFuture.supplyAsync(() -> {
-			try {
-				return userService.isPasswordResetRequested(user.getUserID());
-			} catch (Exception ex) {
-				throw new CompletionException(ex);
-			}
-		}, executor);
 		CompletableFuture<List<Store>> allStoresFuture = CompletableFuture.supplyAsync(() -> {
 			try {
 				return storeService.getAllStores();
@@ -386,14 +379,13 @@ public class EditAccountController extends PageController {
 			}
 		}, executor);
 		CompletableFuture.allOf(
-				passwordResetFuture,
 				allStoresFuture,
 				staffStoresFuture,
 				allPermissionsFuture,
 				userPermissionsFuture
 		).thenRunAsync(() -> {
 			try {
-				boolean isPasswordResetRequested = passwordResetFuture.get();
+				boolean isPasswordResetRequested = user.getPassword()==null;
 				List<Store> allStores = allStoresFuture.get();
 				List<Employment> staffStores = staffStoresFuture.get();
 				List<Permission> allPermissions = allPermissionsFuture.get();
