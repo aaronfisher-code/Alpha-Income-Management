@@ -15,10 +15,7 @@ import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
-import models.Permission;
-import models.Store;
-import models.User;
-import models.Employment;
+import models.*;
 import services.*;
 import utils.AnimationUtils;
 import utils.GUIUtils;
@@ -33,6 +30,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 public class EditAccountController extends PageController {
 
@@ -558,82 +556,81 @@ public class EditAccountController extends PageController {
 	}
 
 	public void addUser() {
+		if (!usernameField.isValid()) {
+			usernameField.requestFocus();
+			return;
+		}
+		if (!firstNameField.isValid()) {
+			firstNameField.requestFocus();
+			return;
+		}
+		if (!lastNameField.isValid()) {
+			lastNameField.requestFocus();
+			return;
+		}
+		if (storeSelector.getSelectionModel().getSelection().isEmpty()) {
+			dialogPane.showError("Error", "No store selected, Please select at least one store for the user to work at");
+			return;
+		}
+
 		String username = usernameField.getText();
 		String fname = firstNameField.getText();
 		String lname = lastNameField.getText();
 		String role = roleField.getText();
 		String profileText = getColorString(profileTextPicker.getValue());
 		String profileBG = getColorString(profileBackgroundPicker.getValue());
-		if (!usernameField.isValid()) {
-			usernameField.requestFocus();
-		} else if (!firstNameField.isValid()) {
-			firstNameField.requestFocus();
-		} else if (!lastNameField.isValid()) {
-			lastNameField.requestFocus();
-		} else if (storeSelector.getSelectionModel().getSelection().isEmpty()) {
-			dialogPane.showError("Error", "No store selected, Please select at least one store for the user to work at");
-		} else {
-			userSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
-			Task<Void> addUserTask = new Task<>() {
-				@Override
-				protected Void call() throws Exception {
-					// Check if username already exists
-					if (userService.getUserByUsername(username) != null) {
-						throw new Exception("Username already exists");
-					}
-					User newUser = new User();
-					newUser.setUsername(username);
-					newUser.setFirst_name(fname);
-					newUser.setLast_name(lname);
-					newUser.setRole(role);
-					newUser.setBgColour(profileBG);
-					newUser.setTextColour(profileText);
-					userService.addUser(newUser);
-					List<CompletableFuture<Void>> futures = new ArrayList<>();
-					// Add employments in parallel
-					for (Store s : storeSelector.getSelectionModel().getSelection().values()) {
-						CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-							try {
-								employmentService.addEmployment(newUser, s);
-							} catch (Exception e) {
-								throw new CompletionException(e);
-							}
-						}, executor);
-						futures.add(future);
-					}
-					// Add user permissions in parallel
-					for (Permission p : permissionsSelector.getSelectionModel().getSelection().values()) {
-						CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-							try {
-								userPermissionService.addUserPermission(newUser, p);
-							} catch (Exception e) {
-								throw new CompletionException(e);
-							}
-						}, executor);
-						futures.add(future);
-					}
-					// Wait for all futures to complete
-					CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-					return null;
+
+		userSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+		Task<Void> addUserTask = new Task<>() {
+			@Override
+			protected Void call() throws Exception {
+				if (userService.getUserByUsername(username) != null) {
+					throw new Exception("Username already exists");
 				}
-			};
-			addUserTask.setOnSucceeded(_ -> {
-				dialogPane.showInformation("Success", "User was successfully added to the database");
-				closeUserPopover();
-				usersView();
-				userSpinner.setMaxWidth(0);
-			});
-			addUserTask.setOnFailed(_ -> {
-				Throwable exception = addUserTask.getException();
-				if (exception.getMessage().equals("Username already exists")) {
-					dialogPane.showError("Error", "Username already exists, Please choose a different username");
-				} else {
-					dialogPane.showError("Error", "An error occurred while adding a user", exception);
-				}
-				userSpinner.setMaxWidth(0);
-			});
-			executor.submit(addUserTask);
-		}
+
+				User newUser = new User();
+				newUser.setUsername(username);
+				newUser.setFirst_name(fname);
+				newUser.setLast_name(lname);
+				newUser.setRole(role);
+				newUser.setBgColour(profileBG);
+				newUser.setTextColour(profileText);
+				User createdUser = userService.addUser(newUser);
+
+				List<Employment> employments = storeSelector.getSelectionModel().getSelection().values().stream()
+						.map(store -> new Employment(createdUser.getUserID(), store.getStoreID()))
+						.collect(Collectors.toList());
+				List<UserPermissionDTO> userPermissions = permissionsSelector.getSelectionModel().getSelection().values().stream()
+						.map(perm -> new UserPermissionDTO(createdUser.getUserID(), perm.getPermissionID()))
+						.collect(Collectors.toList());
+
+				CompletableFuture<Void> additions = CompletableFuture.allOf(
+						CompletableFuture.runAsync(() -> employmentService.addEmployments(employments), executor),
+						CompletableFuture.runAsync(() -> userPermissionService.addUserPermissions(userPermissions), executor)
+				);
+				additions.join();
+				return null;
+			}
+		};
+
+		addUserTask.setOnSucceeded(_ -> {
+			dialogPane.showInformation("Success", "User was successfully added to the database");
+			closeUserPopover();
+			usersView();
+			userSpinner.setMaxWidth(0);
+		});
+		addUserTask.setOnFailed(_ -> {
+			Throwable exception = addUserTask.getException();
+			if ("Username already exists".equals(exception.getMessage())) {
+				dialogPane.showError("Error", "Username already exists, Please choose a different username");
+			} else {
+				dialogPane.showError("Error", "An error occurred while adding a user", exception);
+			}
+			userSpinner.setMaxWidth(0);
+		});
+
+		// 5. Submit task
+		executor.submit(addUserTask);
 	}
 
 	public void editStore(Store store) {
@@ -669,96 +666,78 @@ public class EditAccountController extends PageController {
 	}
 
 	public void editUser(User user) {
-		LocalDate inactiveDate = null;
-		if (inactiveUserToggle.isSelected() && user.getInactiveDate() != null) {
-			inactiveDate = user.getInactiveDate();
-		} else if (inactiveUserToggle.isSelected() && user.getInactiveDate() == null) {
-			inactiveDate = LocalDate.now();
+		if (!firstNameField.isValid()) {
+			firstNameField.requestFocus();
+			return;
 		}
+		if (!lastNameField.isValid()) {
+			lastNameField.requestFocus();
+			return;
+		}
+		if (storeSelector.getSelectionModel().getSelection().isEmpty()) {
+			dialogPane.showError("Error", "No store selected, Please select at least one store for the user to work at");
+			return;
+		}
+
+		LocalDate inactiveDate = inactiveUserToggle.isSelected()
+				? (user.getInactiveDate() != null ? user.getInactiveDate() : LocalDate.now())
+				: null;
 		String username = usernameField.getText();
 		String fname = firstNameField.getText();
 		String lname = lastNameField.getText();
 		String role = roleField.getText();
 		String profileText = getColorString(profileTextPicker.getValue());
 		String profileBG = getColorString(profileBackgroundPicker.getValue());
-		if (!firstNameField.isValid()) {
-			firstNameField.requestFocus();
-		} else if (!lastNameField.isValid()) {
-			lastNameField.requestFocus();
-		} else if (storeSelector.getSelectionModel().getSelection().isEmpty()) {
-			dialogPane.showError("Error", "No store selected, Please select at least one store for the user to work at");
-		} else {
-			userSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
-			LocalDate finalInactiveDate = inactiveDate;
-			Task<Void> editUserTask = new Task<>() {
-				@Override
-				protected Void call() {
-					// Update user details
+
+		userSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
+		Task<Void> editUserTask = new Task<>() {
+			@Override
+			protected Void call() {
+				try {
 					user.setUsername(username);
 					user.setFirst_name(fname);
 					user.setLast_name(lname);
 					user.setRole(role);
 					user.setBgColour(profileBG);
 					user.setTextColour(profileText);
-					user.setInactiveDate(finalInactiveDate);
+					user.setInactiveDate(inactiveDate);
 					userService.updateUser(user);
-					List<CompletableFuture<Void>> futures = new ArrayList<>();
-					// Delete existing employments and permissions
-					CompletableFuture<Void> deleteEmploymentsFuture = CompletableFuture.runAsync(() -> {
-						try {
-							employmentService.deleteEmploymentsForUser(user);
-						} catch (Exception e) {
-							throw new CompletionException(e);
-						}
-					}, executor);
-					CompletableFuture<Void> deletePermissionsFuture = CompletableFuture.runAsync(() -> {
-						try {
-							userPermissionService.deletePermissionsForUser(user);
-						} catch (Exception e) {
-							throw new CompletionException(e);
-						}
-					}, executor);
-					// Wait for deletions to complete before adding new ones
-					CompletableFuture.allOf(deleteEmploymentsFuture, deletePermissionsFuture).join();
-					// Add new employments in parallel
-					for (Store s : storeSelector.getSelectionModel().getSelection().values()) {
-						CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-							try {
-								employmentService.addEmployment(user, s);
-							} catch (Exception e) {
-								throw new CompletionException(e);
-							}
-						}, executor);
-						futures.add(future);
-					}
-					// Add new user permissions in parallel
-					for (Permission p : permissionsSelector.getSelectionModel().getSelection().values()) {
-						CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-							try {
-								userPermissionService.addUserPermission(user, p);
-							} catch (Exception e) {
-								throw new CompletionException(e);
-							}
-						}, executor);
-						futures.add(future);
-					}
-					// Wait for all futures to complete
-					CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+					CompletableFuture<Void> deletions = CompletableFuture.allOf(
+							CompletableFuture.runAsync(() -> employmentService.deleteEmploymentsForUser(user), executor),
+							CompletableFuture.runAsync(() -> userPermissionService.deletePermissionsForUser(user), executor)
+					);
+					deletions.join();
+
+					List<Employment> employments = storeSelector.getSelectionModel().getSelection().values().stream()
+							.map(store -> new Employment(user.getUserID(), store.getStoreID()))
+							.collect(Collectors.toList());
+					List<UserPermissionDTO> userPermissions = permissionsSelector.getSelectionModel().getSelection().values().stream()
+							.map(perm -> new UserPermissionDTO(user.getUserID(), perm.getPermissionID()))
+							.collect(Collectors.toList());
+
+					CompletableFuture<Void> additions = CompletableFuture.allOf(
+							CompletableFuture.runAsync(() -> employmentService.addEmployments(employments), executor),
+							CompletableFuture.runAsync(() -> userPermissionService.addUserPermissions(userPermissions), executor)
+					);
+					additions.join();
 					return null;
+				} catch (Exception e) {
+					throw new CompletionException("Failed to update user", e);
 				}
-			};
-			editUserTask.setOnSucceeded(_ -> {
-				dialogPane.showInformation("Success", "User was successfully updated");
-				closeUserPopover();
-				usersView();
-				userSpinner.setMaxWidth(0);
-			});
-			editUserTask.setOnFailed(_ -> {
-				dialogPane.showError("Error", "An error occurred while updating the user", editUserTask.getException());
-				userSpinner.setMaxWidth(0);
-			});
-			executor.submit(editUserTask);
-		}
+			}
+		};
+		editUserTask.setOnSucceeded(event -> {
+			dialogPane.showInformation("Success", "User was successfully updated");
+			closeUserPopover();
+			usersView();
+			userSpinner.setMaxWidth(0);
+		});
+		editUserTask.setOnFailed(event -> {
+			dialogPane.showError("Error", "An error occurred while updating the user", editUserTask.getException());
+			userSpinner.setMaxWidth(0);
+		});
+		executor.submit(editUserTask);
 	}
 
 	public void resetPassword(User user) {

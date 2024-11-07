@@ -131,9 +131,10 @@ public class UserService {
         }
     }
 
-    public void addUser(User user) {
+    public User addUser(User user) {
         HttpEntity<User> entity = new HttpEntity<>(user, createHeaders());
-        restTemplate.exchange(apiBaseUrl, HttpMethod.POST, entity, Void.class);
+        ResponseEntity<User> response = restTemplate.exchange(apiBaseUrl, HttpMethod.POST, entity, User.class);
+        return response.getBody();
     }
 
     public void updateUser(User user) {

@@ -8,6 +8,11 @@ public class Employment {
 
 	public Employment() {}
 
+	public Employment(int userID, int storeID) {
+		this.userID = userID;
+		this.storeID = storeID;
+	}
+
 	public int getEmploymentID() {
 		return employmentID;
 	}

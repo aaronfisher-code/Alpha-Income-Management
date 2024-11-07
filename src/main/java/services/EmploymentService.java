@@ -1,6 +1,7 @@
 package services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import models.CellDataPoint;
 import models.Employment;
 import models.Store;
 import models.User;
@@ -12,6 +13,8 @@ import org.springframework.web.client.RestTemplate;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 public class EmploymentService {
@@ -35,13 +38,21 @@ public class EmploymentService {
         return headers;
     }
 
-    public void addEmployment(User user, Store store) {
-        Employment employment = new Employment();
-        employment.setUserID(user.getUserID());
-        employment.setStoreID(store.getStoreID());
+    public void addEmployments(List<Employment> employments){
+        int batchSize = 500;
+        List<List<Employment>> batches = new ArrayList<>();
 
-        HttpEntity<Employment> entity = new HttpEntity<>(employment, createHeaders());
-        restTemplate.exchange(apiBaseUrl, HttpMethod.POST, entity, Void.class);
+        // Split into batches
+        for (int i = 0; i < employments.size(); i += batchSize) {
+            int endIndex = Math.min(i + batchSize, employments.size());
+            batches.add(employments.subList(i, endIndex));
+        }
+
+        // Process each batch
+        for (List<Employment> batch : batches) {
+            HttpEntity<List<Employment>> entity = new HttpEntity<>(batch, createHeaders());
+            restTemplate.exchange(apiBaseUrl, HttpMethod.POST, entity, Void.class);
+        }
     }
 
     public void deleteEmploymentsForUser(User user) {
