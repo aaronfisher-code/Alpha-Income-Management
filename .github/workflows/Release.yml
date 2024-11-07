@@ -42,9 +42,6 @@ jobs:
 
       - name: Create application.properties
         run: |
-          echo "DB_URL=${{ secrets.DB_URL }}" > src/main/resources/application.properties
-          echo "DB_USERNAME=${{ secrets.DB_USER }}" >> src/main/resources/application.properties
-          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> src/main/resources/application.properties
           echo "api.base.url=${{ secrets.API_BASE_URL }}" >> src/main/resources/application.properties
           echo "api.token=${{ secrets.API_TOKEN }}" >> src/main/resources/application.properties
           echo "VERSION=${{ steps.increment_version.outputs.new_version }}" >> src/main/resources/application.properties

@@ -38,7 +38,7 @@ public class ShiftCardController extends PageController {
 
 	@Override
 	public void fill() {
-		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && shift.getUsername().equals(main.getCurrentUser().getUsername()))||
+		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && shift.getUserID()==main.getCurrentUser().getUserID())||
 				main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))) {
 			backgroundPane.setCursor(Cursor.HAND);
 		}else{
@@ -66,7 +66,7 @@ public class ShiftCardController extends PageController {
 	}
 
 	public void showDifference(Shift originalShift, Shift modifiedShift){
-		if(!originalShift.getUsername().equals(modifiedShift.getUsername())){
+		if(originalShift.getUserID()!=modifiedShift.getUserID()){
 			employeeName.setStyle("-fx-text-fill: RED");
 			employeeRole.setStyle("-fx-text-fill: RED");
 		}
@@ -82,7 +82,7 @@ public class ShiftCardController extends PageController {
 	}
 
 	public void hoverOn(){
-		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && shift.getUsername().equals(main.getCurrentUser().getUsername()))||
+		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && shift.getUserID()==main.getCurrentUser().getUserID())||
 				main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))) {
 			DropShadow d = new DropShadow(BlurType.THREE_PASS_BOX, Color.web("#000000", 0.8), 5.56, 0.0, 0.0, 2.0);
 			d.setHeight(24);
@@ -93,7 +93,7 @@ public class ShiftCardController extends PageController {
 	}
 
 	public void hoverOff(){
-		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && shift.getUsername().equals(main.getCurrentUser().getUsername()))||
+		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && shift.getUserID()==main.getCurrentUser().getUserID())||
 				main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))) {
 			DropShadow d = new DropShadow(BlurType.THREE_PASS_BOX, Color.web("#000000", 0.1), 10, 0.0, 0.0, 4.0);
 			d.setHeight(24);

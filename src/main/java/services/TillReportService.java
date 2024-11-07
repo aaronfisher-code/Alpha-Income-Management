@@ -6,10 +6,14 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import models.TillReportDataPoint;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
@@ -36,50 +40,57 @@ public class TillReportService {
     }
 
     public List<TillReportDataPoint> getTillReportDataPoints(int storeId, LocalDate startDate, LocalDate endDate) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(apiBaseUrl)
-                .queryParam("storeId", storeId)
-                .queryParam("startDate", startDate)
-                .queryParam("endDate", endDate);
-
-        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
-        ResponseEntity<String> response = restTemplate.exchange(
-                builder.toUriString(),
-                HttpMethod.GET,
-                entity,
-                String.class);
-
         try {
-            return objectMapper.readValue(response.getBody(), new TypeReference<>() {
-            });
-        } catch (IOException e) {
-            throw new RuntimeException("Error parsing JSON response", e);
+            URI uri = new URI(apiBaseUrl + "?storeId=" + storeId +
+                    "&startDate=" + startDate +
+                    "&endDate=" + endDate);
+
+            HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+            ResponseEntity<String> response = restTemplate.exchange(
+                    uri,
+                    HttpMethod.GET,
+                    entity,
+                    String.class);
+
+            return objectMapper.readValue(response.getBody(), new TypeReference<>() {});
+        } catch (URISyntaxException | IOException e) {
+            throw new RuntimeException("Error executing request", e);
         }
     }
 
     public List<TillReportDataPoint> getTillReportDataPointsByKey(int storeId, LocalDate startDate, LocalDate endDate, String key) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(apiBaseUrl + "/by-key")
-                .queryParam("storeId", storeId)
-                .queryParam("startDate", startDate)
-                .queryParam("endDate", endDate)
-                .queryParam("key", key);
-
-        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
-        ResponseEntity<String> response = restTemplate.exchange(
-                builder.toUriString(),
-                HttpMethod.GET,
-                entity,
-                String.class);
-
         try {
-            return objectMapper.readValue(response.getBody(), new TypeReference<>() {
-            });
-        } catch (IOException e) {
-            throw new RuntimeException("Error parsing JSON response", e);
+            String baseUrl = apiBaseUrl + "/by-key";
+            URI uri = new URI(baseUrl + "?storeId=" + storeId +
+                    "&startDate=" + startDate +
+                    "&endDate=" + endDate +
+                    "&key=" + URLEncoder.encode(key, StandardCharsets.UTF_8));
+
+            HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+            ResponseEntity<String> response = restTemplate.exchange(
+                    uri,
+                    HttpMethod.GET,
+                    entity,
+                    String.class);
+
+            return objectMapper.readValue(response.getBody(), new TypeReference<>() {});
+        } catch (URISyntaxException | IOException e) {
+            throw new RuntimeException("Error executing request", e);
         }
     }
 
-    public void importTillReportDataPoint(TillReportDataPoint dataPoint) {
-        HttpEntity<TillReportDataPoint> entity = new HttpEntity<>(dataPoint, createHeaders());
-        restTemplate.exchange(apiBaseUrl + "/import", HttpMethod.POST, entity, Void.class);
+    public void importTillReportData(List<TillReportDataPoint> dataPoints) {
+        int batchSize = 1000;
+        List<List<TillReportDataPoint>> batches = new ArrayList<>();
+        // Split into batches
+        for (int i = 0; i < dataPoints.size(); i += batchSize) {
+            int endIndex = Math.min(i + batchSize, dataPoints.size());
+            batches.add(dataPoints.subList(i, endIndex));
+        }
+        // Process each batch
+        for (List<TillReportDataPoint> batch : batches) {
+            HttpEntity<List<TillReportDataPoint>> entity = new HttpEntity<>(batch, createHeaders());
+            restTemplate.exchange(apiBaseUrl + "/import", HttpMethod.POST, entity, Void.class);
+        }
     }
 }

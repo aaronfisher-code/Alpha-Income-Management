@@ -12,8 +12,7 @@ import java.time.format.DateTimeFormatter;
 public class LeaveRequest {
 	private int leaveID;
 	private int storeID;
-
-	private String employeeID;
+	private int userID;
 
 	private String employeeFirstName, employeeLastName;
 
@@ -56,12 +55,12 @@ public class LeaveRequest {
 		this.storeID = storeID;
 	}
 
-	public String getEmployeeID() {
-		return employeeID;
+	public int getUserID() {
+		return userID;
 	}
 
-	public void setEmployeeID(String employeeID) {
-		this.employeeID = employeeID;
+	public void setUserID(int userID) {
+		this.userID = userID;
 	}
 
 	public LocalDateTime getFromDate() {

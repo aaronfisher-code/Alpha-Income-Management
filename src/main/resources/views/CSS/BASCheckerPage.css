@@ -11,3 +11,15 @@
 .disableText{
     -fx-background-color: #E6E6E6;
 }
+
+.altText{
+    -fx-background-color: #F9F9F9;
+}
+
+.mfx-text-field {
+    -fx-border-radius: 0 !important;
+}
+
+.mfx-text-field .text-field {
+    -fx-border-radius: 0 !important;
+}

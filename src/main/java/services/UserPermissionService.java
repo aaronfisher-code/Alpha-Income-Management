@@ -1,17 +1,17 @@
 package services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import models.Employment;
 import models.User;
 import models.Permission;
+import models.UserPermissionDTO;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 public class UserPermissionService {
     private String apiBaseUrl;
@@ -35,17 +35,25 @@ public class UserPermissionService {
         return headers;
     }
 
-    public void addUserPermission(User user, Permission permission) {
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("username", user.getUsername());
-        requestBody.put("permissionID", permission.getPermissionID());
+    public void addUserPermissions(List<UserPermissionDTO> userPermissions) {
+        int batchSize = 500;
+        List<List<UserPermissionDTO>> batches = new ArrayList<>();
 
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, createHeaders());
-        restTemplate.exchange(apiBaseUrl, HttpMethod.POST, entity, Void.class);
+        // Split into batches
+        for (int i = 0; i < userPermissions.size(); i += batchSize) {
+            int endIndex = Math.min(i + batchSize, userPermissions.size());
+            batches.add(userPermissions.subList(i, endIndex));
+        }
+
+        // Process each batch
+        for (List<UserPermissionDTO> batch : batches) {
+            HttpEntity<List<UserPermissionDTO>> entity = new HttpEntity<>(batch, createHeaders());
+            restTemplate.exchange(apiBaseUrl, HttpMethod.POST, entity, Void.class);
+        }
     }
 
     public void deletePermissionsForUser(User user) {
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
-        restTemplate.exchange(apiBaseUrl + "/" + URLEncoder.encode(user.getUsername(), StandardCharsets.UTF_8), HttpMethod.DELETE, entity, Void.class);
+        restTemplate.exchange(apiBaseUrl + "/" + URLEncoder.encode(String.valueOf(user.getUserID()), StandardCharsets.UTF_8), HttpMethod.DELETE, entity, Void.class);
     }
 }

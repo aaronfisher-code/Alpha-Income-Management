@@ -65,7 +65,7 @@ public class MainMenuController extends PageController {
         userLabel.setStyle("-fx-background-color: " + main.getCurrentUser().getBgColour() + ";");
         userLabel.setTextFill(Paint.valueOf(main.getCurrentUser().getTextColour()));
         try {
-            for (Store store : userService.getStoresForUser(main.getCurrentUser().getUsername())) {
+            for (Store store : userService.getStoresForUser(main.getCurrentUser().getUserID())) {
                 storeSearchCombo.getItems().add(store);
             }
         } catch (Exception ex) {

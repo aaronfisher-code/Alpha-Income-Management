@@ -14,6 +14,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
@@ -106,9 +107,21 @@ public class InvoiceService {
         restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
     }
 
-    public void importInvoiceData(int storeId, CellDataPoint cdp) {
-        String url = apiBaseUrl + "/import-data?storeId=" + storeId;
-        HttpEntity<CellDataPoint> entity = new HttpEntity<>(cdp, createHeaders());
-        restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
+    public void importInvoiceData(int storeId, List<CellDataPoint> dataPoints) {
+        int batchSize = 1000;
+        List<List<CellDataPoint>> batches = new ArrayList<>();
+
+        // Split into batches
+        for (int i = 0; i < dataPoints.size(); i += batchSize) {
+            int endIndex = Math.min(i + batchSize, dataPoints.size());
+            batches.add(dataPoints.subList(i, endIndex));
+        }
+
+        // Process each batch
+        for (List<CellDataPoint> batch : batches) {
+            String url = apiBaseUrl + "/import-data?storeId=" + storeId;
+            HttpEntity<List<CellDataPoint>> entity = new HttpEntity<>(batch, createHeaders());
+            restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
+        }
     }
 }

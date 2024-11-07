@@ -103,7 +103,7 @@ public class RosterPageController extends PageController {
                 employeeSelect.getItems().addAll(currentUsers);
             } else if (main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts"))) {
                 employeeSelect.getItems().addAll(currentUsers.stream()
-                        .filter(u -> u.getUsername().equals(main.getCurrentUser().getUsername()))
+                        .filter(u -> u.getUserID()==main.getCurrentUser().getUserID())
                         .toList());
             } else {
                 addList.setVisible(false);
@@ -224,7 +224,7 @@ public class RosterPageController extends PageController {
                         for(LeaveRequest lr: allLeaveRequests){
                             LocalDateTime shiftStart = LocalDateTime.of(date.minusDays(weekDay - dayOfWeek),updatedShift.getShiftStartTime());
                             LocalDateTime shiftEnd = LocalDateTime.of(date.minusDays(weekDay - dayOfWeek),updatedShift.getShiftEndTime());
-                            if(lr.getEmployeeID().equals(updatedShift.getUsername())&&lr.getFromDate().isBefore(shiftEnd)&&lr.getToDate().isAfter(shiftStart)){
+                            if(lr.getUserID()==updatedShift.getUserID()&&lr.getFromDate().isBefore(shiftEnd)&&lr.getToDate().isAfter(shiftStart)){
                                 sc.setModification(lr.getLeaveType());
                             }
                         }
@@ -232,7 +232,7 @@ public class RosterPageController extends PageController {
                         if(shiftIsModified)
                             sc.showDifference(s,updatedShift);
                         Shift finalS = updatedShift;
-                        if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && finalS.getUsername().equals(main.getCurrentUser().getUsername()))||
+                        if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && finalS.getUserID()==main.getCurrentUser().getUserID())||
                                 main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))){
                             shiftCard.setOnMouseClicked(_ -> openPopover(finalS,sc.getDate()));
                         }
@@ -256,12 +256,12 @@ public class RosterPageController extends PageController {
                     for(LeaveRequest lr: allLeaveRequests){
                         LocalDateTime shiftStart = LocalDateTime.of(date.minusDays(weekDay - dayOfWeek),m.getShiftStartTime());
                         LocalDateTime shiftEnd = LocalDateTime.of(date.minusDays(weekDay - dayOfWeek),m.getShiftEndTime());
-                        if(lr.getEmployeeID().equals(m.getUsername())&&lr.getFromDate().isBefore(shiftEnd)&&lr.getToDate().isAfter(shiftStart)){
+                        if(lr.getUserID()==m.getUserID()&&lr.getFromDate().isBefore(shiftEnd)&&lr.getToDate().isAfter(shiftStart)){
                             sc.setModification(lr.getLeaveType());
                         }
                     }
                     sc.setDate(date.minusDays(weekDay - dayOfWeek));
-                    if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && m.getUsername().equals(main.getCurrentUser().getUsername()))||
+                    if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && m.getUserID()==main.getCurrentUser().getUserID())||
                             main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))){
                         shiftCard.setOnMouseClicked(_ -> openPopover(m,sc.getDate()));
                     }
@@ -390,7 +390,7 @@ public class RosterPageController extends PageController {
         contentDarken.setVisible(true);
         AnimationUtils.slideIn(editShiftPopover,0);
         try {
-            employeeSelect.setValue(userService.getUserByUsername(s.getUsername()));
+            employeeSelect.setValue(userService.getUserByID(s.getUserID()));
         } catch (Exception ex) {
             dialogPane.showError("Error","An error occurred while fetching user", ex);
         }
@@ -493,7 +493,7 @@ public class RosterPageController extends PageController {
                 if (deleteShift) {
                     shiftDate = null;
                 }
-                Shift newShift = createShiftFromInputs(selectedUser.getUsername(), shiftDate);
+                Shift newShift = createShiftFromInputs(selectedUser.getUserID(), shiftDate);
                 if (previousShift != null) {
                     Shift modification = createModificationFromShift(newShift, previousShift.getShiftID(), originalShiftDate);
                     rosterService.addShiftModification(modification);
@@ -569,7 +569,7 @@ public class RosterPageController extends PageController {
         return true;
     }
 
-    private Shift createShiftFromInputs(String username, LocalDate shiftDate) {
+    private Shift createShiftFromInputs(int userID, LocalDate shiftDate) {
         LocalTime startTime = LocalTime.parse(startTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
         LocalTime endTime = LocalTime.parse(endTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
         int thirtyMin = thirtyMinBreaks.getText().isEmpty() ? 0 : Integer.parseInt(thirtyMinBreaks.getText());
@@ -581,7 +581,7 @@ public class RosterPageController extends PageController {
         }
         Shift shift = new Shift();
         shift.setStoreID(main.getCurrentStore().getStoreID());
-        shift.setUsername(username);
+        shift.setUserID(userID);
         shift.setShiftStartTime(startTime);
         shift.setShiftEndTime(endTime);
         shift.setShiftStartDate(shiftDate);
@@ -595,7 +595,7 @@ public class RosterPageController extends PageController {
     private Shift createModificationFromShift(Shift shift, int originalShiftId, LocalDate originalDate) {
         Shift modification = new Shift();
         modification.setStoreID(shift.getStoreID());
-        modification.setUsername(shift.getUsername());
+        modification.setUserID(shift.getUserID());
         modification.setShiftStartTime(shift.getShiftStartTime());
         modification.setShiftEndTime(shift.getShiftEndTime());
         modification.setShiftStartDate(shift.getShiftStartDate());
@@ -616,7 +616,7 @@ public class RosterPageController extends PageController {
         Task<Void> editShiftTask = new Task<>() {
             @Override
             protected Void call() {
-                String usrname = employeeSelect.getValue().getUsername();
+                int userID = employeeSelect.getValue().getUserID();
                 LocalDate sDate = startDate.getValue();
                 LocalTime sTime = LocalTime.parse(startTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
                 LocalTime eTime = LocalTime.parse(endTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
@@ -627,7 +627,7 @@ public class RosterPageController extends PageController {
                     int multiplier = repeatUnit.getSelectedItem().equals("Weeks") ? 7 : 1;
                     daysPerRepeat = Integer.parseInt(repeatValue.getText()) * multiplier;
                 }
-                s.setUsername(usrname);
+                s.setUserID(userID);
                 s.setShiftStartTime(sTime);
                 s.setShiftEndTime(eTime);
                 s.setShiftStartDate(sDate);
