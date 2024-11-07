@@ -159,7 +159,7 @@ public class LeaveManagementController extends DateSelectController {
         contentDarken.setVisible(true);
         AnimationUtils.slideIn(editLeavePopover,0);
         try {
-            employeeSelect.setValue(userService.getUserByUsername(leaveRequest.getEmployeeID()));
+            employeeSelect.setValue(userService.getUserByID(leaveRequest.getUserID()));
         } catch (Exception ex) {
             dialogPane.showError("Error", "An error occurred while trying to find this employee",ex);
         }
@@ -204,7 +204,7 @@ public class LeaveManagementController extends DateSelectController {
                 LocalTime endTime = LocalTime.parse(endTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
                 try {
                     LeaveRequest leaveRequest = new LeaveRequest();
-                    leaveRequest.setEmployeeID(employeeSelect.getValue().getUsername());
+                    leaveRequest.setUserID(employeeSelect.getValue().getUserID());
                     leaveRequest.setStoreID(main.getCurrentStore().getStoreID());
                     leaveRequest.setLeaveType(leaveTypeCombo.getValue());
                     leaveRequest.setFromDate(startDate.getValue().atTime(startTime));
@@ -240,7 +240,7 @@ public class LeaveManagementController extends DateSelectController {
                 LocalTime startTime = LocalTime.parse(startTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
                 LocalTime endTime = LocalTime.parse(endTimeField.getText().toUpperCase(), DateTimeFormatter.ofPattern("h:mm a", Locale.US));
                 try {
-                    leaveRequest.setEmployeeID(employeeSelect.getValue().getUsername());
+                    leaveRequest.setUserID(employeeSelect.getValue().getUserID());
                     leaveRequest.setLeaveType(leaveTypeCombo.getValue());
                     leaveRequest.setFromDate(startDate.getValue().atTime(startTime));
                     leaveRequest.setToDate(endDate.getValue().atTime(endTime));

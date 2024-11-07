@@ -79,25 +79,15 @@ public class LogController extends PageController {
             return;
         }
         progressBar.setVisible(true);
-        Task<String> loginTask = new Task<>() {
+        Task<User> loginTask = new Task<>() {
             @Override
-            protected String call() {
-                User user = userService.getUserByUsername(username);
-                if (user == null) {
-                    return "Unrecognized";
-                } else if (user.getPassword() == null) {
-                    return "PasswordReset";
-                } else if (userService.verifyPassword(user.getUsername(), password)) {
-                    return "Success";
-                } else {
-                    return "Error";
-                }
+            protected User call() {
+                return userService.verifyPassword(username, password);
             }
         };
         loginTask.setOnSucceeded(_ -> {
             progressBar.setVisible(false);
-            String status = loginTask.getValue();
-            handleLoginResult(status, username);
+            handleLoginResult(loginTask.getValue());
         });
         loginTask.setOnFailed(_ -> {
             progressBar.setVisible(false);
@@ -106,34 +96,25 @@ public class LogController extends PageController {
         executor.submit(loginTask);
     }
 
-    private void handleLoginResult(String status, String username) {
-        switch (status) {
-            case "Unrecognized":
-                logInError.setText("Unrecognized username");
-                break;
-            case "PasswordReset":
-                try {
-                    User user = userService.getUserByUsername(username);
-                    setNewPasswordView(user);
-                } catch (Exception ex) {
-                    dialogPane.showError("Failed to set new password view", ex);
-                }
-                break;
-            case "Success":
-                loadUserAndChangeScene(username);
-                break;
-            default:
-                logInError.setText("Login error, please ensure your username and password are correct");
-                break;
+    private void handleLoginResult(User loginResult) {
+        if(loginResult == null) {
+            logInError.setText("Login error, please ensure your username and password are correct");
+        }else if(loginResult.getPassword() == null){
+            try {
+                setNewPasswordView(loginResult);
+            } catch (Exception ex) {
+                dialogPane.showError("Failed to set new password view", ex);
+            }
+        }else{
+            loadUserAndChangeScene(loginResult);
         }
     }
 
-    private void loadUserAndChangeScene(String username) {
+    private void loadUserAndChangeScene(User currentUser) {
         Task<User> loadUserTask = new Task<>() {
             @Override
             protected User call() {
-                User currentUser = userService.getUserByUsername(username);
-                currentUser.setPermissions(userService.getUserPermissions(username));
+                currentUser.setPermissions(userService.getUserPermissions(currentUser.getUserID()));
                 return currentUser;
             }
         };
@@ -154,7 +135,7 @@ public class LogController extends PageController {
         executor.submit(loadUserTask);
     }
 
-    public void userLoginWithPassword(User user) {
+    public void userLoginWithPassword(User currentUser) {
         if (!password.getText().equals(confirmPassword.getText())) {
             logInError.setText("Passwords don't match");
             return;
@@ -163,13 +144,13 @@ public class LogController extends PageController {
         Task<Void> updatePasswordTask = new Task<>() {
             @Override
             protected Void call() {
-                userService.updateUserPassword(user.getUsername(), password.getText());
+                userService.updateUserPassword(currentUser.getUserID(), password.getText());
                 return null;
             }
         };
         updatePasswordTask.setOnSucceeded(_ -> {
             progressBar.setVisible(false);
-            loadUserAndChangeScene(user.getUsername());
+            loadUserAndChangeScene(currentUser);
         });
 
         updatePasswordTask.setOnFailed(_ -> {
@@ -180,11 +161,11 @@ public class LogController extends PageController {
         executor.submit(updatePasswordTask);
     }
 
-    public void setNewPasswordView(User user) {
+    public void setNewPasswordView(User currentUser) {
         Platform.runLater(() -> {
             confirmPasswordLabel.setVisible(true);
             confirmPassword.setVisible(true);
-            login.setOnAction(_ -> userLoginWithPassword(user));
+            login.setOnAction(_ -> userLoginWithPassword(currentUser));
             subtitle.setText("Please set a new password for this account before signing in");
         });
     }

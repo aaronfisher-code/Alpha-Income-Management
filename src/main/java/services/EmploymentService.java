@@ -37,7 +37,7 @@ public class EmploymentService {
 
     public void addEmployment(User user, Store store) {
         Employment employment = new Employment();
-        employment.setUsername(user.getUsername());
+        employment.setUserID(user.getUserID());
         employment.setStoreID(store.getStoreID());
 
         HttpEntity<Employment> entity = new HttpEntity<>(employment, createHeaders());
@@ -45,7 +45,7 @@ public class EmploymentService {
     }
 
     public void deleteEmploymentsForUser(User user) {
-        String url = apiBaseUrl + "/" + URLEncoder.encode(user.getUsername(), StandardCharsets.UTF_8);
+        String url = apiBaseUrl + "/" + URLEncoder.encode(String.valueOf(user.getUserID()), StandardCharsets.UTF_8);
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
     }

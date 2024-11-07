@@ -37,7 +37,7 @@ public class UserPermissionService {
 
     public void addUserPermission(User user, Permission permission) {
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("username", user.getUsername());
+        requestBody.put("userID", user.getUserID());
         requestBody.put("permissionID", permission.getPermissionID());
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, createHeaders());
@@ -46,6 +46,6 @@ public class UserPermissionService {
 
     public void deletePermissionsForUser(User user) {
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
-        restTemplate.exchange(apiBaseUrl + "/" + URLEncoder.encode(user.getUsername(), StandardCharsets.UTF_8), HttpMethod.DELETE, entity, Void.class);
+        restTemplate.exchange(apiBaseUrl + "/" + URLEncoder.encode(String.valueOf(user.getUserID()), StandardCharsets.UTF_8), HttpMethod.DELETE, entity, Void.class);
     }
 }

@@ -350,7 +350,6 @@ public class BudgetAndExpensesController extends DateSelectController{
 			if (!newValue.equals(oldValue) && !isUpdatingTargets) {
 				if (!growthField.isFocused() || !newValue.isEmpty()) {
 					isUpdatingTargets = true;
-					System.out.println("Growth field has been updated, reflecting in target field: " + newValue+" "+fieldName);
 					updateTargetFromGrowth(baseField, growthField, targetField, format, fieldName, secondaryTarget);
 					isUpdatingTargets = false;
 				}
@@ -361,7 +360,6 @@ public class BudgetAndExpensesController extends DateSelectController{
 			if (!newValue.equals(oldValue) && !isUpdatingTargets) {
 				if (!targetField.isFocused() || !newValue.isEmpty()) {
 					isUpdatingTargets = true;
-					System.out.println("Target field has been updated, reflecting in growth field: " + newValue+" "+fieldName);
 					updateGrowthFromTarget(baseField, growthField, targetField, fieldName, secondaryTarget);
 					isUpdatingTargets = false;
 				}

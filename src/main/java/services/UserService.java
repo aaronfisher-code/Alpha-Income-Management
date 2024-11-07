@@ -39,7 +39,14 @@ public class UserService {
     }
 
     public User getUserByUsername(String username) {
-        String url = apiBaseUrl + "/" + URLEncoder.encode(username, StandardCharsets.UTF_8);
+        String url = apiBaseUrl + "/by-username/" + URLEncoder.encode(username, StandardCharsets.UTF_8);
+        HttpEntity<?> entity = new HttpEntity<>(createHeaders());
+        ResponseEntity<User> response = restTemplate.exchange(url, HttpMethod.GET, entity, User.class);
+        return response.getBody();
+    }
+
+    public User getUserByID(int userID) {
+        String url = apiBaseUrl + "/by-id/" + URLEncoder.encode(String.valueOf(userID), StandardCharsets.UTF_8);
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         ResponseEntity<User> response = restTemplate.exchange(url, HttpMethod.GET, entity, User.class);
         return response.getBody();
@@ -68,8 +75,8 @@ public class UserService {
         }
     }
 
-    public List<Employment> getEmploymentsForUser(String username) {
-        String url = apiBaseUrl + "/" + URLEncoder.encode(username,StandardCharsets.UTF_8) + "/employments";
+    public List<Employment> getEmploymentsForUser(int userID) {
+        String url = apiBaseUrl + "/" + URLEncoder.encode(String.valueOf(userID),StandardCharsets.UTF_8) + "/employments";
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
         try {
@@ -80,28 +87,28 @@ public class UserService {
         }
     }
 
-    public boolean verifyPassword(String username, String password) {
+    public User verifyPassword(String username, String password) {
         String url = apiBaseUrl + "/" + URLEncoder.encode(username,StandardCharsets.UTF_8) + "/verify-password";
         HttpEntity<String> entity = new HttpEntity<>(password, createHeaders());
-        ResponseEntity<Boolean> response = restTemplate.exchange(url, HttpMethod.POST, entity, Boolean.class);
+        ResponseEntity<User> response = restTemplate.exchange(url, HttpMethod.POST, entity, User.class);
         return response.getBody();
     }
 
-    public void updateUserPassword(String username, String newPassword) {
-        String url = apiBaseUrl + "/" + URLEncoder.encode(username,StandardCharsets.UTF_8) + "/password";
+    public void updateUserPassword(int userID, String newPassword) {
+        String url = apiBaseUrl + "/" + URLEncoder.encode(String.valueOf(userID),StandardCharsets.UTF_8) + "/password";
         HttpEntity<String> entity = new HttpEntity<>(newPassword, createHeaders());
         restTemplate.exchange(url, HttpMethod.PUT, entity, Void.class);
     }
 
-    public boolean isPasswordResetRequested(String username) {
-        String url = apiBaseUrl + "/" + URLEncoder.encode(username,StandardCharsets.UTF_8) + "/password-reset-requested";
+    public boolean isPasswordResetRequested(int userID) {
+        String url = apiBaseUrl + "/" + URLEncoder.encode(String.valueOf(userID),StandardCharsets.UTF_8) + "/password-reset-requested";
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         ResponseEntity<Boolean> response = restTemplate.exchange(url, HttpMethod.GET, entity, Boolean.class);
         return response.getBody();
     }
 
-    public List<Permission> getUserPermissions(String username) {
-        String url = apiBaseUrl + "/" + URLEncoder.encode(username,StandardCharsets.UTF_8) + "/permissions";
+    public List<Permission> getUserPermissions(int userID) {
+        String url = apiBaseUrl + "/" + URLEncoder.encode(String.valueOf(userID),StandardCharsets.UTF_8) + "/permissions";
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
         try {
@@ -112,8 +119,8 @@ public class UserService {
         }
     }
 
-    public List<Store> getStoresForUser(String username) {
-        String url = apiBaseUrl + "/" + URLEncoder.encode(username,StandardCharsets.UTF_8) + "/stores";
+    public List<Store> getStoresForUser(int userID) {
+        String url = apiBaseUrl + "/" + URLEncoder.encode(String.valueOf(userID),StandardCharsets.UTF_8) + "/stores";
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
         try {
@@ -135,14 +142,14 @@ public class UserService {
         restTemplate.exchange(url, HttpMethod.PUT, entity, Void.class);
     }
 
-    public void deleteUser(String username) {
-        String url = apiBaseUrl + "/" + URLEncoder.encode(username,StandardCharsets.UTF_8);
+    public void deleteUser(int userID) {
+        String url = apiBaseUrl + "/" + URLEncoder.encode(String.valueOf(userID),StandardCharsets.UTF_8);
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
     }
 
-    public void resetUserPassword(String username) {
-        String url = apiBaseUrl + "/" + URLEncoder.encode(username,StandardCharsets.UTF_8) + "/reset-password";
+    public void resetUserPassword(int userID) {
+        String url = apiBaseUrl + "/" + URLEncoder.encode(String.valueOf(userID),StandardCharsets.UTF_8) + "/reset-password";
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
     }

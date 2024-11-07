@@ -8,7 +8,7 @@ import java.time.LocalTime;
 public class Shift {
 	private int shiftID;
 	private int storeID;
-	private String username;
+	private int userID;
     private LocalTime shiftStartTime;
 	private LocalTime shiftEndTime;
 	private LocalDate shiftStartDate;
@@ -36,12 +36,12 @@ public class Shift {
 		this.shiftID = shiftID;
 	}
 
-	public String getUsername() {
-		return username;
+	public int getUserID() {
+		return userID;
 	}
 
-	public void setUsername(String username) {
-		this.username = username;
+	public void setUserID(int userID) {
+		this.userID = userID;
 	}
 
 	public LocalTime getShiftStartTime() {

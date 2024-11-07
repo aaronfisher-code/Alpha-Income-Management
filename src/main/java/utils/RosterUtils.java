@@ -79,7 +79,7 @@ public class RosterUtils {
                     for(LeaveRequest lr: allLeaveRequests){
                         LocalDateTime shiftStart = LocalDateTime.of(day,updatedShift.getShiftStartTime());
                         LocalDateTime shiftEnd = LocalDateTime.of(day,updatedShift.getShiftEndTime());
-                        if(lr.getEmployeeID().equals(updatedShift.getUsername())&&lr.getFromDate().isBefore(shiftEnd)&&lr.getToDate().isAfter(shiftStart)){
+                        if(lr.getUserID()==updatedShift.getUserID()&&lr.getFromDate().isBefore(shiftEnd)&&lr.getToDate().isAfter(shiftStart)){
                             shiftOnLeave = true;
                         }
                     }
@@ -101,7 +101,7 @@ public class RosterUtils {
                 for(LeaveRequest lr: allLeaveRequests){
                     LocalDateTime shiftStart = LocalDateTime.of(day,m.getShiftStartTime());
                     LocalDateTime shiftEnd = LocalDateTime.of(day,m.getShiftEndTime());
-                    if(lr.getEmployeeID().equals(m.getUsername())&&lr.getFromDate().isBefore(shiftEnd)&&lr.getToDate().isAfter(shiftStart)){
+                    if(lr.getUserID()==m.getUserID()&&lr.getFromDate().isBefore(shiftEnd)&&lr.getToDate().isAfter(shiftStart)){
                         shiftOnLeave = true;
                     }
                 }

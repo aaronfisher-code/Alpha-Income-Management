@@ -140,7 +140,6 @@ public class InvoiceEntryController extends DateSelectController{
 				Task<Invoice> task = new Task<>() {
 					@Override
 					protected Invoice call() {
-						System.out.println("Invoice No: "+invoiceNoField.getText());
 						try{
                             return invoiceService.getInvoice(invoiceNoField.getText());
 						} catch (UnsupportedEncodingException e) {

@@ -33,7 +33,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class EditAccountController extends PageController {
 
@@ -53,6 +52,7 @@ public class EditAccountController extends PageController {
 	@FXML private MFXButton saveStoreButton,passwordResetButton,saveUserButton;
 	@FXML private MFXProgressSpinner userSpinner, storeSpinner;
 	private MFXTableView<User> accountsTable = new MFXTableView<>();
+	private MFXTableColumn<User> userIDCol;
 	private MFXTableColumn<User> usernameCol;
 	private MFXTableColumn<User> firstNameCol;
 	private MFXTableColumn<User> lastNameCol;
@@ -102,16 +102,18 @@ public class EditAccountController extends PageController {
 		userFilterView.setTitle("Current Users");
 		userFilterView.setSubtitle("Double click a user to edit");
 		userFilterView.setTextFilterProvider(text -> user -> user.getFirst_name().toLowerCase().contains(text) || user.getLast_name().toLowerCase().contains(text) || user.getRole().toLowerCase().contains(text));
-		usernameCol = new MFXTableColumn<>("STAFF ID",false, Comparator.comparing(User::getUsername));
+		userIDCol = new MFXTableColumn<>("STAFF ID",false, Comparator.comparing(User::getUserID));
+		usernameCol = new MFXTableColumn<>("USERNAME",false, Comparator.comparing(User::getUsername));
 		firstNameCol = new MFXTableColumn<>("FIRST NAME",false, Comparator.comparing(User::getFirst_name));
 		lastNameCol = new MFXTableColumn<>("LAST NAME",false, Comparator.comparing(User::getLast_name));
 		roleCol = new MFXTableColumn<>("ROLE",false, Comparator.comparing(User::getRole));
+		userIDCol.setRowCellFactory(_ -> new MFXTableRowCell<>(User::getUserID));
 		usernameCol.setRowCellFactory(_ -> new MFXTableRowCell<>(User::getUsername));
 		firstNameCol.setRowCellFactory(_ -> new MFXTableRowCell<>(User::getFirst_name));
 		lastNameCol.setRowCellFactory(_ -> new MFXTableRowCell<>(User::getLast_name));
 		roleCol.setRowCellFactory(_ -> new MFXTableRowCell<>(User::getRole));
 		accountsTable = new MFXTableView<>();
-		accountsTable.getTableColumns().addAll(usernameCol,firstNameCol,lastNameCol,roleCol);
+		accountsTable.getTableColumns().addAll(userIDCol,usernameCol,firstNameCol,lastNameCol,roleCol);
 		accountsTable.getFilters().addAll(
 				new StringFilter<>("Username",User::getUsername),
 				new StringFilter<>("First Name",User::getFirst_name),
@@ -245,7 +247,6 @@ public class EditAccountController extends PageController {
 		inactiveUserToggle.setVisible(false);
 		deleteUserButton.setVisible(false);
 		inactiveUserToggle.setSelected(false);
-		usernameField.setDisable(false);
 		usernameField.clear();
 		firstNameField.clear();
 		lastNameField.clear();
@@ -341,7 +342,6 @@ public class EditAccountController extends PageController {
 		firstNameField.setText(user.getFirst_name());
 		lastNameField.setText(user.getLast_name());
 		roleField.setText(user.getRole());
-		usernameField.setDisable(true);
 		profileTextPicker.setValue(Color.valueOf(user.getTextColour()));
 		profileBackgroundPicker.setValue(Color.valueOf(user.getBgColour()));
 		passwordResetButton.setVisible(true);
@@ -354,7 +354,7 @@ public class EditAccountController extends PageController {
 		userSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
 		CompletableFuture<Boolean> passwordResetFuture = CompletableFuture.supplyAsync(() -> {
 			try {
-				return userService.isPasswordResetRequested(user.getUsername());
+				return userService.isPasswordResetRequested(user.getUserID());
 			} catch (Exception ex) {
 				throw new CompletionException(ex);
 			}
@@ -368,7 +368,7 @@ public class EditAccountController extends PageController {
 		}, executor);
 		CompletableFuture<List<Employment>> staffStoresFuture = CompletableFuture.supplyAsync(() -> {
 			try {
-				return userService.getEmploymentsForUser(user.getUsername());
+				return userService.getEmploymentsForUser(user.getUserID());
 			} catch (Exception ex) {
 				throw new CompletionException(ex);
 			}
@@ -382,7 +382,7 @@ public class EditAccountController extends PageController {
 		}, executor);
 		CompletableFuture<List<Permission>> userPermissionsFuture = CompletableFuture.supplyAsync(() -> {
 			try {
-				return userService.getUserPermissions(user.getUsername());
+				return userService.getUserPermissions(user.getUserID());
 			} catch (Exception ex) {
 				throw new CompletionException(ex);
 			}
@@ -675,6 +675,7 @@ public class EditAccountController extends PageController {
 		} else if (inactiveUserToggle.isSelected() && user.getInactiveDate() == null) {
 			inactiveDate = LocalDate.now();
 		}
+		String username = usernameField.getText();
 		String fname = firstNameField.getText();
 		String lname = lastNameField.getText();
 		String role = roleField.getText();
@@ -693,6 +694,7 @@ public class EditAccountController extends PageController {
 				@Override
 				protected Void call() {
 					// Update user details
+					user.setUsername(username);
 					user.setFirst_name(fname);
 					user.setLast_name(lname);
 					user.setRole(role);
@@ -764,7 +766,7 @@ public class EditAccountController extends PageController {
 		Task<Void> resetPasswordTask = new Task<>() {
 			@Override
 			protected Void call() {
-				userService.resetUserPassword(user.getUsername());
+				userService.resetUserPassword(user.getUserID());
 				return null;
 			}
 		};
@@ -822,7 +824,7 @@ public class EditAccountController extends PageController {
 				Task<Void> deleteUserTask = new Task<>() {
 					@Override
 					protected Void call() {
-						userService.deleteUser(user.getUsername());
+						userService.deleteUser(user.getUserID());
 						return null;
 					}
 				};
