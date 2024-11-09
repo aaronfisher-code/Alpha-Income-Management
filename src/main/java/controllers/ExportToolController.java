@@ -1,184 +1,251 @@
 package controllers;
 
-import application.Main;
 import io.github.palexdev.materialfx.controls.MFXComboBox;
+import io.github.palexdev.materialfx.controls.MFXProgressBar;
 import io.github.palexdev.materialfx.controls.MFXTextField;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
+import models.LeaveRequest;
 import models.Shift;
+import models.SpecialDateObj;
 import models.User;
+import services.LeaveService;
+import services.RosterService;
+import services.UserService;
 
-import javax.swing.*;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.io.IOException;
 import java.text.DateFormatSymbols;
-import java.time.Duration;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 import static java.time.temporal.ChronoUnit.DAYS;
 
 public class ExportToolController extends PageController {
-
-
     @FXML
-    private MFXComboBox monthPicker;
-
+    private MFXComboBox<String> monthPicker;
     @FXML
     private MFXTextField yearPicker;
+    @FXML
+    private MFXProgressBar progressBar;
 
-    private Connection con = null;
-    PreparedStatement preparedStatement = null;
-    ResultSet resultSet = null;
-    private Shift shift;
     private RosterPageController parent;
-    private LocalDate date;
-    private boolean noEntries;
+    private RosterService rosterService;
+    private LeaveService leaveService;
+    private UserService userService;
 
-    public void setParent(RosterPageController m) {
-        this.parent = m;
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+
+    @FXML
+    public void initialize() {
+        try {
+            rosterService = new RosterService();
+            leaveService = new LeaveService();
+            userService = new UserService();
+            executor = Executors.newCachedThreadPool();
+        } catch (IOException ex) {
+            parent.getDialogPane().showError("Failed to initialize services", ex);
+        }
     }
 
-    public void setConnection(Connection c) {
-        this.con = c;
+    public void setParent(RosterPageController parent) {
+        this.parent = parent;
     }
-
-    public void setDate(LocalDate d) { this.date = d; }
 
     @Override
     public void fill() {
-        for(int i = 0; i<12; i++)
+        // Add months to the month picker
+        for (int i = 0; i < 12; i++) {
             monthPicker.getItems().add(new DateFormatSymbols().getMonths()[i]);
-    }
-
-    public void copyToClipboard(){
-        StringBuilder outString = new StringBuilder();
-        outString.append(publicHolidays()).append("\r\n");
-        ArrayList<User> users = getAllUsers();
-        for(User u: users){
-            outString.append(userHours(u)).append("\r\n");
         }
 
-        ClipboardContent content = new ClipboardContent();
-        content.putString(outString.toString());
-        Clipboard.getSystemClipboard().setContent(content);
-        JOptionPane.showMessageDialog(null, "Data copied to clipboard!");
+        // Set default value to current month and year
+        monthPicker.selectItem(new DateFormatSymbols().getMonths()[LocalDate.now().getMonthValue() - 1]);
+        yearPicker.setText(String.valueOf(LocalDate.now().getYear()));
     }
 
-    public String publicHolidays(){
-        LocalDate sDate = LocalDate.of(Integer.parseInt(yearPicker.getText()),monthPicker.getItems().indexOf(monthPicker.getValue())+1,1);
-        LocalDate eDate = LocalDate.of(Integer.parseInt(yearPicker.getText()),monthPicker.getItems().indexOf(monthPicker.getValue())+1,sDate.lengthOfMonth());
-        long daysBetween = Duration.between(sDate.atStartOfDay(), eDate.atStartOfDay()).toDays()+1;
-        String[] publicHolidays = new String[(int) (daysBetween+1)];
-        publicHolidays[0] = "Public holidays:\t\t";
-        String sql = "SELECT * FROM specialDates";
-        try {
-            preparedStatement = con.prepareStatement(sql);
-            resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                LocalDate eventDate = LocalDate.parse(resultSet.getString("eventDate"));
-                if(eventDate.compareTo(sDate)>=0 && eventDate.compareTo(eDate)<=0 ){
-                    if (resultSet.getString("storeStatus").equals("Public Holiday")) {
-                        publicHolidays[eventDate.getDayOfMonth()] = "Y\t\t";
+    public void copyToClipboard() {
+        if (!validateInputs()) {
+            return;
+        }
+
+        progressBar.setVisible(true);
+        Task<String> exportTask = new Task<>() {
+            @Override
+            protected String call() throws Exception {
+                LocalDate startDate = LocalDate.of(
+                        Integer.parseInt(yearPicker.getText()),
+                        monthPicker.getItems().indexOf(monthPicker.getValue()) + 1,
+                        1
+                );
+                LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
+
+                // Fetch all required data concurrently
+                CompletableFuture<List<SpecialDateObj>> specialDatesFuture = CompletableFuture.supplyAsync(() -> {
+                    try {
+                        return rosterService.getSpecialDates(startDate, endDate);
+                    } catch (Exception e) {
+                        // Return an empty list if there are no special dates
+                        return new ArrayList<>();
+                    }
+                }, executor);
+
+                CompletableFuture<List<User>> usersFuture = CompletableFuture.supplyAsync(() -> {
+                    try {
+                        return userService.getAllUsers();
+                    } catch (Exception e) {
+                        throw new CompletionException(e);
+                    }
+                }, executor);
+
+                CompletableFuture<List<Shift>> shiftsFuture = CompletableFuture.supplyAsync(() -> {
+                    try {
+                        return rosterService.getShifts(main.getCurrentStore().getStoreID(), startDate, endDate);
+                    } catch (Exception e) {
+                        throw new CompletionException(e);
+                    }
+                }, executor);
+
+                CompletableFuture<List<LeaveRequest>> leaveRequestsFuture = CompletableFuture.supplyAsync(() -> {
+                    try {
+                        return leaveService.getLeaveRequests(main.getCurrentStore().getStoreID(), startDate, endDate);
+                    } catch (Exception e) {
+                        // Return an empty list if there are no leave requests
+                        return new ArrayList<>();
+                    }
+                }, executor);
+
+                // Wait for all data to be fetched
+                List<SpecialDateObj> specialDates = specialDatesFuture.get();
+                List<User> users = usersFuture.get();
+                List<Shift> shifts = shiftsFuture.get();
+                List<LeaveRequest> leaveRequests = leaveRequestsFuture.get();
+
+                // If no shifts found, show message and return empty string
+                if (shifts.isEmpty()) {
+                    throw new Exception("No shifts found for the selected month.");
+                }
+
+                // Create lookup map for users
+                Map<Integer, User> userMap = users.stream()
+                        .collect(Collectors.toMap(User::getUserID, user -> user));
+
+                // Build the export string
+                StringBuilder export = new StringBuilder();
+
+                // Add header row
+                export.append("Date\tUserID\tName\tStartTime\tFinishTime\tPublicHoliday\tLeaveType\n");
+
+                // Process each day in the selected month
+                for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+                    LocalDate currentDate = date; // Effectively final copy for lambda
+
+                    // Check if it's a public holiday
+                    boolean isPublicHoliday = specialDates.stream()
+                            .anyMatch(sd -> sd.getEventDate().equals(currentDate) &&
+                                    sd.getStoreStatus().equals("Public Holiday"));
+
+                    // Process all shifts for this day
+                    List<Shift> dayShifts = new ArrayList<>();
+
+                    // Add regular shifts
+                    dayShifts.addAll(shifts.stream()
+                            .filter(s -> s.getShiftStartDate().equals(currentDate))
+                            .toList());
+
+                    // Add repeating shifts
+                    dayShifts.addAll(shifts.stream()
+                            .filter(s -> s.isRepeating() &&
+                                    DAYS.between(s.getShiftStartDate(), currentDate) % s.getDaysPerRepeat() == 0 &&
+                                    !currentDate.isBefore(s.getShiftStartDate()) &&
+                                    (s.getShiftEndDate() == null || !currentDate.isAfter(s.getShiftEndDate())))
+                            .toList());
+
+                    // Process each shift
+                    for (Shift shift : dayShifts) {
+                        User user = userMap.get(shift.getUserID());
+                        if (user == null) continue;
+
+                        // Check for leave
+                        String leaveType = leaveRequests.stream()
+                                .filter(lr -> lr.getUserID() == shift.getUserID())
+                                .filter(lr -> {
+                                    LocalDateTime shiftStart = LocalDateTime.of(currentDate, shift.getShiftStartTime());
+                                    LocalDateTime shiftEnd = LocalDateTime.of(currentDate, shift.getShiftEndTime());
+                                    return lr.getFromDate().isBefore(shiftEnd) && lr.getToDate().isAfter(shiftStart);
+                                })
+                                .map(LeaveRequest::getLeaveType)
+                                .findFirst()
+                                .orElse("");
+
+                        // Add row to export
+                        export.append(String.format("%s\t%d\t%s %s\t%s\t%s\t%s\t%s\n",
+                                currentDate.format(DATE_FORMATTER),
+                                user.getUserID(),
+                                user.getFirst_name(),
+                                user.getLast_name(),
+                                shift.getShiftStartTime().format(TIME_FORMATTER),
+                                shift.getShiftEndTime().format(TIME_FORMATTER),
+                                isPublicHoliday ? "Yes" : "No",
+                                leaveType
+                        ));
                     }
                 }
-            }
-        } catch (SQLException ex) {
-            System.err.println(ex.getMessage());
-        }
-        StringBuilder resultString = new StringBuilder();
-        for(int i = 0;i<publicHolidays.length;i++){
-            if(publicHolidays[i] == null || publicHolidays[i].isEmpty()){
-                publicHolidays[i] = "N\t\t";
-            }
-            resultString.append(publicHolidays[i]);
-        }
-        resultString.append("\r\n");
-        resultString.append("Staff hours\t\t");
-        for(int i = 1;i<publicHolidays.length;i++){
-            resultString.append(String.valueOf(i)+"\t\t");
-        }
-        return resultString.toString();
-    }
-    
-    public String userHours(User u){
-        LocalDate sDate = LocalDate.of(Integer.parseInt(yearPicker.getText()),monthPicker.getItems().indexOf(monthPicker.getValue())+1,1);
-        LocalDate eDate = LocalDate.of(Integer.parseInt(yearPicker.getText()),monthPicker.getItems().indexOf(monthPicker.getValue())+1,sDate.lengthOfMonth());
-        long daysBetween = Duration.between(sDate.atStartOfDay(), eDate.atStartOfDay()).toDays()+1;
-        String[] hoursArray = new String[(int) (daysBetween+1)];
-        String[] leaveArray = new String[(int) (daysBetween+1)];
-        Shift s = null;
 
-        String sql = "SELECT * FROM shifts JOIN accounts a on a.username = shifts.username Where shifts.username = ? ";
-        try {
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setString(1, u.getUsername());
-            resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                for(int i = 0; i<daysBetween; i++){
-//                    s=new Shift(resultSet);
-                    s = new Shift();
-                    boolean repeatShiftDay = (s.isRepeating() && DAYS.between(s.getShiftStartDate(), sDate.plusDays(i)) % s.getDaysPerRepeat() == 0 && DAYS.between(s.getShiftStartDate(), sDate.plusDays(i)) >= 0);
-                    boolean equalDay = s.getShiftStartDate().equals(sDate.plusDays(i));
-                    boolean pastEnd = s.getShiftEndDate() != null && s.getShiftEndDate().isBefore(sDate.plusDays(i));
-                    if ((equalDay || repeatShiftDay) && !pastEnd) {
-                        hoursArray[i] = String.valueOf(s.getShiftStartTime().until(s.getShiftEndTime(), ChronoUnit.HOURS)-(0.5*s.getThirtyMinBreaks()));
-                    }
-                }
+                return export.toString();
             }
-        } catch (SQLException ex) {
-            System.err.println(ex.getMessage());
-        }
+        };
 
-        sql = "SELECT * FROM leaveRequests Where username = ?";
-        try {
-            preparedStatement = con.prepareStatement(sql);
-            preparedStatement.setString(1, u.getUsername());
-            resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                for(int i = 0; i<daysBetween; i++){
-                    if(sDate.plusDays(i).compareTo(LocalDate.parse(resultSet.getString("leaveStartDate")))>=0
-                    && sDate.plusDays(i).compareTo(LocalDate.parse(resultSet.getString("leaveEndDate")))<=0){
-                        leaveArray[i] = "L";
-                    }
-                }
-            }
-        } catch (SQLException ex) {
-            System.err.println(ex.getMessage());
-        }
-        StringBuilder resultString = new StringBuilder();
-        resultString.append(u.getFirst_name()+" "+u.getLast_name()+"\t");
-        for(int i = 0;i<daysBetween;i++){
-            if(hoursArray[i] == null || hoursArray[i].isEmpty()){
-                hoursArray[i] = "0";
-            }
-            if(leaveArray[i] == null || leaveArray[i].isEmpty()){
-                leaveArray[i] = "";
-            }
-            resultString.append(leaveArray[i]+"\t"+hoursArray[i]+"\t");
-        }
+        exportTask.setOnSucceeded(e -> {
+            String exportData = exportTask.getValue();
+            ClipboardContent content = new ClipboardContent();
+            content.putString(exportData);
+            Clipboard.getSystemClipboard().setContent(content);
+            parent.getDialogPane().showInformation("Success", "Data has been copied to clipboard");
+            progressBar.setVisible(false);
+        });
 
+        exportTask.setOnFailed(e -> {
+            Throwable exception = exportTask.getException();
+            String errorMessage = exception.getMessage();
+            if (errorMessage.equals("No shifts found for the selected month.")) {
+                parent.getDialogPane().showInformation("No Data", errorMessage);
+            } else {
+                parent.getDialogPane().showError("Export Failed", "Failed to export data", exception);
+            }
+            progressBar.setVisible(false);
+        });
 
-        return resultString.toString();
+        executor.submit(exportTask);
     }
 
-    public ArrayList<User> getAllUsers(){
-        ArrayList<User> allUsers = new ArrayList<>();
-        String sql = "SELECT * FROM accounts ORDER BY last_name";
-        try {
-            preparedStatement = con.prepareStatement(sql);
-            resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-//                allUsers.add(new User(resultSet));
-            }
-        } catch (SQLException ex) {
-            System.err.println(ex.getMessage());
+    private boolean validateInputs() {
+        if (monthPicker.getValue() == null || monthPicker.getValue().isEmpty()) {
+            parent.getDialogPane().showError("Validation Error", "Please select a month");
+            return false;
         }
-        return allUsers;
-    }
 
+        try {
+            int year = Integer.parseInt(yearPicker.getText());
+            if (year < 1900 || year > 2100) {
+                parent.getDialogPane().showError("Validation Error", "Please enter a valid year between 1900 and 2100");
+                return false;
+            }
+        } catch (NumberFormatException e) {
+            parent.getDialogPane().showError("Validation Error", "Please enter a valid year");
+            return false;
+        }
+
+        return true;
+    }
 }

@@ -2,13 +2,22 @@
 
 <?import io.github.palexdev.materialfx.controls.MFXButton?>
 <?import io.github.palexdev.materialfx.controls.MFXComboBox?>
+<?import io.github.palexdev.materialfx.controls.MFXProgressBar?>
 <?import io.github.palexdev.materialfx.controls.MFXTextField?>
-<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.layout.VBox?>
 
-<AnchorPane prefHeight="187.0" prefWidth="285.0" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.ExportToolController">
+<VBox spacing="10.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.ExportToolController">
    <children>
-      <MFXComboBox fx:id="monthPicker" floatMode="BORDER" floatingText="Month" layoutX="23.0" layoutY="14.0" prefHeight="8.0" prefWidth="238.0" />
-      <MFXTextField fx:id="yearPicker" floatMode="BORDER" floatingText="Year" layoutX="23.0" layoutY="68.0" prefHeight="49.0" prefWidth="238.0" />
-      <MFXButton layoutX="23.0" layoutY="141.0" onAction="#copyToClipboard" prefHeight="26.0" prefWidth="238.0" style="-fx-background-color: #0F60FF;" text="Copy to Clipboard" textFill="WHITE" />
+      <MFXComboBox fx:id="monthPicker" floatMode="BORDER" floatingText="Month" prefHeight="8.0" prefWidth="238.0" />
+      <MFXTextField fx:id="yearPicker" floatMode="BORDER" floatingText="Year" prefHeight="49.0" prefWidth="238.0" />
+      <MFXButton onAction="#copyToClipboard" prefHeight="26.0" prefWidth="238.0" style="-fx-background-color: #0F60FF;" text="Copy to Clipboard" textFill="WHITE" />
+      <MFXProgressBar fx:id="progressBar" maxWidth="1.7976931348623157E308" style="-mfx-color: #0F60FF;" visible="false">
+         <VBox.margin>
+            <Insets top="-5.0" />
+         </VBox.margin></MFXProgressBar>
    </children>
-</AnchorPane>
+   <padding>
+      <Insets bottom="10.0" left="20.0" right="20.0" top="20.0" />
+   </padding>
+</VBox>
