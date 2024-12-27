@@ -17,8 +17,10 @@ import services.UserService;
 
 import java.io.IOException;
 import java.text.DateFormatSymbols;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,6 +47,7 @@ public class ExportToolController extends PageController {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+    private static final DateTimeFormatter DURATION_FORMATTER = DateTimeFormatter.ofPattern("H:mm");
 
     @FXML
     public void initialize() {
@@ -72,6 +75,25 @@ public class ExportToolController extends PageController {
         // Set default value to current month and year
         monthPicker.selectItem(new DateFormatSymbols().getMonths()[LocalDate.now().getMonthValue() - 1]);
         yearPicker.setText(String.valueOf(LocalDate.now().getYear()));
+    }
+
+    private String calculateShiftDuration(LocalTime startTime, LocalTime endTime, int thirtyMinBreaks, int tenMinBreaks) {
+        Duration duration;
+
+        // Handle shifts that cross midnight
+        if (endTime.isBefore(startTime)) {
+            duration = Duration.between(startTime, LocalTime.MAX)
+                    .plus(Duration.between(LocalTime.MIN, endTime))
+                    .plusMinutes(1); // Add 1 minute to account for midnight
+        } else {
+            duration = Duration.between(startTime, endTime);
+        }
+
+        // Convert duration to decimal hours
+        double hours = duration.toMinutes() / 60.0;
+
+        // Format to 2 decimal places
+        return String.format("%.2f", hours);
     }
 
     public void copyToClipboard() {
@@ -116,6 +138,14 @@ public class ExportToolController extends PageController {
                     }
                 }, executor);
 
+                CompletableFuture<List<Shift>> modificationsFuture = CompletableFuture.supplyAsync(() -> {
+                    try {
+                        return rosterService.getShiftModifications(main.getCurrentStore().getStoreID(), startDate, endDate);
+                    } catch (Exception e) {
+                        return new ArrayList<>();
+                    }
+                }, executor);
+
                 CompletableFuture<List<LeaveRequest>> leaveRequestsFuture = CompletableFuture.supplyAsync(() -> {
                     try {
                         return leaveService.getLeaveRequests(main.getCurrentStore().getStoreID(), startDate, endDate);
@@ -129,6 +159,7 @@ public class ExportToolController extends PageController {
                 List<SpecialDateObj> specialDates = specialDatesFuture.get();
                 List<User> users = usersFuture.get();
                 List<Shift> shifts = shiftsFuture.get();
+                List<Shift> modifications = modificationsFuture.get();
                 List<LeaveRequest> leaveRequests = leaveRequestsFuture.get();
 
                 // If no shifts found, show message and return empty string
@@ -144,26 +175,22 @@ public class ExportToolController extends PageController {
                 StringBuilder export = new StringBuilder();
 
                 // Add header row
-                export.append("Date\tUserID\tName\tStartTime\tFinishTime\tPublicHoliday\tLeaveType\n");
+                export.append("Date\tUserID\tName\tStartTime\tFinishTime\tTotal Hours\t30min Breaks\t10min Breaks\tPublicHoliday\tLeaveType\n");
 
                 // Process each day in the selected month
                 for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
-                    LocalDate currentDate = date; // Effectively final copy for lambda
+                    LocalDate currentDate = date;
 
-                    // Check if it's a public holiday
                     boolean isPublicHoliday = specialDates.stream()
                             .anyMatch(sd -> sd.getEventDate().equals(currentDate) &&
                                     sd.getStoreStatus().equals("Public Holiday"));
 
-                    // Process all shifts for this day
+                    // Get all shifts for the current day (including repeating shifts)
                     List<Shift> dayShifts = new ArrayList<>();
-
-                    // Add regular shifts
                     dayShifts.addAll(shifts.stream()
                             .filter(s -> s.getShiftStartDate().equals(currentDate))
                             .toList());
 
-                    // Add repeating shifts
                     dayShifts.addAll(shifts.stream()
                             .filter(s -> s.isRepeating() &&
                                     DAYS.between(s.getShiftStartDate(), currentDate) % s.getDaysPerRepeat() == 0 &&
@@ -173,32 +200,105 @@ public class ExportToolController extends PageController {
 
                     // Process each shift
                     for (Shift shift : dayShifts) {
-                        User user = userMap.get(shift.getUserID());
+                        // Check for modifications
+                        Shift effectiveShift = shift;
+                        boolean shiftIsModified = false;
+
+                        for (Shift mod : modifications) {
+                            if (mod.getShiftID() == shift.getShiftID() &&
+                                    mod.getOriginalDate().equals(currentDate)) {
+                                effectiveShift = mod;
+                                shiftIsModified = true;
+                                break;
+                            }
+                        }
+
+                        // Skip if shift is modified and moved to different date
+                        if (shiftIsModified && effectiveShift.getShiftStartDate() != null &&
+                                !effectiveShift.getShiftStartDate().equals(currentDate)) {
+                            continue;
+                        }
+
+                        User user = userMap.get(effectiveShift.getUserID());
                         if (user == null) continue;
 
-                        // Check for leave
+                        Shift finalEffectiveShift = effectiveShift;
                         String leaveType = leaveRequests.stream()
-                                .filter(lr -> lr.getUserID() == shift.getUserID())
+                                .filter(lr -> lr.getUserID() == finalEffectiveShift.getUserID())
                                 .filter(lr -> {
-                                    LocalDateTime shiftStart = LocalDateTime.of(currentDate, shift.getShiftStartTime());
-                                    LocalDateTime shiftEnd = LocalDateTime.of(currentDate, shift.getShiftEndTime());
+                                    LocalDateTime shiftStart = LocalDateTime.of(currentDate, finalEffectiveShift.getShiftStartTime());
+                                    LocalDateTime shiftEnd = LocalDateTime.of(currentDate, finalEffectiveShift.getShiftEndTime());
                                     return lr.getFromDate().isBefore(shiftEnd) && lr.getToDate().isAfter(shiftStart);
                                 })
                                 .map(LeaveRequest::getLeaveType)
                                 .findFirst()
                                 .orElse("");
 
+                        // Calculate total hours
+                        String totalHours = calculateShiftDuration(
+                                effectiveShift.getShiftStartTime(),
+                                effectiveShift.getShiftEndTime(),
+                                effectiveShift.getThirtyMinBreaks(),
+                                effectiveShift.getTenMinBreaks()
+                        );
+
                         // Add row to export
-                        export.append(String.format("%s\t%d\t%s %s\t%s\t%s\t%s\t%s\n",
+                        export.append(String.format("%s\t%d\t%s %s\t%s\t%s\t%s\t%d\t%d\t%s\t%s\n",
                                 currentDate.format(DATE_FORMATTER),
                                 user.getUserID(),
                                 user.getFirst_name(),
                                 user.getLast_name(),
-                                shift.getShiftStartTime().format(TIME_FORMATTER),
-                                shift.getShiftEndTime().format(TIME_FORMATTER),
+                                effectiveShift.getShiftStartTime().format(TIME_FORMATTER),
+                                effectiveShift.getShiftEndTime().format(TIME_FORMATTER),
+                                totalHours,
+                                effectiveShift.getThirtyMinBreaks(),
+                                effectiveShift.getTenMinBreaks(),
                                 isPublicHoliday ? "Yes" : "No",
                                 leaveType
                         ));
+                    }
+
+                    // Add modifications that create new shifts on this date
+                    for (Shift mod : modifications) {
+                        if (mod.getShiftStartDate() != null &&
+                                mod.getShiftStartDate().equals(currentDate) &&
+                                !mod.getShiftStartDate().equals(mod.getOriginalDate())) {
+
+                            User user = userMap.get(mod.getUserID());
+                            if (user == null) continue;
+
+                            String leaveType = leaveRequests.stream()
+                                    .filter(lr -> lr.getUserID() == mod.getUserID())
+                                    .filter(lr -> {
+                                        LocalDateTime shiftStart = LocalDateTime.of(currentDate, mod.getShiftStartTime());
+                                        LocalDateTime shiftEnd = LocalDateTime.of(currentDate, mod.getShiftEndTime());
+                                        return lr.getFromDate().isBefore(shiftEnd) && lr.getToDate().isAfter(shiftStart);
+                                    })
+                                    .map(LeaveRequest::getLeaveType)
+                                    .findFirst()
+                                    .orElse("");
+
+                            String totalHours = calculateShiftDuration(
+                                    mod.getShiftStartTime(),
+                                    mod.getShiftEndTime(),
+                                    mod.getThirtyMinBreaks(),
+                                    mod.getTenMinBreaks()
+                            );
+
+                            export.append(String.format("%s\t%d\t%s %s\t%s\t%s\t%s\t%d\t%d\t%s\t%s\n",
+                                    currentDate.format(DATE_FORMATTER),
+                                    user.getUserID(),
+                                    user.getFirst_name(),
+                                    user.getLast_name(),
+                                    mod.getShiftStartTime().format(TIME_FORMATTER),
+                                    mod.getShiftEndTime().format(TIME_FORMATTER),
+                                    totalHours,
+                                    mod.getThirtyMinBreaks(),
+                                    mod.getTenMinBreaks(),
+                                    isPublicHoliday ? "Yes" : "No",
+                                    leaveType
+                            ));
+                        }
                     }
                 }
 
