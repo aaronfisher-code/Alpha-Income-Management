@@ -91,6 +91,12 @@ public class RosterPageController extends PageController {
         datePkr.setText(main.getCurrentDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)));
         datePkr.getStyleClass().add("custDatePicker");
         datePkr.getStylesheets().add("/views/CSS/RosterPage.css");
+        exportDataButton.setOnAction(_ -> {
+            dialog = new DialogPane.Dialog<>(dialogPane, DialogPane.Type.BLANK);
+            dialog.setPadding(false);
+            dialog.setContent(createExportDialog());
+            dialogPane.showDialog(dialog);
+        });
         Task<List<User>> getUsersTask = new Task<>() {
             @Override
             protected List<User> call() {
@@ -812,20 +818,19 @@ public class RosterPageController extends PageController {
         m.changePage("/views/FXML/LeaveManagementPage.fxml");
     }
 
-    public void exportData() throws IOException {
-        Stage exportToolStage = new Stage();
-        ExportToolController c;
-        exportToolStage.setResizable(false);
-        exportToolStage.initModality(Modality.APPLICATION_MODAL);
+    private Node createExportDialog() {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/ExportTool.fxml"));
-        Parent root = loader.load();
-        c = loader.getController();
-        c.setMain(main);
-        c.fill();
-        c.setParent(this);
-        exportToolStage.setTitle("Export roster info to clipboard");
-        exportToolStage.setScene(new Scene(root));
-        exportToolStage.showAndWait();
+        VBox exportDialog = null;
+        try {
+            exportDialog = loader.load();
+        } catch (IOException e) {
+            dialogPane.showError("Error","An error occurred while trying to open the export dialog",e);
+        }
+        ExportToolController dialogController = loader.getController();
+        dialogController.setParent(this);
+        dialogController.setMain(this.main);
+        dialogController.fill();
+        return exportDialog;
     }
 
     public void adjustGridSize(){
