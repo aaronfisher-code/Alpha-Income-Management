@@ -24,6 +24,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 public class BudgetAndExpensesController extends DateSelectController{
 
@@ -31,20 +32,20 @@ public class BudgetAndExpensesController extends DateSelectController{
 	@FXML private MFXTextField cpaIncomeXero, cpaIncomeSpreadsheet,cpaIncomeVariance,lanternPayIncomeXero,lanternPayIncomeSpreadsheet,lanternPayIncomeVariance,otherIncomeXero,otherIncomeSpreadsheet,otherIncomeVariance,atoGSTrefundXero;
 	@FXML private MFXButton saveButton;
 	@FXML private Label errorLabel;
-    @FXML private GridPane endOfMonthTable;
+	@FXML private GridPane endOfMonthTable;
 	@FXML private MFXProgressSpinner progressSpinner,saveProgressSpinner;
 	@FXML private MFXTextField noOfScriptsLast, noOfScriptsGrowth1, noOfScriptsTarget1, noOfScriptsGrowth2, noOfScriptsTarget2;
-	private boolean noOfScriptsTarget1UseGrowth, noOfScriptsTarget2UseGrowth;
+	private boolean noOfScriptsTarget1UseGrowth = true, noOfScriptsTarget2UseGrowth = true;
 	@FXML private MFXTextField otcCustomerLast, otcCustomerGrowth1, otcCustomerTarget1, otcCustomerGrowth2, otcCustomerTarget2;
-	private boolean otcCustomerTarget1UseGrowth, otcCustomerTarget2UseGrowth;
+	private boolean otcCustomerTarget1UseGrowth = true, otcCustomerTarget2UseGrowth = true;
 	@FXML private MFXTextField gpDollarLast, gpDollarGrowth1, gpDollarTarget1, gpDollarGrowth2, gpDollarTarget2;
-	private boolean gpDollarTarget1UseGrowth, gpDollarTarget2UseGrowth;
+	private boolean gpDollarTarget1UseGrowth = true, gpDollarTarget2UseGrowth = true;
 	@FXML private MFXTextField scriptsOnFileLast, scriptsOnFileGrowth1, scriptsOnFileTarget1, scriptsOnFileGrowth2, scriptsOnFileTarget2;
-	private boolean scriptsOnFileTarget1UseGrowth, scriptsOnFileTarget2UseGrowth;
+	private boolean scriptsOnFileTarget1UseGrowth = true, scriptsOnFileTarget2UseGrowth = true;
 	@FXML private MFXTextField medschecksLast, medschecksGrowth1, medschecksTarget1, medschecksGrowth2, medschecksTarget2;
-	private boolean medschecksTarget1UseGrowth, medschecksTarget2UseGrowth;
+	private boolean medschecksTarget1UseGrowth = true, medschecksTarget2UseGrowth = true;
 	@FXML private MFXTextField smsPatientsLast, smsPatientsGrowth1, smsPatientsTarget1, smsPatientsGrowth2, smsPatientsTarget2;
-	private boolean smsPatientsTarget1UseGrowth, smsPatientsTarget2UseGrowth;
+	private boolean smsPatientsTarget1UseGrowth = true, smsPatientsTarget2UseGrowth = true;
 	private BudgetExpensesService budgetExpensesService;
 	private AccountPaymentService accountPaymentService;
 	private TillReportService tillReportService;
@@ -233,7 +234,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 			}
 		}, executor);
 
-		CompletableFuture<Integer> lastYearScriptsOnFileFuture = CompletableFuture.supplyAsync(() -> {
+		CompletableFuture<int[]> eodMetricsFuture = CompletableFuture.supplyAsync(() -> {
 			try {
 				List<EODDataPoint> eodData = eodService.getEODDataPoints(
 						main.getCurrentStore().getStoreID(),
@@ -241,58 +242,36 @@ public class BudgetAndExpensesController extends DateSelectController{
 						lastYearMonthObject.atEndOfMonth()
 				);
 
-				return eodData != null && !eodData.isEmpty() ?
-						eodData.stream()
-								.sorted(Comparator.comparing(EODDataPoint::getDate).reversed())
-								.filter(dataPoint -> dataPoint.getScriptsOnFile() > 0)
-								.findFirst()
-								.map(EODDataPoint::getScriptsOnFile)
-								.orElse(0) :
-						0;
+				if (eodData == null || eodData.isEmpty()) {
+					return new int[]{0, 0, 0};
+				}
+
+				// Sort once for all metrics
+				List<EODDataPoint> sortedData = eodData.stream()
+						.sorted(Comparator.comparing(EODDataPoint::getDate).reversed())
+						.toList();
+
+				int scriptsOnFile = sortedData.stream()
+						.filter(dataPoint -> dataPoint.getScriptsOnFile() > 0)
+						.findFirst()
+						.map(EODDataPoint::getScriptsOnFile)
+						.orElse(0);
+
+				int medschecks = sortedData.stream()
+						.filter(dataPoint -> dataPoint.getMedschecks() > 0)
+						.findFirst()
+						.map(EODDataPoint::getMedschecks)
+						.orElse(0);
+
+				int smsPatients = sortedData.stream()
+						.filter(dataPoint -> dataPoint.getSmsPatients() > 0)
+						.findFirst()
+						.map(EODDataPoint::getSmsPatients)
+						.orElse(0);
+
+				return new int[]{scriptsOnFile, medschecks, smsPatients};
 			} catch (Exception e) {
-				return 0;
-			}
-		}, executor);
-
-		CompletableFuture<Integer> lastYearMedsChecksFuture = CompletableFuture.supplyAsync(() -> {
-			try {
-				List<EODDataPoint> eodData = eodService.getEODDataPoints(
-						main.getCurrentStore().getStoreID(),
-						lastYearMonthObject.atDay(1),
-						lastYearMonthObject.atEndOfMonth()
-				);
-
-				return eodData != null && !eodData.isEmpty() ?
-						eodData.stream()
-								.sorted(Comparator.comparing(EODDataPoint::getDate).reversed())
-								.filter(dataPoint -> dataPoint.getMedschecks() > 0)
-								.findFirst()
-								.map(EODDataPoint::getMedschecks)
-								.orElse(0) :
-						0;
-			} catch (Exception e) {
-				return 0;
-			}
-		}, executor);
-
-		CompletableFuture<Integer> lastYearSMSPatientsFuture = CompletableFuture.supplyAsync(() -> {
-			try {
-				List<EODDataPoint> eodData = eodService.getEODDataPoints(
-						main.getCurrentStore().getStoreID(),
-						lastYearMonthObject.atDay(1),
-						lastYearMonthObject.atEndOfMonth()
-				);
-
-				return eodData != null && !eodData.isEmpty() ?
-						eodData.stream()
-								.sorted(Comparator.comparing(EODDataPoint::getDate).reversed())
-								.filter(dataPoint -> dataPoint.getSmsPatients() > 0)
-								.findFirst()
-								.map(EODDataPoint::getSmsPatients)
-								.orElse(0) :
-						0;
-			} catch (Exception e) {
-				return 0;
+				return new int[]{0, 0, 0};
 			}
 		}, executor);
 
@@ -305,7 +284,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 		}, executor);
 
 		CompletableFuture.allOf(rosterUtilsFuture, budgetDataFuture, cpaPaymentFuture,
-						tacPaymentFuture, otherPaymentFuture, lastYearScriptCountFuture, lastYearOtcCustomerFuture, lastYearGrossProfitFuture, lastYearScriptsOnFileFuture, lastYearMedsChecksFuture, lastYearSMSPatientsFuture, targetsFuture)
+						tacPaymentFuture, otherPaymentFuture, lastYearScriptCountFuture, lastYearOtcCustomerFuture, lastYearGrossProfitFuture, eodMetricsFuture, targetsFuture)
 				.thenRunAsync(() -> {
 					try {
 						RosterUtils rosterUtils = rosterUtilsFuture.get();
@@ -316,9 +295,9 @@ public class BudgetAndExpensesController extends DateSelectController{
 						double lastYearScriptCount = lastYearScriptCountFuture.get();
 						double lastYearOtcCustomer = lastYearOtcCustomerFuture.get();
 						double lastYearGrossProfit = lastYearGrossProfitFuture.get();
-						int lastYearScriptsOnFile = lastYearScriptsOnFileFuture.get();
-						int lastYearMedsChecks = lastYearMedsChecksFuture.get();
-						int lastYearSMSPatients = lastYearSMSPatientsFuture.get();
+						int lastYearScriptsOnFile = eodMetricsFuture.get()[0];
+						int lastYearMedsChecks = eodMetricsFuture.get()[1];
+						int lastYearSMSPatients = eodMetricsFuture.get()[2];
 						List<DBTargetDatapoint> targetsData = targetsFuture.get();
 
 						Platform.runLater(() -> {
@@ -527,6 +506,9 @@ public class BudgetAndExpensesController extends DateSelectController{
 					scriptsOnFileTarget1,scriptsOnFileGrowth1, scriptsOnFileTarget2, scriptsOnFileGrowth2,
 					medschecksTarget1,medschecksGrowth1, medschecksTarget2, medschecksGrowth2,smsPatientsTarget1,
 					smsPatientsGrowth1,smsPatientsTarget2,smsPatientsGrowth2).forEach(field -> field.setText("0"));
+			Arrays.asList(noOfScriptsTarget1UseGrowth,noOfScriptsTarget2UseGrowth,otcCustomerTarget1UseGrowth,otcCustomerTarget2UseGrowth,
+					gpDollarTarget1UseGrowth,gpDollarTarget2UseGrowth,scriptsOnFileTarget1UseGrowth,scriptsOnFileTarget2UseGrowth,
+					medschecksTarget1UseGrowth,medschecksTarget2UseGrowth,smsPatientsTarget1UseGrowth,smsPatientsTarget2UseGrowth).forEach(flag -> flag = true);
 		}else{
 			for(DBTargetDatapoint dbTargetDatapoint: targetsData){
 				isUpdatingTargets = true;
@@ -770,7 +752,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 				DBTargetDatapoint medschecksTargetData = new DBTargetDatapoint(
 						LocalDate.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth(), 1),
 						main.getCurrentStore().getStoreID(),
-						"Medschecks",
+						"MedsChecks",
 						Double.parseDouble(medschecksGrowth1.getText()),
 						Double.parseDouble(medschecksTarget1.getText()),
 						medschecksTarget1UseGrowth,
