@@ -43,6 +43,8 @@ public class BudgetAndExpensesController extends DateSelectController{
 	private boolean scriptsOnFileTarget1UseGrowth, scriptsOnFileTarget2UseGrowth;
 	@FXML private MFXTextField medschecksLast, medschecksGrowth1, medschecksTarget1, medschecksGrowth2, medschecksTarget2;
 	private boolean medschecksTarget1UseGrowth, medschecksTarget2UseGrowth;
+	@FXML private MFXTextField smsPatientsLast, smsPatientsGrowth1, smsPatientsTarget1, smsPatientsGrowth2, smsPatientsTarget2;
+	private boolean smsPatientsTarget1UseGrowth, smsPatientsTarget2UseGrowth;
 	private BudgetExpensesService budgetExpensesService;
 	private AccountPaymentService accountPaymentService;
 	private TillReportService tillReportService;
@@ -73,14 +75,14 @@ public class BudgetAndExpensesController extends DateSelectController{
 				mfxTextField.setDisable(true);
 			}
 		}
-		for(MFXTextField mfxTextField: Arrays.asList(noOfScriptsGrowth1,noOfScriptsGrowth2,otcCustomerGrowth1,otcCustomerGrowth2,gpDollarGrowth1,gpDollarGrowth2,scriptsOnFileGrowth1,scriptsOnFileGrowth2,medschecksGrowth1,medschecksGrowth2)){
+		for(MFXTextField mfxTextField: Arrays.asList(noOfScriptsGrowth1,noOfScriptsGrowth2,otcCustomerGrowth1,otcCustomerGrowth2,gpDollarGrowth1,gpDollarGrowth2,scriptsOnFileGrowth1,scriptsOnFileGrowth2,medschecksGrowth1,medschecksGrowth2,smsPatientsGrowth1,smsPatientsGrowth2)){
 			if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Budget - Edit"))) {
 				ValidatorUtils.setupRegexValidation(mfxTextField, errorLabel, ValidatorUtils.CASH_REGEX, ValidatorUtils.CASH_ERROR, "", saveButton);
 			}else{
 				mfxTextField.setDisable(true);
 			}
 		}
-		for(MFXTextField mfxTextField:Arrays.asList(noOfScriptsTarget1,noOfScriptsTarget2,otcCustomerTarget1,otcCustomerTarget2,gpDollarTarget1,gpDollarTarget2,scriptsOnFileTarget1,scriptsOnFileTarget2,medschecksTarget1,medschecksTarget2)){
+		for(MFXTextField mfxTextField:Arrays.asList(noOfScriptsTarget1,noOfScriptsTarget2,otcCustomerTarget1,otcCustomerTarget2,gpDollarTarget1,gpDollarTarget2,scriptsOnFileTarget1,scriptsOnFileTarget2,medschecksTarget1,medschecksTarget2,smsPatientsTarget1,smsPatientsTarget2)){
 			if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Budget - Edit"))) {
 				ValidatorUtils.setupRegexValidation(mfxTextField, errorLabel, ValidatorUtils.CASH_REGEX, ValidatorUtils.CASH_ERROR, "", saveButton);
 			}else{
@@ -273,6 +275,27 @@ public class BudgetAndExpensesController extends DateSelectController{
 			}
 		}, executor);
 
+		CompletableFuture<Integer> lastYearSMSPatientsFuture = CompletableFuture.supplyAsync(() -> {
+			try {
+				List<EODDataPoint> eodData = eodService.getEODDataPoints(
+						main.getCurrentStore().getStoreID(),
+						lastYearMonthObject.atDay(1),
+						lastYearMonthObject.atEndOfMonth()
+				);
+
+				return eodData != null && !eodData.isEmpty() ?
+						eodData.stream()
+								.sorted(Comparator.comparing(EODDataPoint::getDate).reversed())
+								.filter(dataPoint -> dataPoint.getSmsPatients() > 0)
+								.findFirst()
+								.map(EODDataPoint::getSmsPatients)
+								.orElse(0) :
+						0;
+			} catch (Exception e) {
+				return 0;
+			}
+		}, executor);
+
 		CompletableFuture<List<DBTargetDatapoint>> targetsFuture = CompletableFuture.supplyAsync(() -> {
 			try {
 				return targetService.getTargetData(main.getCurrentStore().getStoreID(), yearMonthObject);
@@ -282,7 +305,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 		}, executor);
 
 		CompletableFuture.allOf(rosterUtilsFuture, budgetDataFuture, cpaPaymentFuture,
-						tacPaymentFuture, otherPaymentFuture, lastYearScriptCountFuture, lastYearOtcCustomerFuture, lastYearGrossProfitFuture, lastYearScriptsOnFileFuture, lastYearMedsChecksFuture, targetsFuture)
+						tacPaymentFuture, otherPaymentFuture, lastYearScriptCountFuture, lastYearOtcCustomerFuture, lastYearGrossProfitFuture, lastYearScriptsOnFileFuture, lastYearMedsChecksFuture, lastYearSMSPatientsFuture, targetsFuture)
 				.thenRunAsync(() -> {
 					try {
 						RosterUtils rosterUtils = rosterUtilsFuture.get();
@@ -295,6 +318,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 						double lastYearGrossProfit = lastYearGrossProfitFuture.get();
 						int lastYearScriptsOnFile = lastYearScriptsOnFileFuture.get();
 						int lastYearMedsChecks = lastYearMedsChecksFuture.get();
+						int lastYearSMSPatients = lastYearSMSPatientsFuture.get();
 						List<DBTargetDatapoint> targetsData = targetsFuture.get();
 
 						Platform.runLater(() -> {
@@ -303,11 +327,13 @@ public class BudgetAndExpensesController extends DateSelectController{
 							gpDollarLast.setText(String.format("%.2f", lastYearGrossProfit));
 							scriptsOnFileLast.setText(String.valueOf(lastYearScriptsOnFile));
 							medschecksLast.setText(String.valueOf(lastYearMedsChecks));
+							smsPatientsLast.setText(String.valueOf(lastYearSMSPatients));
 							formatIntegerTargetFields(noOfScriptsLast, noOfScriptsGrowth1, noOfScriptsTarget1, noOfScriptsGrowth2, noOfScriptsTarget2, "noOfScripts");
 							formatCurrencyTargetFields(otcCustomerLast, otcCustomerGrowth1, otcCustomerTarget1, otcCustomerGrowth2, otcCustomerTarget2, "otcCustomer");
 							formatCurrencyTargetFields(gpDollarLast, gpDollarGrowth1, gpDollarTarget1, gpDollarGrowth2, gpDollarTarget2, "gpDollar");
 							formatIntegerTargetFields(scriptsOnFileLast, scriptsOnFileGrowth1, scriptsOnFileTarget1, scriptsOnFileGrowth2, scriptsOnFileTarget2, "scriptsOnFile");
 							formatIntegerTargetFields(medschecksLast, medschecksGrowth1, medschecksTarget1, medschecksGrowth2, medschecksTarget2, "medschecks");
+							formatIntegerTargetFields(smsPatientsLast, smsPatientsGrowth1, smsPatientsTarget1, smsPatientsGrowth2, smsPatientsTarget2, "smsPatients");
 							TableUtils.formatTextFields(endOfMonthTable, this::updateTotals);
 							updateUIWithData(rosterUtils, data, totalCPAPayment, totalTACPayment, totalOtherPayment, targetsData);
 							updateTotals();
@@ -450,6 +476,13 @@ public class BudgetAndExpensesController extends DateSelectController{
 					medschecksTarget1UseGrowth = useGrowth;
 				}
 				break;
+			case "smsPatients":
+				if (secondaryTarget) {
+					smsPatientsTarget2UseGrowth = useGrowth;
+				} else {
+					smsPatientsTarget1UseGrowth = useGrowth;
+				}
+				break;
 		}
 	}
 
@@ -492,7 +525,8 @@ public class BudgetAndExpensesController extends DateSelectController{
 					otcCustomerTarget1,otcCustomerGrowth1, otcCustomerTarget2, otcCustomerGrowth2,
 					gpDollarTarget1,gpDollarGrowth1, gpDollarTarget2, gpDollarGrowth2,
 					scriptsOnFileTarget1,scriptsOnFileGrowth1, scriptsOnFileTarget2, scriptsOnFileGrowth2,
-					medschecksTarget1,medschecksGrowth1, medschecksTarget2, medschecksGrowth2).forEach(field -> field.setText("0"));
+					medschecksTarget1,medschecksGrowth1, medschecksTarget2, medschecksGrowth2,smsPatientsTarget1,
+					smsPatientsGrowth1,smsPatientsTarget2,smsPatientsGrowth2).forEach(field -> field.setText("0"));
 		}else{
 			for(DBTargetDatapoint dbTargetDatapoint: targetsData){
 				isUpdatingTargets = true;
@@ -577,6 +611,22 @@ public class BudgetAndExpensesController extends DateSelectController{
 							updateGrowthFromTarget(medschecksLast, medschecksGrowth2, medschecksTarget2, "medschecks", true);
 						}
 						break;
+					case "SMSPatients":
+						if (dbTargetDatapoint.isUseTarget1Growth()) {
+							smsPatientsGrowth1.setText(String.format("%.2f", dbTargetDatapoint.getTarget1Growth()));
+							updateTargetFromGrowth(smsPatientsLast, smsPatientsGrowth1, smsPatientsTarget1, TableUtils.formatStyle.INTEGER, "smsPatients", false);
+						} else {
+							smsPatientsTarget1.setText(String.format("%.0f", dbTargetDatapoint.getTarget1Actual()));
+							updateGrowthFromTarget(smsPatientsLast, smsPatientsGrowth1, smsPatientsTarget1, "smsPatients", false);
+						}
+						if (dbTargetDatapoint.isUseTarget2Growth()) {
+							smsPatientsGrowth2.setText(String.format("%.2f", dbTargetDatapoint.getTarget2Growth()));
+							updateTargetFromGrowth(smsPatientsLast, smsPatientsGrowth2, smsPatientsTarget2, TableUtils.formatStyle.INTEGER, "smsPatients", true);
+						} else {
+							smsPatientsTarget2.setText(String.format("%.0f", dbTargetDatapoint.getTarget2Actual()));
+							updateGrowthFromTarget(smsPatientsLast, smsPatientsGrowth2, smsPatientsTarget2, "smsPatients", true);
+						}
+						break;
 				}
 			}
 		}
@@ -644,7 +694,8 @@ public class BudgetAndExpensesController extends DateSelectController{
 				!atoGSTrefundXero.isValid() || !monthlyWagesField.isValid() || !noOfScriptsTarget1.isValid() ||
 				!noOfScriptsTarget2.isValid() || !otcCustomerTarget1.isValid() || !otcCustomerTarget2.isValid() ||
 				!gpDollarTarget1.isValid() || !gpDollarTarget2.isValid() || !scriptsOnFileTarget1.isValid() ||
-				!scriptsOnFileTarget2.isValid() || !medschecksTarget1.isValid() || !medschecksTarget2.isValid()) {
+				!scriptsOnFileTarget2.isValid() || !medschecksTarget1.isValid() || !medschecksTarget2.isValid() ||
+				!smsPatientsTarget1.isValid() || !smsPatientsTarget2.isValid()) {
 			errorLabel.setText("Please ensure all fields are valid");
 			errorLabel.setVisible(true);
 			return;
@@ -728,11 +779,24 @@ public class BudgetAndExpensesController extends DateSelectController{
 						medschecksTarget2UseGrowth
 				);
 
+				DBTargetDatapoint smsPatientsTargetData = new DBTargetDatapoint(
+						LocalDate.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth(), 1),
+						main.getCurrentStore().getStoreID(),
+						"SMSPatients",
+						Double.parseDouble(smsPatientsGrowth1.getText()),
+						Double.parseDouble(smsPatientsTarget1.getText()),
+						smsPatientsTarget1UseGrowth,
+						Double.parseDouble(smsPatientsGrowth2.getText()),
+						Double.parseDouble(smsPatientsTarget2.getText()),
+						smsPatientsTarget2UseGrowth
+				);
+
 				targetService.updateTargetData(noOfScriptsTargetData);
 				targetService.updateTargetData(otcCustomerTargetData);
 				targetService.updateTargetData(gpDollarTargetData);
 				targetService.updateTargetData(scriptsOnFileTargetData);
 				targetService.updateTargetData(medschecksTargetData);
+				targetService.updateTargetData(smsPatientsTargetData);
 
 				return null;
 			}
