@@ -156,7 +156,7 @@ public class InvoiceEntryController extends DateSelectController{
 						invoiceNoValidationLabel.setVisible(false);
 						if (amountField.isValid()) {
 							varianceLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(
-									Double.parseDouble(expectedUnitAmountLabel.getText().replace("$", "")) - Double.parseDouble(amountField.getText())));
+									Double.parseDouble(expectedUnitAmountLabel.getText().replace("$", "").replace(",","")) - Double.parseDouble(amountField.getText())));
 						}
 					} else {
 						expectedUnitAmountLabel.setText("N/A");
@@ -240,7 +240,7 @@ public class InvoiceEntryController extends DateSelectController{
 				if(expectedUnitAmountLabel.getText().equals("N/A"))
 					varianceLabel.setText("N/A");
 				else
-					varianceLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(Double.parseDouble(expectedUnitAmountLabel.getText().replace("$","")) - Double.parseDouble(amountField.getText())));
+					varianceLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(Double.parseDouble(expectedUnitAmountLabel.getText().replace("$","").replace(",","")) - Double.parseDouble(amountField.getText())));
 			}
 		});
 	}
