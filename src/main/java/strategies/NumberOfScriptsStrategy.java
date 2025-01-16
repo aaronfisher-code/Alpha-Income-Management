@@ -1,15 +1,11 @@
 package strategies;
 
-import application.Main;
 import controllers.TargetGraphsPageController;
 import javafx.scene.chart.XYChart;
+import models.DBTargetDatapoint;
 import models.TillReportDataPoint;
-import services.TargetService;
-import services.TillReportService;
 import utils.RosterUtils;
 
-import java.io.IOException;
-import java.sql.*;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -19,24 +15,11 @@ public class NumberOfScriptsStrategy extends AbstractLineGraphStrategy {
     public static final String GRAPH_TITLE = "Number of Scripts";
     public static final String AXIS_LABEL = "Script #";
     public static final boolean DOLLAR_FORMAT = false;
+    List<TillReportDataPoint> currentTillReportDataPoints;
 
-    private TillReportService tillReportService;
-    private List<TillReportDataPoint> currentTillReportDataPoints;
-
-    public NumberOfScriptsStrategy(LocalDate startDate, LocalDate endDate, TargetGraphsPageController parent) {
-        super(startDate, endDate, parent, "NoOfScripts");
-
-        try {
-            this.tillReportService = new TillReportService();
-            this.currentTillReportDataPoints = tillReportService.getTillReportDataPointsByKey(
-                    main.getCurrentStore().getStoreID(),
-                    startDate,
-                    endDate,
-                    "Gross Profit ($)"
-            );
-        } catch (IOException e) {
-            parent.throwError(e);
-        }
+    public NumberOfScriptsStrategy(LocalDate startDate, LocalDate endDate, TargetGraphsPageController parent, List<TillReportDataPoint> currentTillReportDataPoints, RosterUtils rosterUtils, List<DBTargetDatapoint> targets) {
+        super(startDate, endDate, parent, rosterUtils, targets);
+        this.currentTillReportDataPoints = currentTillReportDataPoints;
     }
 
     @Override

@@ -19,30 +19,18 @@ public abstract class AbstractLineGraphStrategy implements LineGraphTargetStrate
     protected LocalDate endDate;
     protected List<DBTargetDatapoint> targets;
     protected RosterUtils rosterUtils;
-    protected TargetService targetService;
     protected Main main;
     protected TargetGraphsPageController parent;
 
     public AbstractLineGraphStrategy(LocalDate startDate, LocalDate endDate,
-                                     TargetGraphsPageController parent, String targetKey) {
+                                     TargetGraphsPageController parent, RosterUtils rosterUtils, List<DBTargetDatapoint> targets) {
         this.length = (int) ChronoUnit.DAYS.between(startDate, endDate);
         this.startDate = startDate;
         this.endDate = endDate;
         this.parent = parent;
         this.main = parent.getMain();
-
-        try {
-            this.targetService = new TargetService();
-            this.rosterUtils = new RosterUtils(main, startDate, endDate);
-            this.targets = targetService.getTargetsByKey(
-                    main.getCurrentStore().getStoreID(),
-                    targetKey,
-                    startDate,
-                    endDate
-            );
-        } catch (IOException e) {
-            parent.throwError(e);
-        }
+        this.rosterUtils = rosterUtils;
+        this.targets = targets;
     }
 
     @Override

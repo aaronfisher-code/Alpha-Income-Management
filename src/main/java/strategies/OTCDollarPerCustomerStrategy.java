@@ -1,15 +1,11 @@
 package strategies;
 
-import application.Main;
 import controllers.TargetGraphsPageController;
 import javafx.scene.chart.XYChart;
+import models.DBTargetDatapoint;
 import models.TillReportDataPoint;
-import services.TargetService;
-import services.TillReportService;
 import utils.RosterUtils;
 
-import java.io.IOException;
-import java.sql.*;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -22,22 +18,10 @@ public class OTCDollarPerCustomerStrategy extends AbstractLineGraphStrategy {
     public static final boolean DOLLAR_FORMAT = true;
 
     private List<TillReportDataPoint> currentTillReportDataPoints;
-    private TillReportService tillReportService;
 
-    public OTCDollarPerCustomerStrategy(LocalDate startDate, LocalDate endDate, TargetGraphsPageController parent) {
-        super(startDate, endDate, parent, "NoOfScripts");
-
-        try {
-            this.tillReportService = new TillReportService();
-            this.currentTillReportDataPoints = tillReportService.getTillReportDataPointsByKey(
-                    main.getCurrentStore().getStoreID(),
-                    startDate,
-                    endDate,
-                    "Avg. OTC Sales Per Customer"
-            );
-        } catch (IOException e) {
-            parent.throwError(e);
-        }
+    public OTCDollarPerCustomerStrategy(LocalDate startDate, LocalDate endDate, TargetGraphsPageController parent, List<TillReportDataPoint> currentTillReportDataPoints, RosterUtils rosterUtils, List<DBTargetDatapoint> targets) {
+        super(startDate, endDate, parent, rosterUtils, targets);
+        this.currentTillReportDataPoints = currentTillReportDataPoints;
     }
 
     @Override

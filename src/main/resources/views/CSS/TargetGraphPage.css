@@ -3,6 +3,16 @@
     -fx-font-size: 12px;
 }
 
+.mfx-progress-bar .bar1{
+    -mfx-color: #0F60FF;
+    -fx-fill: #0F60FF;
+}
+
+.mfx-progress-bar .bar2{
+    -mfx-color: #0F60FF;
+    -fx-fill: #0F60FF;
+}
+
 
 
 

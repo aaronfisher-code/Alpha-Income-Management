@@ -2,10 +2,10 @@ package strategies;
 
 import controllers.TargetGraphsPageController;
 import javafx.scene.chart.XYChart;
+import models.DBTargetDatapoint;
 import models.EODDataPoint;
-import services.EODService;
+import utils.RosterUtils;
 
-import java.io.IOException;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -17,22 +17,11 @@ public class ScriptsOnFileStrategy extends AbstractLineGraphStrategy {
     public static final boolean DOLLAR_FORMAT = false;
 
     private List<EODDataPoint> currentEODDataPoints;
-    private EODService eodService;
 
     public ScriptsOnFileStrategy(LocalDate startDate, LocalDate endDate,
-                                 TargetGraphsPageController parent) {
-        super(startDate, endDate, parent, "ScriptsOnFile");
-
-        try {
-            this.eodService = new EODService();
-            this.currentEODDataPoints = eodService.getEODDataPoints(
-                    main.getCurrentStore().getStoreID(),
-                    startDate,
-                    endDate
-            );
-        } catch (IOException e) {
-            parent.throwError(e);
-        }
+                                 TargetGraphsPageController parent, List<EODDataPoint> currentEODDataPoints, RosterUtils rosterUtils, List<DBTargetDatapoint> targets) {
+        super(startDate, endDate, parent, rosterUtils, targets);
+        this.currentEODDataPoints = currentEODDataPoints;
     }
 
     @Override

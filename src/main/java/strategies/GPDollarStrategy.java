@@ -2,10 +2,9 @@ package strategies;
 
 import controllers.TargetGraphsPageController;
 import javafx.scene.chart.XYChart;
+import models.DBTargetDatapoint;
 import models.TillReportDataPoint;
-import services.TillReportService;
-
-import java.io.IOException;
+import utils.RosterUtils;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -17,22 +16,10 @@ public class GPDollarStrategy extends AbstractLineGraphStrategy {
     public static final boolean DOLLAR_FORMAT = true;
 
     private List<TillReportDataPoint> currentTillReportDataPoints;
-    private TillReportService tillReportService;
 
-    public GPDollarStrategy(LocalDate startDate, LocalDate endDate, TargetGraphsPageController parent) {
-        super(startDate, endDate, parent, "GPDollar");
-
-        try {
-            this.tillReportService = new TillReportService();
-            this.currentTillReportDataPoints = tillReportService.getTillReportDataPointsByKey(
-                    main.getCurrentStore().getStoreID(),
-                    startDate,
-                    endDate,
-                    "Gross Profit ($)"
-            );
-        } catch (IOException e) {
-            parent.throwError(e);
-        }
+    public GPDollarStrategy(LocalDate startDate, LocalDate endDate, TargetGraphsPageController parent, List<TillReportDataPoint> currentTillReportDataPoints, RosterUtils rosterUtils, List<DBTargetDatapoint> targets) {
+        super(startDate, endDate, parent, rosterUtils, targets);
+        this.currentTillReportDataPoints = currentTillReportDataPoints;
     }
 
     @Override
