@@ -15,6 +15,8 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.ColorPicker?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
 <?import javafx.scene.effect.DropShadow?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
@@ -395,7 +397,14 @@
             <VBox fx:id="userEntryContainer1" maxWidth="1.7976931348623157E308" style="-fx-background-color: #FFFFFF;" VBox.vgrow="ALWAYS">
                <children>
                   <Label text="Select user permissions:" />
-                  <MFXCheckListView fx:id="permissionsSelector" depthLevel="LEVEL0" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="135.0" prefWidth="416.0" style="-fx-border-color: #D3D3D3;" VBox.vgrow="ALWAYS" />
+                  <TableView fx:id="permissionsTable" maxHeight="1.7976931348623157E308" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="permissionEnabledCol" prefWidth="62.40002226829529" text="Enabled" />
+                      <TableColumn fx:id="permissionNameCol" prefWidth="210.39993286132812" text="Permission" />
+                      <TableColumn fx:id="permissionStartDateCol" minWidth="0.0" prefWidth="69.60009765625" text="Start" />
+                        <TableColumn fx:id="permissionEndDateCol" prefWidth="71.1998291015625" text="End" />
+                    </columns>
+                  </TableView>
                </children>
                <padding>
                   <Insets left="5.0" right="5.0" />

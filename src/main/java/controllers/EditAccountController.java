@@ -23,7 +23,6 @@ import utils.ValidatorUtils;
 
 import java.io.IOException;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -49,6 +48,11 @@ public class EditAccountController extends PageController {
 	@FXML private MFXCheckListView<Permission> permissionsSelector;
 	@FXML private MFXButton saveStoreButton,passwordResetButton,saveUserButton;
 	@FXML private MFXProgressSpinner userSpinner, storeSpinner;
+	@FXML private TableView<Permission> permissionsTable;
+	@FXML private TableColumn<Permission, String> permissionEnabledCol;
+	@FXML private TableColumn<Permission, String> permissionNameCol;
+	@FXML private TableColumn<Permission, String> permissionStartDateCol;
+	@FXML private TableColumn<Permission, String> permissionEndDateCol;
 	private MFXTableView<User> accountsTable = new MFXTableView<>();
 	private MFXTableColumn<User> userIDCol;
 	private MFXTableColumn<User> usernameCol;
