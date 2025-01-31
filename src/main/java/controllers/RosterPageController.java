@@ -17,10 +17,7 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import models.LeaveRequest;
-import models.Shift;
-import models.SpecialDateObj;
-import models.User;
+import models.*;
 import org.controlsfx.control.PopOver;
 import services.LeaveService;
 import services.RosterService;
@@ -176,11 +173,22 @@ public class RosterPageController extends PageController {
         updatePage();
     }
 
-    public void updateDay(LocalDate date, VBox shiftContainer, int dayOfWeek, List<Shift> allShifts,List<Shift> allModifications,List<LeaveRequest> allLeaveRequests,List<SpecialDateObj> specialDates) {
-        //empty the contents of the current day VBox
-        shiftContainer.getChildren().removeAll(shiftContainer.getChildren());
+    public void updateDay(LocalDate date,
+                          VBox shiftContainer,
+                          int dayOfWeek,
+                          List<Shift> allShifts,
+                          List<Shift> allModifications,
+                          List<LeaveRequest> allLeaveRequests,
+                          List<SpecialDateObj> specialDates) {
+
+        // 1) Clear whatever was in this day column
+        shiftContainer.getChildren().clear();
+
+        // 2) Figure out which date corresponds to "dayOfWeek" in the displayed row
         long weekDay = date.getDayOfWeek().getValue();
-        //Create Day Header card
+        LocalDate displayDate = date.minusDays(weekDay - dayOfWeek);
+
+        // 3) Create Day Header (same as before)
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/RosterDayCard.fxml"));
         VBox rosterDayCard = null;
         try {
@@ -188,92 +196,182 @@ public class RosterPageController extends PageController {
         } catch (IOException ex) {
             dialogPane.showError("Error","An error occurred while loading the day card", ex);
         }
+
         RosterDayCardController rdc = loader.getController();
         rdc.setMain(main);
-        rdc.setDate(date.minusDays(weekDay - dayOfWeek));
+        rdc.setDate(displayDate);
         rdc.setParent(this);
+
+        // Handle "special dates"
         for(SpecialDateObj sd: specialDates){
-            if(sd.getEventDate().equals(date.minusDays(weekDay - dayOfWeek))){
+            if(sd.getEventDate().equals(displayDate)){
                 rdc.setSpecialDate(sd);
             }
         }
         rdc.fill();
-        if (rdc.getDate() == date) {
-            //add blue selection formatting if date is current
+
+        // If this is the same day as "date" we highlight it
+        if (displayDate.equals(date)) {
             rdc.select();
         }
+
         HBox.setHgrow(rosterDayCard, Priority.ALWAYS);
-        weekdayBox.add(rosterDayCard,dayOfWeek-1,0);
-        //Create Shift Cards
+        weekdayBox.add(rosterDayCard, dayOfWeek - 1, 0);
+
+        // 4) Build shift cards for "regular" shifts
         for (Shift s : allShifts) {
-            boolean repeatShiftDay = (s.isRepeating() && DAYS.between(s.getShiftStartDate(), date.minusDays(weekDay - dayOfWeek)) % s.getDaysPerRepeat() == 0 && DAYS.between(s.getShiftStartDate(), date.minusDays(weekDay - dayOfWeek)) >= 0);
-            boolean equalDay = s.getShiftStartDate().equals(date.minusDays(weekDay - dayOfWeek));
-            boolean pastEnd = s.getShiftEndDate() != null && s.getShiftEndDate().isBefore(date.minusDays(weekDay - dayOfWeek));
-            if ((equalDay || repeatShiftDay) && !pastEnd) {
+            boolean repeatShiftDay = (
+                    s.isRepeating()
+                            && DAYS.between(s.getShiftStartDate(), displayDate) % s.getDaysPerRepeat() == 0
+                            && DAYS.between(s.getShiftStartDate(), displayDate) >= 0
+            );
+            boolean sameStartDay = s.getShiftStartDate().equals(displayDate);
+            boolean pastEnd = (s.getShiftEndDate() != null && s.getShiftEndDate().isBefore(displayDate));
+
+            if ((sameStartDay || repeatShiftDay) && !pastEnd) {
+                // Possibly check if a modification overrides it:
                 Shift updatedShift = s;
                 boolean shiftIsModified = false;
-                for(Shift m: allModifications){
-                    if(m.getShiftID()==s.getShiftID() && m.getOriginalDate().equals(date.minusDays(weekDay - dayOfWeek))){
+
+                for(Shift m: allModifications) {
+                    if(m.getShiftID() == s.getShiftID() && m.getOriginalDate().equals(displayDate)) {
                         updatedShift = m;
-                        shiftIsModified=true;
+                        shiftIsModified = true;
                     }
                 }
-                if(!shiftIsModified || (updatedShift.getShiftStartDate()!=null&&updatedShift.getShiftStartDate().equals(date.minusDays(weekDay - dayOfWeek)))){
+
+                // If no override or if the updated shift has the same start date => we display it
+                if(!shiftIsModified || (updatedShift.getShiftStartDate() != null
+                        && updatedShift.getShiftStartDate().equals(displayDate))) {
+
+                    // Build sub-segments
+                    List<ShiftSegment> segments = buildShiftSegments(updatedShift, displayDate, allLeaveRequests);
+
+                    // For each sub-segment, create a shift card
+                    for (ShiftSegment seg : segments) {
+                        try {
+                            loader = new FXMLLoader(getClass().getResource("/views/FXML/ShiftCard.fxml"));
+                            StackPane shiftCard = loader.load();
+                            ShiftCardController sc = loader.getController();
+                            sc.setMain(main);
+
+                            // Create a "partial" shift object representing just this segment
+                            Shift partialShift = new Shift();
+                            partialShift.setShiftID(updatedShift.getShiftID());
+                            partialShift.setStoreID(updatedShift.getStoreID());
+                            partialShift.setUserID(updatedShift.getUserID());
+                            partialShift.setShiftStartTime(seg.getStartTime());
+                            partialShift.setShiftEndTime(seg.getEndTime());
+                            partialShift.setShiftStartDate(displayDate);
+                            partialShift.setThirtyMinBreaks(updatedShift.getThirtyMinBreaks());
+                            partialShift.setTenMinBreaks(updatedShift.getTenMinBreaks());
+                            partialShift.setRepeating(updatedShift.isRepeating());
+                            partialShift.setDaysPerRepeat(updatedShift.getDaysPerRepeat());
+                            partialShift.setOriginalDate(updatedShift.getOriginalDate());
+                            partialShift.setFirst_name(updatedShift.getFirst_name());
+                            partialShift.setLast_name(updatedShift.getLast_name());
+                            partialShift.setProfileBG(updatedShift.getProfileBG());
+                            partialShift.setProfileText(updatedShift.getProfileText());
+                            partialShift.setRole(updatedShift.getRole());
+
+                            sc.setShift(partialShift);
+                            sc.fill();
+
+                            // If segment is on leave, mark it
+                            if (seg.isOnLeave()) {
+                                // You can style differently or set some property:
+                                // e.g. sc.setModification("On Leave");
+                                sc.setModification("On Leave");
+                            }
+
+                            // If the shift is a modification vs the original
+                            if (shiftIsModified) {
+                                sc.showDifference(s, updatedShift);
+                            }
+
+                            // Handle user permissions for editing
+                            Shift finalS = updatedShift;
+                            boolean canEditOwn = main.getCurrentUser().getPermissions().stream()
+                                    .anyMatch(p -> p.getPermissionName().equals("Roster - Edit own shifts")
+                                            && finalS.getUserID() == main.getCurrentUser().getUserID());
+                            boolean canEditAll = main.getCurrentUser().getPermissions().stream()
+                                    .anyMatch(p -> p.getPermissionName().equals("Roster - Edit all shifts"));
+
+                            if(canEditOwn || canEditAll) {
+                                shiftCard.setOnMouseClicked(_ -> openPopover(finalS, displayDate));
+                            }
+
+                            shiftContainer.getChildren().add(shiftCard);
+
+                        } catch (Exception ex) {
+                            dialogPane.showError("Error","Error loading shift card", ex);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 5) Build shift cards for modifications that have a different start date from the original
+        for (Shift m : allModifications) {
+            if (m.getShiftStartDate() != null
+                    && m.getShiftStartDate().equals(displayDate)
+                    && !(m.getShiftStartDate().equals(m.getOriginalDate()))) {
+
+                // Same sub-segment logic
+                List<ShiftSegment> segments = buildShiftSegments(m, displayDate, allLeaveRequests);
+
+                for (ShiftSegment seg : segments) {
                     try {
                         loader = new FXMLLoader(getClass().getResource("/views/FXML/ShiftCard.fxml"));
                         StackPane shiftCard = loader.load();
                         ShiftCardController sc = loader.getController();
                         sc.setMain(main);
-                        sc.setShift(updatedShift);
+
+                        // Partial shift for the segment
+                        Shift partialShift = new Shift();
+                        partialShift.setShiftID(m.getShiftID());
+                        partialShift.setStoreID(m.getStoreID());
+                        partialShift.setUserID(m.getUserID());
+                        partialShift.setShiftStartTime(seg.getStartTime());
+                        partialShift.setShiftEndTime(seg.getEndTime());
+                        partialShift.setShiftStartDate(displayDate);
+                        partialShift.setThirtyMinBreaks(m.getThirtyMinBreaks());
+                        partialShift.setTenMinBreaks(m.getTenMinBreaks());
+                        partialShift.setRepeating(m.isRepeating());
+                        partialShift.setDaysPerRepeat(m.getDaysPerRepeat());
+                        partialShift.setOriginalDate(m.getOriginalDate());
+                        partialShift.setFirst_name(m.getFirst_name());
+                        partialShift.setLast_name(m.getLast_name());
+                        partialShift.setProfileBG(m.getProfileBG());
+                        partialShift.setProfileText(m.getProfileText());
+                        partialShift.setRole(m.getRole());
+
+                        sc.setShift(partialShift);
                         sc.fill();
-                        //Check for leave requests
-                        for(LeaveRequest lr: allLeaveRequests){
-                            LocalDateTime shiftStart = LocalDateTime.of(date.minusDays(weekDay - dayOfWeek),updatedShift.getShiftStartTime());
-                            LocalDateTime shiftEnd = LocalDateTime.of(date.minusDays(weekDay - dayOfWeek),updatedShift.getShiftEndTime());
-                            if(lr.getUserID()==updatedShift.getUserID()&&lr.getFromDate().isBefore(shiftEnd)&&lr.getToDate().isAfter(shiftStart)){
-                                sc.setModification(lr.getLeaveType());
-                            }
+
+                        // Mark on leave if applicable
+                        if (seg.isOnLeave()) {
+                            sc.setModification("On Leave");
                         }
-                        sc.setDate(date.minusDays(weekDay - dayOfWeek));
-                        if(shiftIsModified)
-                            sc.showDifference(s,updatedShift);
-                        Shift finalS = updatedShift;
-                        if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && finalS.getUserID()==main.getCurrentUser().getUserID())||
-                                main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))){
-                            shiftCard.setOnMouseClicked(_ -> openPopover(finalS,sc.getDate()));
+
+                        sc.setDate(displayDate);
+
+                        // Permissions
+                        boolean canEditOwn = main.getCurrentUser().getPermissions().stream()
+                                .anyMatch(p -> p.getPermissionName().equals("Roster - Edit own shifts")
+                                        && m.getUserID() == main.getCurrentUser().getUserID());
+                        boolean canEditAll = main.getCurrentUser().getPermissions().stream()
+                                .anyMatch(p -> p.getPermissionName().equals("Roster - Edit all shifts"));
+
+                        if(canEditOwn || canEditAll) {
+                            shiftCard.setOnMouseClicked(_ -> openPopover(m, displayDate));
                         }
+
                         shiftContainer.getChildren().add(shiftCard);
+
                     } catch (Exception ex) {
-                        dialogPane.showError("Error","An error occurred while loading the shift card", ex);
+                        dialogPane.showError("Error","Error loading modification shift card", ex);
                     }
-                }
-            }
-        }
-        for(Shift m: allModifications){
-            if(m.getShiftStartDate()!=null&&m.getShiftStartDate().equals(date.minusDays(weekDay - dayOfWeek))&&(!(m.getShiftStartDate().equals(m.getOriginalDate())))){
-                try {
-                    loader = new FXMLLoader(getClass().getResource("/views/FXML/ShiftCard.fxml"));
-                    StackPane shiftCard = loader.load();
-                    ShiftCardController sc = loader.getController();
-                    sc.setMain(main);
-                    sc.setShift(m);
-                    sc.fill();
-                    //Check for leave requests
-                    for(LeaveRequest lr: allLeaveRequests){
-                        LocalDateTime shiftStart = LocalDateTime.of(date.minusDays(weekDay - dayOfWeek),m.getShiftStartTime());
-                        LocalDateTime shiftEnd = LocalDateTime.of(date.minusDays(weekDay - dayOfWeek),m.getShiftEndTime());
-                        if(lr.getUserID()==m.getUserID()&&lr.getFromDate().isBefore(shiftEnd)&&lr.getToDate().isAfter(shiftStart)){
-                            sc.setModification(lr.getLeaveType());
-                        }
-                    }
-                    sc.setDate(date.minusDays(weekDay - dayOfWeek));
-                    if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit own shifts") && m.getUserID()==main.getCurrentUser().getUserID())||
-                            main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Roster - Edit all shifts"))){
-                        shiftCard.setOnMouseClicked(_ -> openPopover(m,sc.getDate()));
-                    }
-                    shiftContainer.getChildren().add(shiftCard);
-                } catch (Exception ex) {
-                    dialogPane.showError("Error","An error occurred while loading the shift card", ex);
                 }
             }
         }
@@ -843,5 +941,100 @@ public class RosterPageController extends PageController {
         if(satBox.getChildren().size()>maxCards){maxCards=satBox.getChildren().size();}
         if(sunBox.getChildren().size()>maxCards){maxCards=sunBox.getChildren().size();}
         shiftCardGrid.setPrefHeight(100*(maxCards+1));
+    }
+
+    private List<ShiftSegment> buildShiftSegments(Shift shift,
+                                                  LocalDate shiftDay,
+                                                  List<LeaveRequest> allLeaveRequests) {
+
+        LocalTime shiftStart = shift.getShiftStartTime();
+        LocalTime shiftEnd   = shift.getShiftEndTime();
+
+        // Basic checks:
+        if (shiftStart == null || shiftEnd == null) {
+            return new ArrayList<>();
+        }
+        if (!shiftStart.isBefore(shiftEnd)) {
+            // Start >= End => no valid working block
+            return new ArrayList<>();
+        }
+
+        // 1) Gather relevant leaves for THIS user that actually intersect the shift times
+        //    on this single date.
+        List<LeaveRequest> relevantLeaves = new ArrayList<>();
+        LocalDateTime dayStart = LocalDateTime.of(shiftDay, shiftStart);
+        LocalDateTime dayEnd   = LocalDateTime.of(shiftDay, shiftEnd);
+
+        for (LeaveRequest lr : allLeaveRequests) {
+            if (lr.getUserID() == shift.getUserID()) {
+                // Overlap check:
+                if (lr.getToDate().isAfter(dayStart) && lr.getFromDate().isBefore(dayEnd)) {
+                    relevantLeaves.add(lr);
+                }
+            }
+        }
+
+        // If no leave overlaps, it's one continuous "regular" segment
+        if (relevantLeaves.isEmpty()) {
+            return List.of(new ShiftSegment(shiftStart, shiftEnd, false));
+        }
+
+        // 2) Build boundary times:
+        //    - shiftStart, shiftEnd
+        //    - any portion of LR that intersects the shift day
+        List<LocalTime> boundaries = new ArrayList<>();
+        boundaries.add(shiftStart);
+        boundaries.add(shiftEnd);
+
+        for (LeaveRequest lr : relevantLeaves) {
+            LocalDateTime from = lr.getFromDate();
+            LocalDateTime to   = lr.getToDate();
+
+            // Clamp to [dayStart, dayEnd] so we only consider relevant portion
+            LocalDateTime clampedStart = from.isBefore(dayStart) ? dayStart : from;
+            LocalDateTime clampedEnd   = to.isAfter(dayEnd) ? dayEnd : to;
+
+            LocalTime leaveStart = clampedStart.toLocalTime();
+            LocalTime leaveEnd   = clampedEnd.toLocalTime();
+
+            // Add if within shift bounds:
+            if (!leaveStart.isBefore(shiftStart) && !leaveStart.isAfter(shiftEnd)) {
+                boundaries.add(leaveStart);
+            }
+            if (!leaveEnd.isBefore(shiftStart) && !leaveEnd.isAfter(shiftEnd)) {
+                boundaries.add(leaveEnd);
+            }
+        }
+
+        // Sort and remove duplicates:
+        boundaries = boundaries.stream().distinct().sorted().toList();
+
+        // 3) Build sub-segments from consecutive boundary pairs
+        List<ShiftSegment> segments = new ArrayList<>();
+        for (int i = 0; i < boundaries.size() - 1; i++) {
+            LocalTime segStart = boundaries.get(i);
+            LocalTime segEnd   = boundaries.get(i + 1);
+
+            if (!segStart.isBefore(segEnd)) {
+                continue; // skip zero-length or reversed
+            }
+
+            // Check if this sub-interval is entirely covered by any leave
+            boolean isOnLeave = false;
+            LocalDateTime subStart = LocalDateTime.of(shiftDay, segStart);
+            LocalDateTime subEnd   = LocalDateTime.of(shiftDay, segEnd);
+
+            for (LeaveRequest lr : relevantLeaves) {
+                // If this sub-block is fully inside a particular leave request => onLeave
+                if (!lr.getFromDate().isAfter(subStart) && !lr.getToDate().isBefore(subEnd)) {
+                    isOnLeave = true;
+                    break;
+                }
+            }
+
+            segments.add(new ShiftSegment(segStart, segEnd, isOnLeave));
+        }
+
+        return segments;
     }
 }
