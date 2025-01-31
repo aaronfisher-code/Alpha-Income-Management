@@ -20,25 +20,44 @@ public class WorkbookProcessor {
 
     private LocalDateTime periodStart;
     private LocalDateTime periodEnd;
-    public WorkbookProcessor(HSSFWorkbook wb){
+    public WorkbookProcessor(HSSFWorkbook wb) {
         this.wb = wb;
-        //creating a Sheet object to retrieve the object
-        HSSFSheet sheet=wb.getSheetAt(0);
-        //evaluating cell type
-        for(int i=0;i<3;i++){
-            if(sheet.getRow(0)!=null || sheet.getRow(1)!=null) {
-                if (sheet.getRow(1)!=null && sheet.getRow(1).getCell(i).getStringCellValue().equals("Daily Script Totals")) {
-                    System.out.println("Identified as Daily script totals report");
-                    processDailyScriptTotals(sheet);
-                }else if(sheet.getRow(0)!=null && sheet.getRow(0).getCell(i).getStringCellValue().equals("Order Invoices List")){
-                    System.out.println("Identified as Invoice export report");
-                    processInvoiceExport(sheet);
-                }else{
-                    processTillReport(sheet);
+        HSSFSheet sheet = wb.getSheetAt(0);
+
+        // Check first if at least one of the rows exists
+        if (sheet.getRow(0) == null && sheet.getRow(1) == null && sheet.getRow(7) == null) {
+            System.out.println("Error: No valid rows found in the sheet.");
+            return;
+        }
+        // Identify report type
+        if (cellContainsText(sheet, 1, 1, "Daily Script Totals")) {
+            System.out.println("Identified as Daily script totals report");
+            processDailyScriptTotals(sheet);
+        } else if (cellContainsText(sheet, 0, 0, "Order Invoices List")) {
+            System.out.println("Identified as Invoice export report");
+            processInvoiceExport(sheet);
+        } else if (cellContainsText(sheet, 7, 1, "Till Summary")) {
+            System.out.println("Identified as Till report");
+            processTillReport(sheet);
+        }else{
+            throw new IllegalArgumentException("Invalid report type");
+        }
+    }
+
+    // Helper method to check if a cell contains a specific text
+    private boolean cellContainsText(HSSFSheet sheet, int rowIdx, int colIdx, String expectedText) {
+        Row row = sheet.getRow(rowIdx);
+        if (row != null) {
+            Cell cell = row.getCell(colIdx);
+            if (cell != null) {
+                try {
+                    return cell.getStringCellValue().trim().equalsIgnoreCase(expectedText);
+                } catch (IllegalStateException e) {
+                    return false; // Cell might be numeric or date type
                 }
-                break;
             }
         }
+        return false;
     }
 
     private void processTillReport(HSSFSheet sheet){

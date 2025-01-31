@@ -19,14 +19,17 @@ import utils.*;
 import java.io.*;
 import java.text.NumberFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class EODDataEntryPageController extends DateSelectController{
 
@@ -161,37 +164,142 @@ public class EODDataEntryPageController extends DateSelectController{
 
 	public void importFiles(LocalDate targetDate) {
 		FileChooser fileChooser = new FileChooser();
-		fileChooser.setTitle("Open Data entry File");
+		fileChooser.setTitle("Open Data Entry File");
 		fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("XLS Files", "*.xls"));
-		File newfile = fileChooser.showOpenDialog(main.getStg());
-		if (newfile != null) {
-			Task<Void> importTask = new Task<>() {
-				@Override
-				protected Void call() throws Exception {
-					FileInputStream file = new FileInputStream(newfile);
+		File newFile = fileChooser.showOpenDialog(main.getStg());
+
+		if (newFile != null) {
+			// First, do a "pre-check" in the JavaFX thread to detect warnings or file-format issues.
+			List<String> warnings = new ArrayList<>();
+
+			try (FileInputStream fis = new FileInputStream(newFile)) {
+
+				// Attempt to open the workbook
+				HSSFWorkbook workbook;
+				try {
+					workbook = new HSSFWorkbook(fis);
+				} catch (Exception e) {
+					dialogPane.showError("File Error",
+							"Invalid file format detected. Please use XLS (97-2003) format.");
+					return; // Stop here
+				}
+
+				// Attempt to parse the workbook structure
+				WorkbookProcessor wbp;
+				try {
+					wbp = new WorkbookProcessor(workbook);
+				} catch (Exception e) {
+					dialogPane.showError("Workbook Error",
+							"Please ensure you export both reports from Z-Office as \"Excel 97-2003 workbook (*.xls)\" and NOT as data-only or csv");
+					return; // Stop here
+				}
+
+				// Validate Period Dates
+				LocalDateTime periodStart = wbp.getPeriodStart();
+				LocalDateTime periodEnd   = wbp.getPeriodEnd();
+
+				if (periodStart != null && periodEnd != null) {
+					long daysBetween = java.time.Duration.between(periodStart, periodEnd).toDays();
+
+					if (daysBetween > 1) {
+						warnings.add("The report period spans multiple days. "
+								+ "Daily reports should only cover a single day.");
+					}
+
+					// Example additional check
+					long diffToTarget = java.time.Duration
+							.between(periodEnd, targetDate.atStartOfDay()).toDays();
+					if (diffToTarget > 1) {
+						warnings.add("The period end date is significantly before the target date. "
+								+ "Please verify this report is correct.");
+					}
+				}
+
+				// If there are no warnings, jump straight to import
+				if (warnings.isEmpty()) {
+					// We can do the actual import in a Task
+					startImportTask(newFile, targetDate);
+				} else {
+					// If warnings exist, confirm with the user before proceeding.
+					String combinedWarnings = String.join("\n", warnings);
+
+					// Use GemsFX's dialog to confirm
+					dialogPane.showWarning(
+							"Import Warning",
+							combinedWarnings + "\n\nDo you wish to continue with the import anyway?"
+					).thenAccept(buttonType -> {
+						if (buttonType.equals(ButtonType.OK)) {
+							// Only proceed if user confirms
+							startImportTask(newFile, targetDate);
+						}
+						// If they cancel/close the dialog, do nothing
+					});
+				}
+
+			} catch (IOException ioEx) {
+				dialogPane.showError("File Error",
+						"An I/O error occurred while reading the file: " + ioEx.getMessage());
+			}
+		}
+	}
+
+	private void startImportTask(File newFile, LocalDate targetDate) {
+		Task<Void> importTask = new Task<>() {
+			@Override
+			protected Void call() throws Exception {
+				try (FileInputStream file = new FileInputStream(newFile)) {
 					HSSFWorkbook workbook = new HSSFWorkbook(file);
 					WorkbookProcessor wbp = new WorkbookProcessor(workbook);
+
 					List<TillReportDataPoint> importedData = new ArrayList<>();
 					for (CellDataPoint cdp : wbp.getDataPoints()) {
-						TillReportDataPoint tdp = new TillReportDataPoint(cdp, wbp, targetDate, main.getCurrentStore().getStoreID());
+						TillReportDataPoint tdp = new TillReportDataPoint(
+								cdp,
+								wbp,
+								targetDate,
+								main.getCurrentStore().getStoreID()
+						);
 						importedData.add(tdp);
 					}
+
+					// Finally import into DB or wherever
 					tillReportService.importTillReportData(importedData);
-					return null;
 				}
-			};
-			importTask.setOnSucceeded(_ -> {
-				progressSpinner.setVisible(false);
-				dialogPane.showInformation("Success", "Data imported successfully");
-				fillTable();
-			});
-			importTask.setOnFailed(_ -> {
-				progressSpinner.setVisible(false);
-				dialogPane.showError("Failed to import data", (Exception) importTask.getException());
-			});
-			progressSpinner.setVisible(true);
-			executor.submit(importTask);
-		}
+
+				return null;
+			}
+		};
+
+		// Succeeded / Failed handlers
+		importTask.setOnSucceeded(_ -> {
+			progressSpinner.setVisible(false);
+			dialogPane.showInformation("Success", "Data imported successfully");
+			fillTable();
+		});
+
+		importTask.setOnFailed(_ -> {
+			progressSpinner.setVisible(false);
+			Throwable exception = importTask.getException();
+			if (exception instanceof IllegalArgumentException) {
+				dialogPane.showWarning("Import Warning", exception.getMessage());
+			} else {
+				dialogPane.showError("Failed to Import Data",
+						"An error occurred while processing the file.");
+			}
+		});
+
+		// If you still want to show any `updateMessage()` warnings from inside the Task,
+		// you can add a listener here, just note that you’d typically do user interactions
+		// in the JavaFX thread:
+		importTask.messageProperty().addListener((obs, oldMsg, newMsg) -> {
+			if (newMsg != null) {
+				dialogPane.showWarning("Import Warning", newMsg);
+			}
+		});
+
+		// Show spinner and run
+		progressSpinner.setVisible(true);
+		executor.submit(importTask);
 	}
 
 	public void fillTable() {
