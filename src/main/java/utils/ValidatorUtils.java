@@ -26,7 +26,7 @@ public class ValidatorUtils {
     public final static String INT_REGEX = "-?[0-9]*";
     public final static String INT_ERROR = "Please enter a valid number";
     public final static String DATE_REGEX = "^(0?[1-9]|[12][0-9]|3[01])/(0?[1-9]|1[012])/((19|20)?\\d\\d)$";
-    public final static String DATE_ERROR = "Please enter a valid date";
+    public final static String DATE_ERROR = "Please enter a valid date (dd/mm/yyyy)";
     public final static String TIME_REGEX = "^(1[0-2]|0?[1-9]):[0-5][0-9] ([Aa][Mm]|[Pp][Mm])$";
     public final static String TIME_ERROR = "Please enter a valid time";
 

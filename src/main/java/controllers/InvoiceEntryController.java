@@ -612,7 +612,7 @@ public class InvoiceEntryController extends DateSelectController{
 				progressSpinner.setVisible(false);
 			});
 			task.setOnFailed(_ -> {
-				dialogPane.showError("Error", "An error occurred while adding the invoice", task.getException());
+				dialogPane.showError("Error", "An error occurred while adding the invoice, it's likely a duplicate, or there is some server issue", task.getException());
 				progressSpinner.setVisible(false);
 			});
 			executor.submit(task);
