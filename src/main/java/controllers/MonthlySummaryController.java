@@ -71,6 +71,7 @@ public class MonthlySummaryController extends DateSelectController{
 	@FXML private TableColumn<?, ?> totalsZReportProfitCol;
 	@FXML private TableColumn<MonthlySummaryDataPoint,String> totalsRunningTillBalanceCol;
 	@FXML private Button exportDataButton;
+	@FXML private Button exportTableDataButton;
 	@FXML private MFXProgressSpinner progressSpinner;
     private final ObservableList<TillReportDataPoint> currentTillReportDataPoints = FXCollections.observableArrayList();
 	private final ObservableList<EODDataPoint> currentEODDataPoints = FXCollections.observableArrayList();
@@ -105,6 +106,7 @@ public class MonthlySummaryController extends DateSelectController{
 	@Override
 	public void fill() {
         exportDataButton.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Monthly Summary - Export")));
+		exportTableDataButton.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Monthly Summary - Export")));
 //		itemsPerCustomerCol.getStyleClass().add("yellowColumn");
 		summaryTable.setSelectionModel(null);
 		dateCol.setCellValueFactory(new PropertyValueFactory<>("dateString"));
@@ -467,6 +469,115 @@ public class MonthlySummaryController extends DateSelectController{
 				dialogPane.showError("Error","Failed to export data", exportTask.getException());
 			}
 		});
+		currentTask.set(exportTask);
+		executor.submit(exportTask);
+	}
+
+	public void exportFullSummaryTable() {
+		// Ensure there's something to export
+		if (summaryTable.getItems() == null || summaryTable.getItems().isEmpty()) {
+			dialogPane.showWarning("No data","No data to export");
+			return;
+		}
+
+		cancelCurrentTaskIfRunning();
+		progressSpinner.setVisible(true);
+
+		Task<String> exportTask = new Task<>() {
+			@Override
+			protected String call() {
+				StringBuilder sb = new StringBuilder();
+
+				// 1) Build header row for summaryTable using tab separators
+				sb.append("Date").append("\t");
+				sb.append("Duration of day (0-1)").append("\t");
+				sb.append("No. of scripts").append("\t");
+				sb.append("No. of customers").append("\t");
+				sb.append("No. of items").append("\t");
+				sb.append("No. of OTC items").append("\t");
+				sb.append("Items/Customer").append("\t");
+				sb.append("OTC items/Customer").append("\t");
+				sb.append("$/Customer").append("\t");
+				sb.append("OTC $/Customer").append("\t");
+				sb.append("Total Income (In-store sales only)").append("\t");
+				sb.append("GP $").append("\t");
+				sb.append("GP %").append("\t");
+				sb.append("Rent and Outgoings").append("\t");
+				sb.append("Wages").append("\t");
+				sb.append("Z Report Profit").append("\t");
+				sb.append("Running Z Profit").append("\t");
+				sb.append("Till Balance").append("\t");
+				sb.append("Running Till Balance").append("\n");
+
+				// Remove trailing tab and add newline
+				if (sb.length() > 0) {
+					sb.setLength(sb.length() - 1);
+					sb.append("\n");
+				}
+
+				// 2) Build data rows for summaryTable
+				for (MonthlySummaryDataPoint item : summaryTable.getItems()) {
+					for (TableColumn<MonthlySummaryDataPoint, ?> col : summaryTable.getColumns()) {
+						Object cellValue = col.getCellData(item);
+						sb.append(cellValue != null ? cellValue.toString() : "").append("\t");
+					}
+					// Remove trailing tab and add newline
+					if (sb.length() > 0) {
+						sb.setLength(sb.length() - 1);
+						sb.append("\n");
+					}
+				}
+
+				// 3) (Optional) Separate the totals table with a blank line
+				sb.append("\n");
+
+				// 4) Build header row for totalsTable
+				for (TableColumn<MonthlySummaryDataPoint, ?> col : totalsTable.getColumns()) {
+					String header = col.getText() != null ? col.getText() : "";
+					sb.append(header).append("\t");
+				}
+				if (sb.length() > 0) {
+					sb.setLength(sb.length() - 1);
+					sb.append("\n");
+				}
+
+				// 5) Build data rows for totalsTable
+				for (MonthlySummaryDataPoint item : totalsTable.getItems()) {
+					for (TableColumn<MonthlySummaryDataPoint, ?> col : totalsTable.getColumns()) {
+						Object cellValue = col.getCellData(item);
+						sb.append(cellValue != null ? cellValue.toString() : "").append("\t");
+					}
+					if (sb.length() > 0) {
+						sb.setLength(sb.length() - 1);
+						sb.append("\n");
+					}
+				}
+
+				return sb.toString();
+			}
+		};
+
+		exportTask.setOnSucceeded(e -> {
+			if (!exportTask.isCancelled()) {
+				String tsvData = exportTask.getValue();
+
+				// Copy the multi-line tab-delimited data to the system clipboard
+				ClipboardContent content = new ClipboardContent();
+				content.putString(tsvData);
+				Clipboard.getSystemClipboard().setContent(content);
+
+				dialogPane.showInformation("Data Exported", "Full summary data copied to clipboard!");
+				progressSpinner.setVisible(false);
+			}
+		});
+
+		exportTask.setOnFailed(e -> {
+			if (!exportTask.isCancelled()) {
+				progressSpinner.setVisible(false);
+				dialogPane.showError("Error", "Failed to export data", exportTask.getException());
+			}
+		});
+
 		currentTask.set(exportTask);
 		executor.submit(exportTask);
 	}
