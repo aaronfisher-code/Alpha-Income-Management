@@ -39,7 +39,7 @@ public class Main extends Application {
 
 	@Override
 	public void init() throws Exception {
-//		LogRedirector.redirectOutputToFile("AlphaIncome.log");
+		LogRedirector.redirectOutputToFile("AlphaIncome.log");
 		Thread.setDefaultUncaughtExceptionHandler(this::handleGlobalException);
 		System.out.println("Application initializing...");
 
