@@ -472,7 +472,7 @@ public class EODDataEntryPageController extends DateSelectController{
 				if (e.isInDB()) {
 					eodService.updateEODDataPoint(e);
 				} else {
-					eodService.insertEODDataPoint(new EODDataPoint(/* ... */));
+					eodService.insertEODDataPoint(new EODDataPoint(true, e.getDate(), main.getCurrentStore().getStoreID(), cashValue, eftposValue, amexValue, googleSquareValue, chequeValue, medschecksValue, sohValue, sofValue, smsPatientsValue, 0, 0, notesValue));
 				}
 				return null;
 			}
