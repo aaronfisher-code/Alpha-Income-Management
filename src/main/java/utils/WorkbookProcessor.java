@@ -26,18 +26,14 @@ public class WorkbookProcessor {
 
         // Check first if at least one of the rows exists
         if (sheet.getRow(0) == null && sheet.getRow(1) == null && sheet.getRow(7) == null) {
-            System.out.println("Error: No valid rows found in the sheet.");
             return;
         }
         // Identify report type
         if (cellContainsText(sheet, 1, 1, "Daily Script Totals")) {
-            System.out.println("Identified as Daily script totals report");
             processDailyScriptTotals(sheet);
         } else if (cellContainsText(sheet, 0, 0, "Order Invoices List")) {
-            System.out.println("Identified as Invoice export report");
             processInvoiceExport(sheet);
         } else if (cellContainsText(sheet, 7, 1, "Till Summary")) {
-            System.out.println("Identified as Till report");
             processTillReport(sheet);
         }else{
             throw new IllegalArgumentException("Invalid report type");
@@ -60,47 +56,78 @@ public class WorkbookProcessor {
         return false;
     }
 
-    private void processTillReport(HSSFSheet sheet){
+    private void processTillReport(HSSFSheet sheet) {
         String category = "";
-        System.out.println(sheet.getRow(1).getCell(2).getStringCellValue());
-        String[] splitDate= sheet.getRow(3).getCell(4).getStringCellValue().split("\\s+");
+
+        // Get the raw text from the cell that holds the date range.
+        String tillPeriodCell = sheet.getRow(3).getCell(4).getStringCellValue();
+        String dateRange;
+
+        // Check if the new format is used (contains parentheses)
+        if (tillPeriodCell.contains("(") && tillPeriodCell.contains(")")) {
+            // For new files, the cell might be like:
+            // "2046 (31/01/2025 18:49 to 01/02/2025 16:59)"
+            int openParen = tillPeriodCell.indexOf('(');
+            int closeParen = tillPeriodCell.indexOf(')');
+            dateRange = tillPeriodCell.substring(openParen + 1, closeParen);
+        } else {
+            // For old files, the cell might be like:
+            // "01/01/1753 00:00 to 21/02/2022 23:45"
+            dateRange = tillPeriodCell;
+        }
+
+        // Now split the date range into start and end dates.
+        String[] dates = dateRange.split(" to ");
+        if (dates.length != 2) {
+            System.err.println("Error: Unable to parse date range from: " + dateRange);
+            return;
+        }
+
+        // Use the proper formatter for dates like "dd/MM/yyyy HH:mm"
         String format = "dd/MM/yyyy HH:mm";
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
-        periodStart = LocalDateTime.parse(splitDate[0]+" "+splitDate[1],formatter);
-        periodEnd = LocalDateTime.parse(splitDate[3]+" "+splitDate[4],formatter);
-        for(Row row: sheet)     //iteration over row using for each loop
-        {
-            if(row.getRowNum()<7){
+        try {
+            periodStart = LocalDateTime.parse(dates[0].trim(), formatter);
+            periodEnd = LocalDateTime.parse(dates[1].trim(), formatter);
+        } catch (DateTimeParseException e) {
+            System.err.println("Error parsing dates: " + e.getMessage());
+            return;
+        }
+
+        // Process the remaining rows for data points
+        for (Row row : sheet) {
+            if (row.getRowNum() < 7) {
                 continue;
             }
             CellDataPoint cdp = new CellDataPoint();
             boolean dataCheck = false;
-            if(row.getCell(1)!=null){
+            if (row.getCell(1) != null) {
                 category = row.getCell(1).getStringCellValue();
                 cdp.setCategory(category);
-            }else{
+            } else {
                 cdp.setCategory(category);
             }
 
-            if(row.getCell(3)!=null){
+            if (row.getCell(3) != null) {
                 cdp.setSubCategory(row.getCell(3).getStringCellValue());
             }
 
-            if(row.getCell(9)!=null){
+            if (row.getCell(9) != null) {
                 cdp.setQuantity(row.getCell(9).getNumericCellValue());
                 dataCheck = true;
             }
 
-            for(int i=13;i<17;i++){
-                if(row.getCell(i)!=null){
+            for (int i = 13; i < 17; i++) {
+                if (row.getCell(i) != null) {
                     cdp.setAmount(row.getCell(i).getNumericCellValue());
                     dataCheck = true;
                     break;
                 }
             }
 
-            if(dataCheck)
+            if (dataCheck) {
                 dataPoints.add(cdp);
+            }
         }
     }
 

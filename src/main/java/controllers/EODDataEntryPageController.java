@@ -190,7 +190,7 @@ public class EODDataEntryPageController extends DateSelectController{
 					wbp = new WorkbookProcessor(workbook);
 				} catch (Exception e) {
 					dialogPane.showError("Workbook Error",
-							"Please ensure you export both reports from Z-Office as \"Excel 97-2003 workbook (*.xls)\" and NOT as data-only or csv");
+							"Please ensure you export both reports from Z-Office as \"Excel 97-2003 workbook (*.xls)\" and NOT as data-only or csv",e);
 					return; // Stop here
 				}
 
