@@ -44,7 +44,11 @@ public class ShiftCardController extends PageController {
 		}else{
 			backgroundPane.setCursor(Cursor.DEFAULT);
 		}
-		employeeName.setText(shift.getFirst_name() + ". " + shift.getLast_name().charAt(0));
+		if(shift.getNickname()!=null && !shift.getNickname().isEmpty()){
+			employeeName.setText(shift.getNickname());
+		}else{
+			employeeName.setText(shift.getFirst_name() + ". " + shift.getLast_name().charAt(0));
+		}
 		employeeRole.setText(shift.getRole());
 		employeeIcon.setText(String.valueOf(shift.getFirst_name().charAt(0)));
 		employeeIcon.setStyle("-fx-background-color: " + shift.getProfileBG() + ";-fx-background-radius: 26px;");

@@ -270,6 +270,7 @@ public class RosterPageController extends PageController {
                             partialShift.setOriginalDate(updatedShift.getOriginalDate());
                             partialShift.setFirst_name(updatedShift.getFirst_name());
                             partialShift.setLast_name(updatedShift.getLast_name());
+                            partialShift.setNickname(updatedShift.getNickname());
                             partialShift.setProfileBG(updatedShift.getProfileBG());
                             partialShift.setProfileText(updatedShift.getProfileText());
                             partialShift.setRole(updatedShift.getRole());
@@ -342,6 +343,7 @@ public class RosterPageController extends PageController {
                         partialShift.setOriginalDate(m.getOriginalDate());
                         partialShift.setFirst_name(m.getFirst_name());
                         partialShift.setLast_name(m.getLast_name());
+                        partialShift.setNickname(m.getNickname());
                         partialShift.setProfileBG(m.getProfileBG());
                         partialShift.setProfileText(m.getProfileText());
                         partialShift.setRole(m.getRole());

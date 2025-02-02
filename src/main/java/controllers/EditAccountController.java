@@ -41,9 +41,9 @@ public class EditAccountController extends PageController {
 	@FXML private Region contentDarken;
 	@FXML private Button deleteStoreButton,deleteUserButton;
 	@FXML private MFXTextField storeNameField,storeHoursField;
-	@FXML private Label editStorePopoverTitle,editUserPopoverTitle,employeeIcon,employeeName,employeeRole,storeNameValidationLabel,usernameValidationLabel,firstNameValidationLabel,lastNameValidationLabel,storeHoursValidationLabel;
+	@FXML private Label editStorePopoverTitle,editUserPopoverTitle,employeeIcon,employeeName,employeeRole,storeNameValidationLabel,usernameValidationLabel,firstNameValidationLabel,lastNameValidationLabel,nicknameValidationLabel,storeHoursValidationLabel;
 	@FXML private MFXRectangleToggleNode inactiveUserToggle;
-	@FXML private MFXTextField usernameField,firstNameField,lastNameField,roleField;
+	@FXML private MFXTextField usernameField,firstNameField,lastNameField,nicknameField,roleField;
 	@FXML private ColorPicker profileTextPicker,profileBackgroundPicker;
 	@FXML private MFXCheckListView<Store> storeSelector;
 	@FXML private MFXCheckListView<Permission> permissionsSelector;
@@ -51,7 +51,7 @@ public class EditAccountController extends PageController {
 	@FXML private MFXProgressSpinner userSpinner, storeSpinner;
 	private MFXTableView<User> accountsTable = new MFXTableView<>();
 	private MFXTableColumn<User> userIDCol;
-	private MFXTableColumn<User> usernameCol;
+	private MFXTableColumn<User> nicknameCol;
 	private MFXTableColumn<User> firstNameCol;
 	private MFXTableColumn<User> lastNameCol;
 	private MFXTableColumn<User> roleCol;
@@ -99,21 +99,21 @@ public class EditAccountController extends PageController {
 		userFilterView = new FilterView<>();
 		userFilterView.setTitle("Current Users");
 		userFilterView.setSubtitle("Double click a user to edit");
-		userFilterView.setTextFilterProvider(text -> user -> user.getFirst_name().toLowerCase().contains(text) || user.getLast_name().toLowerCase().contains(text) || user.getRole().toLowerCase().contains(text));
+		userFilterView.setTextFilterProvider(text -> user -> user.getNickname().toLowerCase().contains(text) || user.getFirst_name().toLowerCase().contains(text) || user.getLast_name().toLowerCase().contains(text) || user.getRole().toLowerCase().contains(text));
 		userIDCol = new MFXTableColumn<>("STAFF ID",false, Comparator.comparing(User::getUserID));
-		usernameCol = new MFXTableColumn<>("USERNAME",false, Comparator.comparing(User::getUsername));
+		nicknameCol = new MFXTableColumn<>("NICKNAME",false, Comparator.comparing(User::getNickname));
 		firstNameCol = new MFXTableColumn<>("FIRST NAME",false, Comparator.comparing(User::getFirst_name));
 		lastNameCol = new MFXTableColumn<>("LAST NAME",false, Comparator.comparing(User::getLast_name));
 		roleCol = new MFXTableColumn<>("ROLE",false, Comparator.comparing(User::getRole));
 		userIDCol.setRowCellFactory(_ -> new MFXTableRowCell<>(User::getUserID));
-		usernameCol.setRowCellFactory(_ -> new MFXTableRowCell<>(User::getUsername));
+		nicknameCol.setRowCellFactory(_ -> new MFXTableRowCell<>(User::getNickname));
 		firstNameCol.setRowCellFactory(_ -> new MFXTableRowCell<>(User::getFirst_name));
 		lastNameCol.setRowCellFactory(_ -> new MFXTableRowCell<>(User::getLast_name));
 		roleCol.setRowCellFactory(_ -> new MFXTableRowCell<>(User::getRole));
 		accountsTable = new MFXTableView<>();
-		accountsTable.getTableColumns().addAll(userIDCol,usernameCol,firstNameCol,lastNameCol,roleCol);
+		accountsTable.getTableColumns().addAll(userIDCol,nicknameCol,firstNameCol,lastNameCol,roleCol);
 		accountsTable.getFilters().addAll(
-				new StringFilter<>("Username",User::getUsername),
+				new StringFilter<>("Nickname",User::getNickname),
 				new StringFilter<>("First Name",User::getFirst_name),
 				new StringFilter<>("Last Name",User::getLast_name),
 				new StringFilter<>("Role",User::getRole)
@@ -248,6 +248,7 @@ public class EditAccountController extends PageController {
 		usernameField.clear();
 		firstNameField.clear();
 		lastNameField.clear();
+		nicknameField.clear();
 		roleField.clear();
 		profileTextPicker.setValue(Color.WHITE);
 		profileBackgroundPicker.setValue(Color.WHITE);
@@ -293,12 +294,27 @@ public class EditAccountController extends PageController {
 		}, executor);
 		//Add live updates to person card preview
 		firstNameField.textProperty().addListener((_, _, newValue) -> {
-					employeeName.setText(newValue + "." + (lastNameField.getText().isEmpty()?"":lastNameField.getText(0,1)));
-					employeeIcon.setText(newValue.isEmpty()?"":newValue.substring(0,1));
+				if(nicknameField.getText().isEmpty()) {
+					employeeName.setText(newValue + "." + (lastNameField.getText().isEmpty() ? "" : lastNameField.getText(0, 1)));
+					employeeIcon.setText(newValue.isEmpty() ? "" : newValue.substring(0, 1));
 				}
+			}
 		);
-		lastNameField.textProperty().addListener((_, _, newValue) ->
-				employeeName.setText(firstNameField.getText() + "." + (newValue.isEmpty()?"":newValue.substring(0,1))));
+		lastNameField.textProperty().addListener((_, _, newValue) ->{
+			if(nicknameField.getText().isEmpty()) {
+				employeeName.setText(firstNameField.getText() + "." + (newValue.isEmpty()?"":newValue.substring(0,1)));
+			}
+		});
+
+		nicknameField.textProperty().addListener((_, _, newValue) -> {
+			if(newValue.isEmpty()){
+				employeeName.setText(firstNameField.getText() + "." + (lastNameField.getText().isEmpty()?"":lastNameField.getText(0,1)));
+				employeeIcon.setText(firstNameField.getText().isEmpty()?"":firstNameField.getText().substring(0,1));
+			}else{
+				employeeName.setText(newValue);
+				employeeIcon.setText(newValue.substring(0,1));
+			}
+		});
 		roleField.textProperty().addListener((_, _, newValue) ->
 				employeeRole.setText(newValue));
 		profileBackgroundPicker.valueProperty().addListener((_, _, newValue) -> {
@@ -339,13 +355,20 @@ public class EditAccountController extends PageController {
 		usernameField.setText(user.getUsername());
 		firstNameField.setText(user.getFirst_name());
 		lastNameField.setText(user.getLast_name());
+		if(user.getNickname()!=null && !user.getNickname().isEmpty())
+			nicknameField.setText(user.getNickname());
 		roleField.setText(user.getRole());
 		profileTextPicker.setValue(Color.valueOf(user.getTextColour()));
 		profileBackgroundPicker.setValue(Color.valueOf(user.getBgColour()));
 		passwordResetButton.setVisible(true);
-		employeeName.setText(user.getFirst_name() + "." + user.getLast_name().charAt(0));
+		if(user.getNickname()!=null && !user.getNickname().isEmpty()){
+			employeeName.setText(user.getNickname());
+			employeeIcon.setText(user.getNickname().substring(0,1));
+		}else{
+			employeeName.setText(user.getFirst_name() + "." + user.getLast_name().charAt(0));
+			employeeIcon.setText(user.getFirst_name().substring(0,1));
+		}
 		employeeRole.setText(user.getRole());
-		employeeIcon.setText(user.getFirst_name().substring(0,1));
 		employeeIcon.setStyle("-fx-background-color: " + user.getBgColour()+ "; -fx-text-fill: " + user.getTextColour() + ";");
 		storeSelector.getSelectionModel().clearSelection();
 		permissionsSelector.getSelectionModel().clearSelection();
@@ -419,12 +442,26 @@ public class EditAccountController extends PageController {
 				});
 				//Add live updates to person card preview
 				firstNameField.textProperty().addListener((_, _, newValue) -> {
-							employeeName.setText(newValue + "." + (lastNameField.getText().isEmpty()?"":lastNameField.getText(0,1)));
-							employeeIcon.setText(newValue.isEmpty()?"":newValue.substring(0,1));
+							if (nicknameField.getText().isEmpty()) {
+								employeeName.setText(newValue + "." + (lastNameField.getText().isEmpty() ? "" : lastNameField.getText(0, 1)));
+								employeeIcon.setText(newValue.isEmpty() ? "" : newValue.substring(0, 1));
+							}
 						}
 				);
-				lastNameField.textProperty().addListener((_, _, newValue) ->
-						employeeName.setText(firstNameField.getText() + "." + (newValue.isEmpty()?"":newValue.substring(0,1))));
+				lastNameField.textProperty().addListener((_, _, newValue) -> {
+					if (nicknameField.getText().isEmpty()) {
+						employeeName.setText(firstNameField.getText() + "." + (newValue.isEmpty() ? "" : newValue.substring(0, 1)));
+					}
+				});
+				nicknameField.textProperty().addListener((_, _, newValue) -> {
+					if (newValue.isEmpty()) {
+						employeeName.setText(firstNameField.getText() + "." + (lastNameField.getText().isEmpty() ? "" : lastNameField.getText(0, 1)));
+						employeeIcon.setText(firstNameField.getText().isEmpty() ? "" : firstNameField.getText().substring(0, 1));
+					} else {
+						employeeName.setText(newValue);
+						employeeIcon.setText(newValue.substring(0, 1));
+					}
+				});
 				roleField.textProperty().addListener((_, _, newValue) ->
 						employeeRole.setText(newValue));
 				profileBackgroundPicker.valueProperty().addListener((_, _, newValue) -> {
@@ -515,6 +552,7 @@ public class EditAccountController extends PageController {
 		usernameValidationLabel.setVisible(false);
 		firstNameValidationLabel.setVisible(false);
 		lastNameValidationLabel.setVisible(false);
+		nicknameValidationLabel.setVisible(false);
 	}
 
 	public void addStore() {
@@ -568,6 +606,7 @@ public class EditAccountController extends PageController {
 		String username = usernameField.getText();
 		String fname = firstNameField.getText();
 		String lname = lastNameField.getText();
+		String nickname = nicknameField.getText();
 		String role = roleField.getText();
 		String profileText = getColorString(profileTextPicker.getValue());
 		String profileBG = getColorString(profileBackgroundPicker.getValue());
@@ -584,6 +623,7 @@ public class EditAccountController extends PageController {
 				newUser.setUsername(username);
 				newUser.setFirst_name(fname);
 				newUser.setLast_name(lname);
+				newUser.setNickname(nickname);
 				newUser.setRole(role);
 				newUser.setBgColour(profileBG);
 				newUser.setTextColour(profileText);
@@ -677,6 +717,7 @@ public class EditAccountController extends PageController {
 		String username = usernameField.getText();
 		String fname = firstNameField.getText();
 		String lname = lastNameField.getText();
+		String nickname = nicknameField.getText();
 		String role = roleField.getText();
 		String profileText = getColorString(profileTextPicker.getValue());
 		String profileBG = getColorString(profileBackgroundPicker.getValue());
@@ -689,6 +730,7 @@ public class EditAccountController extends PageController {
 					user.setUsername(username);
 					user.setFirst_name(fname);
 					user.setLast_name(lname);
+					user.setNickname(nickname);
 					user.setRole(role);
 					user.setBgColour(profileBG);
 					user.setTextColour(profileText);

@@ -13,6 +13,8 @@ public class User {
     private String first_name;
 
     private String last_name;
+
+	private String nickname;
     
     private String role;
 
@@ -67,6 +69,18 @@ public class User {
 
 	public void setLast_name(String last_name) {
 		this.last_name = last_name;
+	}
+
+	public String getNickname() {
+		if(nickname == null || nickname.isEmpty()){
+			return "";
+		}else{
+			return nickname;
+		}
+	}
+
+	public void setNickname(String nickname) {
+		this.nickname = nickname;
 	}
 
 	public String getRole() {

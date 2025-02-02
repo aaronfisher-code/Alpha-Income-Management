@@ -296,6 +296,12 @@
                               <Insets bottom="-5.0" top="-30.0" />
                            </VBox.margin>
                         </Label>
+                        <MFXTextField fx:id="nicknameField" borderGap="0.0" floatMode="ABOVE" floatingText="Preferred Name/Nickname (Optional)" maxWidth="1.7976931348623157E308" minHeight="36.0" />
+                        <Label fx:id="nicknameValidationLabel" text="Please enter a valid name" textFill="RED" visible="false">
+                           <VBox.margin>
+                              <Insets bottom="-5.0" top="-30.0" />
+                           </VBox.margin>
+                        </Label>
                         <MFXTextField fx:id="roleField" borderGap="0.0" floatMode="ABOVE" floatingText="Role" layoutX="15.0" layoutY="296.0" maxWidth="1.7976931348623157E308" minHeight="36.0" />
                         <HBox alignment="TOP_CENTER" maxWidth="1.7976931348623157E308" spacing="30.0">
                            <children>
