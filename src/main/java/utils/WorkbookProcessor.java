@@ -10,16 +10,22 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.Date;
+import java.util.*;
+import java.util.stream.Collectors;
+
+
 
 public class WorkbookProcessor {
-
+    private enum WorkbookType {
+        DAILY_SCRIPT_TOTALS,
+        ORDER_INVOICES_LIST,
+        TILL_SUMMARY
+    }
     public ArrayList<CellDataPoint> dataPoints = new ArrayList<>();
     private HSSFWorkbook wb;
-
     private LocalDateTime periodStart;
     private LocalDateTime periodEnd;
+    private WorkbookType workbookType;
     public WorkbookProcessor(HSSFWorkbook wb) {
         this.wb = wb;
         HSSFSheet sheet = wb.getSheetAt(0);
@@ -30,11 +36,11 @@ public class WorkbookProcessor {
         }
         // Identify report type
         if (cellContainsText(sheet, 1, 1, "Daily Script Totals")) {
-            processDailyScriptTotals(sheet);
+            this.workbookType = WorkbookType.DAILY_SCRIPT_TOTALS;
         } else if (cellContainsText(sheet, 0, 0, "Order Invoices List")) {
-            processInvoiceExport(sheet);
+            this.workbookType = WorkbookType.ORDER_INVOICES_LIST;
         } else if (cellContainsText(sheet, 7, 1, "Till Summary")) {
-            processTillReport(sheet);
+            this.workbookType = WorkbookType.TILL_SUMMARY;
         }else{
             throw new IllegalArgumentException("Invalid report type");
         }
@@ -59,31 +65,23 @@ public class WorkbookProcessor {
     private void processTillReport(HSSFSheet sheet) {
         String category = "";
 
-        // Get the raw text from the cell that holds the date range.
         String tillPeriodCell = sheet.getRow(3).getCell(4).getStringCellValue();
         String dateRange;
 
-        // Check if the new format is used (contains parentheses)
         if (tillPeriodCell.contains("(") && tillPeriodCell.contains(")")) {
-            // For new files, the cell might be like:
-            // "2046 (31/01/2025 18:49 to 01/02/2025 16:59)"
             int openParen = tillPeriodCell.indexOf('(');
             int closeParen = tillPeriodCell.indexOf(')');
             dateRange = tillPeriodCell.substring(openParen + 1, closeParen);
         } else {
-            // For old files, the cell might be like:
-            // "01/01/1753 00:00 to 21/02/2022 23:45"
             dateRange = tillPeriodCell;
         }
 
-        // Now split the date range into start and end dates.
         String[] dates = dateRange.split(" to ");
         if (dates.length != 2) {
             System.err.println("Error: Unable to parse date range from: " + dateRange);
             return;
         }
 
-        // Use the proper formatter for dates like "dd/MM/yyyy HH:mm"
         String format = "dd/MM/yyyy HH:mm";
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
         try {
@@ -94,36 +92,93 @@ public class WorkbookProcessor {
             return;
         }
 
+        //Build column index map to identify the columns of interest
+        Map<Integer, Integer> columnCounts = new HashMap<>();
+
+        // Iterate over all rows in the sheet to get counts of each column.
+        for (Row row : sheet) {
+            if (row.getRowNum() < 7) {
+                continue;
+            }
+
+            // Determine the bounds for the current row.
+            int firstCellNum = row.getFirstCellNum();
+            int lastCellNum = row.getLastCellNum();
+            String lastCountedValue = null; // used to track the value from the last non-blank cell we counted
+
+            for (int colIndex = firstCellNum; colIndex < lastCellNum; colIndex++) {
+                Cell cell = row.getCell(colIndex);
+                if (cell != null && cell.getCellType() != CellType.BLANK) {
+                    String currentValue = getCellValue(cell).trim();
+                    if (lastCountedValue != null && lastCountedValue.equals(currentValue)) {
+                        continue;
+                    }
+                    columnCounts.put(colIndex, columnCounts.getOrDefault(colIndex, 0) + 1);
+                    lastCountedValue = currentValue;
+                } else {
+                    lastCountedValue = null;
+                }
+            }
+        }
+        // If there's not enough to make indexes, return
+        if (columnCounts.size() < 4) {
+            System.err.println("Not enough columns with data to assign all 4 fields.");
+            return;  // or handle this situation as needed
+        }
+
+        // Get the top 4 columns by non-null count (sorted descending by count)
+        List<Integer> topColumns = columnCounts.entrySet()
+                .stream()
+                .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue()))
+                .limit(4)
+                .map(Map.Entry::getKey).sorted().toList();
+
+        // Assign the columns of interest as follows:
+        int categoryIndex   = topColumns.get(0);
+        int subcategoryIndex = topColumns.get(1);
+        int quantityIndex    = topColumns.get(2);
+        int amountIndex      = topColumns.get(3);
+
         // Process the remaining rows for data points
         for (Row row : sheet) {
             if (row.getRowNum() < 7) {
                 continue;
             }
             CellDataPoint cdp = new CellDataPoint();
+            cdp.setCategory(category);
             boolean dataCheck = false;
-            if (row.getCell(1) != null) {
-                category = row.getCell(1).getStringCellValue();
-                cdp.setCategory(category);
-            } else {
-                cdp.setCategory(category);
+
+            for(int i = categoryIndex; i < subcategoryIndex; i++){
+                if(row.getCell(i) != null){
+                    category = row.getCell(i).getStringCellValue();
+                    cdp.setCategory(category);
+                    break;
+                }
             }
 
-            if (row.getCell(3) != null) {
-                cdp.setSubCategory(row.getCell(3).getStringCellValue());
+            for(int i = subcategoryIndex; i < quantityIndex; i++){
+                if(row.getCell(i) != null){
+                    cdp.setSubCategory(row.getCell(i).getStringCellValue());
+                    break;
+                }
             }
 
-            if (row.getCell(9) != null) {
-                cdp.setQuantity(row.getCell(9).getNumericCellValue());
-                dataCheck = true;
+            for(int i = quantityIndex; i < amountIndex; i++){
+                if(row.getCell(i) != null){
+                    cdp.setQuantity(row.getCell(i).getNumericCellValue());
+                    dataCheck = true;
+                    break;
+                }
             }
 
-            for (int i = 13; i < 17; i++) {
-                if (row.getCell(i) != null) {
+            for(int i = amountIndex; i < row.getLastCellNum(); i++){
+                if(row.getCell(i) != null){
                     cdp.setAmount(row.getCell(i).getNumericCellValue());
                     dataCheck = true;
                     break;
                 }
             }
+
 
             if (dataCheck) {
                 dataPoints.add(cdp);
@@ -192,7 +247,27 @@ public class WorkbookProcessor {
         return periodEnd;
     }
     public ArrayList<CellDataPoint> getDataPoints() {
+        if(this.workbookType == WorkbookType.TILL_SUMMARY){
+            processTillReport(this.wb.getSheetAt(0));
+        }else if(this.workbookType == WorkbookType.DAILY_SCRIPT_TOTALS){
+            processDailyScriptTotals(this.wb.getSheetAt(0));
+        } else if (this.workbookType == WorkbookType.ORDER_INVOICES_LIST) {
+            processInvoiceExport(this.wb.getSheetAt(0));
+        }
         return dataPoints;
+    }
+
+    private static String getCellValue(Cell cell) {
+        if (cell == null) return "";
+        return switch (cell.getCellType()) {
+            case STRING -> cell.getStringCellValue();
+            case NUMERIC -> String.valueOf(cell.getNumericCellValue());
+            case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
+            case FORMULA ->
+                // Depending on your needs, you might want to evaluate the formula here.
+                    cell.getCellFormula();
+            default -> "";
+        };
     }
 
 }
