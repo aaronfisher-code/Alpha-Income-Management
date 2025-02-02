@@ -73,7 +73,7 @@ public class InvoiceEntryController extends DateSelectController{
 	private TableColumn<Invoice,LocalDate> dueDateCol;
 	private TableColumn<Invoice,Double> unitAmountCol;
 	private TableColumn<Invoice,Double> importedInvoiceAmountCol;
-	private TableColumn<Invoice,Double> varianceCol;
+	private TableColumn<Invoice,String> varianceCol;
 	private TableColumn<Invoice,Double> creditsCol;
 	private TableColumn<Invoice,Double> totalAfterCreditCol;
 	private TableColumn<Invoice,String> notesCol;
@@ -203,6 +203,39 @@ public class InvoiceEntryController extends DateSelectController{
 		unitAmountCol.setCellValueFactory(new PropertyValueFactory<>("unitAmountString"));
 		importedInvoiceAmountCol.setCellValueFactory(new PropertyValueFactory<>("importedInvoiceAmountString"));
 		varianceCol.setCellValueFactory(new PropertyValueFactory<>("varianceString"));
+		varianceCol.setCellFactory(tc -> new TableCell<Invoice, String>() {
+			@Override
+			protected void updateItem(String value, boolean empty) {
+				super.updateItem(value, empty);
+
+				if (empty || value == null) {
+					setText(null);
+					setStyle(""); // reset style
+				} else {
+					// Display the text in the cell
+					setText(value);
+
+					// Remove any currency symbols/commas so we can parse as double
+					String numericPart = value.replaceAll("[^0-9\\-\\.]", "");
+					double varianceAmount = 0.0;
+					try {
+						varianceAmount = Double.parseDouble(numericPart);
+					} catch (NumberFormatException e) {
+						// If parsing fails, revert to default styling and just show the text
+						setStyle("");
+						return;
+					}
+
+					// If absolute variance > 20 cents, highlight in red
+					if (Math.abs(varianceAmount) > 0.20) {
+						setStyle("-fx-background-color: red; -fx-text-fill: white;");
+					} else {
+						// Otherwise, reset or use your default style
+						setStyle("");
+					}
+				}
+			}
+		});
 		creditsCol.setCellValueFactory(new PropertyValueFactory<>("creditsString"));
 		totalAfterCreditCol.setCellValueFactory(new PropertyValueFactory<>("totalAfterCreditsString"));
 		notesCol.setCellValueFactory(new PropertyValueFactory<>("notes"));
