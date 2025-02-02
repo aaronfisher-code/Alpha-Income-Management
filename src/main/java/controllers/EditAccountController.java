@@ -355,8 +355,11 @@ public class EditAccountController extends PageController {
 		usernameField.setText(user.getUsername());
 		firstNameField.setText(user.getFirst_name());
 		lastNameField.setText(user.getLast_name());
-		if(user.getNickname()!=null && !user.getNickname().isEmpty())
+		if(user.getNickname()!=null && !user.getNickname().isEmpty()) {
 			nicknameField.setText(user.getNickname());
+		}else{
+			nicknameField.clear();
+		}
 		roleField.setText(user.getRole());
 		profileTextPicker.setValue(Color.valueOf(user.getTextColour()));
 		profileBackgroundPicker.setValue(Color.valueOf(user.getBgColour()));
