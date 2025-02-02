@@ -112,6 +112,10 @@ public class User {
 	public void setPermissions(List<Permission> permissions) {this.permissions = permissions;}
 
 	public String toString(){
-		return getFirst_name()+" "+getLast_name();
+		if(getNickname().isEmpty() || getNickname() == null) {
+			return getFirst_name() + " " + getLast_name();
+		}else{
+			return getNickname();
+		}
 	}
 }
