@@ -78,6 +78,10 @@ public class LogController extends PageController {
             logInError.setText("Please enter a valid username");
             return;
         }
+        if (password.isEmpty()) {
+            logInError.setText("Password cannot be blank, if this is a new account, please enter your password above");
+            return;
+        }
         progressBar.setVisible(true);
         Task<User> loginTask = new Task<>() {
             @Override
