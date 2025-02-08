@@ -4,6 +4,7 @@ import models.CellDataPoint;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellRangeAddress;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -18,7 +19,8 @@ import java.util.stream.Collectors;
 public class WorkbookProcessor {
     private enum WorkbookType {
         DAILY_SCRIPT_TOTALS,
-        ORDER_INVOICES_LIST,
+        ORDER_INVOICES_LIST_DATA_ONLY,
+        ORDER_INVOICES_LIST_DEFAULT,
         TILL_SUMMARY
     }
     public ArrayList<CellDataPoint> dataPoints = new ArrayList<>();
@@ -38,7 +40,9 @@ public class WorkbookProcessor {
         if (cellContainsText(sheet, 1, 1, "Daily Script Totals")) {
             this.workbookType = WorkbookType.DAILY_SCRIPT_TOTALS;
         } else if (cellContainsText(sheet, 0, 0, "Order Invoices List")) {
-            this.workbookType = WorkbookType.ORDER_INVOICES_LIST;
+            this.workbookType = WorkbookType.ORDER_INVOICES_LIST_DATA_ONLY;
+        } else if (cellContainsText(sheet, 1, 1, "Order Invoices List")) {
+            this.workbookType = WorkbookType.ORDER_INVOICES_LIST_DEFAULT;
         } else if (cellContainsText(sheet, 7, 1, "Till Summary")) {
             this.workbookType = WorkbookType.TILL_SUMMARY;
         }else{
@@ -216,24 +220,45 @@ public class WorkbookProcessor {
         }
     }
 
-    private void processInvoiceExport(HSSFSheet sheet){
-        for(Row row: sheet)     //iteration over row using for each loop
-        {
-            if(row.getRowNum()<2){//Skip to invoices
-                continue;
-            }
-            if(row.getCell(1)!=null) {
-                try{
-                    String invoiceNumber = row.getCell(0).getStringCellValue();
-                    String invoiceAmountString = row.getCell(8).getStringCellValue();
+    private void processInvoiceExport(HSSFSheet sheet,
+                                     int startRow,
+                                     int invoiceNumberCol,
+                                     int amountCol,
+                                     boolean handleMergedCells)
+    {
+        for (int i = startRow; i <= sheet.getLastRowNum(); i++) {
+            Row row = sheet.getRow(i);
+            if (row == null) continue;
+
+            // Safely grab the cells.
+            // If handleMergedCells is true, we use getRealCell(...).
+            // Otherwise, we just row.getCell(...).
+            Cell invoiceCell = handleMergedCells
+                    ? getRealCell(sheet, i, invoiceNumberCol)
+                    : row.getCell(invoiceNumberCol);
+
+            Cell amountCell = handleMergedCells
+                    ? getRealCell(sheet, i, amountCol)
+                    : row.getCell(amountCol);
+
+            if (invoiceCell != null && amountCell != null) {
+                try {
+                    String invoiceNumber = getCellValue(invoiceCell);
+                    String invoiceAmountString = getCellValue(amountCell);
+
+                    // Remove formatting from the invoice amount ($, commas, etc.)
                     String formattedAmount = invoiceAmountString.replaceAll("[$,]", "");
                     Double actualAmount = Double.parseDouble(formattedAmount);
+
+                    // Build the CellDataPoint and add to dataPoints
                     CellDataPoint invoiceDataPoint = new CellDataPoint();
                     invoiceDataPoint.setCategory(invoiceNumber);
                     invoiceDataPoint.setSubCategory("");
                     invoiceDataPoint.setAmount(actualAmount);
+
                     dataPoints.add(invoiceDataPoint);
-                }catch(IllegalStateException e){
+                } catch (IllegalStateException | NumberFormatException e) {
+                    // You may want to log or handle these exceptions more gracefully
                     e.printStackTrace();
                 }
             }
@@ -247,13 +272,26 @@ public class WorkbookProcessor {
         return periodEnd;
     }
     public ArrayList<CellDataPoint> getDataPoints() {
-        if(this.workbookType == WorkbookType.TILL_SUMMARY){
-            processTillReport(this.wb.getSheetAt(0));
-        }else if(this.workbookType == WorkbookType.DAILY_SCRIPT_TOTALS){
-            processDailyScriptTotals(this.wb.getSheetAt(0));
-        } else if (this.workbookType == WorkbookType.ORDER_INVOICES_LIST) {
-            processInvoiceExport(this.wb.getSheetAt(0));
+        HSSFSheet sheet = this.wb.getSheetAt(0);
+
+        switch (this.workbookType) {
+            case TILL_SUMMARY:
+                processTillReport(sheet);
+                break;
+
+            case DAILY_SCRIPT_TOTALS:
+                processDailyScriptTotals(sheet);
+                break;
+
+            case ORDER_INVOICES_LIST_DATA_ONLY:
+                processInvoiceExport(sheet, 2, 0, 8, false);
+                break;
+
+            case ORDER_INVOICES_LIST_DEFAULT:
+                processInvoiceExport(sheet, 7, 1, 19, true);
+                break;
         }
+
         return dataPoints;
     }
 
@@ -268,6 +306,37 @@ public class WorkbookProcessor {
                     cell.getCellFormula();
             default -> "";
         };
+    }
+
+    /**
+     * Checks if the cell at (row, col) is in a merged region.
+     * If it is, returns the CellRangeAddress for that region, otherwise returns null.
+     */
+    private CellRangeAddress getMergedRegion(Sheet sheet, int row, int col) {
+        int numMergedRegions = sheet.getNumMergedRegions();
+        for (int i = 0; i < numMergedRegions; i++) {
+            CellRangeAddress range = sheet.getMergedRegion(i);
+            if (range.isInRange(row, col)) {
+                return range;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Safely returns the cell that actually contains the data,
+     * taking merged cells into account.
+     */
+    private Cell getRealCell(Sheet sheet, int rowIndex, int colIndex) {
+        CellRangeAddress mergedRegion = getMergedRegion(sheet, rowIndex, colIndex);
+        if (mergedRegion != null) {
+            // If this (rowIndex, colIndex) is part of a merged region,
+            // read from the top-left cell of that region
+            rowIndex = mergedRegion.getFirstRow();
+            colIndex = mergedRegion.getFirstColumn();
+        }
+        Row row = sheet.getRow(rowIndex);
+        return (row == null) ? null : row.getCell(colIndex);
     }
 
 }
