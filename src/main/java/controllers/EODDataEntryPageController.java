@@ -18,6 +18,7 @@ import utils.*;
 
 import java.io.*;
 import java.text.NumberFormat;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
@@ -25,10 +26,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class EODDataEntryPageController extends DateSelectController{
@@ -163,143 +161,177 @@ public class EODDataEntryPageController extends DateSelectController{
 	}
 
 	public void importFiles(LocalDate targetDate) {
+		// Multiple-file selection
 		FileChooser fileChooser = new FileChooser();
-		fileChooser.setTitle("Open Data Entry File");
-		fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("XLS Files", "*.xls"));
-		File newFile = fileChooser.showOpenDialog(main.getStg());
+		fileChooser.setTitle("Open Data Entry File(s)");
+		fileChooser.getExtensionFilters()
+				.addAll(new FileChooser.ExtensionFilter("XLS Files", "*.xls"));
 
-		if (newFile != null) {
-			// First, do a "pre-check" in the JavaFX thread to detect warnings or file-format issues.
-			List<String> warnings = new ArrayList<>();
+		List<File> selectedFiles = fileChooser.showOpenMultipleDialog(main.getStg());
+		if (selectedFiles == null || selectedFiles.isEmpty()) {
+			return; // User canceled
+		}
 
-			try (FileInputStream fis = new FileInputStream(newFile)) {
-
-				// Attempt to open the workbook
-				HSSFWorkbook workbook;
-				try {
-					workbook = new HSSFWorkbook(fis);
-				} catch (Exception e) {
-					dialogPane.showError("File Error",
-							"Invalid file format detected. Please use XLS (97-2003) format.");
-					return; // Stop here
-				}
-
-				// Attempt to parse the workbook structure
-				WorkbookProcessor wbp;
-				try {
-					wbp = new WorkbookProcessor(workbook);
-				} catch (Exception e) {
-					dialogPane.showError("Workbook Error",
-							"Please ensure you export both reports from Z-Office as \"Excel 97-2003 workbook (*.xls)\" and NOT as data-only or csv",e);
-					return; // Stop here
-				}
-
-				// Validate Period Dates
-				LocalDateTime periodStart = wbp.getPeriodStart();
-				LocalDateTime periodEnd   = wbp.getPeriodEnd();
-
-				if (periodStart != null && periodEnd != null) {
-					long daysBetween = java.time.Duration.between(periodStart, periodEnd).toDays();
-
-					if (daysBetween > 1) {
-						warnings.add("The report period spans multiple days. "
-								+ "Daily reports should only cover a single day.");
-					}
-
-					// Example additional check
-					long diffToTarget = java.time.Duration
-							.between(periodEnd, targetDate.atStartOfDay()).toDays();
-					if (diffToTarget > 1) {
-						warnings.add("The period end date is significantly before the target date. "
-								+ "Please verify this report is correct.");
-					}
-				}
-
-				// If there are no warnings, jump straight to import
-				if (warnings.isEmpty()) {
-					// We can do the actual import in a Task
-					startImportTask(newFile, targetDate);
-				} else {
-					// If warnings exist, confirm with the user before proceeding.
-					String combinedWarnings = String.join("\n", warnings);
-
-					// Use GemsFX's dialog to confirm
-					dialogPane.showWarning(
-							"Import Warning",
-							combinedWarnings + "\n\nDo you wish to continue with the import anyway?"
-					).thenAccept(buttonType -> {
-						if (buttonType.equals(ButtonType.OK)) {
-							// Only proceed if user confirms
-							startImportTask(newFile, targetDate);
-						}
-						// If they cancel/close the dialog, do nothing
-					});
-				}
-
-			} catch (IOException ioEx) {
-				dialogPane.showError("File Error",
-						"An I/O error occurred while reading the file: " + ioEx.getMessage());
+		// 1) Check all files up front
+		List<String> allWarnings = new ArrayList<>();
+		for (File file : selectedFiles) {
+			boolean valid = checkFileForWarnings(file, targetDate, allWarnings);
+			if (!valid) {
+				// We already showed an error => stop everything
+				return;
 			}
+		}
+
+		// 2) If warnings exist, show them once
+		if (!allWarnings.isEmpty()) {
+			String combinedWarnings = String.join("\n", allWarnings);
+			dialogPane.showWarning(
+					"Import Warnings",
+					combinedWarnings + "\n\nPress OK to proceed with import, or Cancel to stop."
+			).thenAccept(buttonType -> {
+				if (buttonType == ButtonType.OK) {
+					// Do them one at a time
+					importFilesSequentially(selectedFiles, targetDate, 0);
+				}
+			});
+		} else {
+			// No warnings => proceed directly
+			importFilesSequentially(selectedFiles, targetDate, 0);
 		}
 	}
 
-	private void startImportTask(File newFile, LocalDate targetDate) {
-		Task<Void> importTask = new Task<>() {
-			@Override
-			protected Void call() throws Exception {
-				try (FileInputStream file = new FileInputStream(newFile)) {
-					HSSFWorkbook workbook = new HSSFWorkbook(file);
-					WorkbookProcessor wbp = new WorkbookProcessor(workbook);
+	/**
+	 * Tries to open/parse the workbook for the given file and gather any warnings.
+	 * Returns false if there's a fatal error, true if the file is basically valid.
+	 */
+	private boolean checkFileForWarnings(File file, LocalDate targetDate, List<String> warningsOut) {
+		try (FileInputStream fis = new FileInputStream(file)) {
+			HSSFWorkbook workbook;
+			try {
+				workbook = new HSSFWorkbook(fis);
+			} catch (Exception e) {
+				dialogPane.showError("File Error",
+						"Invalid XLS format: " + file.getName());
+				return false;
+			}
 
-					List<TillReportDataPoint> importedData = new ArrayList<>();
-					for (CellDataPoint cdp : wbp.getDataPoints()) {
-						TillReportDataPoint tdp = new TillReportDataPoint(
-								cdp,
-								wbp,
-								targetDate,
-								main.getCurrentStore().getStoreID()
-						);
-						importedData.add(tdp);
-					}
+			WorkbookProcessor wbp;
+			try {
+				wbp = new WorkbookProcessor(workbook);
+			} catch (Exception e) {
+				dialogPane.showError(
+						"Workbook Error",
+						"Please ensure 'Excel 97-2003' format, not data-only or csv.\nFile: " + file.getName(),
+						e
+				);
+				return false;
+			}
 
-					// Finally import into DB or wherever
-					tillReportService.importTillReportData(importedData);
+			LocalDateTime periodStart = wbp.getPeriodStart();
+			LocalDateTime periodEnd   = wbp.getPeriodEnd();
+			if (periodStart != null && periodEnd != null) {
+				long daysBetween = Duration.between(periodStart, periodEnd).toDays();
+				if (daysBetween > 1) {
+					warningsOut.add("File " + file.getName()
+							+ ": The report period spans multiple days; normally it’s just 1 day.");
 				}
-
-				return null;
+				long diffToTarget = Duration.between(periodEnd, targetDate.atStartOfDay()).toDays();
+				if (diffToTarget > 1) {
+					warningsOut.add("File " + file.getName()
+							+ ": The period end date is far from the target date. Please verify.");
+				}
 			}
-		};
 
-		// Succeeded / Failed handlers
-		importTask.setOnSucceeded(_ -> {
-			progressSpinner.setVisible(false);
-			dialogPane.showInformation("Success", "Data imported successfully");
-			fillTable();
-		});
+		} catch (IOException ioEx) {
+			dialogPane.showError("File Error",
+					"I/O error reading file: " + file.getName() + "\n" + ioEx.getMessage());
+			return false;
+		}
 
-		importTask.setOnFailed(_ -> {
-			progressSpinner.setVisible(false);
-			Throwable exception = importTask.getException();
-			if (exception instanceof IllegalArgumentException) {
-				dialogPane.showWarning("Import Warning", exception.getMessage());
-			} else {
-				dialogPane.showError("Failed to Import Data",
-						"An error occurred while processing the file.");
+		return true;
+	}
+
+	private void importFilesSequentially(List<File> files, LocalDate targetDate, int index) {
+		// If we've imported all files, we're done
+		if (index >= files.size()) {
+			return;
+		}
+
+		File currentFile = files.get(index);
+
+		// 1) Show “Importing file X of Y” *non-blocking*
+		dialogPane.showInformation(
+						"Import Progress",
+						String.format("Importing file %d of %d:\n%s",
+								(index + 1), files.size(), currentFile.getName())
+				)
+				.thenAccept(btn -> {
+					// 2) Only after they close the above dialog, do the actual import
+					doSingleFileImport(currentFile, targetDate)
+							.thenRun(() -> {
+								// 3) Once current import is done (and success dialog closed),
+								// import the next file
+								importFilesSequentially(files, targetDate, index + 1);
+							});
+				});
+	}
+
+	private CompletableFuture<Void> doSingleFileImport(File newFile, LocalDate targetDate) {
+		CompletableFuture<Void> future = new CompletableFuture<>();
+
+		try (FileInputStream fis = new FileInputStream(newFile)) {
+			HSSFWorkbook workbook = new HSSFWorkbook(fis);
+			WorkbookProcessor wbp = new WorkbookProcessor(workbook);
+
+			// Build data
+			List<TillReportDataPoint> importedData = new ArrayList<>();
+			for (CellDataPoint cdp : wbp.getDataPoints()) {
+				importedData.add(new TillReportDataPoint(
+						cdp, wbp, targetDate, main.getCurrentStore().getStoreID()
+				));
 			}
-		});
 
-		// If you still want to show any `updateMessage()` warnings from inside the Task,
-		// you can add a listener here, just note that you’d typically do user interactions
-		// in the JavaFX thread:
-		importTask.messageProperty().addListener((obs, oldMsg, newMsg) -> {
-			if (newMsg != null) {
-				dialogPane.showWarning("Import Warning", newMsg);
-			}
-		});
+			Task<Void> importTask = new Task<>() {
+				@Override
+				protected Void call() throws Exception {
+					tillReportService.importTillReportData(importedData);
+					return null;
+				}
+			};
 
-		// Show spinner and run
-		progressSpinner.setVisible(true);
-		executor.submit(importTask);
+			importTask.setOnRunning(e -> progressSpinner.setVisible(true));
+
+			importTask.setOnSucceeded(e -> {
+				progressSpinner.setVisible(false);
+				dialogPane.showInformation("Success", "Data imported successfully")
+						.thenAccept(btn -> {
+							fillTable();
+							future.complete(null); // signal done
+						});
+			});
+
+			importTask.setOnFailed(e -> {
+				progressSpinner.setVisible(false);
+				Throwable exception = importTask.getException();
+				if (exception instanceof IllegalArgumentException) {
+					dialogPane.showWarning("Import Warning", exception.getMessage())
+							.thenAccept(btn -> future.complete(null));
+				} else {
+					dialogPane.showError("Failed to Import Data",
+									"Error while processing file: " + newFile.getName())
+							.thenAccept(btn -> future.complete(null));
+				}
+			});
+
+			executor.submit(importTask);
+
+		} catch (IOException | RuntimeException e) {
+			dialogPane.showError("File Error",
+							"Cannot read file: " + newFile.getName() + "\n" + e.getMessage())
+					.thenAccept(btn -> future.complete(null));
+		}
+
+		return future;
 	}
 
 	public void fillTable() {
