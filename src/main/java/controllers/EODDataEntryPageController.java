@@ -26,6 +26,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -161,18 +162,52 @@ public class EODDataEntryPageController extends DateSelectController{
 	}
 
 	public void importFiles(LocalDate targetDate) {
-		// Multiple-file selection
+		// -- 1) Load configuration to get the last used directory (if any)
+		Properties props = new Properties();
+		File configFile = new File("appConfig.properties");
+		if (configFile.exists()) {
+			try (FileInputStream fis = new FileInputStream(configFile)) {
+				props.load(fis);
+			} catch (IOException e) {
+				dialogPane.showError("Config Error", "Failed to load app configuration", e);
+			}
+		}
+
+		String lastDir = props.getProperty("lastEODImportDir");
+
+		// -- 2) Build and configure the FileChooser
 		FileChooser fileChooser = new FileChooser();
 		fileChooser.setTitle("Open Data Entry File(s)");
 		fileChooser.getExtensionFilters()
 				.addAll(new FileChooser.ExtensionFilter("XLS Files", "*.xls"));
 
+		// If we do have a stored last directory, set it as initial
+		if (lastDir != null) {
+			File lastDirFile = new File(lastDir);
+			if (lastDirFile.exists() && lastDirFile.isDirectory()) {
+				fileChooser.setInitialDirectory(lastDirFile);
+			}
+		}
+
+		// -- 3) Show multiple-file selection dialog
 		List<File> selectedFiles = fileChooser.showOpenMultipleDialog(main.getStg());
 		if (selectedFiles == null || selectedFiles.isEmpty()) {
 			return; // User canceled
 		}
 
-		// 1) Check all files up front
+		// -- 4) Store the directory of the first chosen file as the "last import dir"
+		File firstFile = selectedFiles.get(0);
+		File parentDir = firstFile.getParentFile();
+		if (parentDir != null) {
+			props.setProperty("lastEODImportDir", parentDir.getAbsolutePath());
+			try (FileOutputStream fos = new FileOutputStream(configFile)) {
+				props.store(fos, "App configuration");
+			} catch (IOException e) {
+				dialogPane.showError("Config Error", "Failed to save app configuration", e);
+			}
+		}
+
+		// -- 5) Continue with your existing checks and import logic
 		List<String> allWarnings = new ArrayList<>();
 		for (File file : selectedFiles) {
 			boolean valid = checkFileForWarnings(file, targetDate, allWarnings);
@@ -182,7 +217,7 @@ public class EODDataEntryPageController extends DateSelectController{
 			}
 		}
 
-		// 2) If warnings exist, show them once
+		// If warnings exist, show them
 		if (!allWarnings.isEmpty()) {
 			String combinedWarnings = String.join("\n", allWarnings);
 			dialogPane.showWarning(
@@ -190,7 +225,6 @@ public class EODDataEntryPageController extends DateSelectController{
 					combinedWarnings + "\n\nPress OK to proceed with import, or Cancel to stop."
 			).thenAccept(buttonType -> {
 				if (buttonType == ButtonType.OK) {
-					// Do them one at a time
 					importFilesSequentially(selectedFiles, targetDate, 0);
 				}
 			});

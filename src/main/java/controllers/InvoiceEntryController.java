@@ -37,6 +37,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -930,31 +931,79 @@ public class InvoiceEntryController extends DateSelectController{
 	}
 
 	public void importFiles() {
+		// 1) Load configuration to get the last used directory (if any)
+		Properties props = new Properties();
+		File configFile = new File("appConfig.properties");
+		if (configFile.exists()) {
+			try (FileInputStream fis = new FileInputStream(configFile)) {
+				props.load(fis);
+			} catch (IOException e) {
+				dialogPane.showError("Error", "An error occurred while loading the app configuration", e);
+			}
+		}
+		String lastDir = props.getProperty("lastInvoiceImportDir");
+
+		// 2) Configure the FileChooser
 		FileChooser fileChooser = new FileChooser();
 		fileChooser.setTitle("Open Invoice export File");
-		fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("XLS Files", "*.xls"));
+		fileChooser.getExtensionFilters()
+				.addAll(new FileChooser.ExtensionFilter("XLS Files", "*.xls"));
+
+		// If we have a saved last directory, set it as initial
+		if (lastDir != null) {
+			File lastDirFile = new File(lastDir);
+			if (lastDirFile.exists() && lastDirFile.isDirectory()) {
+				fileChooser.setInitialDirectory(lastDirFile);
+			}
+		}
+
+		// 3) Show the file chooser
 		File newfile = fileChooser.showOpenDialog(main.getStg());
+
+		// If user selected a file...
 		if (newfile != null) {
+			// 4) Save the directory of this selected file as the new "last import dir"
+			File parentDir = newfile.getParentFile();
+			if (parentDir != null) {
+				props.setProperty("lastInvoiceImportDir", parentDir.getAbsolutePath());
+				try (FileOutputStream fos = new FileOutputStream(configFile)) {
+					props.store(fos, "App configuration");
+				} catch (IOException e) {
+					dialogPane.showError("Error", "An error occurred while saving the last import directory", e);
+				}
+			}
+
+			// 5) Continue your import logic (same as before)
 			progressSpinner.setVisible(true);
+
 			Task<Void> task = new Task<>() {
 				@Override
 				protected Void call() throws Exception {
-					FileInputStream file = new FileInputStream(newfile);
-					HSSFWorkbook workbook = new HSSFWorkbook(file);
-					WorkbookProcessor wbp = new WorkbookProcessor(workbook);
-					invoiceService.importInvoiceData(main.getCurrentStore().getStoreID(), wbp.getDataPoints());
+					try (FileInputStream file = new FileInputStream(newfile)) {
+						HSSFWorkbook workbook = new HSSFWorkbook(file);
+						WorkbookProcessor wbp = new WorkbookProcessor(workbook);
+						invoiceService.importInvoiceData(
+								main.getCurrentStore().getStoreID(),
+								wbp.getDataPoints()
+						);
+					}
 					return null;
 				}
 			};
+
 			task.setOnSucceeded(_ -> {
 				progressSpinner.setVisible(false);
 				dialogPane.showInformation("Success", "Invoice data imported successfully");
 				fillInvoiceTable();
 			});
+
 			task.setOnFailed(_ -> {
 				progressSpinner.setVisible(false);
-				dialogPane.showError("Error", "An error occurred while importing invoice data", task.getException());
+				dialogPane.showError("Error",
+						"An error occurred while importing invoice data",
+						task.getException());
 			});
+
 			executor.submit(task);
 		}
 	}
