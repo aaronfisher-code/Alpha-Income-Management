@@ -783,7 +783,6 @@ public class InvoiceEntryController extends DateSelectController{
 					credit.setCreditAmount(Double.parseDouble(creditAmountField.getText()));
 					credit.setNotes(creditNotesField.getText());
 					creditService.updateCredit(credit);
-					creditService.updateCredit(credit);
 					return null;
 				}
 			};
