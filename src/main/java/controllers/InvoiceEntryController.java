@@ -638,7 +638,6 @@ public class InvoiceEntryController extends DateSelectController{
 				invoiceNoValidationLabel.setVisible(false);
 				invoiceNoField.clear();
 				invoiceDateField.setValue(null);
-				dueDateField.setValue(null);
 				amountField.clear();
 				notesField.clear();
 				fillInvoiceTable();
