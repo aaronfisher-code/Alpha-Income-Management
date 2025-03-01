@@ -90,7 +90,7 @@ public class EODDataEntryPageController extends DateSelectController{
         TableColumn<EODDataPoint, Integer> scriptsOnFileCol = new TableColumn<>("SCRIPTS ON\nFILE");
         TableColumn<EODDataPoint, Integer> smsPatientsCol = new TableColumn<>("SMS PATIENTS");
 		TableColumn<EODDataPoint, String> tillBalanceCol = new TableColumn<>("TILL BALANCE");
-        TableColumn<EODDataPoint, Double> runningTillBalanceCol = new TableColumn<>("RUNNING TILL\nBALANCE");
+		TableColumn<EODDataPoint, String> runningTillBalanceCol = new TableColumn<>("RUNNING TILL\nBALANCE");
 		notesCol = new TableColumn<>("NOTES");
 		dateCol.setMinWidth(80);
 		dateCol.setCellValueFactory(new PropertyValueFactory<>("dateString"));
@@ -118,6 +118,24 @@ public class EODDataEntryPageController extends DateSelectController{
                     // Get the underlying data object for this row
                     EODDataPoint dataPoint = getTableView().getItems().get(getIndex());
                     if (dataPoint.getTillBalance() < 0) {
+                        setStyle("-fx-text-fill: red;");
+                    } else {
+                        setStyle("");
+                    }
+                }
+            }
+        });
+		runningTillBalanceCol.setCellFactory(_ -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    setText(item);
+                    EODDataPoint dataPoint = getTableView().getItems().get(getIndex());
+                    if (dataPoint.getRunningTillBalance() < 0) {
                         setStyle("-fx-text-fill: red;");
                     } else {
                         setStyle("");
@@ -182,7 +200,7 @@ public class EODDataEntryPageController extends DateSelectController{
 			};
 
 			// Add a listener to update the style when the row selection changes
-			row.selectedProperty().addListener((obs, wasSelected, isNowSelected) -> {
+			row.selectedProperty().addListener((_, _, _) -> {
 				updateRowStyle(row);
 			});
 
