@@ -69,7 +69,7 @@ public class LeaveManagementController extends DateSelectController {
         } catch (Exception ex) {
             dialogPane.showError("Error", "An error occurred while trying to fetch employees",ex);
         }
-        leaveTypeCombo.getItems().addAll("Sick Leave", "Annual Leave", "Unpaid Leave", "Maternity Leave", "Paternity Leave", "Bereavement Leave", "Other");
+        leaveTypeCombo.getItems().addAll("Sick Leave", "Annual Leave", "Unpaid Leave", "Maternity Leave", "Paternity Leave", "Bereavement Leave","Public holiday not worked", "Other");
         openStartTimePicker.setOnAction(_ -> {
             if(!startTimeField.getText().isEmpty()){startTime = LocalTime.parse(startTimeField.getText().toLowerCase(), DateTimeFormatter.ofPattern("h:mm a"));}
             else {startTime = LocalTime.MIDNIGHT;}
