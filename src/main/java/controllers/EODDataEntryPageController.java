@@ -107,42 +107,73 @@ public class EODDataEntryPageController extends DateSelectController{
 		runningTillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("runningTillBalanceString"));
 		notesCol.setCellValueFactory(new PropertyValueFactory<>("notes"));
 		tillBalanceCol.setCellFactory(_ -> new TableCell<>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setStyle("");
-                } else {
-                    setText(item);
-                    // Get the underlying data object for this row
-                    EODDataPoint dataPoint = getTableView().getItems().get(getIndex());
-                    if (dataPoint.getTillBalance() < 0) {
-                        setStyle("-fx-text-fill: red;");
-                    } else {
-                        setStyle("");
-                    }
-                }
-            }
-        });
+			@Override
+			protected void updateItem(String item, boolean empty) {
+				super.updateItem(item, empty);
+				if (empty || item == null) {
+					setText(null);
+					setStyle("");
+				} else {
+					setText(item);
+					TableRow<EODDataPoint> row = getTableRow();
+					if (row != null) {
+						// Add the listener only once per row to update cell style on selection changes
+						if (!row.getProperties().containsKey("styleListenerAdded")) {
+							row.selectedProperty().addListener((_, _, _) -> {
+								// Force re-run updateItem when selection changes
+								updateItem(getItem(), empty);
+							});
+							row.getProperties().put("styleListenerAdded", true);
+						}
+						// When row is selected, revert to default style
+						if (row.isSelected()) {
+							setStyle("");
+						} else {
+							EODDataPoint dataPoint = getTableView().getItems().get(getIndex());
+							if (dataPoint.getTillBalance() < 0) {
+								setStyle("-fx-text-fill: red;");
+							} else {
+								setStyle("");
+							}
+						}
+					}
+				}
+			}
+		});
 		runningTillBalanceCol.setCellFactory(_ -> new TableCell<>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setStyle("");
-                } else {
-                    setText(item);
-                    EODDataPoint dataPoint = getTableView().getItems().get(getIndex());
-                    if (dataPoint.getRunningTillBalance() < 0) {
-                        setStyle("-fx-text-fill: red;");
-                    } else {
-                        setStyle("");
-                    }
-                }
-            }
-        });
+			@Override
+			protected void updateItem(String item, boolean empty) {
+				super.updateItem(item, empty);
+				if (empty || item == null) {
+					setText(null);
+					setStyle("");
+				} else {
+					setText(item);
+					TableRow<EODDataPoint> row = getTableRow();
+					if (row != null) {
+						// Use a unique property key for this column
+						if (!row.getProperties().containsKey("styleListenerAdded_runningTillBalance")) {
+							row.selectedProperty().addListener((_, _, _) -> {
+								// Force update of this cell when the row selection changes
+								updateItem(getItem(), empty);
+							});
+							row.getProperties().put("styleListenerAdded_runningTillBalance", true);
+						}
+						if (row.isSelected()) {
+							// Revert to default styling when the row is selected
+							setStyle("");
+						} else {
+							EODDataPoint dataPoint = getTableView().getItems().get(getIndex());
+							if (dataPoint.getRunningTillBalance() < 0) {
+								setStyle("-fx-text-fill: red;");
+							} else {
+								setStyle("");
+							}
+						}
+					}
+				}
+			}
+		});
 		eodDataTable.getColumns().addAll(
                 dateCol,
                 cashAmountCol,
