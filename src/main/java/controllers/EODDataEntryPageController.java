@@ -28,7 +28,6 @@ import java.util.Locale;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class EODDataEntryPageController extends DateSelectController{
 
@@ -50,6 +49,7 @@ public class EODDataEntryPageController extends DateSelectController{
 	private double currentRunningTillBalance;
 	private EODService eodService;
 	private TillReportService tillReportService;
+	private RosterUtils rosterUtils;
 
 	@FXML
 	private void initialize() {
@@ -169,15 +169,47 @@ public class EODDataEntryPageController extends DateSelectController{
 
 	private void addDoubleClickFunction(){
 		eodDataTable.setRowFactory(_ -> {
-			TableRow<EODDataPoint> row = new TableRow<>();
+			TableRow<EODDataPoint> row = new TableRow<>() {
+				@Override
+				protected void updateItem(EODDataPoint item, boolean empty) {
+					super.updateItem(item, empty);
+					if (empty || item == null) {
+						setStyle("");
+					} else {
+						updateRowStyle(this);
+					}
+				}
+			};
+
+			// Add a listener to update the style when the row selection changes
+			row.selectedProperty().addListener((obs, wasSelected, isNowSelected) -> {
+				updateRowStyle(row);
+			});
+
 			row.setOnMouseClicked(event -> {
-				if (event.getClickCount() == 2 && (! row.isEmpty()) ) {
+				if (event.getClickCount() == 2 && !row.isEmpty()) {
 					EODDataPoint rowData = row.getItem();
 					openEODPopover(rowData);
 				}
 			});
-			return row ;
+			return row;
 		});
+	}
+
+	private void updateRowStyle(TableRow<EODDataPoint> row) {
+		EODDataPoint item = row.getItem();
+		if (row.isSelected()) {
+			// When selected, let the default selection styling apply.
+			row.setStyle("");
+		} else {
+			// Retrieve the day duration and default to 0 if not found
+			double dayDuration = rosterUtils.getDayDuration(item.getDate());
+			if (dayDuration == 0) {
+				row.setStyle("-fx-background-color: #d3d3d3; -fx-border-color: #d3d3d3; -fx-border-width: 1px;");
+			} else {
+				row.setStyle("");
+			}
+		}
 	}
 
 	public void importFiles(LocalDate targetDate) {
@@ -395,25 +427,30 @@ public class EODDataEntryPageController extends DateSelectController{
 				YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
 				int daysInMonth = yearMonthObject.lengthOfMonth();
 
-				// Create tasks for concurrent execution
+				// Create concurrent tasks to fetch EOD data and TillReport data
 				Callable<List<EODDataPoint>> eodDataCallable = () -> eodService.getEODDataPoints(
 						main.getCurrentStore().getStoreID(),
 						yearMonthObject.atDay(1),
 						yearMonthObject.atEndOfMonth()
 				);
-
 				Callable<List<TillReportDataPoint>> tillReportDataCallable = () -> tillReportService.getTillReportDataPointsByKey(
 						main.getCurrentStore().getStoreID(),
 						yearMonthObject.atDay(1),
 						yearMonthObject.atEndOfMonth(),
 						"Total Takings"
 				);
-
-				// Submit tasks for execution
 				Future<List<EODDataPoint>> eodDataFuture = executor.submit(eodDataCallable);
 				Future<List<TillReportDataPoint>> tillReportDataFuture = executor.submit(tillReportDataCallable);
 
-				// Wait for both tasks to complete and handle potential errors
+				CompletableFuture<Void> rosterFuture = CompletableFuture.runAsync(() -> {
+					try {
+						rosterUtils = new RosterUtils(main, yearMonthObject);
+					} catch (Exception e) {
+						throw new RuntimeException("Error loading roster data", e);
+					}
+				}, executor);
+
+				// Wait for the EOD and TillReport tasks to complete
 				List<EODDataPoint> currentEODDataPoints;
 				List<TillReportDataPoint> currentTillReportDataPoints;
 				try {
@@ -424,7 +461,6 @@ public class EODDataEntryPageController extends DateSelectController{
 				} catch (Exception e) {
 					throw new Exception("Failed to retrieve EODDataPoints: " + e.getMessage(), e);
 				}
-
 				try {
 					currentTillReportDataPoints = tillReportDataFuture.get();
 					if (currentTillReportDataPoints == null) {
@@ -433,8 +469,9 @@ public class EODDataEntryPageController extends DateSelectController{
 				} catch (Exception e) {
 					throw new Exception("Failed to retrieve TillReportDataPoints: " + e.getMessage(), e);
 				}
+				rosterFuture.join();
 
-				// Populate eodDataPoints
+				// Populate eodDataPoints (using existing data if available, or creating a new one)
 				for (int i = 1; i <= daysInMonth; i++) {
 					LocalDate currentDate = LocalDate.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth(), i);
 					EODDataPoint existingDataPoint = currentEODDataPoints.stream()
@@ -444,19 +481,17 @@ public class EODDataEntryPageController extends DateSelectController{
 					eodDataPoints.add(existingDataPoint);
 				}
 
-				// Calculate till balances
+				// Calculate till balances for each day
 				double runningTillBalance = 0;
 				for (EODDataPoint e : eodDataPoints) {
 					TillReportDataPoint matchingTillReport = currentTillReportDataPoints.stream()
 							.filter(t -> t.getAssignedDate().equals(e.getDate()))
 							.findFirst()
 							.orElse(null);
-
 					double amount = (matchingTillReport != null) ? matchingTillReport.getAmount() : 0;
 					e.calculateTillBalances(amount, runningTillBalance);
 					runningTillBalance = e.getRunningTillBalance();
 				}
-
 				return eodDataPoints;
 			}
 		};

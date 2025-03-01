@@ -54,7 +54,7 @@ public class RosterUtils {
     }
 
     public double getDayDuration(LocalDate day) {
-        return dayDurationMap.get(day);
+        return dayDurationMap.getOrDefault(day,0.0);
     }
 
     private double loadDayDuration(LocalDate day){
