@@ -89,7 +89,7 @@ public class EODDataEntryPageController extends DateSelectController{
         TableColumn<EODDataPoint, Double> stockOnHandAmountCol = new TableColumn<>("STOCK ON\nHAND");
         TableColumn<EODDataPoint, Integer> scriptsOnFileCol = new TableColumn<>("SCRIPTS ON\nFILE");
         TableColumn<EODDataPoint, Integer> smsPatientsCol = new TableColumn<>("SMS PATIENTS");
-        TableColumn<EODDataPoint, Double> tillBalanceCol = new TableColumn<>("TILL BALANCE");
+		TableColumn<EODDataPoint, String> tillBalanceCol = new TableColumn<>("TILL BALANCE");
         TableColumn<EODDataPoint, Double> runningTillBalanceCol = new TableColumn<>("RUNNING TILL\nBALANCE");
 		notesCol = new TableColumn<>("NOTES");
 		dateCol.setMinWidth(80);
@@ -106,6 +106,25 @@ public class EODDataEntryPageController extends DateSelectController{
 		tillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("tillBalanceString"));
 		runningTillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("runningTillBalanceString"));
 		notesCol.setCellValueFactory(new PropertyValueFactory<>("notes"));
+		tillBalanceCol.setCellFactory(_ -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    setText(item);
+                    // Get the underlying data object for this row
+                    EODDataPoint dataPoint = getTableView().getItems().get(getIndex());
+                    if (dataPoint.getTillBalance() < 0) {
+                        setStyle("-fx-text-fill: red;");
+                    } else {
+                        setStyle("");
+                    }
+                }
+            }
+        });
 		eodDataTable.getColumns().addAll(
                 dateCol,
                 cashAmountCol,
