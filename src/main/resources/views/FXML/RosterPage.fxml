@@ -30,13 +30,13 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane maxWidth="1.7976931348623157E308" prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.RosterPageController">
+<StackPane maxWidth="1.7976931348623157E308" prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.RosterPageController">
    <children>
       <BorderPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-background-color: TRANSPARENT;">
          <top>
             <BorderPane snapToPixel="false" style="-fx-background-color: #F3F2F7; -fx-background-radius: 10;" BorderPane.alignment="CENTER">
                <left>
-                  <FlowPane fx:id="datePickerPane" hgap="5.0" prefWrapLength="520.0" snapToPixel="false" vgap="5.0" BorderPane.alignment="CENTER">
+                  <FlowPane fx:id="datePickerPane" hgap="5.0" prefWrapLength="575.0" snapToPixel="false" vgap="5.0" BorderPane.alignment="CENTER">
                      <children>
                         <Label prefHeight="32.0" styleClass="headingText" text="NOW SHOWING THE WEEK OF:" textFill="#6e6b7b">
                            <font>
@@ -60,6 +60,17 @@
                         <Button alignment="TOP_CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#weekForward" prefHeight="30.0" prefWidth="20.0" style="-fx-background-color: #f3F2F7; -fx-padding: 1;" text="&gt;" textFill="#b2bac9">
                            <font>
                               <Font size="19.0" />
+                           </font>
+                           <opaqueInsets>
+                              <Insets />
+                           </opaqueInsets>
+                           <cursor>
+                              <Cursor fx:constant="HAND" />
+                           </cursor>
+                        </Button>
+                        <Button alignment="TOP_CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#skipToCurrentDay" style="-fx-background-color: #e1e1e1; -fx-padding: 3;" text="TODAY" textFill="#6e6b7b">
+                           <font>
+                              <Font size="11.0" />
                            </font>
                            <opaqueInsets>
                               <Insets />

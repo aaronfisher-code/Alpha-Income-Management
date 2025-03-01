@@ -463,6 +463,10 @@ public class RosterPageController extends PageController {
         setDatePkr(datePkr.getValue().minusWeeks(1));
     }
 
+    public void skipToCurrentDay() {
+        setDatePkr(LocalDate.now());
+    }
+
     public void setDatePkr(LocalDate date) {
         datePkr.setValue(date);
     }
