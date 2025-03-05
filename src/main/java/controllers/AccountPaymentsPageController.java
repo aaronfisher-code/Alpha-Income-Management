@@ -422,9 +422,13 @@ public class AccountPaymentsPageController extends DateSelectController{
 				}
 			};
 			addPaymentTask.setOnSucceeded(_ -> {
-				closePopover();
+				invoiceNoField.clear();
+				invoiceDateField.clear();
+				descriptionField.clear();
+				amountField.clear();
+				accountAdjustedBox.setSelected(false);
 				fillTable();
-				dialogPane.showInformation("Success", "Payment was successfully added");
+				Platform.runLater(() -> invoiceNoField.requestFocus());
 				progressSpinner.setVisible(false);
 			});
 			addPaymentTask.setOnFailed(_ -> {
