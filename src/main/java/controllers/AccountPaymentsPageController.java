@@ -286,9 +286,9 @@ public class AccountPaymentsPageController extends DateSelectController{
 			progressSpinner.setVisible(true);
 			Task<Void> exportTask = new Task<>() {
 				@Override
-				protected Void call() {
+				protected Void call() throws FileNotFoundException {
 					try (PrintWriter pw = new PrintWriter(file)) {
-						pw.println("Contact,,,,,,,,,,Invoice number,Invoice date ,Due Date,,Description,Quantity,Unit amount,Account code,GST free,");
+						pw.println("*ContactName,,,,,,,,,,*InvoiceNumber,*InvoiceDate,*DueDate,,*Description,*Quantity,*UnitAmount,*AccountCode,*TaxType,");
 						YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
 						ObservableList<AccountPayment> currentAccountPaymentDataPoints = FXCollections.observableArrayList(
 								accountPaymentService.getAccountPaymentsForMonth(main.getCurrentStore().getStoreID(), yearMonthObject)
@@ -303,11 +303,10 @@ public class AccountPaymentsPageController extends DateSelectController{
 							pw.print(a.getAccountCode()+",");
 							pw.println(a.getTaxRate());
 						}
-						dialogPane.showInformation("Success", "Information exported successfully");
 					} catch (FileNotFoundException e){
-						dialogPane.showError("Error", "This file could not be accessed, please ensure its not open in another program", e);
+						throw new FileNotFoundException();
 					} catch (Exception e) {
-						dialogPane.showError("Error", "An error occurred while trying to retrieve account payment information", e);
+						throw new RuntimeException(e);
 					}
 					return null;
 				}
