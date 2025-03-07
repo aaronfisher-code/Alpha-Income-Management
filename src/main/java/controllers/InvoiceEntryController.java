@@ -271,10 +271,28 @@ public class InvoiceEntryController extends DateSelectController{
 		contentDarken.setOnMouseClicked(_ -> closeInvoicePopover());
 		amountField.delegateFocusedProperty().addListener((_, _, _) -> {
 			if (amountField.isValid()) {
-				if(expectedUnitAmountLabel.getText().equals("N/A"))
+				if(expectedUnitAmountLabel.getText().equals("N/A")) {
 					varianceLabel.setText("N/A");
-				else
-					varianceLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(Double.parseDouble(expectedUnitAmountLabel.getText().replace("$","").replace(",","")) - Double.parseDouble(amountField.getText())));
+					varianceLabel.setStyle("");
+				} else {
+					try {
+						double expected = Double.parseDouble(expectedUnitAmountLabel.getText().replace("$", "").replace(",", ""));
+						double amount = Double.parseDouble(amountField.getText());
+						double variance = expected - amount;
+						String formattedVariance = NumberFormat.getCurrencyInstance(Locale.US).format(variance);
+						varianceLabel.setText(formattedVariance);
+
+						// If the absolute variance is greater than 20 cents, highlight the label in red
+						if (Math.abs(variance) > 0.20) {
+							varianceLabel.setStyle("-fx-background-color: red; -fx-text-fill: white;");
+						} else {
+							varianceLabel.setStyle("");
+						}
+					} catch (NumberFormatException e) {
+						varianceLabel.setText("N/A");
+						varianceLabel.setStyle("");
+					}
+				}
 			}
 		});
 	}
