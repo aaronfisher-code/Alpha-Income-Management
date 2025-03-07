@@ -308,7 +308,7 @@ public class BASCheckerController extends DateSelectController{
 		//note: total sale metric is incorrect with current setup, so using total income instead until solution is found
 		//TODO: fix total sales metric
 		spreadsheetCheck2.setText(String.format("%.2f", result.getTotalIncome()));
-		spreadsheetCheck3.setText(String.format("%.2f", result.totalSales() - result.getTotalIncome()));
+		spreadsheetCheck3.setText(String.format("%.2f", result.getTotalIncome() - result.getTotalIncome()));
 
 		cogsCheck1.setText(String.format("%.2f", result.invoiceTotal()));
 		cogsCheck2.setText(String.format("%.2f", result.cogsCheck2()));
