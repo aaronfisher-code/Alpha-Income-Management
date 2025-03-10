@@ -214,7 +214,14 @@ public class LeaveManagementController extends DateSelectController {
                 } catch (Exception ex) {
                     dialogPane.showError("Error", "An error occurred while trying to add the leave request",ex);
                 }
-                closePopover();
+                employeeSelect.setValue(null);
+                employeeSelect.setText("");
+                employeeSelect.clearSelection();
+                startDate.setValue(null);
+                startTimeField.setText("");
+                endDate.setValue(null);
+                endTimeField.setText("");
+                reasonField.setText("");
                 fillTable();
                 dialogPane.showInformation("Success", "Leave request successfully added");
             }
