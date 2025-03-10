@@ -197,70 +197,138 @@ public class ExportToolController extends PageController {
 
                     // Process each shift
                     for (Shift shift : dayShifts) {
-                        // Check for modifications
-                        Shift effectiveShift = shift;
-                        boolean shiftIsModified = false;
+                        // Look for a modification for this shift on the current day.
+                        Shift modificationForShift = modifications.stream()
+                                .filter(mod -> mod.getShiftID() == shift.getShiftID() &&
+                                        mod.getOriginalDate().equals(currentDate))
+                                .findFirst().orElse(null);
 
-                        for (Shift mod : modifications) {
-                            if (mod.getShiftID() == shift.getShiftID() &&
-                                    mod.getOriginalDate().equals(currentDate)) {
-                                effectiveShift = mod;
-                                shiftIsModified = true;
-                                break;
+                        if (modificationForShift != null) {
+                            // 1) Export the original shift ONLY if there is a leave record (i.e. at least one segment is on leave)
+                            User originalUser = userMap.get(shift.getUserID());
+                            if (originalUser != null) {
+                                List<ShiftSegment> originalSegments = buildShiftSegments(shift, date, leaveRequests);
+                                for (ShiftSegment seg : originalSegments) {
+                                    // Only export segments that are on leave
+                                    if (seg.getStartTime().equals(seg.getEndTime()) || !seg.isOnLeave()) {
+                                        continue;
+                                    }
+                                    String leaveType = "";
+                                    LocalDateTime subStart = LocalDateTime.of(date, seg.getStartTime());
+                                    LocalDateTime subEnd   = LocalDateTime.of(date, seg.getEndTime());
+                                    leaveType = leaveRequests.stream()
+                                            .filter(lr -> lr.getUserID() == shift.getUserID())
+                                            .filter(lr -> !lr.getFromDate().isAfter(subStart)
+                                                    && !lr.getToDate().isBefore(subEnd))
+                                            .map(LeaveRequest::getLeaveType)
+                                            .findFirst()
+                                            .orElse("On Leave");
+                                    String totalHours = calculateShiftDuration(
+                                            seg.getStartTime(),
+                                            seg.getEndTime(),
+                                            shift.getThirtyMinBreaks(),
+                                            shift.getTenMinBreaks()
+                                    );
+                                    export.append(String.format(
+                                            "%s\t%d\t%s %s\t%s\t%s\t%s\t%d\t%d\t%s\t%s\n",
+                                            date.format(DATE_FORMATTER),
+                                            originalUser.getUserID(),
+                                            originalUser.getFirst_name(),
+                                            originalUser.getLast_name(),
+                                            seg.getStartTime().format(TIME_FORMATTER),
+                                            seg.getEndTime().format(TIME_FORMATTER),
+                                            totalHours,
+                                            shift.getThirtyMinBreaks(),
+                                            shift.getTenMinBreaks(),
+                                            isPublicHoliday ? "Yes" : "No",
+                                            leaveType
+                                    ));
+                                }
                             }
-                        }
 
-                        // Skip if shift is modified and moved to different date
-                        if (shiftIsModified && effectiveShift.getShiftStartDate() != null &&
-                                !effectiveShift.getShiftStartDate().equals(currentDate)) {
-                            continue;
-                        }
-
-                        User user = userMap.get(effectiveShift.getUserID());
-                        if (user == null) continue;
-
-                        List<ShiftSegment> segments = buildShiftSegments(effectiveShift, date, leaveRequests);
-
-                        for (ShiftSegment seg : segments) {
-                            if (seg.getStartTime().equals(seg.getEndTime())) {
-                                continue; // skip zero-length
+                            // 2) Export the covering (modified) shift if it still falls on the current day
+                            if (modificationForShift.getShiftStartDate() == null ||
+                                    modificationForShift.getShiftStartDate().equals(currentDate)) {
+                                User coveringUser = userMap.get(modificationForShift.getUserID());
+                                if (coveringUser != null) {
+                                    List<ShiftSegment> coveringSegments = buildShiftSegments(modificationForShift, date, leaveRequests);
+                                    for (ShiftSegment seg : coveringSegments) {
+                                        if (seg.getStartTime().equals(seg.getEndTime())) continue;
+                                        String leaveType = "";
+                                        if (seg.isOnLeave()) {
+                                            LocalDateTime subStart = LocalDateTime.of(date, seg.getStartTime());
+                                            LocalDateTime subEnd   = LocalDateTime.of(date, seg.getEndTime());
+                                            leaveType = leaveRequests.stream()
+                                                    .filter(lr -> lr.getUserID() == modificationForShift.getUserID())
+                                                    .filter(lr -> !lr.getFromDate().isAfter(subStart)
+                                                            && !lr.getToDate().isBefore(subEnd))
+                                                    .map(LeaveRequest::getLeaveType)
+                                                    .findFirst()
+                                                    .orElse("On Leave");
+                                        }
+                                        String totalHours = calculateShiftDuration(
+                                                seg.getStartTime(),
+                                                seg.getEndTime(),
+                                                modificationForShift.getThirtyMinBreaks(),
+                                                modificationForShift.getTenMinBreaks()
+                                        );
+                                        export.append(String.format(
+                                                "%s\t%d\t%s %s\t%s\t%s\t%s\t%d\t%d\t%s\t%s\n",
+                                                date.format(DATE_FORMATTER),
+                                                coveringUser.getUserID(),
+                                                coveringUser.getFirst_name(),
+                                                coveringUser.getLast_name(),
+                                                seg.getStartTime().format(TIME_FORMATTER),
+                                                seg.getEndTime().format(TIME_FORMATTER),
+                                                totalHours,
+                                                modificationForShift.getThirtyMinBreaks(),
+                                                modificationForShift.getTenMinBreaks(),
+                                                isPublicHoliday ? "Yes" : "No",
+                                                leaveType
+                                        ));
+                                    }
+                                }
                             }
-                            // If on leave => pick a leaveType or "On Leave"
-                            String leaveType = "";
-                            if (seg.isOnLeave()) {
-                                LocalDateTime subStart = LocalDateTime.of(date, seg.getStartTime());
-                                LocalDateTime subEnd   = LocalDateTime.of(date, seg.getEndTime());
-                                Shift finalEffectiveShift = effectiveShift;
-                                leaveType = leaveRequests.stream()
-                                        .filter(lr -> lr.getUserID() == finalEffectiveShift.getUserID())
-                                        .filter(lr -> !lr.getFromDate().isAfter(subStart)
-                                                && !lr.getToDate().isBefore(subEnd))
-                                        .map(LeaveRequest::getLeaveType)
-                                        .findFirst()
-                                        .orElse("On Leave");
+                        } else {
+                            // Normal processing if no modification exists.
+                            User user = userMap.get(shift.getUserID());
+                            if (user == null) continue;
+                            List<ShiftSegment> segments = buildShiftSegments(shift, date, leaveRequests);
+                            for (ShiftSegment seg : segments) {
+                                if (seg.getStartTime().equals(seg.getEndTime())) continue;
+                                String leaveType = "";
+                                if (seg.isOnLeave()) {
+                                    LocalDateTime subStart = LocalDateTime.of(date, seg.getStartTime());
+                                    LocalDateTime subEnd   = LocalDateTime.of(date, seg.getEndTime());
+                                    leaveType = leaveRequests.stream()
+                                            .filter(lr -> lr.getUserID() == shift.getUserID())
+                                            .filter(lr -> !lr.getFromDate().isAfter(subStart)
+                                                    && !lr.getToDate().isBefore(subEnd))
+                                            .map(LeaveRequest::getLeaveType)
+                                            .findFirst()
+                                            .orElse("On Leave");
+                                }
+                                String totalHours = calculateShiftDuration(
+                                        seg.getStartTime(),
+                                        seg.getEndTime(),
+                                        shift.getThirtyMinBreaks(),
+                                        shift.getTenMinBreaks()
+                                );
+                                export.append(String.format(
+                                        "%s\t%d\t%s %s\t%s\t%s\t%s\t%d\t%d\t%s\t%s\n",
+                                        date.format(DATE_FORMATTER),
+                                        user.getUserID(),
+                                        user.getFirst_name(),
+                                        user.getLast_name(),
+                                        seg.getStartTime().format(TIME_FORMATTER),
+                                        seg.getEndTime().format(TIME_FORMATTER),
+                                        totalHours,
+                                        shift.getThirtyMinBreaks(),
+                                        shift.getTenMinBreaks(),
+                                        isPublicHoliday ? "Yes" : "No",
+                                        leaveType
+                                ));
                             }
-
-                            String totalHours = calculateShiftDuration(
-                                    seg.getStartTime(),
-                                    seg.getEndTime(),
-                                    effectiveShift.getThirtyMinBreaks(),
-                                    effectiveShift.getTenMinBreaks()
-                            );
-
-                            export.append(String.format(
-                                    "%s\t%d\t%s %s\t%s\t%s\t%s\t%d\t%d\t%s\t%s\n",
-                                    date.format(DATE_FORMATTER),
-                                    user.getUserID(),
-                                    user.getFirst_name(),
-                                    user.getLast_name(),
-                                    seg.getStartTime().format(TIME_FORMATTER),
-                                    seg.getEndTime().format(TIME_FORMATTER),
-                                    totalHours,
-                                    effectiveShift.getThirtyMinBreaks(),
-                                    effectiveShift.getTenMinBreaks(),
-                                    isPublicHoliday ? "Yes" : "No",
-                                    leaveType
-                            ));
                         }
                     }
 
