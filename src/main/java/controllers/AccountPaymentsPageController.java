@@ -32,6 +32,7 @@ import java.io.PrintWriter;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
@@ -288,20 +289,21 @@ public class AccountPaymentsPageController extends DateSelectController{
 				@Override
 				protected Void call() throws FileNotFoundException {
 					try (PrintWriter pw = new PrintWriter(file)) {
-						pw.println("*ContactName,,,,,,,,,,*InvoiceNumber,*InvoiceDate,*DueDate,,*Description,*Quantity,*UnitAmount,*AccountCode,*TaxType,");
+						pw.println("*ContactName,EmailAddress,POAddressLine1,POAddressLine2,POAddressLine3,POAddressLine4,POCity,PORegion,POPostalCode,POCountry,*InvoiceNumber,*InvoiceDate,*DueDate,InventoryItemCode,*Description,*Quantity,*UnitAmount,Discount,*AccountCode,*TaxType,TrackingName1,TrackingOption1,TrackingName2,TrackingOption2,Currency,BrandingTheme");
 						YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
 						ObservableList<AccountPayment> currentAccountPaymentDataPoints = FXCollections.observableArrayList(
 								accountPaymentService.getAccountPaymentsForMonth(main.getCurrentStore().getStoreID(), yearMonthObject)
 						);
+						DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 						for(AccountPayment a: currentAccountPaymentDataPoints){
 							pw.print(a.getContactName()+",,,,,,,,,,");
 							pw.print(a.getInvoiceNumber()+",");
-							pw.print(a.getInvDate()+",");
-							pw.print(a.getDueDate()+",,");
+							pw.print(a.getInvDate().format(formatter)+",");
+							pw.print(a.getDueDate().format(formatter)+",,");
 							pw.print(a.getDescription()+",1,");
-							pw.print("$"+a.getUnitAmount()+",");
+							pw.print("$"+a.getUnitAmount()+",,");
 							pw.print(a.getAccountCode()+",");
-							pw.println(a.getTaxRate());
+							pw.println(a.getTaxRate()+",,,,,,");
 						}
 					} catch (FileNotFoundException e){
 						throw new FileNotFoundException();
