@@ -626,118 +626,170 @@ public class InvoiceEntryController extends DateSelectController{
 		AnimationUtils.slideIn(addCreditPopover,425);
 	}
 
-	public boolean invoiceDuplicateCheck() {
+	public void addInvoice() {
+		if (!invoiceAFX.isValid()) {
+			invoiceAFX.requestFocus();
+			return;
+		}
+		if (!invoiceNoField.isValid()) {
+			invoiceNoField.requestFocus();
+			return;
+		}
+		if (!invoiceDateField.isValid()) {
+			invoiceDateField.requestFocus();
+			return;
+		}
+		if (!dueDateField.isValid()) {
+			dueDateField.requestFocus();
+			return;
+		}
+		if (!amountField.isValid()) {
+			amountField.requestFocus();
+			return;
+		}
 		progressSpinner.setVisible(true);
-		Task<Boolean> task = new Task<>() {
+		Task<Boolean> duplicateCheckTask = new Task<>() {
 			@Override
 			protected Boolean call() {
-				return invoiceService.checkDuplicateInvoice(invoiceNoField.getText(), main.getCurrentStore().getStoreID(), invoiceAFX.getValue().getContactID());
+				return invoiceService.checkDuplicateInvoice(
+						invoiceNoField.getText(),
+						main.getCurrentStore().getStoreID(),
+						invoiceAFX.getValue().getContactID()
+				);
 			}
 		};
-		task.setOnSucceeded(_ -> {
-			boolean isDuplicate = task.getValue();
+		duplicateCheckTask.setOnSucceeded(evt -> {
+			boolean isDuplicate = duplicateCheckTask.getValue();
 			if (isDuplicate) {
 				invoiceNoField.requestFocus();
 				invoiceNoValidationLabel.setText("Invoice Already Exists");
 				invoiceNoValidationLabel.setVisible(true);
+				progressSpinner.setVisible(false);
+			} else {
+				Task<Void> addInvoiceTask = new Task<>() {
+					@Override
+					protected Void call() {
+						InvoiceSupplier contact = invoiceAFX.getSelectedItem();
+						Invoice newInvoice = new Invoice();
+						newInvoice.setSupplierID(contact.getContactID());
+						newInvoice.setInvoiceNo(invoiceNoField.getText());
+						newInvoice.setInvoiceDate(invoiceDateField.getValue());
+						newInvoice.setDueDate(dueDateField.getValue());
+						newInvoice.setDescription(descriptionField.getText());
+						newInvoice.setUnitAmount(Double.parseDouble(amountField.getText()));
+						newInvoice.setNotes(notesField.getText());
+						newInvoice.setStoreID(main.getCurrentStore().getStoreID());
+						invoiceService.addInvoice(newInvoice);
+						return null;
+					}
+				};
+				addInvoiceTask.setOnSucceeded(ev -> {
+					invoiceNoValidationLabel.setVisible(false);
+					invoiceNoField.clear();
+					invoiceDateField.setValue(null);
+					amountField.clear();
+					notesField.clear();
+					fillInvoiceTable();
+					Platform.runLater(() -> invoiceNoField.requestFocus());
+					progressSpinner.setVisible(false);
+				});
+				addInvoiceTask.setOnFailed(ev -> {
+					dialogPane.showError("Error", "An error occurred while adding the invoice, it's likely a duplicate, or there is some server issue", addInvoiceTask.getException());
+					progressSpinner.setVisible(false);
+				});
+				executor.submit(addInvoiceTask);
 			}
+		});
+		duplicateCheckTask.setOnFailed(evt -> {
+			dialogPane.showError("Error", "An error occurred while checking for duplicate invoices", duplicateCheckTask.getException());
 			progressSpinner.setVisible(false);
 		});
-		task.setOnFailed(_ -> {
-			dialogPane.showError("Error", "An error occurred while checking for duplicate invoices", task.getException());
-			progressSpinner.setVisible(false);
-		});
-		executor.submit(task);
-		return false; // Return false immediately, the actual check is done asynchronously
+		executor.submit(duplicateCheckTask);
 	}
 
-	public void addInvoice(){
-		if(!invoiceAFX.isValid()){invoiceAFX.requestFocus();}
-		else if(!invoiceNoField.isValid()){invoiceNoField.requestFocus();}
-		else if(!invoiceDateField.isValid()){invoiceDateField.requestFocus();}
-		else if(!dueDateField.isValid()){dueDateField.requestFocus();}
-		else if(!amountField.isValid()){amountField.requestFocus();}
-		else if(!invoiceDuplicateCheck()){
+	public void editInvoice(Invoice invoice) {
+		if (!invoiceAFX.isValid()) {
+			invoiceAFX.requestFocus();
+			return;
+		}
+		if (!invoiceNoField.isValid()) {
 			invoiceNoField.requestFocus();
-			invoiceNoValidationLabel.setText("Invoice Already Exists");
-			invoiceNoValidationLabel.setVisible(true);
-		}else{
+			return;
+		}
+		if (!invoiceDateField.isValid()) {
+			invoiceDateField.requestFocus();
+			return;
+		}
+		if (!dueDateField.isValid()) {
+			dueDateField.requestFocus();
+			return;
+		}
+		if (!amountField.isValid()) {
+			amountField.requestFocus();
+			return;
+		}
+		if (!Objects.equals(invoiceNoField.getText(), invoice.getInvoiceNo())) {
 			progressSpinner.setVisible(true);
-			Task<Void> task = new Task<>() {
+			Task<Boolean> duplicateCheckTask = new Task<>() {
 				@Override
-				protected Void call() {
-					InvoiceSupplier contact = invoiceAFX.getSelectedItem();
-					Invoice newInvoice = new Invoice();
-					newInvoice.setSupplierID(contact.getContactID());
-					newInvoice.setInvoiceNo(invoiceNoField.getText());
-					newInvoice.setInvoiceDate(invoiceDateField.getValue());
-					newInvoice.setDueDate(dueDateField.getValue());
-					newInvoice.setDescription(descriptionField.getText());
-					newInvoice.setUnitAmount(Double.parseDouble(amountField.getText()));
-					newInvoice.setNotes(notesField.getText());
-					newInvoice.setStoreID(main.getCurrentStore().getStoreID());
-					invoiceService.addInvoice(newInvoice);
-					return null;
+				protected Boolean call() {
+					return invoiceService.checkDuplicateInvoice(
+							invoiceNoField.getText(),
+							main.getCurrentStore().getStoreID(),
+							invoiceAFX.getValue().getContactID()
+					);
 				}
 			};
-			task.setOnSucceeded(_ -> {
-				invoiceNoValidationLabel.setVisible(false);
-				invoiceNoField.clear();
-				invoiceDateField.setValue(null);
-				amountField.clear();
-				notesField.clear();
-				fillInvoiceTable();
-				Platform.runLater(() -> invoiceNoField.requestFocus());
+			duplicateCheckTask.setOnSucceeded(evt -> {
+				boolean isDuplicate = duplicateCheckTask.getValue();
+				if (isDuplicate) {
+					invoiceNoField.requestFocus();
+					invoiceNoValidationLabel.setText("Invoice Already Exists");
+					invoiceNoValidationLabel.setVisible(true);
+					progressSpinner.setVisible(false);
+				} else {
+					updateInvoice(invoice);
+				}
+			});
+			duplicateCheckTask.setOnFailed(evt -> {
+				dialogPane.showError("Error", "An error occurred while checking for duplicate invoices", duplicateCheckTask.getException());
 				progressSpinner.setVisible(false);
 			});
-			task.setOnFailed(_ -> {
-				dialogPane.showError("Error", "An error occurred while adding the invoice, it's likely a duplicate, or there is some server issue", task.getException());
-				progressSpinner.setVisible(false);
-			});
-			executor.submit(task);
+			executor.submit(duplicateCheckTask);
+		} else {
+			progressSpinner.setVisible(true);
+			updateInvoice(invoice);
 		}
 	}
 
-	public void editInvoice(Invoice invoice){
-		if(!invoiceAFX.isValid()){invoiceAFX.requestFocus();}
-		else if(!invoiceNoField.isValid()){invoiceNoField.requestFocus();}
-		else if(!invoiceDateField.isValid()){invoiceDateField.requestFocus();}
-		else if(!dueDateField.isValid()){dueDateField.requestFocus();}
-		else if(!amountField.isValid()){amountField.requestFocus();}
-		else if(!Objects.equals(invoiceNoField.getText(), invoice.getInvoiceNo()) && !invoiceDuplicateCheck()){
-			invoiceNoField.requestFocus();
-			invoiceNoValidationLabel.setText("Invoice Already Exists");
-			invoiceNoValidationLabel.setVisible(true);
-		}else{
-			progressSpinner.setVisible(true);
-			Task<Void> task = new Task<>() {
-				@Override
-				protected Void call() {
-					InvoiceSupplier contact = invoiceAFX.getValue();
-					String oldInvoiceNo = invoice.getInvoiceNo();
-					invoice.setSupplierID(contact.getContactID());
-					invoice.setInvoiceNo(invoiceNoField.getText());
-					invoice.setInvoiceDate(invoiceDateField.getValue());
-					invoice.setDueDate(dueDateField.getValue());
-					invoice.setDescription(descriptionField.getText());
-					invoice.setUnitAmount(Double.parseDouble(amountField.getText()));
-					invoice.setNotes(notesField.getText());
-					invoiceService.updateInvoice(invoice,oldInvoiceNo);
-					return null;
-				}
-			};
-			task.setOnSucceeded(_ -> {
-				closeInvoicePopover();
-				fillInvoiceTable();
-				dialogPane.showInformation("Success", "Invoice was successfully edited");
-				progressSpinner.setVisible(false);
-			});
-			task.setOnFailed(_ -> {
-				dialogPane.showError("Error", "An error occurred while updating the invoice", task.getException());
-				progressSpinner.setVisible(false);
-			});
-			executor.submit(task);
-		}
+	private void updateInvoice(Invoice invoice) {
+		String oldInvoiceNo = invoice.getInvoiceNo();
+		Task<Void> updateTask = new Task<>() {
+			@Override
+			protected Void call() {
+				InvoiceSupplier contact = invoiceAFX.getValue();
+				invoice.setSupplierID(contact.getContactID());
+				invoice.setInvoiceNo(invoiceNoField.getText());
+				invoice.setInvoiceDate(invoiceDateField.getValue());
+				invoice.setDueDate(dueDateField.getValue());
+				invoice.setDescription(descriptionField.getText());
+				invoice.setUnitAmount(Double.parseDouble(amountField.getText()));
+				invoice.setNotes(notesField.getText());
+				invoiceService.updateInvoice(invoice, oldInvoiceNo);
+				return null;
+			}
+		};
+		updateTask.setOnSucceeded(evt -> {
+			closeInvoicePopover();
+			fillInvoiceTable();
+			dialogPane.showInformation("Success", "Invoice was successfully edited");
+			progressSpinner.setVisible(false);
+		});
+		updateTask.setOnFailed(evt -> {
+			dialogPane.showError("Error", "An error occurred while updating the invoice", updateTask.getException());
+			progressSpinner.setVisible(false);
+		});
+		executor.submit(updateTask);
 	}
 
 	public void deleteInvoice(Invoice invoice) {
