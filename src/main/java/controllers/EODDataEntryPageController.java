@@ -817,7 +817,7 @@ public class EODDataEntryPageController extends DateSelectController{
 							pw.print(govtRecovery + ",,,,,,,,");
 							dateTimeFormatter = DateTimeFormatter.ofPattern("ddMMyyyy");
 							formattedDate = d.format(dateTimeFormatter);
-							pw.print((govtRecovery > 0) ? formattedDate + "ch,," : ",,");
+							pw.print((govtRecovery > 0) ? formattedDate + "me,," : ",,");
 							dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 							formattedDate = d.format(dateTimeFormatter);
 							pw.print((govtRecovery > 0) ? formattedDate + "," : ",");
