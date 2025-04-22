@@ -57,69 +57,129 @@ public class RosterUtils {
         return dayDurationMap.getOrDefault(day,0.0);
     }
 
-    private double loadDayDuration(LocalDate day){
+    private double loadDayDuration(LocalDate day) {
         LocalTime earliestStart = LocalTime.MAX;
-        LocalTime latestEnd = LocalTime.MIN;
+        LocalTime latestEnd     = LocalTime.MIN;
+
+        // 1) Gather all “active” shifts or modifications on this day
+        List<Shift> toConsider = new ArrayList<>();
 
         for (Shift s : allShifts) {
-            boolean repeatShiftDay = (s.isRepeating() && DAYS.between(s.getShiftStartDate(), day) % s.getDaysPerRepeat() == 0 && DAYS.between(s.getShiftStartDate(), day) >= 0);
-            boolean equalDay = s.getShiftStartDate().equals(day);
-            boolean pastEnd = s.getShiftEndDate() != null && s.getShiftEndDate().isBefore(day);
-            if ((equalDay || repeatShiftDay) && !pastEnd) {
-                Shift updatedShift = s;
-                boolean shiftIsModified = false;
-                for(Shift m: allModifications){
-                    if(m.getShiftID()==s.getShiftID() && m.getOriginalDate().equals(day)){
-                        updatedShift = m;
-                        shiftIsModified=true;
-                    }
-                }
-                if(!shiftIsModified || (shiftIsModified&&updatedShift.getShiftStartDate()!=null&&updatedShift.getShiftStartDate().equals(day))){
-                    boolean shiftOnLeave = false;
-                    for(LeaveRequest lr: allLeaveRequests){
-                        LocalDateTime shiftStart = LocalDateTime.of(day,updatedShift.getShiftStartTime());
-                        LocalDateTime shiftEnd = LocalDateTime.of(day,updatedShift.getShiftEndTime());
-                        if(lr.getUserID()==updatedShift.getUserID()&&lr.getFromDate().isBefore(shiftEnd)&&lr.getToDate().isAfter(shiftStart)){
-                            shiftOnLeave = true;
-                        }
-                    }
-                    if(!shiftOnLeave) {
-                        if (updatedShift.getShiftStartTime().isBefore(earliestStart)) {
-                            earliestStart = updatedShift.getShiftStartTime();
-                        }
-                        if (updatedShift.getShiftEndTime().isAfter(latestEnd)) {
-                            latestEnd = updatedShift.getShiftEndTime();
-                        }
-                    }
+            // **NULL GUARD**: skip any shift missing its key data
+            if (s.getShiftStartDate() == null
+                    || s.getShiftStartTime() == null
+                    || s.getShiftEndTime()   == null) {
+                continue;
+            }
+
+            boolean repeatDay = s.isRepeating()
+                    && DAYS.between(s.getShiftStartDate(), day) >= 0
+                    && DAYS.between(s.getShiftStartDate(), day) % s.getDaysPerRepeat() == 0;
+            boolean sameDay   = s.getShiftStartDate().equals(day);
+            boolean pastEnd   = s.getShiftEndDate() != null
+                    && s.getShiftEndDate().isBefore(day);
+
+            if ((sameDay || repeatDay) && !pastEnd) {
+                // look for a modification on exactly this original shift & day
+                Shift mod = allModifications.stream()
+                        .filter(m -> m.getShiftID() == s.getShiftID()
+                                && day.equals(m.getOriginalDate()))
+                        .findFirst()
+                        .orElse(null);
+
+                if (mod != null
+                        && mod.getShiftStartDate() != null
+                        && mod.getShiftStartDate().equals(day)
+                        && mod.getShiftStartTime() != null
+                        && mod.getShiftEndTime()   != null) {
+                    toConsider.add(mod);
+                } else {
+                    toConsider.add(s);
                 }
             }
         }
 
-        for(Shift m: allModifications){
-            if(m.getShiftStartDate()!=null&&m.getShiftStartDate().equals(day)&&(!(m.getShiftStartDate().equals(m.getOriginalDate())))){
-                boolean shiftOnLeave = false;
-                for(LeaveRequest lr: allLeaveRequests){
-                    LocalDateTime shiftStart = LocalDateTime.of(day,m.getShiftStartTime());
-                    LocalDateTime shiftEnd = LocalDateTime.of(day,m.getShiftEndTime());
-                    if(lr.getUserID()==m.getUserID()&&lr.getFromDate().isBefore(shiftEnd)&&lr.getToDate().isAfter(shiftStart)){
-                        shiftOnLeave = true;
+        // also include any “pure” modifications that moved a shift onto this day
+        for (Shift m : allModifications) {
+            if (m.getShiftStartDate() == null
+                    || m.getShiftStartTime() == null
+                    || m.getShiftEndTime()   == null) {
+                continue;
+            }
+            if (day.equals(m.getShiftStartDate())
+                    && !day.equals(m.getOriginalDate())) {
+                toConsider.add(m);
+            }
+        }
+
+        // 2) For each candidate, carve out working segments around any leave
+        for (Shift shift : toConsider) {
+            LocalTime sTime = shift.getShiftStartTime();
+            LocalTime eTime = shift.getShiftEndTime();
+
+            // sanity check
+            if (!sTime.isBefore(eTime)) continue;
+
+            LocalDateTime shiftStartDT = LocalDateTime.of(day, sTime);
+            LocalDateTime shiftEndDT   = LocalDateTime.of(day, eTime);
+
+            // collect overlapping leaves
+            List<LeaveRequest> relevantLeaves = new ArrayList<>();
+            for (LeaveRequest lr : allLeaveRequests) {
+                if (lr.getUserID() == shift.getUserID()
+                        && lr.getFromDate().isBefore(shiftEndDT)
+                        && lr.getToDate().isAfter(shiftStartDT)) {
+                    relevantLeaves.add(lr);
+                }
+            }
+
+            // build boundary list
+            List<LocalTime> boundaries = new ArrayList<>();
+            boundaries.add(sTime);
+            boundaries.add(eTime);
+            for (LeaveRequest lr : relevantLeaves) {
+                LocalDateTime ls = lr.getFromDate().isBefore(shiftStartDT) ? shiftStartDT : lr.getFromDate();
+                LocalDateTime le = lr.getToDate().isAfter( shiftEndDT  ) ? shiftEndDT   : lr.getToDate();
+                boundaries.add(ls.toLocalTime());
+                boundaries.add(le.toLocalTime());
+            }
+            boundaries = boundaries.stream()
+                    .distinct()
+                    .sorted()
+                    .toList();
+
+            // build & evaluate each tiny sub‑segment
+            for (int i = 0; i < boundaries.size() - 1; i++) {
+                LocalTime segStart = boundaries.get(i);
+                LocalTime segEnd   = boundaries.get(i + 1);
+                if (!segStart.isBefore(segEnd)) continue;
+
+                LocalDateTime subStart = LocalDateTime.of(day, segStart);
+                LocalDateTime subEnd   = LocalDateTime.of(day, segEnd);
+
+                // check if fully covered by any leave
+                boolean onLeave = false;
+                for (LeaveRequest lr : relevantLeaves) {
+                    if (!lr.getFromDate().isAfter(subStart)
+                            && !lr.getToDate().isBefore(subEnd)) {
+                        onLeave = true;
+                        break;
                     }
                 }
-                if(!shiftOnLeave) {
-                    if (m.getShiftStartTime().isBefore(earliestStart)) {
-                        earliestStart = m.getShiftStartTime();
-                    }
-                    if (m.getShiftEndTime().isAfter(latestEnd)) {
-                        latestEnd = m.getShiftEndTime();
-                    }
+
+                if (!onLeave) {
+                    if (segStart.isBefore(earliestStart)) earliestStart = segStart;
+                    if (segEnd.isAfter( latestEnd   )) latestEnd     = segEnd;
                 }
             }
         }
-        if(earliestStart.equals(LocalTime.MAX)||latestEnd.equals(LocalTime.MIN)){
-            return 0;
-        }else {
-            return (double) Duration.between(earliestStart, latestEnd).toHours() / main.getCurrentStore().getStoreHours();
+
+        // 3) compute duration
+        if (earliestStart.equals(LocalTime.MAX) || latestEnd.equals(LocalTime.MIN)) {
+            return 0.0;
         }
+        long openHours = Duration.between(earliestStart, latestEnd).toHours();
+        return (double) openHours / main.getCurrentStore().getStoreHours();
     }
 
     public int getOpenDays() {
