@@ -77,7 +77,7 @@
         <dependency>
             <groupId>io.github.palexdev</groupId>
             <artifactId>materialfx</artifactId>
-            <version>11.13.5</version>
+            <version>11.13.8</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.openjfx</groupId>
