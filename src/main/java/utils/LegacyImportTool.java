@@ -8,6 +8,7 @@ import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import java.io.InputStream;
 import java.sql.Date;
 import java.sql.*;
 import java.time.*;
@@ -26,8 +27,28 @@ public class LegacyImportTool {
     private String sql = null;
 
 
-    public LegacyImportTool(Main main){
+    public LegacyImportTool(Main main) {
         this.main = main;
+        try (InputStream in = getClass().getClassLoader().getResourceAsStream("application.properties")) {
+            Properties props = new Properties();
+            props.load(in);
+            String host     = props.getProperty("db.host");
+            String port     = props.getProperty("db.port");
+            String dbName   = props.getProperty("db.name");
+            String user     = props.getProperty("db.user");
+            String password = props.getProperty("db.password");
+
+            // ensure driver is registered
+            Class.forName("com.mysql.cj.jdbc.Driver");
+
+            String url = String.format(
+                    "jdbc:mysql://%s:%s/%s?useSSL=false&serverTimezone=UTC",
+                    host, port, dbName
+            );
+            con = DriverManager.getConnection(url, user, password);
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to initialize DB connection", e);
+        }
     }
 
     public void ImportStaffCopy(XSSFWorkbook wb) {
@@ -97,70 +118,70 @@ public class LegacyImportTool {
             for(int i=0;i<daysInMonth;i++) {
                 if(sheet.getRow(i)!=null && sheet.getRow(i).getCell(0)!=null && sheet.getRow(i).getCell(0).getCellType()!= CellType.BLANK){
                     Map<String, List<Double>> tillValues = new HashMap<>(); //Key, Quantity+Amount
-                    tillValues.put("Agency Sales", Arrays.asList(findNum(sheet,i,187),findNum(sheet,i,188)));
-                    tillValues.put("Agency Sales Commission", Arrays.asList(findNum(sheet,i,190),findNum(sheet,i,191)));
-                    tillValues.put("Avg. Discounts Per Customer", Arrays.asList(findNum(sheet,i,166),findNum(sheet,i,167)));
-                    tillValues.put("Avg. OTC Sales Per Customer", Arrays.asList(findNum(sheet,i,157),findNum(sheet,i,158)));
-                    tillValues.put("Avg. Payment Surcharges Per Customer", Arrays.asList(findNum(sheet,i,178),findNum(sheet,i,179)));
-                    tillValues.put("Avg. Prescription Sales Per Customer", Arrays.asList(findNum(sheet,i,160),findNum(sheet,i,161)));
-                    tillValues.put("Avg. Surcharges Per Customer", Arrays.asList(findNum(sheet,i,172),findNum(sheet,i,173)));
-                    tillValues.put("Equals Total Takings", Arrays.asList(0.00,findNum(sheet,i,154)));
-                    tillValues.put("Equals Total Till Turnover", Arrays.asList(0.00,findNum(sheet,i,122)));
-                    tillValues.put("Gross OTC Sales", Arrays.asList(findNum(sheet,i,68),findNum(sheet,i,69)));
-                    tillValues.put("Gross OTC Sales-Less Discounts", Arrays.asList(findNum(sheet,i,71),findNum(sheet,i,72)));
-                    tillValues.put("Gross OTC Sales-Plus Payment Surcharges", Arrays.asList(findNum(sheet,i,77),findNum(sheet,i,78)));
-                    tillValues.put("Gross OTC Sales-Plus Surcharges", Arrays.asList(findNum(sheet,i,74),findNum(sheet,i,75)));
-                    tillValues.put("Gross Profit ($)", Arrays.asList(0.00,findNum(sheet,i,33)));
-                    tillValues.put("Gross Profit (%)", Arrays.asList(0.00,findNum(sheet,i,35)));
-                    tillValues.put("Less Debtor Charges", Arrays.asList(findNum(sheet,i,133),findNum(sheet,i,134)));
-                    tillValues.put("Less Layby Purchases", Arrays.asList(findNum(sheet,i,136),findNum(sheet,i,137)));
-                    tillValues.put("Less Petty Cash", Arrays.asList(findNum(sheet,i,145),findNum(sheet,i,146)));
-                    tillValues.put("Less Redeemed Club Dollars", Arrays.asList(findNum(sheet,i,142),findNum(sheet,i,143)));
-                    tillValues.put("Less Redeemed Vouchers", Arrays.asList(findNum(sheet,i,139),findNum(sheet,i,140)));
-                    tillValues.put("Less Total Government Contributions", Arrays.asList(findNum(sheet,i,148),findNum(sheet,i,149)));
-                    tillValues.put("Open Drawer", Arrays.asList(findNum(sheet,i,196),0.00));
-                    tillValues.put("Plus Debtor Account Payments", Arrays.asList(findNum(sheet,i,124),findNum(sheet,i,125)));
-                    tillValues.put("Plus Gross OTC Debtor Charges", Arrays.asList(findNum(sheet,i,80),findNum(sheet,i,81)));
-                    tillValues.put("Plus Gross OTC Debtor Charges-Less Discounts", Arrays.asList(findNum(sheet,i,83),findNum(sheet,i,84)));
-                    tillValues.put("Plus Gross OTC Debtor Charges-Plus Payment Surcharges", Arrays.asList(findNum(sheet,i,89),findNum(sheet,i,90)));
-                    tillValues.put("Plus Gross OTC Debtor Charges-Plus Surcharges", Arrays.asList(findNum(sheet,i,86),findNum(sheet,i,87)));
-                    tillValues.put("Plus Gross Prescription Debtor Charges", Arrays.asList(findNum(sheet,i,107),findNum(sheet,i,108)));
-                    tillValues.put("Plus Gross Prescription Debtor Charges-Less Discounts", Arrays.asList(findNum(sheet,i,110),findNum(sheet,i,111)));
-                    tillValues.put("Plus Gross Prescription Debtor Charges-Plus Government Contribution", Arrays.asList(findNum(sheet,i,119),findNum(sheet,i,120)));
-                    tillValues.put("Plus Gross Prescription Debtor Charges-Plus Payment Surcharges", Arrays.asList(findNum(sheet,i,116),findNum(sheet,i,117)));
-                    tillValues.put("Plus Gross Prescription Debtor Charges-Plus Surcharges", Arrays.asList(findNum(sheet,i,113),findNum(sheet,i,114)));
-                    tillValues.put("Plus Gross Prescription Sales", Arrays.asList(findNum(sheet,i,92),findNum(sheet,i,93)));
-                    tillValues.put("Plus Gross Prescription Sales-Less Discounts", Arrays.asList(findNum(sheet,i,95),findNum(sheet,i,96)));
-                    tillValues.put("Plus Gross Prescription Sales-Plus Government Contribution", Arrays.asList(findNum(sheet,i,104),findNum(sheet,i,105)));
-                    tillValues.put("Plus Gross Prescription Sales-Plus Payment Surcharges", Arrays.asList(findNum(sheet,i,101),findNum(sheet,i,102)));
-                    tillValues.put("Plus Gross Prescription Sales-Plus Surcharges", Arrays.asList(findNum(sheet,i,98),findNum(sheet,i,99)));
-                    tillValues.put("Plus Layby Account Payments", Arrays.asList(findNum(sheet,i,127),findNum(sheet,i,128)));
-                    tillValues.put("Plus Purchased Vouchers", Arrays.asList(findNum(sheet,i,130),findNum(sheet,i,131)));
-                    tillValues.put("Plus Total Rounding", Arrays.asList(findNum(sheet,i,151),findNum(sheet,i,152)));
-                    tillValues.put("Refunds", Arrays.asList(findNum(sheet,i,181),findNum(sheet,i,182)));
-                    tillValues.put("Saved Sales", Arrays.asList(findNum(sheet,i,193),findNum(sheet,i,194)));
-                    tillValues.put("Total Customers Served", Arrays.asList(findNum(sheet,i,13),0.00));
-                    tillValues.put("Total Debtor Sales", Arrays.asList(findNum(sheet,i,47),findNum(sheet,i,48)));
-                    tillValues.put("Total Debtor Sales-GST Free Sales", Arrays.asList(findNum(sheet,i,50),findNum(sheet,i,51)));
-                    tillValues.put("Total Debtor Sales-GST Sales", Arrays.asList(findNum(sheet,i,53),findNum(sheet,i,54)));
-                    tillValues.put("Total Discounts", Arrays.asList(findNum(sheet,i,163),findNum(sheet,i,164)));
-                    tillValues.put("Total Government Contribution", Arrays.asList(findNum(sheet,i,26),findNum(sheet,i,27)));
-                    tillValues.put("Total GST Collected", Arrays.asList(0.00,findNum(sheet,i,62)));
-                    tillValues.put("Total GST Free Sales", Arrays.asList(findNum(sheet,i,56),findNum(sheet,i,57)));
-                    tillValues.put("Total GST Paid in Petty Cash", Arrays.asList(findNum(sheet,i,64),findNum(sheet,i,65)));
-                    tillValues.put("Total GST Sales", Arrays.asList(findNum(sheet,i,59),findNum(sheet,i,60)));
-                    tillValues.put("Total Non-Debtor Sales", Arrays.asList(findNum(sheet,i,38),findNum(sheet,i,39)));
-                    tillValues.put("Total Non-Debtor Sales-GST Free Sales", Arrays.asList(findNum(sheet,i,41),findNum(sheet,i,42)));
-                    tillValues.put("Total Non-Debtor Sales-GST Sales", Arrays.asList(findNum(sheet,i,44),findNum(sheet,i,45)));
-                    tillValues.put("Total Payment Surcharges", Arrays.asList(findNum(sheet,i,175),findNum(sheet,i,176)));
-                    tillValues.put("Total Sales", Arrays.asList(findNum(sheet,i,15),findNum(sheet,i,16)));
-                    tillValues.put("Total Sales-OTC Sales", Arrays.asList(findNum(sheet,i,18),findNum(sheet,i,19)));
-                    tillValues.put("Total Sales-Prescription Sales", Arrays.asList(findNum(sheet,i,21),findNum(sheet,i,22)));
-                    tillValues.put("Total Sales-Prescription Sales (inc Government Contribution)", Arrays.asList(0.00,findNum(sheet,i,24)));
-                    tillValues.put("Total Surcharges", Arrays.asList(findNum(sheet,i,169),findNum(sheet,i,170)));
-                    tillValues.put("Total Till Turnover", Arrays.asList(0.00,findNum(sheet,i,29)));
-                    tillValues.put("Voided Receipts", Arrays.asList(findNum(sheet,i,184),findNum(sheet,i,185)));
-                    tillValues.put("Total Takings", Arrays.asList(0.00,findNum(sheet,i,31)));
+                    tillValues.put("Agency Sales", Arrays.asList(findNum(sheet,i,188), findNum(sheet,i,189)));
+                    tillValues.put("Agency Sales Commission", Arrays.asList(findNum(sheet,i,191), findNum(sheet,i,192)));
+                    tillValues.put("Avg. Discounts Per Customer", Arrays.asList(findNum(sheet,i,167), findNum(sheet,i,168)));
+                    tillValues.put("Avg. OTC Sales Per Customer", Arrays.asList(findNum(sheet,i,158), findNum(sheet,i,159)));
+                    tillValues.put("Avg. Payment Surcharges Per Customer", Arrays.asList(findNum(sheet,i,179), findNum(sheet,i,180)));
+                    tillValues.put("Avg. Prescription Sales Per Customer", Arrays.asList(findNum(sheet,i,161), findNum(sheet,i,162)));
+                    tillValues.put("Avg. Surcharges Per Customer", Arrays.asList(findNum(sheet,i,173), findNum(sheet,i,174)));
+                    tillValues.put("Equals Total Takings", Arrays.asList(0.00, findNum(sheet,i,155)));
+                    tillValues.put("Equals Total Till Turnover", Arrays.asList(0.00, findNum(sheet,i,122)));
+                    tillValues.put("Gross OTC Sales", Arrays.asList(findNum(sheet,i,68), findNum(sheet,i,69)));
+                    tillValues.put("Gross OTC Sales-Less Discounts", Arrays.asList(findNum(sheet,i,71), findNum(sheet,i,72)));
+                    tillValues.put("Gross OTC Sales-Plus Payment Surcharges", Arrays.asList(findNum(sheet,i,77), findNum(sheet,i,78)));
+                    tillValues.put("Gross OTC Sales-Plus Surcharges", Arrays.asList(findNum(sheet,i,74), findNum(sheet,i,75)));
+                    tillValues.put("Gross Profit ($)", Arrays.asList(0.00, findNum(sheet,i,33)));
+                    tillValues.put("Gross Profit (%)", Arrays.asList(0.00, findNum(sheet,i,35)));
+                    tillValues.put("Less Debtor Charges", Arrays.asList(findNum(sheet,i,134), findNum(sheet,i,135)));
+                    tillValues.put("Less Layby Purchases", Arrays.asList(findNum(sheet,i,137), findNum(sheet,i,138)));
+                    tillValues.put("Less Petty Cash", Arrays.asList(findNum(sheet,i,146), findNum(sheet,i,147)));
+                    tillValues.put("Less Redeemed Club Dollars", Arrays.asList(findNum(sheet,i,143), findNum(sheet,i,144)));
+                    tillValues.put("Less Redeemed Vouchers", Arrays.asList(findNum(sheet,i,140), findNum(sheet,i,141)));
+                    tillValues.put("Less Total Government Contributions", Arrays.asList(findNum(sheet,i,149), findNum(sheet,i,150)));
+                    tillValues.put("Open Drawer", Arrays.asList(findNum(sheet,i,197), 0.00));
+                    tillValues.put("Plus Debtor Account Payments", Arrays.asList(findNum(sheet,i,125), findNum(sheet,i,126)));
+                    tillValues.put("Plus Gross OTC Debtor Charges", Arrays.asList(findNum(sheet,i,80), findNum(sheet,i,81)));
+                    tillValues.put("Plus Gross OTC Debtor Charges-Less Discounts", Arrays.asList(findNum(sheet,i,83), findNum(sheet,i,84)));
+                    tillValues.put("Plus Gross OTC Debtor Charges-Plus Payment Surcharges", Arrays.asList(findNum(sheet,i,89), findNum(sheet,i,90)));
+                    tillValues.put("Plus Gross OTC Debtor Charges-Plus Surcharges", Arrays.asList(findNum(sheet,i,86), findNum(sheet,i,87)));
+                    tillValues.put("Plus Gross Prescription Debtor Charges", Arrays.asList(findNum(sheet,i,107), findNum(sheet,i,108)));
+                    tillValues.put("Plus Gross Prescription Debtor Charges-Less Discounts", Arrays.asList(findNum(sheet,i,110), findNum(sheet,i,111)));
+                    tillValues.put("Plus Gross Prescription Debtor Charges-Plus Government Contribution", Arrays.asList(findNum(sheet,i,119), findNum(sheet,i,120)));
+                    tillValues.put("Plus Gross Prescription Debtor Charges-Plus Payment Surcharges", Arrays.asList(findNum(sheet,i,116), findNum(sheet,i,117)));
+                    tillValues.put("Plus Gross Prescription Debtor Charges-Plus Surcharges", Arrays.asList(findNum(sheet,i,113), findNum(sheet,i,114)));
+                    tillValues.put("Plus Gross Prescription Sales", Arrays.asList(findNum(sheet,i,92), findNum(sheet,i,93)));
+                    tillValues.put("Plus Gross Prescription Sales-Less Discounts", Arrays.asList(findNum(sheet,i,95), findNum(sheet,i,96)));
+                    tillValues.put("Plus Gross Prescription Sales-Plus Government Contribution", Arrays.asList(findNum(sheet,i,104), findNum(sheet,i,105)));
+                    tillValues.put("Plus Gross Prescription Sales-Plus Payment Surcharges", Arrays.asList(findNum(sheet,i,101), findNum(sheet,i,102)));
+                    tillValues.put("Plus Gross Prescription Sales-Plus Surcharges", Arrays.asList(findNum(sheet,i,98), findNum(sheet,i,99)));
+                    tillValues.put("Plus Layby Account Payments", Arrays.asList(findNum(sheet,i,128), findNum(sheet,i,129)));
+                    tillValues.put("Plus Purchased Vouchers", Arrays.asList(findNum(sheet,i,131), findNum(sheet,i,132)));
+                    tillValues.put("Plus Total Rounding", Arrays.asList(findNum(sheet,i,152), findNum(sheet,i,153)));
+                    tillValues.put("Refunds", Arrays.asList(findNum(sheet,i,182), findNum(sheet,i,183)));
+                    tillValues.put("Saved Sales", Arrays.asList(findNum(sheet,i,194), findNum(sheet,i,195)));
+                    tillValues.put("Total Customers Served", Arrays.asList(findNum(sheet,i,13), 0.00));
+                    tillValues.put("Total Debtor Sales", Arrays.asList(findNum(sheet,i,47), findNum(sheet,i,48)));
+                    tillValues.put("Total Debtor Sales-GST Free Sales", Arrays.asList(findNum(sheet,i,50), findNum(sheet,i,51)));
+                    tillValues.put("Total Debtor Sales-GST Sales", Arrays.asList(findNum(sheet,i,53), findNum(sheet,i,54)));
+                    tillValues.put("Total Discounts", Arrays.asList(findNum(sheet,i,164), findNum(sheet,i,165)));
+                    tillValues.put("Total Government Contribution", Arrays.asList(findNum(sheet,i,26), findNum(sheet,i,27)));
+                    tillValues.put("Total GST Collected", Arrays.asList(0.00, findNum(sheet,i,62)));
+                    tillValues.put("Total GST Free Sales", Arrays.asList(findNum(sheet,i,56), findNum(sheet,i,57)));
+                    tillValues.put("Total GST Paid in Petty Cash", Arrays.asList(findNum(sheet,i,64), findNum(sheet,i,65)));
+                    tillValues.put("Total GST Sales", Arrays.asList(findNum(sheet,i,59), findNum(sheet,i,60)));
+                    tillValues.put("Total Non-Debtor Sales", Arrays.asList(findNum(sheet,i,38), findNum(sheet,i,39)));
+                    tillValues.put("Total Non-Debtor Sales-GST Free Sales", Arrays.asList(findNum(sheet,i,41), findNum(sheet,i,42)));
+                    tillValues.put("Total Non-Debtor Sales-GST Sales", Arrays.asList(findNum(sheet,i,44), findNum(sheet,i,45)));
+                    tillValues.put("Total Payment Surcharges", Arrays.asList(findNum(sheet,i,176), findNum(sheet,i,177)));
+                    tillValues.put("Total Sales", Arrays.asList(findNum(sheet,i,15), findNum(sheet,i,16)));
+                    tillValues.put("Total Sales-OTC Sales", Arrays.asList(findNum(sheet,i,18), findNum(sheet,i,19)));
+                    tillValues.put("Total Sales-Prescription Sales", Arrays.asList(findNum(sheet,i,21), findNum(sheet,i,22)));
+                    tillValues.put("Total Sales-Prescription Sales (inc Government Contribution)", Arrays.asList(0.00, findNum(sheet,i,24)));
+                    tillValues.put("Total Surcharges", Arrays.asList(findNum(sheet,i,170), findNum(sheet,i,171)));
+                    tillValues.put("Total Till Turnover", Arrays.asList(0.00, findNum(sheet,i,29)));
+                    tillValues.put("Voided Receipts", Arrays.asList(findNum(sheet,i,185), findNum(sheet,i,186)));
+                    tillValues.put("Total Takings", Arrays.asList(0.00, findNum(sheet,i,31)));
 
                     String period = sheet.getRow(i).getCell(8).getStringCellValue();
                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
