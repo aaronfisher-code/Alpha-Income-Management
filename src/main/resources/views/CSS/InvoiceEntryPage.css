@@ -30,4 +30,10 @@
     -mfx-color:#0F60FF;
 }
 
+.totalsText {
+    -fx-font-family: "Montserrat";
+    -fx-font-size: 14px;
+    -fx-text-fill: BLACK;
+}
+
 

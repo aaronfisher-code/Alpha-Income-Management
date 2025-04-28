@@ -12,18 +12,24 @@ import io.github.palexdev.materialfx.controls.MFXProgressSpinner;
 import io.github.palexdev.materialfx.controls.MFXTextField;
 import io.github.palexdev.materialfx.enums.FloatMode;
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.DoubleBinding;
+import javafx.beans.binding.StringBinding;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextFlow;
 import javafx.stage.FileChooser;
 import models.*;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -66,6 +72,7 @@ public class InvoiceEntryController extends DateSelectController{
 	@FXML private JFXNodesList addList;
 	@FXML private Button importDataButton,exportDataButton;
 	@FXML private MFXProgressSpinner progressSpinner;
+	private Label invoiceTotalLabel;
 	private TableView<Invoice> invoicesTable = new TableView<>();
 	private TableView<Credit> creditsTable = new TableView<>();
 	private TableColumn<Invoice,String> supplierNameCol;
@@ -323,6 +330,39 @@ public class InvoiceEntryController extends DateSelectController{
 				}
 			}
 		});
+		DoubleBinding totalBinding = Bindings.createDoubleBinding(
+				() -> invoiceFilterView.getFilteredItems()
+						.stream()
+						.mapToDouble(Invoice::getUnitAmount)
+						.sum(),
+				invoiceFilterView.getFilteredItems()
+		);
+
+
+		Text prefix = new Text("Invoice Total: ");
+		Text amountText = new Text();
+		NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US);
+		StringBinding formattedAmount = Bindings.createStringBinding(
+				() -> currencyFormatter.format(totalBinding.get()),
+				totalBinding
+		);
+		amountText.textProperty().bind(formattedAmount);
+		prefix.getStyleClass().add("totalsText");
+		amountText.getStyleClass().add("totalsText");
+
+		TextFlow totalFlow = new TextFlow(prefix, amountText);
+		totalFlow.setPadding(new Insets(10));            // 10px on all sides
+		totalFlow.setTextAlignment(javafx.scene.text.TextAlignment.LEFT);
+		totalFlow.setMaxWidth(Double.MAX_VALUE);          // let it stretch in the VBox
+
+		controlBox.setAlignment(Pos.TOP_LEFT);
+		controlBox.getChildren().clear();
+		invoiceFilterView.setPadding(new Insets(20,20,10,20));
+		controlBox.getChildren().addAll(
+				invoiceFilterView,
+				invoicesTable,
+				totalFlow
+		);
 	}
 
 	public void creditsView(){
