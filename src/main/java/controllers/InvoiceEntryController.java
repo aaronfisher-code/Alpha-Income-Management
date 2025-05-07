@@ -168,8 +168,8 @@ public class InvoiceEntryController extends DateSelectController{
 							@Override
 							protected Invoice call() {
 								try{
-									return invoiceService.getInvoice(invoiceNoField.getText());
-								} catch (UnsupportedEncodingException e) {
+									return invoiceService.getInvoice(invoiceNoField.getText(), main.getCurrentStore().getStoreID(), invoiceAFX.getValue().getContactID());
+								} catch (Exception e) {
 									throw new RuntimeException(e);
 								}
 							}
@@ -804,6 +804,8 @@ public class InvoiceEntryController extends DateSelectController{
 
 	private void updateInvoice(Invoice invoice) {
 		String oldInvoiceNo = invoice.getInvoiceNo();
+		int oldStoreID = invoice.getStoreID();
+		int oldSupplierID = invoice.getSupplierID();
 		Task<Void> updateTask = new Task<>() {
 			@Override
 			protected Void call() {
@@ -815,7 +817,7 @@ public class InvoiceEntryController extends DateSelectController{
 				invoice.setDescription(descriptionField.getText());
 				invoice.setUnitAmount(Double.parseDouble(amountField.getText()));
 				invoice.setNotes(notesField.getText());
-				invoiceService.updateInvoice(invoice, oldInvoiceNo);
+				invoiceService.updateInvoice(invoice, oldInvoiceNo, oldStoreID, oldSupplierID);
 				return null;
 			}
 		};
@@ -841,7 +843,7 @@ public class InvoiceEntryController extends DateSelectController{
 				Task<Void> task = new Task<>() {
 					@Override
 					protected Void call() {
-						invoiceService.deleteInvoice(invoice.getInvoiceNo(), main.getCurrentStore().getStoreID());
+						invoiceService.deleteInvoice(invoice.getInvoiceNo(), main.getCurrentStore().getStoreID(), invoice.getSupplierID());
 						return null;
 					}
 				};

@@ -18,6 +18,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 public class InvoiceService {
     private String apiBaseUrl;
     private String apiToken;
@@ -40,11 +42,14 @@ public class InvoiceService {
         return headers;
     }
 
-    public Invoice getInvoice(String invoiceId) throws UnsupportedEncodingException {
-        String url = apiBaseUrl + "/" + URLEncoder.encode(invoiceId, StandardCharsets.UTF_8);
+    public Invoice getInvoice(String invoiceId, int storeId, int supplierId) {
+        String url = apiBaseUrl + "/"
+                + URLEncoder.encode(invoiceId, UTF_8)
+                + "?storeId=" + storeId
+                + "&supplierId=" + supplierId;
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
-        ResponseEntity<Invoice> response = restTemplate.exchange(url, HttpMethod.GET, entity, Invoice.class);
-        return response.getBody();
+        ResponseEntity<Invoice> resp = restTemplate.exchange(url, HttpMethod.GET, entity, Invoice.class);
+        return resp.getBody();
     }
 
     public List<Invoice> getAllInvoices(int storeId, YearMonth yearMonth) {
@@ -81,7 +86,7 @@ public class InvoiceService {
     public boolean checkDuplicateInvoice(String invoiceId, int storeId, int supplierId) {
         String url = UriComponentsBuilder.fromHttpUrl(apiBaseUrl)
                 .path("/check-duplicate")
-                .queryParam("invoiceId", URLEncoder.encode(invoiceId, StandardCharsets.UTF_8))
+                .queryParam("invoiceId", URLEncoder.encode(invoiceId, UTF_8))
                 .queryParam("storeId", storeId)
                 .queryParam("supplierId", supplierId)
                 .toUriString();
@@ -95,14 +100,20 @@ public class InvoiceService {
         restTemplate.exchange(apiBaseUrl, HttpMethod.POST, entity, Void.class);
     }
 
-    public void updateInvoice(Invoice invoice, String originalInvoiceNo) {
-        String url = apiBaseUrl + "/" + URLEncoder.encode(originalInvoiceNo, StandardCharsets.UTF_8);
+    public void updateInvoice(Invoice invoice, String originalInvoiceNo, int storeId, int supplierId) {
+        String url = apiBaseUrl + "/"
+                + URLEncoder.encode(originalInvoiceNo, UTF_8)
+                + "?storeId=" + storeId
+                + "&supplierId=" + supplierId;
         HttpEntity<Invoice> entity = new HttpEntity<>(invoice, createHeaders());
         restTemplate.exchange(url, HttpMethod.PUT, entity, Void.class);
     }
 
-    public void deleteInvoice(String invoiceId, int storeId) {
-        String url = apiBaseUrl + "/" + URLEncoder.encode(invoiceId, StandardCharsets.UTF_8) + "?storeId=" + storeId;
+    public void deleteInvoice(String invoiceId, int storeId, int supplierId) {
+        String url = apiBaseUrl + "/"
+                + URLEncoder.encode(invoiceId, UTF_8)
+                + "?storeId=" + storeId
+                + "&supplierId=" + supplierId;
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
     }
