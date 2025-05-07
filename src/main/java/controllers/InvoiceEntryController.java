@@ -168,7 +168,7 @@ public class InvoiceEntryController extends DateSelectController{
 							@Override
 							protected Invoice call() {
 								try{
-									return invoiceService.getInvoice(invoiceNoField.getText(), main.getCurrentStore().getStoreID(), invoiceAFX.getValue().getContactID());
+									return invoiceService.getInvoice(invoiceNoField.getText(), main.getCurrentStore().getStoreID());
 								} catch (Exception e) {
 									throw new RuntimeException(e);
 								}

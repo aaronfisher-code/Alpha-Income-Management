@@ -42,13 +42,13 @@ public class InvoiceService {
         return headers;
     }
 
-    public Invoice getInvoice(String invoiceId, int storeId, int supplierId) {
+    public Invoice getInvoice(String invoiceId, int storeId) {
         String url = apiBaseUrl + "/"
-                + URLEncoder.encode(invoiceId, UTF_8)
-                + "?storeId=" + storeId
-                + "&supplierId=" + supplierId;
+                + URLEncoder.encode(invoiceId, StandardCharsets.UTF_8)
+                + "?storeId=" + storeId;
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
-        ResponseEntity<Invoice> resp = restTemplate.exchange(url, HttpMethod.GET, entity, Invoice.class);
+        ResponseEntity<Invoice> resp =
+                restTemplate.exchange(url, HttpMethod.GET, entity, Invoice.class);
         return resp.getBody();
     }
 
