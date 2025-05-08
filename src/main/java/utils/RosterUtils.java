@@ -65,10 +65,10 @@ public class RosterUtils {
         List<Shift> toConsider = new ArrayList<>();
 
         for (Shift s : allShifts) {
-            // **NULL GUARD**: skip any shift missing its key data
+            // NULL GUARD on the _original_ shift record
             if (s.getShiftStartDate() == null
                     || s.getShiftStartTime() == null
-                    || s.getShiftEndTime()   == null) {
+                    || s.getShiftEndTime() == null) {
                 continue;
             }
 
@@ -80,20 +80,34 @@ public class RosterUtils {
                     && s.getShiftEndDate().isBefore(day);
 
             if ((sameDay || repeatDay) && !pastEnd) {
-                // look for a modification on exactly this original shift & day
-                Shift mod = allModifications.stream()
-                        .filter(m -> m.getShiftID() == s.getShiftID()
-                                && day.equals(m.getOriginalDate()))
-                        .findFirst()
-                        .orElse(null);
+                // ——— Cancellation? ———
+                // (your “deleted” mods set the mod’s shiftStartDate to null)
+                boolean isCancelled = allModifications.stream()
+                        .anyMatch(m ->
+                                m.getShiftID() == s.getShiftID()
+                                        && day.equals(m.getOriginalDate())
+                                        && m.getShiftStartDate() == null
+                        );
+                if (isCancelled) {
+                    // user explicitly deleted this occurrence
+                    continue;
+                }
 
-                if (mod != null
-                        && mod.getShiftStartDate() != null
-                        && mod.getShiftStartDate().equals(day)
-                        && mod.getShiftStartTime() != null
-                        && mod.getShiftEndTime()   != null) {
-                    toConsider.add(mod);
+                // ——— Real modification? ———
+                Optional<Shift> realMod = allModifications.stream()
+                        .filter(m ->
+                                m.getShiftID() == s.getShiftID()
+                                        && day.equals(m.getOriginalDate())
+                                        && m.getShiftStartDate() != null
+                                        && m.getShiftStartTime()  != null
+                                        && m.getShiftEndTime()    != null
+                        )
+                        .findFirst();
+
+                if (realMod.isPresent()) {
+                    toConsider.add(realMod.get());
                 } else {
+                    // no mod → use the original shift
                     toConsider.add(s);
                 }
             }
@@ -112,12 +126,10 @@ public class RosterUtils {
             }
         }
 
-        // 2) For each candidate, carve out working segments around any leave
+        // 2) Carve out working segments around any leave
         for (Shift shift : toConsider) {
             LocalTime sTime = shift.getShiftStartTime();
             LocalTime eTime = shift.getShiftEndTime();
-
-            // sanity check
             if (!sTime.isBefore(eTime)) continue;
 
             LocalDateTime shiftStartDT = LocalDateTime.of(day, sTime);
@@ -148,7 +160,7 @@ public class RosterUtils {
                     .sorted()
                     .toList();
 
-            // build & evaluate each tiny sub‑segment
+            // evaluate each sub-segment
             for (int i = 0; i < boundaries.size() - 1; i++) {
                 LocalTime segStart = boundaries.get(i);
                 LocalTime segEnd   = boundaries.get(i + 1);
