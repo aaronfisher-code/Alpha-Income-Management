@@ -708,8 +708,6 @@ public class ExportToolController extends PageController {
         y -= DAY_HEADER_ROW_HEIGHT;
         float tableTop = y;
 
-        DateTimeFormatter tf = DateTimeFormatter.ofPattern("HH:mm");
-
         for (String role : roles) {
             List<User> list = empsByRole.getOrDefault(role, Collections.emptyList());
             // filter those with any shift
@@ -799,12 +797,23 @@ public class ExportToolController extends PageController {
                             && !d.isBefore(l.getFromDate().toLocalDate()) && !d.isAfter(l.getToDate().toLocalDate()));
                     if (leave) text = "LEAVE";
                     else {
-                        Shift s = findEffectiveShiftForDate(u, d, allShifts, allMods, modMap);
-                        if (s != null) {
-                            text = formatTime(s.getShiftStartTime())
-                                    + " - "
-                                    + formatTime(s.getShiftEndTime());
-                        }
+                        List<Shift> shiftsForDay = findAllShiftsForDate(u, d, allShifts, allMods, modMap);
+
+                        // build simple TimeRange list
+                        List<TimeRange> ranges = shiftsForDay.stream()
+                                .map(sft -> new TimeRange(sft.getShiftStartTime(), sft.getShiftEndTime()))
+                                .collect(Collectors.toList());
+
+                        // merge any that butt‐up
+                        List<TimeRange> merged = mergeContiguous(ranges);
+
+                        // format each into a line
+                        List<String> lines = merged.stream()
+                                .map(r -> formatTime(r.start) + " - " + formatTime(r.end))
+                                .collect(Collectors.toList());
+
+                        // join with newline (or comma, if you prefer)
+                        text = String.join("\n", lines);
                     }
                     drawTextInCell(csRef.get(), text, leave ? fontItalic : fontRegular, SHIFT_TIME_FONT_SIZE,
                             x, rowTop - EMPLOYEE_ROW_HEIGHT, colDateW, EMPLOYEE_ROW_HEIGHT, true);
@@ -822,6 +831,46 @@ public class ExportToolController extends PageController {
             }
         }
         return y;
+    }
+
+    private List<Shift> findAllShiftsForDate(User emp, LocalDate date,
+                                             List<Shift> allShifts,
+                                             List<Shift> allMods,
+                                             Map<String,Shift> modMap) {
+        List<Shift> result = new ArrayList<>();
+
+        // 1) explicit modifications that start on this date
+        for (Shift mod : allMods) {
+            if (mod.getUserID()==emp.getUserID()
+                    && mod.getShiftStartDate()!=null
+                    && mod.getShiftStartDate().equals(date)) {
+                result.add(mod);
+            }
+        }
+
+        // 2) original or repeating instances that weren’t moved off this date
+        for (Shift s : allShifts) {
+            if (s.getUserID()!=emp.getUserID()) continue;
+            boolean onDate = (!s.isRepeating() && s.getShiftStartDate().equals(date))
+                    || (s.isRepeating()
+                    && !s.getShiftStartDate().isAfter(date)
+                    && (s.getShiftEndDate()==null || !s.getShiftEndDate().isBefore(date))
+                    && DAYS.between(s.getShiftStartDate(), date) % s.getDaysPerRepeat() == 0
+            );
+            if (!onDate) continue;
+
+            // if there’s a “move‐away” mod for this instance, skip it:
+            String key = s.getShiftID() + "_" + date.toString();
+            Shift move = modMap.get(key);
+            if (move!=null && (move.getShiftStartDate()==null || !move.getShiftStartDate().equals(date))) {
+                continue;
+            }
+            result.add(s);
+        }
+
+        // sort by start‐time:
+        result.sort(Comparator.comparing(Shift::getShiftStartTime));
+        return result;
     }
 
     // Corrected Shift Logic
@@ -930,35 +979,47 @@ public class ExportToolController extends PageController {
         return currentY;
     }
 
-    // drawTextInCell, truncateText, drawVerticalTableLines, drawPageFooter remain largely similar, adjust Y positions and font sizes as needed
-    // Make sure drawTextInCell correctly uses cellBottomY and cellHeight for vertical centering/positioning
-    private void drawTextInCell(PDPageContentStream stream, String text, PDType1Font font, float fontSize,
-                                float cellX, float cellBottomY, float cellWidth, float cellHeight, boolean centered) throws IOException {
+    private void drawTextInCell(PDPageContentStream stream,
+                                String text,
+                                PDType1Font font,
+                                float fontSize,
+                                float cellX,
+                                float cellBottomY,
+                                float cellWidth,
+                                float cellHeight,
+                                boolean centered) throws IOException {
         if (text == null) text = "";
-        text = truncateText(text, cellWidth - 2 * CELL_PADDING, font, fontSize);
+
+        // split into lines immediately
+        String[] parts = text.split("\n");
+        float leading = fontSize + 2f;
+        float blockH  = leading * parts.length;
+        float startY  = cellBottomY + (cellHeight - blockH)/2 + (parts.length-1)*leading;
 
         stream.setFont(font, fontSize);
-        float textWidth = font.getStringWidth(text) / 1000 * fontSize;
-        float textHeight = font.getFontDescriptor().getCapHeight() / 1000 * fontSize; // Approx height of text from baseline to cap
 
-        // Calculate Y position for text baseline to be vertically centered in the cell
-        float yPos = cellBottomY + (cellHeight - textHeight) / 2 + textHeight * 0.1f; // Small adjustment for typical baseline offset
+        for (int i = 0; i < parts.length; i++) {
+            // truncate *this* single line only
+            String line = truncateText(parts[i], cellWidth - 2 * CELL_PADDING, font, fontSize);
+            float w     = font.getStringWidth(line) / 1000 * fontSize;
 
-        float xPos = cellX + CELL_PADDING;
-        if (centered) {
-            xPos = cellX + (cellWidth - textWidth) / 2;
+            float xPos = cellX + (centered
+                    ? (cellWidth - w) / 2
+                    : CELL_PADDING);
+
+            // don’t let it overflow
             if (xPos < cellX + CELL_PADDING) xPos = cellX + CELL_PADDING;
-        }
-        if (xPos + textWidth > cellX + cellWidth - CELL_PADDING) { // Ensure text doesn't overflow right padding
-            xPos = cellX + cellWidth - CELL_PADDING - textWidth;
-            if (xPos < cellX + CELL_PADDING) xPos = cellX + CELL_PADDING; // Prevent going past left padding
-        }
+            if (xPos + w > cellX + cellWidth - CELL_PADDING) {
+                xPos = cellX + cellWidth - CELL_PADDING - w;
+            }
 
+            float yPos = startY - i * leading;
 
-        stream.beginText();
-        stream.newLineAtOffset(xPos, yPos);
-        stream.showText(text);
-        stream.endText();
+            stream.beginText();
+            stream.newLineAtOffset(xPos, yPos);
+            stream.showText(line);
+            stream.endText();
+        }
     }
 
     private String truncateText(String text, float maxWidth, PDType1Font font, float fontSize) throws IOException {
@@ -1018,5 +1079,29 @@ public class ExportToolController extends PageController {
                 ? t.format(HOUR_ONLY_FMT)
                 : t.format(HOUR_MIN_FMT);
         return raw.toLowerCase();  // e.g. "9am" or "3:30pm"
+    }
+
+    private List<TimeRange> mergeContiguous(List<TimeRange> in) {
+        List<TimeRange> out = new ArrayList<>();
+        if (in.isEmpty()) return out;
+        // assume `in` is sorted by start
+        TimeRange curr = in.get(0);
+        for (int i = 1; i < in.size(); i++) {
+            TimeRange next = in.get(i);
+            if (curr.end.equals(next.start)) {
+                // extend
+                curr = new TimeRange(curr.start, next.end);
+            } else {
+                out.add(curr);
+                curr = next;
+            }
+        }
+        out.add(curr);
+        return out;
+    }
+
+    private static class TimeRange {
+        LocalTime start, end;
+        TimeRange(LocalTime s, LocalTime e) { start = s; end = e; }
     }
 }
