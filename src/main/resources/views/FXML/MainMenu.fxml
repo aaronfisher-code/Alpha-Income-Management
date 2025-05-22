@@ -19,7 +19,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane prefHeight="800.0" prefWidth="1500.0" style="-fx-background-color: TRANSPARENT;" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.MainMenuController">
+<StackPane prefHeight="800.0" prefWidth="1500.0" style="-fx-background-color: TRANSPARENT;" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.MainMenuController">
    <children>
       <BorderPane fx:id="contentPane" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-background-color: #EDF0F7;" StackPane.alignment="CENTER_LEFT">
          <StackPane.margin>
@@ -39,7 +39,7 @@
                <children>
                   <VBox>
                      <children>
-                        <MFXFilterComboBox fx:id="storeSearchCombo" floatMode="DISABLED" graphicTextGap="5.0" minHeight="40.0" minWidth="285.0" prefHeight="40.0" prefWidth="293.0" style="-fx-background-color: #F0F0F0; -fx-border-color: #F0F0F0;" text="Direct Chemist Outlet Cobblebank">
+                        <MFXFilterComboBox fx:id="storeSearchCombo" floatMode="DISABLED" graphicTextGap="5.0" minHeight="40.0" minWidth="285.0" prefHeight="40.0" prefWidth="293.0" style="-fx-background-color: #F0F0F0; -fx-border-color: #F0F0F0;">
                            <cursor>
                               <Cursor fx:constant="HAND" />
                            </cursor>
@@ -55,7 +55,7 @@
                      <children>
                         <HBox fx:id="userNameBox" alignment="CENTER_LEFT" minHeight="40.0" style="-fx-background-color: #F0F0F0; -fx-background-radius: 3;">
                            <children>
-                              <Label fx:id="userLabel" alignment="CENTER" contentDisplay="CENTER" graphicTextGap="0.0" minHeight="25.0" minWidth="25.0" prefHeight="25.0" prefWidth="25.0" styleClass="profileIcon" text="A" textAlignment="CENTER">
+                              <Label fx:id="userLabel" alignment="CENTER" contentDisplay="CENTER" graphicTextGap="0.0" minHeight="25.0" minWidth="25.0" prefHeight="25.0" prefWidth="25.0" styleClass="profileIcon" textAlignment="CENTER">
                                  <font>
                                     <Font size="22.0" />
                                  </font>
@@ -66,7 +66,7 @@
                                     <Insets top="-1.0" />
                                  </padding>
                               </Label>
-                              <Label fx:id="userNameLabel" alignment="CENTER_RIGHT" contentDisplay="RIGHT" focusTraversable="false" styleClass="userNameText" text="User Name" textFill="#6e6b7b">
+                              <Label fx:id="userNameLabel" alignment="CENTER_RIGHT" contentDisplay="RIGHT" focusTraversable="false" styleClass="userNameText" textFill="#6e6b7b">
                                  <font>
                                     <Font size="10.0" />
                                  </font>
