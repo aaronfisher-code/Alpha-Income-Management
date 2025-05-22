@@ -11,17 +11,16 @@ import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
-import javafx.scene.control.ContentDisplay;
-import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
+import javafx.scene.control.*;
 import javafx.scene.effect.BlurType;
 import javafx.scene.effect.DropShadow;
+import javafx.scene.image.Image;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.SVGPath;
+import javafx.stage.Stage;
 import javafx.util.Duration;
 import models.Store;
 import org.controlsfx.control.PopOver;
@@ -31,7 +30,9 @@ import utils.AnimationUtils;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 
 public class MainMenuController extends PageController {
@@ -60,36 +61,72 @@ public class MainMenuController extends PageController {
     }
 
     public void fill() {
+        List<Store> stores;
+        try {
+            stores = userService.getStoresForUser(main.getCurrentUser().getUserID());
+        } catch (Exception ex) {
+            dialogPane.showError("Error loading stores", ex);
+            return;
+        }
+
+        // 1) Prompt if more than one:
+        if (stores.size() > 1) {
+            ChoiceDialog<Store> dlg = new ChoiceDialog<>(stores.get(0), stores);
+            dlg.setTitle("Select Store");
+            dlg.setHeaderText("You have access to multiple stores");
+            dlg.setContentText("Please select your store:");
+            Stage dialogStage = (Stage) dlg.getDialogPane().getScene().getWindow();
+
+            dialogStage.getIcons().add(new Image(getClass().getResourceAsStream("/images/alpha logo.png")));
+            // block until user picks
+            Optional<Store> picked = dlg.showAndWait();
+            if (picked.isEmpty()) {
+                // user cancelled: either exit or default back to first
+                main.setCurrentStore(stores.get(0));
+            } else {
+                main.setCurrentStore(picked.get());
+            }
+        }
+        // 2) If exactly one, auto-select; if zero, you may want to error out:
+        else if (stores.size() == 1) {
+            main.setCurrentStore(stores.get(0));
+        } else {
+            dialogPane.showError("No stores found for your user.", "Error");
+            return;
+        }
+
+        // 3) Now that currentStore is set, populate the combo with all stores
+        storeSearchCombo.getItems().clear();
+        storeSearchCombo.getItems().addAll(stores);
+        storeSearchCombo.selectItem(main.getCurrentStore());
+        storeSearchCombo.setOnAction(evt ->
+                main.setCurrentStore((Store) storeSearchCombo.getSelectedItem())
+        );
+
+        // 4) The rest of your existing setup:
         userNameLabel.setText(main.getCurrentUser().getFirst_name() + " " + main.getCurrentUser().getLast_name());
         userLabel.setText(String.valueOf(main.getCurrentUser().getFirst_name().charAt(0)));
         userLabel.setStyle("-fx-background-color: " + main.getCurrentUser().getBgColour() + ";");
         userLabel.setTextFill(Paint.valueOf(main.getCurrentUser().getTextColour()));
-        try {
-            for (Store store : userService.getStoresForUser(main.getCurrentUser().getUserID())) {
-                storeSearchCombo.getItems().add(store);
-            }
-        } catch (Exception ex) {
-            dialogPane.showError("Error loading stores", ex);
-        }
-        storeSearchCombo.setOnAction(_ -> main.setCurrentStore((Store) storeSearchCombo.getSelectedItem()));
-        storeSearchCombo.selectFirst();
-        Map<Button, String> buttonPermissions = new HashMap<>();
-        buttonPermissions.put(eodDataEntryButton, "EOD - View");
-        buttonPermissions.put(accountPaymentsButton, "Account Payments - View");
-        buttonPermissions.put(rosterButton, "Roster - View");
-        buttonPermissions.put(accountsButton, "Manage Employees - View");
-        buttonPermissions.put(invoiceTrackingButton, "Invoicing - View");
-        buttonPermissions.put(basCheckerButton, "BAS - View");
-        buttonPermissions.put(budgetExpensesButton, "Budget - View");
-        buttonPermissions.put(monthlySummaryButton, "Monthly Summary - View");
-        buttonPermissions.forEach((button, _) -> button.setDisable(true));
-        main.getCurrentUser().getPermissions().forEach(p -> {
-            buttonPermissions.forEach((button, permission) -> {
-                if (p.getPermissionName().equals(permission)) {
-                    button.setDisable(false);
-                }
-            });
-        });
+
+        Map<Button, String> buttonPermissions = Map.of(
+                eodDataEntryButton,      "EOD - View",
+                accountPaymentsButton,   "Account Payments - View",
+                rosterButton,            "Roster - View",
+                accountsButton,          "Manage Employees - View",
+                invoiceTrackingButton,   "Invoicing - View",
+                basCheckerButton,        "BAS - View",
+                budgetExpensesButton,    "Budget - View",
+                monthlySummaryButton,    "Monthly Summary - View"
+        );
+        buttonPermissions.keySet().forEach(b -> b.setDisable(true));
+        main.getCurrentUser().getPermissions().stream()
+                .map(p -> p.getPermissionName())
+                .forEach(perm -> {
+                    buttonPermissions.forEach((btn, name) -> {
+                        if (name.equals(perm)) btn.setDisable(false);
+                    });
+                });
         for(Node b:buttonPane.getChildren()){
             if(b.getAccessibleRole() == AccessibleRole.BUTTON){
                 Button a = (Button) b;
