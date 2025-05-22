@@ -6,23 +6,62 @@
 <?import io.github.palexdev.materialfx.controls.MFXTextField?>
 <?import java.net.URL?>
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox alignment="CENTER" spacing="25.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.ExportToolController">
-   <children>
-      <MFXComboBox fx:id="monthPicker" floatMode="ABOVE" floatingText="Month" floatingTextGap="10.0" maxWidth="1.7976931348623157E308" />
-      <MFXTextField fx:id="yearPicker" floatMode="ABOVE" floatingText="Year" maxWidth="1.7976931348623157E308" />
-      <MFXButton maxWidth="1.7976931348623157E308" onAction="#copyToClipboard" style="-fx-background-color: #0F60FF; -fx-text-fill: WHITE;" text="Copy to Clipboard" textFill="WHITE" />
-      <MFXProgressBar fx:id="progressBar" maxWidth="1.7976931348623157E308" style="-mfx-color: #0F60FF;" visible="false">
-         <VBox.margin>
-            <Insets top="-15.0" />
-         </VBox.margin></MFXProgressBar>
-   </children>
-   <padding>
-      <Insets bottom="10.0" left="20.0" right="20.0" top="20.0" />
-   </padding>
-   <stylesheets>
-      <URL value="@../CSS/ExportTool.css" />
-      <URL value="@../CSS/application.css" />
-   </stylesheets>
-</VBox>
+<TabPane fx:id="parent" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" tabClosingPolicy="UNAVAILABLE" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/23.0.1" fx:controller="controllers.ExportToolController">
+  <tabs>
+    <Tab text="Excel Export">
+      <content>
+        <AnchorPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="0.0" minWidth="0.0">
+               <children>
+                  <VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" spacing="25.0">
+                     <children>
+                        <MFXComboBox fx:id="monthPicker" floatMode="ABOVE" floatingText="Month" floatingTextGap="10.0" maxWidth="1.7976931348623157E308" />
+                        <MFXTextField fx:id="yearPicker" floatMode="ABOVE" floatingText="Year" maxWidth="1.7976931348623157E308" />
+                        <MFXButton maxWidth="1.7976931348623157E308" onAction="#copyToClipboard" style="-fx-background-color: #0F60FF; -fx-text-fill: WHITE;" text="Copy to Clipboard" textFill="WHITE" />
+                        <MFXProgressBar fx:id="progressBarExcel" maxWidth="1.7976931348623157E308" style="-mfx-color: #0F60FF;" visible="false">
+                           <VBox.margin>
+                              <Insets top="-15.0" />
+                           </VBox.margin>
+                        </MFXProgressBar>
+                     </children>
+                     <padding>
+                        <Insets bottom="10.0" left="20.0" right="20.0" top="20.0" />
+                     </padding>
+                     <stylesheets>
+                        <URL value="@../CSS/ExportTool.css" />
+                        <URL value="@../CSS/application.css" />
+                     </stylesheets>
+                  </VBox>
+               </children></AnchorPane>
+      </content>
+    </Tab>
+    <Tab text="PDF Export">
+      <content>
+        <AnchorPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="0.0" minWidth="0.0">
+               <children>
+                  <VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" spacing="25.0">
+                     <children>
+                        <MFXButton maxWidth="1.7976931348623157E308" onAction="#generatePDF" style="-fx-background-color: #0F60FF; -fx-text-fill: WHITE;" text="Save as PDF" textFill="WHITE" />
+                        <MFXProgressBar fx:id="progressBarPDF" maxWidth="1.7976931348623157E308" style="-mfx-color: #0F60FF;" visible="false">
+                           <VBox.margin>
+                              <Insets top="-15.0" />
+                           </VBox.margin>
+                        </MFXProgressBar>
+                     </children>
+                     <padding>
+                        <Insets bottom="10.0" left="20.0" right="20.0" top="20.0" />
+                     </padding>
+                     <stylesheets>
+                        <URL value="@../CSS/ExportTool.css" />
+                        <URL value="@../CSS/application.css" />
+                     </stylesheets>
+                  </VBox>
+               </children></AnchorPane>
+      </content>
+    </Tab>
+  </tabs>
+</TabPane>

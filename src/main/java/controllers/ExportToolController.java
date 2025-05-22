@@ -7,24 +7,29 @@ import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
+import javafx.stage.FileChooser;
 import models.*;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import services.LeaveService;
 import services.RosterService;
 import services.UserService;
 
+import java.io.File;
 import java.io.IOException;
 import java.text.DateFormatSymbols;
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAdjusters;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static java.time.temporal.ChronoUnit.DAYS;
@@ -35,7 +40,9 @@ public class ExportToolController extends PageController {
     @FXML
     private MFXTextField yearPicker;
     @FXML
-    private MFXProgressBar progressBar;
+    private MFXProgressBar progressBarExcel;
+    @FXML
+    private MFXProgressBar progressBarPDF;
 
     private RosterPageController parent;
     private RosterService rosterService;
@@ -44,7 +51,33 @@ public class ExportToolController extends PageController {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
-    private static final DateTimeFormatter DURATION_FORMATTER = DateTimeFormatter.ofPattern("H:mm");
+    private static final DateTimeFormatter HOUR_ONLY_FMT = DateTimeFormatter.ofPattern("ha", Locale.ENGLISH);
+    private static final DateTimeFormatter HOUR_MIN_FMT = DateTimeFormatter.ofPattern("h:mma", Locale.ENGLISH);
+
+    private static final float MARGIN = 40;
+    private static final float Y_START_PAGE_OFFSET = 25;
+    private static final float BOTTOM_PAGE_MARGIN_THRESHOLD = MARGIN + 30;
+    private static final float EMPLOYEE_ROW_HEIGHT = 20;
+    private static final float DAY_HEADER_ROW_HEIGHT = 18;
+    private static final float ROLE_HEADER_HEIGHT = 10;
+    private static final float WEEK_TITLE_HEIGHT = 14;
+    private static final float INTER_TABLE_SPACING = 15;
+    private static final float CELL_PADDING = 3;
+
+
+    private static final float MAIN_TITLE_FONT_SIZE = 13;
+    private static final float WEEK_TITLE_FONT_SIZE = 11;
+    private static final float ROLE_DIVIDER_FONT_SIZE = 7;
+    private static final float DAY_HEADER_FONT_SIZE = 7.5f;
+    private static final float EMPLOYEE_NAME_FONT_SIZE = 7.5f;
+    private static final float SHIFT_TIME_FONT_SIZE = 7f;
+
+    private PDType1Font fontBold;
+    private PDType1Font fontRegular;
+    private PDType1Font fontItalic;
+
+    private LocalDate overallFortnightStartDate;
+    private LocalDate overallFortnightEndDate;
 
     @FXML
     public void initialize() {
@@ -98,7 +131,7 @@ public class ExportToolController extends PageController {
             return;
         }
 
-        progressBar.setVisible(true);
+        progressBarExcel.setVisible(true);
         Task<String> exportTask = new Task<>() {
             @Override
             protected String call() throws Exception {
@@ -397,7 +430,7 @@ public class ExportToolController extends PageController {
             content.putString(exportData);
             Clipboard.getSystemClipboard().setContent(content);
             parent.getDialogPane().showInformation("Success", "Data has been copied to clipboard");
-            progressBar.setVisible(false);
+            progressBarExcel.setVisible(false);
         });
 
         exportTask.setOnFailed(e -> {
@@ -408,7 +441,7 @@ public class ExportToolController extends PageController {
             } else {
                 parent.getDialogPane().showError("Export Failed", "Failed to export data", exception);
             }
-            progressBar.setVisible(false);
+            progressBarExcel.setVisible(false);
         });
 
         executor.submit(exportTask);
@@ -523,5 +556,467 @@ public class ExportToolController extends PageController {
         }
 
         return segments;
+    }
+
+    @FXML
+    public void generatePDF() {
+        LocalDate dateWithinDisplayedWeek = main.getCurrentDate();
+        fontBold    = PDType1Font.HELVETICA_BOLD;
+        fontRegular = PDType1Font.HELVETICA;
+        fontItalic  = PDType1Font.HELVETICA_OBLIQUE;
+
+        // compute fortnight
+        LocalDate weekStart = dateWithinDisplayedWeek.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate epoch    = LocalDate.of(2000,1,3);
+        long idx = ChronoUnit.DAYS.between(epoch,weekStart) / 14;
+        overallFortnightStartDate = epoch.plusDays(idx*14);
+        overallFortnightEndDate   = overallFortnightStartDate.plusDays(13);
+
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Save Fortnight Roster PDF");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF Files","*.pdf"));
+        chooser.setInitialFileName(
+                "Roster_"+
+                        overallFortnightStartDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))+"_"+
+                        overallFortnightEndDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))+".pdf"
+        );
+        File file = chooser.showSaveDialog(main.getStg());
+        if (file==null) return;
+        progressBarPDF.setVisible(true);
+
+        Task<Void> pdfTask = new Task<>(){
+            @Override protected Void call() throws Exception {
+                // fetch data
+                List<User> allEmps = userService.getAllUserEmployments(main.getCurrentStore().getStoreID());
+                Map<String,List<User>> empsByRole = allEmps.stream()
+                        .filter(u->u.getRole()!=null && !u.getRole().isEmpty())
+                        .collect(Collectors.groupingBy(u->u.getRole().toUpperCase()));
+                List<String> order = List.of("PHARMACIST","PHARMACY ASSISTANTS","OCCASIONAL STAFF");
+                List<String> roles = new ArrayList<>();
+                for(String r:order) if(empsByRole.containsKey(r)) roles.add(r);
+                empsByRole.keySet().stream().filter(r->!order.contains(r)).sorted().forEach(roles::add);
+
+                List<Shift> shifts = rosterService.getShifts(main.getCurrentStore().getStoreID(), overallFortnightStartDate, overallFortnightEndDate);
+                List<Shift> mods   = rosterService.getShiftModifications(main.getCurrentStore().getStoreID(), overallFortnightStartDate, overallFortnightEndDate);
+                List<LeaveRequest> leaves = leaveService.getLeaveRequests(main.getCurrentStore().getStoreID(), overallFortnightStartDate, overallFortnightEndDate);
+                Map<String,Shift> modMap = new HashMap<>();
+                for(Shift m:mods) if(m.getOriginalDate()!=null)
+                    modMap.put(m.getShiftID()+"_"+m.getOriginalDate(),m);
+
+                try(PDDocument doc=new PDDocument()){
+                    PDRectangle ps = PDRectangle.A4;
+                    AtomicReference<PDPage> pageRef = new AtomicReference<>(new PDPage(ps));
+                    doc.addPage(pageRef.get());
+                    AtomicReference<PDPageContentStream> csRef =
+                            new AtomicReference<>(new PDPageContentStream(doc,pageRef.get()));
+                    AtomicReference<Float> yRef = new AtomicReference<>(ps.getHeight()-MARGIN-Y_START_PAGE_OFFSET);
+                    int[] pageNum = {1,0};
+
+                    // week1
+                    LocalDate w1 = overallFortnightStartDate;
+                    String week1Title = String.format(
+                            "ROSTER – WEEK 1 – %s to %s",
+                            w1.format(DateTimeFormatter.ofPattern("dd/MM")),
+                            w1.plusDays(6).format(DateTimeFormatter.ofPattern("dd/MM"))
+                    );
+
+                    // draw the week title:
+                    csRef.get().setFont(fontBold, WEEK_TITLE_FONT_SIZE);
+                    float titleWidth = fontBold.getStringWidth(week1Title) / 1000 * WEEK_TITLE_FONT_SIZE;
+                    float pageWidth  = ps.getWidth();
+                    csRef.get().beginText();
+                    csRef.get().newLineAtOffset((pageWidth - titleWidth)/2, yRef.get());
+                    csRef.get().showText(week1Title);
+                    csRef.get().endText();
+                    yRef.set(yRef.get() - WEEK_TITLE_HEIGHT);
+                    yRef.set(yRef.get() - INTER_TABLE_SPACING/2);
+                    yRef.set(drawWeekTable(doc,pageRef,csRef,ps,roles,empsByRole,shifts,mods,modMap,leaves,w1,yRef,pageNum));
+
+                    yRef.set(yRef.get() - INTER_TABLE_SPACING*8);
+
+                    // week2
+                    LocalDate w2 = overallFortnightStartDate.plusDays(7);
+                    String week2Title = String.format(
+                            "ROSTER – WEEK 2 – %s to %s",
+                            w2.format(DateTimeFormatter.ofPattern("dd/MM")),
+                            w2.plusDays(6).format(DateTimeFormatter.ofPattern("dd/MM"))
+                    );
+
+                    // draw the week title:
+                    csRef.get().setFont(fontBold, WEEK_TITLE_FONT_SIZE);
+                    titleWidth = fontBold.getStringWidth(week2Title) / 1000 * WEEK_TITLE_FONT_SIZE;
+                    pageWidth  = ps.getWidth();
+                    csRef.get().beginText();
+                    csRef.get().newLineAtOffset((pageWidth - titleWidth)/2, yRef.get());
+                    csRef.get().showText(week2Title);
+                    csRef.get().endText();
+                    yRef.set(yRef.get() - WEEK_TITLE_HEIGHT);
+
+                    yRef.set(yRef.get() - INTER_TABLE_SPACING/4);
+                    yRef.set(drawWeekTable(doc,pageRef,csRef,ps,roles,empsByRole,shifts,mods,modMap,leaves,w2,yRef,pageNum));
+
+                    csRef.get().close();
+                    doc.save(file);
+                }
+                return null;
+            }
+        };
+        pdfTask.setOnSucceeded(e->{ progressBarPDF.setVisible(false); parent.getDialogPane().showInformation("Success","Exported to " + file.getAbsolutePath()); });
+        pdfTask.setOnFailed(e->{ progressBarPDF.setVisible(false); parent.getDialogPane().showError("Error","PDF export failed",pdfTask.getException()); });
+        executor.submit(pdfTask);
+    }
+
+    private float drawWeekTable(
+            PDDocument doc,
+            AtomicReference<PDPage> pageRef,
+            AtomicReference<PDPageContentStream> csRef,
+            PDRectangle ps,
+            List<String> roles,
+            Map<String,List<User>> empsByRole,
+            List<Shift> allShifts,
+            List<Shift> allMods,
+            Map<String,Shift> modMap,
+            List<LeaveRequest> allLeaves,
+            LocalDate weekStart,
+            AtomicReference<Float> yRef,
+            int[] pageNum
+    ) throws IOException {
+        float y = yRef.get();
+        float colNameW = 120;
+        float colDateW = (ps.getWidth() - 2 * MARGIN - colNameW) / 7;
+        List<LocalDate> dates = weekStart.datesUntil(weekStart.plusDays(7)).collect(Collectors.toList());
+
+        // draw day-headers once
+        if (y < BOTTOM_PAGE_MARGIN_THRESHOLD + DAY_HEADER_ROW_HEIGHT + roles.size() * EMPLOYEE_ROW_HEIGHT) {
+            // new page (no headers)
+            y = startNewPageAndContextHeaders(
+                    doc,
+                    pageRef,
+                    csRef,
+                    ps,
+                    pageNum,
+                    yRef,       // <-- pass AtomicReference<Float> instead of primitive y/null
+                    null,       // no main title
+                    null,       // no role title
+                    dates,
+                    false,      // don't draw main title
+                    false       // don't draw week title only
+            );
+            y = yRef.get();  // sync local y with ref
+        }
+        drawDayHeaders(csRef.get(), dates, colNameW, colDateW, y);
+        y -= DAY_HEADER_ROW_HEIGHT;
+        float tableTop = y;
+
+        DateTimeFormatter tf = DateTimeFormatter.ofPattern("HH:mm");
+
+        for (String role : roles) {
+            List<User> list = empsByRole.getOrDefault(role, Collections.emptyList());
+            // filter those with any shift
+            List<User> withShifts = list.stream().filter(u ->
+                    dates.stream().anyMatch(d -> findEffectiveShiftForDate(u, d, allShifts, allMods, modMap) != null)
+            ).toList();
+            if (withShifts.isEmpty()) continue;
+
+            // divider row
+            if (y < BOTTOM_PAGE_MARGIN_THRESHOLD + ROLE_HEADER_HEIGHT + withShifts.size() * EMPLOYEE_ROW_HEIGHT) {
+                // new page (redraw week title)
+                y = startNewPageAndContextHeaders(
+                        doc,
+                        pageRef,
+                        csRef,
+                        ps,
+                        pageNum,
+                        yRef,          // <-- pass AtomicReference<Float>
+                        null,          // no main title (already drawn)
+                        null,          // no role title
+                        dates,
+                        false,         // don't draw main title
+                        true           // draw week title only
+                );
+                y = yRef.get();  // sync local y with ref
+                drawDayHeaders(csRef.get(), dates, colNameW, colDateW, y);
+                y -= DAY_HEADER_ROW_HEIGHT;
+            }
+            // — divider row: show role as one big merged cell, centered
+            csRef.get().setFont(fontBold, ROLE_DIVIDER_FONT_SIZE);
+            float titleWidth = fontBold.getStringWidth(role) / 1000 * ROLE_DIVIDER_FONT_SIZE;
+            float tableWidth = ps.getWidth() - 2 * MARGIN;
+            float centeredX = MARGIN + (tableWidth - titleWidth) / 2;
+            csRef.get().beginText();
+            csRef.get().newLineAtOffset(centeredX, y - ROLE_DIVIDER_FONT_SIZE);
+            csRef.get().showText(role);
+            csRef.get().endText();
+            y -= ROLE_HEADER_HEIGHT;   // leave the full height for the “merged” cell
+
+            // underline divider
+            csRef.get().setLineWidth(0.5f);
+            csRef.get().moveTo(MARGIN, y);
+            csRef.get().lineTo(ps.getWidth() - MARGIN, y);
+            csRef.get().stroke();
+            y -= CELL_PADDING;
+
+            float groupTop = y;
+            float dividerTopY    = groupTop + ROLE_HEADER_HEIGHT + CELL_PADDING;
+            float dividerBottomY = groupTop;
+
+            // draw the horizontal underline (you already have this)
+            csRef.get().setLineWidth(0.5f);
+            csRef.get().moveTo(MARGIN, groupTop + CELL_PADDING + ROLE_HEADER_HEIGHT);
+            csRef.get().lineTo(ps.getWidth() - MARGIN, groupTop + CELL_PADDING + ROLE_HEADER_HEIGHT);
+            csRef.get().stroke();
+
+            // now the left/right caps:
+            csRef.get().setLineWidth(0.25f);
+            csRef.get().moveTo(MARGIN, dividerTopY);
+            csRef.get().lineTo(MARGIN, dividerBottomY);
+            csRef.get().moveTo(ps.getWidth() - MARGIN, dividerTopY);
+            csRef.get().lineTo(ps.getWidth() - MARGIN, dividerBottomY);
+            csRef.get().stroke();
+
+            // employee rows
+            for (User u : withShifts) {
+                if (y < BOTTOM_PAGE_MARGIN_THRESHOLD + EMPLOYEE_ROW_HEIGHT) {
+                    // finish verticals + horizontal bottom
+                    drawVerticalTableLines(csRef.get(), tableTop, y + EMPLOYEE_ROW_HEIGHT, colNameW, colDateW, dates.size());
+                    y = startNewPageAndContextHeaders(doc, pageRef, csRef, ps, pageNum, yRef, null, null, dates, false, false);
+                    drawDayHeaders(csRef.get(), dates, colNameW, colDateW, y);
+                    y -= DAY_HEADER_ROW_HEIGHT;
+                    tableTop = y;
+                }
+                float rowTop = y;
+                float yPosName = rowTop - (EMPLOYEE_ROW_HEIGHT + EMPLOYEE_NAME_FONT_SIZE) / 2;
+                // name & role
+                csRef.get().beginText();
+                csRef.get().setFont(fontRegular, EMPLOYEE_NAME_FONT_SIZE);
+                csRef.get().newLineAtOffset(MARGIN + CELL_PADDING, yPosName);
+                csRef.get().showText(u.getNickname());
+                csRef.get().endText();
+                float x = MARGIN + colNameW;
+                for (LocalDate d : dates) {
+                    String text = "-";
+                    boolean leave = allLeaves.stream().anyMatch(l -> l.getUserID() == u.getUserID()
+                            && !d.isBefore(l.getFromDate().toLocalDate()) && !d.isAfter(l.getToDate().toLocalDate()));
+                    if (leave) text = "LEAVE";
+                    else {
+                        Shift s = findEffectiveShiftForDate(u, d, allShifts, allMods, modMap);
+                        if (s != null) {
+                            text = formatTime(s.getShiftStartTime())
+                                    + " - "
+                                    + formatTime(s.getShiftEndTime());
+                        }
+                    }
+                    drawTextInCell(csRef.get(), text, leave ? fontItalic : fontRegular, SHIFT_TIME_FONT_SIZE,
+                            x, rowTop - EMPLOYEE_ROW_HEIGHT, colDateW, EMPLOYEE_ROW_HEIGHT, true);
+                    x += colDateW;
+                }
+                // bottom border
+                csRef.get().setLineWidth(0.25f);
+                csRef.get().moveTo(MARGIN, rowTop - EMPLOYEE_ROW_HEIGHT);
+                csRef.get().lineTo(MARGIN + colNameW + colDateW * dates.size(), rowTop - EMPLOYEE_ROW_HEIGHT);
+                csRef.get().stroke();
+                y -= EMPLOYEE_ROW_HEIGHT;
+
+                float groupBottom = y;
+                drawVerticalTableLines(csRef.get(), groupTop, groupBottom, colNameW, colDateW, dates.size());
+            }
+        }
+        return y;
+    }
+
+    // Corrected Shift Logic
+    private Shift findEffectiveShiftForDate(User employee, LocalDate date,
+                                            List<Shift> allShifts, List<Shift> allModifications,
+                                            Map<String, Shift> modificationMap) {
+        // Priority 1: Check modifications that ARE on this 'date'
+        for (Shift mod : allModifications) {
+            if (mod.getUserID() == employee.getUserID() && mod.getShiftStartDate() != null && mod.getShiftStartDate().equals(date)) {
+                return mod; // This modification is the definitive shift for this date
+            }
+        }
+
+        // Priority 2: Check original/repeating shifts, ensure they weren't modified to be OFF this 'date'
+        for (Shift s : allShifts) {
+            if (s.getUserID() == employee.getUserID()) {
+                boolean isRepeatingInstanceOnDate = s.isRepeating() &&
+                        !s.getShiftStartDate().isAfter(date) &&
+                        (s.getShiftEndDate() == null || !s.getShiftEndDate().isBefore(date)) &&
+                        ChronoUnit.DAYS.between(s.getShiftStartDate(), date) >= 0 &&
+                        ChronoUnit.DAYS.between(s.getShiftStartDate(), date) % s.getDaysPerRepeat() == 0;
+                boolean isNonRepeatingOnDate = !s.isRepeating() && s.getShiftStartDate().equals(date);
+
+                if (isRepeatingInstanceOnDate || isNonRepeatingOnDate) {
+                    // This shift 's' has a theoretical instance on 'date'.
+                    // Check if this specific instance was modified (key: shiftID + this specific 'date').
+                    Shift potentialModification = modificationMap.get(s.getShiftID() + "_" + date.toString());
+
+                    if (potentialModification != null) {
+                        // A modification exists for this instance.
+                        // If potentialModification.getShiftStartDate() is also this 'date',
+                        // it means the shift was altered but stayed on this day. The first loop (above) would have already returned it.
+                        // If potentialModification.getShiftStartDate() is *not* this 'date' (or null),
+                        // it means this instance was moved away or deleted. So, 's' is not the shift.
+                        // Therefore, if a modification exists, the first loop is authoritative. We can skip 's'.
+                        continue;
+                    } else {
+                        // No modification for this instance of 's' on 'date'. So, 's' is the one.
+                        return s;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+
+    private void drawDayHeaders(PDPageContentStream cs, List<LocalDate> datesInWeek,
+                                float empColW, float dateColW, float headerTopY) throws IOException {
+        float currentX = MARGIN;
+        // Employee column header text
+        drawTextInCell(cs, "Employee", fontBold, DAY_HEADER_FONT_SIZE, currentX, headerTopY - DAY_HEADER_ROW_HEIGHT, empColW, DAY_HEADER_ROW_HEIGHT, false);
+        currentX += empColW;
+
+        DateTimeFormatter dateFmtHeader = DateTimeFormatter.ofPattern("EEE dd/MM", Locale.ENGLISH);
+        for (LocalDate date : datesInWeek) {
+            drawTextInCell(cs, date.format(dateFmtHeader), fontBold, DAY_HEADER_FONT_SIZE,
+                    currentX, headerTopY - DAY_HEADER_ROW_HEIGHT, dateColW, DAY_HEADER_ROW_HEIGHT, true);
+            currentX += dateColW;
+        }
+        cs.setLineWidth(0.5f); // Line below day headers
+        cs.moveTo(MARGIN, headerTopY - DAY_HEADER_ROW_HEIGHT);
+        cs.lineTo(MARGIN + empColW + (dateColW * datesInWeek.size()), headerTopY - DAY_HEADER_ROW_HEIGHT);
+        cs.stroke();
+    }
+
+    private float startNewPageAndContextHeaders(PDDocument doc, AtomicReference<PDPage> crP, AtomicReference<PDPageContentStream> csR,
+                                                PDRectangle pS, int[] pNI, AtomicReference<Float> cY,
+                                                String weekTitleStr, String roleNameStr, List<LocalDate> datesInWeek, // Nullable if not needed
+                                                boolean drawMainTitle, boolean drawWeekTitleOnly) throws IOException {
+
+        csR.get().close();
+        pNI[0]++; // Increment page number
+
+        PDPage newPage = new PDPage(pS);
+        doc.addPage(newPage);
+        crP.set(newPage);
+        csR.set(new PDPageContentStream(doc, newPage));
+        float currentY = pS.getHeight() - MARGIN - Y_START_PAGE_OFFSET;
+
+        if (drawMainTitle) {
+            currentY = new AtomicReference<>(currentY).get() - (MAIN_TITLE_FONT_SIZE + (MAIN_TITLE_FONT_SIZE-2) + 15); // Adjust based on drawMainPdfTitle's consumption
+        }
+
+        if (drawWeekTitleOnly && weekTitleStr != null){
+            currentY = new AtomicReference<>(currentY).get() - (WEEK_TITLE_HEIGHT + 5);
+            cY.set(currentY);
+            return currentY; // Only week title was needed
+        }
+
+
+        // Redraw context for a continued table (Week Title, Role Header, Day Headers)
+        if (weekTitleStr != null) {
+            currentY = new AtomicReference<>(currentY).get() - (WEEK_TITLE_HEIGHT + 5);
+        }
+        if (roleNameStr != null) {
+            currentY = new AtomicReference<>(currentY).get() - (ROLE_HEADER_HEIGHT + 3);
+        }
+        if (datesInWeek != null) {
+            float employeeColWidth = 120; // Must match usage in drawTableForRoleGroup
+            float dateColWidth = (pS.getWidth() - (2 * MARGIN) - employeeColWidth) / 7;
+            drawDayHeaders(csR.get(), datesInWeek, employeeColWidth, dateColWidth, currentY);
+            currentY -= DAY_HEADER_ROW_HEIGHT;
+        }
+        cY.set(currentY);
+        return currentY;
+    }
+
+    // drawTextInCell, truncateText, drawVerticalTableLines, drawPageFooter remain largely similar, adjust Y positions and font sizes as needed
+    // Make sure drawTextInCell correctly uses cellBottomY and cellHeight for vertical centering/positioning
+    private void drawTextInCell(PDPageContentStream stream, String text, PDType1Font font, float fontSize,
+                                float cellX, float cellBottomY, float cellWidth, float cellHeight, boolean centered) throws IOException {
+        if (text == null) text = "";
+        text = truncateText(text, cellWidth - 2 * CELL_PADDING, font, fontSize);
+
+        stream.setFont(font, fontSize);
+        float textWidth = font.getStringWidth(text) / 1000 * fontSize;
+        float textHeight = font.getFontDescriptor().getCapHeight() / 1000 * fontSize; // Approx height of text from baseline to cap
+
+        // Calculate Y position for text baseline to be vertically centered in the cell
+        float yPos = cellBottomY + (cellHeight - textHeight) / 2 + textHeight * 0.1f; // Small adjustment for typical baseline offset
+
+        float xPos = cellX + CELL_PADDING;
+        if (centered) {
+            xPos = cellX + (cellWidth - textWidth) / 2;
+            if (xPos < cellX + CELL_PADDING) xPos = cellX + CELL_PADDING;
+        }
+        if (xPos + textWidth > cellX + cellWidth - CELL_PADDING) { // Ensure text doesn't overflow right padding
+            xPos = cellX + cellWidth - CELL_PADDING - textWidth;
+            if (xPos < cellX + CELL_PADDING) xPos = cellX + CELL_PADDING; // Prevent going past left padding
+        }
+
+
+        stream.beginText();
+        stream.newLineAtOffset(xPos, yPos);
+        stream.showText(text);
+        stream.endText();
+    }
+
+    private String truncateText(String text, float maxWidth, PDType1Font font, float fontSize) throws IOException {
+        if (text == null) return "";
+        float textWidth = font.getStringWidth(text) / 1000 * fontSize;
+        if (textWidth <= maxWidth) {
+            return text;
+        }
+        String ellipsis = "..";
+        float ellipsisWidth = font.getStringWidth(ellipsis) / 1000 * fontSize;
+        if (maxWidth < ellipsisWidth) return ""; // Not enough space even for ellipsis
+
+        StringBuilder sb = new StringBuilder();
+        float currentWidth = 0;
+        for (char c : text.toCharArray()) {
+            float charWidth = font.getStringWidth(String.valueOf(c)) / 1000 * fontSize;
+            if (currentWidth + charWidth + ellipsisWidth <= maxWidth) {
+                sb.append(c);
+                currentWidth += charWidth;
+            } else {
+                break;
+            }
+        }
+        return sb.toString() + ellipsis;
+    }
+
+    private void drawVerticalTableLines(PDPageContentStream cs, float tableContentTopY, float tableContentBottomY,
+                                        float empColW, float dateColW, int numDateCols) throws IOException {
+        cs.setLineWidth(0.25f); // Thinner for internal grid lines
+        float currentX = MARGIN;
+
+        float headerSectionHeight = DAY_HEADER_ROW_HEIGHT; // Height of the day headers section
+        float tableTopActualContent = tableContentTopY;
+
+        // Leftmost line
+        cs.moveTo(currentX, tableTopActualContent);
+        cs.lineTo(currentX, tableContentBottomY);
+        cs.stroke();
+
+        // After Employee Column
+        currentX += empColW;
+        cs.moveTo(currentX, tableTopActualContent);
+        cs.lineTo(currentX, tableContentBottomY);
+        cs.stroke();
+
+        // After each Date Column
+        for (int i = 0; i < numDateCols; i++) {
+            currentX += dateColW;
+            cs.moveTo(currentX, tableTopActualContent);
+            cs.lineTo(currentX, tableContentBottomY);
+            cs.stroke();
+        }
+    }
+
+    private String formatTime(LocalTime t) {
+        String raw = (t.getMinute() == 0)
+                ? t.format(HOUR_ONLY_FMT)
+                : t.format(HOUR_MIN_FMT);
+        return raw.toLowerCase();  // e.g. "9am" or "3:30pm"
     }
 }

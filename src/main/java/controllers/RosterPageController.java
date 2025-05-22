@@ -9,14 +9,11 @@ import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.TabPane;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
 import models.*;
 import org.controlsfx.control.PopOver;
 import services.LeaveService;
@@ -24,16 +21,13 @@ import services.RosterService;
 import services.UserService;
 import utils.AnimationUtils;
 import utils.ValidatorUtils;
+
 import java.io.IOException;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.FormatStyle;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executors;
@@ -924,7 +918,7 @@ public class RosterPageController extends PageController {
 
     private Node createExportDialog() {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/ExportTool.fxml"));
-        VBox exportDialog = null;
+        TabPane exportDialog = null;
         try {
             exportDialog = loader.load();
         } catch (IOException e) {
