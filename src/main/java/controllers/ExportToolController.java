@@ -632,7 +632,7 @@ public class ExportToolController extends PageController {
                     yRef.set(yRef.get() - INTER_TABLE_SPACING/2);
                     yRef.set(drawWeekTable(doc,pageRef,csRef,ps,roles,empsByRole,shifts,mods,modMap,leaves,w1,yRef,pageNum));
 
-                    yRef.set(yRef.get() - INTER_TABLE_SPACING*8);
+                    yRef.set(yRef.get() - INTER_TABLE_SPACING*2);
 
                     // week2
                     LocalDate w2 = overallFortnightStartDate.plusDays(7);
