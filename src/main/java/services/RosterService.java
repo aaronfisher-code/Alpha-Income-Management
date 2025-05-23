@@ -11,6 +11,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
@@ -134,19 +135,25 @@ public class RosterService {
     }
 
     public List<SpecialDateObj> getSpecialDates(LocalDate startDate, LocalDate endDate) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(apiBaseUrl + "/special-dates")
-                .queryParam("startDate", startDate)
-                .queryParam("endDate", endDate);
+        UriComponentsBuilder builder = UriComponentsBuilder
+                .fromHttpUrl(apiBaseUrl + "/special-dates")
+                .queryParam("startDate", startDate.toString())
+                .queryParam("endDate",   endDate.toString());
 
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
         ResponseEntity<String> response = restTemplate.exchange(
                 builder.toUriString(),
                 HttpMethod.GET,
                 entity,
-                String.class);
+                String.class
+        );
+        String json = response.getBody();
+        if (json == null || json.isBlank()) {
+            // no content, just return an empty list
+            return Collections.emptyList();
+        }
         try {
-            return objectMapper.readValue(response.getBody(), new TypeReference<>() {
-            });
+            return objectMapper.readValue(json, new TypeReference<List<SpecialDateObj>>() {});
         } catch (IOException e) {
             throw new RuntimeException("Error parsing JSON response", e);
         }

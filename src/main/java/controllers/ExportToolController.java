@@ -69,8 +69,11 @@ public class ExportToolController extends PageController {
     private static final float WEEK_TITLE_FONT_SIZE = 11;
     private static final float ROLE_DIVIDER_FONT_SIZE = 7;
     private static final float DAY_HEADER_FONT_SIZE = 7.5f;
-    private static final float EMPLOYEE_NAME_FONT_SIZE = 7.5f;
-    private static final float SHIFT_TIME_FONT_SIZE = 7f;
+    private static final float EMPLOYEE_NAME_FONT_SIZE = 9f;
+    private static final float SHIFT_TIME_FONT_SIZE = 7.5f;
+    private static final float LEAVE_SHIFT_TIME_FONT_SIZE = 6f;
+    private static final float DAY_HEADER_DESC_FONT_SIZE = 6f;
+    private static final float DAY_HEADER_DESC_HEIGHT    = DAY_HEADER_DESC_FONT_SIZE + 1;
 
     private PDType1Font fontBold;
     private PDType1Font fontRegular;
@@ -206,6 +209,7 @@ public class ExportToolController extends PageController {
 
                 // Add header row
                 export.append("Date\tUserID\tName\tStartTime\tFinishTime\tTotal Hours\t30min Breaks\t10min Breaks\tPublicHoliday\tLeaveType\n");
+                Set<String> seenLines = new HashSet<>();
 
                 // Process each day in the selected month
                 for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
@@ -262,7 +266,7 @@ public class ExportToolController extends PageController {
                                             shift.getThirtyMinBreaks(),
                                             shift.getTenMinBreaks()
                                     );
-                                    export.append(String.format(
+                                    String row = String.format(
                                             "%s\t%d\t%s %s\t%s\t%s\t%s\t%d\t%d\t%s\t%s\n",
                                             date.format(DATE_FORMATTER),
                                             originalUser.getUserID(),
@@ -275,7 +279,10 @@ public class ExportToolController extends PageController {
                                             shift.getTenMinBreaks(),
                                             isPublicHoliday ? "Yes" : "No",
                                             leaveType
-                                    ));
+                                    );
+                                    if (seenLines.add(row)) {
+                                        export.append(row);
+                                    }
                                 }
                             }
 
@@ -286,26 +293,17 @@ public class ExportToolController extends PageController {
                                 if (coveringUser != null) {
                                     List<ShiftSegment> coveringSegments = buildShiftSegments(modificationForShift, date, leaveRequests);
                                     for (ShiftSegment seg : coveringSegments) {
-                                        if (seg.getStartTime().equals(seg.getEndTime())) continue;
-                                        String leaveType = "";
-                                        if (seg.isOnLeave()) {
-                                            LocalDateTime subStart = LocalDateTime.of(date, seg.getStartTime());
-                                            LocalDateTime subEnd   = LocalDateTime.of(date, seg.getEndTime());
-                                            leaveType = leaveRequests.stream()
-                                                    .filter(lr -> lr.getUserID() == modificationForShift.getUserID())
-                                                    .filter(lr -> !lr.getFromDate().isAfter(subStart)
-                                                            && !lr.getToDate().isBefore(subEnd))
-                                                    .map(LeaveRequest::getLeaveType)
-                                                    .findFirst()
-                                                    .orElse("On Leave");
+                                        if (seg.getStartTime().equals(seg.getEndTime()) || seg.isOnLeave()) {
+                                            continue;
                                         }
+                                        String leaveType = "";
                                         String totalHours = calculateShiftDuration(
                                                 seg.getStartTime(),
                                                 seg.getEndTime(),
                                                 modificationForShift.getThirtyMinBreaks(),
                                                 modificationForShift.getTenMinBreaks()
                                         );
-                                        export.append(String.format(
+                                        String row = String.format(
                                                 "%s\t%d\t%s %s\t%s\t%s\t%s\t%d\t%d\t%s\t%s\n",
                                                 date.format(DATE_FORMATTER),
                                                 coveringUser.getUserID(),
@@ -318,7 +316,10 @@ public class ExportToolController extends PageController {
                                                 modificationForShift.getTenMinBreaks(),
                                                 isPublicHoliday ? "Yes" : "No",
                                                 leaveType
-                                        ));
+                                        );
+                                        if (seenLines.add(row)) {
+                                            export.append(row);
+                                        }
                                     }
                                 }
                             }
@@ -347,7 +348,7 @@ public class ExportToolController extends PageController {
                                         shift.getThirtyMinBreaks(),
                                         shift.getTenMinBreaks()
                                 );
-                                export.append(String.format(
+                                String row = String.format(
                                         "%s\t%d\t%s %s\t%s\t%s\t%s\t%d\t%d\t%s\t%s\n",
                                         date.format(DATE_FORMATTER),
                                         user.getUserID(),
@@ -360,7 +361,10 @@ public class ExportToolController extends PageController {
                                         shift.getTenMinBreaks(),
                                         isPublicHoliday ? "Yes" : "No",
                                         leaveType
-                                ));
+                                );
+                                if (seenLines.add(row)) {
+                                    export.append(row);
+                                }
                             }
                         }
                     }
@@ -401,7 +405,7 @@ public class ExportToolController extends PageController {
                                         mod.getTenMinBreaks()
                                 );
 
-                                export.append(String.format(
+                                String row = String.format(
                                         "%s\t%d\t%s %s\t%s\t%s\t%s\t%d\t%d\t%s\t%s\n",
                                         date.format(DATE_FORMATTER),
                                         user.getUserID(),
@@ -414,7 +418,10 @@ public class ExportToolController extends PageController {
                                         mod.getTenMinBreaks(),
                                         isPublicHoliday ? "Yes" : "No",
                                         leaveType
-                                ));
+                                );
+                                if (seenLines.add(row)) {
+                                    export.append(row);
+                                }
                             }
                         }
                     }
@@ -560,7 +567,8 @@ public class ExportToolController extends PageController {
 
     @FXML
     public void generatePDF() {
-        LocalDate dateWithinDisplayedWeek = main.getCurrentDate();
+        LocalDate dateWithinDisplayedWeek = parent.getDatePicker().getValue();
+        System.out.println("Exporting PDF for date: " + dateWithinDisplayedWeek);
         fontBold    = PDType1Font.HELVETICA_BOLD;
         fontRegular = PDType1Font.HELVETICA;
         fontItalic  = PDType1Font.HELVETICA_OBLIQUE;
@@ -603,6 +611,16 @@ public class ExportToolController extends PageController {
                 for(Shift m:mods) if(m.getOriginalDate()!=null)
                     modMap.put(m.getShiftID()+"_"+m.getOriginalDate(),m);
 
+                List<SpecialDateObj> rawSpecials = rosterService.getSpecialDates(
+                        overallFortnightStartDate,
+                        overallFortnightEndDate
+                );
+                Map<LocalDate, String> specialDateDesc = rawSpecials.stream()
+                        .collect(Collectors.toMap(
+                                SpecialDateObj::getEventDate,
+                                SpecialDateObj::getNote,
+                                (a,b)->a  // in case two collide, just pick the first
+                        ));
                 try(PDDocument doc=new PDDocument()){
                     PDRectangle ps = PDRectangle.A4;
                     AtomicReference<PDPage> pageRef = new AtomicReference<>(new PDPage(ps));
@@ -630,7 +648,7 @@ public class ExportToolController extends PageController {
                     csRef.get().endText();
                     yRef.set(yRef.get() - WEEK_TITLE_HEIGHT);
                     yRef.set(yRef.get() - INTER_TABLE_SPACING/2);
-                    yRef.set(drawWeekTable(doc,pageRef,csRef,ps,roles,empsByRole,shifts,mods,modMap,leaves,w1,yRef,pageNum));
+                    yRef.set(drawWeekTable(doc,pageRef,csRef,ps,roles,empsByRole,shifts,mods,modMap,leaves,w1,yRef,pageNum,specialDateDesc));
 
                     yRef.set(yRef.get() - INTER_TABLE_SPACING*2);
 
@@ -653,7 +671,7 @@ public class ExportToolController extends PageController {
                     yRef.set(yRef.get() - WEEK_TITLE_HEIGHT);
 
                     yRef.set(yRef.get() - INTER_TABLE_SPACING/4);
-                    yRef.set(drawWeekTable(doc,pageRef,csRef,ps,roles,empsByRole,shifts,mods,modMap,leaves,w2,yRef,pageNum));
+                    yRef.set(drawWeekTable(doc,pageRef,csRef,ps,roles,empsByRole,shifts,mods,modMap,leaves,w2,yRef,pageNum,specialDateDesc));
 
                     csRef.get().close();
                     doc.save(file);
@@ -679,7 +697,8 @@ public class ExportToolController extends PageController {
             List<LeaveRequest> allLeaves,
             LocalDate weekStart,
             AtomicReference<Float> yRef,
-            int[] pageNum
+            int[] pageNum,
+            Map<LocalDate,String> specialDateDesc
     ) throws IOException {
         float y = yRef.get();
         float colNameW = 120;
@@ -687,7 +706,7 @@ public class ExportToolController extends PageController {
         List<LocalDate> dates = weekStart.datesUntil(weekStart.plusDays(7)).collect(Collectors.toList());
 
         // draw day-headers once
-        if (y < BOTTOM_PAGE_MARGIN_THRESHOLD + DAY_HEADER_ROW_HEIGHT + roles.size() * EMPLOYEE_ROW_HEIGHT) {
+        if (y < BOTTOM_PAGE_MARGIN_THRESHOLD + DAY_HEADER_ROW_HEIGHT + DAY_HEADER_DESC_HEIGHT + roles.size() * EMPLOYEE_ROW_HEIGHT) {
             // new page (no headers)
             y = startNewPageAndContextHeaders(
                     doc,
@@ -704,8 +723,8 @@ public class ExportToolController extends PageController {
             );
             y = yRef.get();  // sync local y with ref
         }
-        drawDayHeaders(csRef.get(), dates, colNameW, colDateW, y);
-        y -= DAY_HEADER_ROW_HEIGHT;
+        drawDayHeaders(csRef.get(), dates, colNameW, colDateW, y, specialDateDesc);
+        y -= (DAY_HEADER_ROW_HEIGHT + DAY_HEADER_DESC_HEIGHT);
         float tableTop = y;
 
         for (String role : roles) {
@@ -733,8 +752,8 @@ public class ExportToolController extends PageController {
                         true           // draw week title only
                 );
                 y = yRef.get();  // sync local y with ref
-                drawDayHeaders(csRef.get(), dates, colNameW, colDateW, y);
-                y -= DAY_HEADER_ROW_HEIGHT;
+                drawDayHeaders(csRef.get(), dates, colNameW, colDateW, y, specialDateDesc);
+                y -= (DAY_HEADER_ROW_HEIGHT + DAY_HEADER_DESC_HEIGHT);
             }
             // — divider row: show role as one big merged cell, centered
             csRef.get().setFont(fontBold, ROLE_DIVIDER_FONT_SIZE);
@@ -774,16 +793,33 @@ public class ExportToolController extends PageController {
 
             // employee rows
             for (User u : withShifts) {
-                if (y < BOTTOM_PAGE_MARGIN_THRESHOLD + EMPLOYEE_ROW_HEIGHT) {
+                // 1) Build a list of "lines" needed each day:
+                List<Integer> linesPerDay = dates.stream().map(d -> {
+                    // gather all segments (work + leave) for that user+date
+                    List<ShiftSegment> segs = findAllShiftsForDate(u, d, allShifts, allMods, modMap).stream()
+                            .flatMap(s -> buildShiftSegments(s, d, allLeaves).stream())
+                            .filter(seg -> !seg.getStartTime().equals(seg.getEndTime()))
+                            .toList();
+                    // if they had zero segments, we'll still draw one “empty” line
+                    return segs.isEmpty() ? 1 : segs.size();
+                }).toList();
+
+                int maxLines = linesPerDay.stream().mapToInt(Integer::intValue).max().orElse(1);
+
+                // 2) translate that into a row-height:
+                float leading = SHIFT_TIME_FONT_SIZE + 2f;               // same leading you use in drawSegmentsInCell
+                float dynamicRowHeight = CELL_PADDING * 2 + maxLines * leading;
+
+                if (y < BOTTOM_PAGE_MARGIN_THRESHOLD + dynamicRowHeight) {
                     // finish verticals + horizontal bottom
-                    drawVerticalTableLines(csRef.get(), tableTop, y + EMPLOYEE_ROW_HEIGHT, colNameW, colDateW, dates.size());
+                    drawVerticalTableLines(csRef.get(), tableTop, y + dynamicRowHeight, colNameW, colDateW, dates.size());
                     y = startNewPageAndContextHeaders(doc, pageRef, csRef, ps, pageNum, yRef, null, null, dates, false, false);
-                    drawDayHeaders(csRef.get(), dates, colNameW, colDateW, y);
-                    y -= DAY_HEADER_ROW_HEIGHT;
+                    drawDayHeaders(csRef.get(), dates, colNameW, colDateW, y, specialDateDesc);
+                    y -= (DAY_HEADER_ROW_HEIGHT + DAY_HEADER_DESC_HEIGHT);
                     tableTop = y;
                 }
                 float rowTop = y;
-                float yPosName = rowTop - (EMPLOYEE_ROW_HEIGHT + EMPLOYEE_NAME_FONT_SIZE) / 2;
+                float yPosName = rowTop - (dynamicRowHeight + EMPLOYEE_NAME_FONT_SIZE) / 2;
                 // name & role
                 csRef.get().beginText();
                 csRef.get().setFont(fontRegular, EMPLOYEE_NAME_FONT_SIZE);
@@ -793,38 +829,23 @@ public class ExportToolController extends PageController {
                 float x = MARGIN + colNameW;
                 for (LocalDate d : dates) {
                     String text = "-";
-                    boolean leave = allLeaves.stream().anyMatch(l -> l.getUserID() == u.getUserID()
-                            && !d.isBefore(l.getFromDate().toLocalDate()) && !d.isAfter(l.getToDate().toLocalDate()));
-                    if (leave) text = "LEAVE";
-                    else {
-                        List<Shift> shiftsForDay = findAllShiftsForDate(u, d, allShifts, allMods, modMap);
-
-                        // build simple TimeRange list
-                        List<TimeRange> ranges = shiftsForDay.stream()
-                                .map(sft -> new TimeRange(sft.getShiftStartTime(), sft.getShiftEndTime()))
-                                .collect(Collectors.toList());
-
-                        // merge any that butt‐up
-                        List<TimeRange> merged = mergeContiguous(ranges);
-
-                        // format each into a line
-                        List<String> lines = merged.stream()
-                                .map(r -> formatTime(r.start) + " - " + formatTime(r.end))
-                                .collect(Collectors.toList());
-
-                        // join with newline (or comma, if you prefer)
-                        text = String.join("\n", lines);
-                    }
-                    drawTextInCell(csRef.get(), text, leave ? fontItalic : fontRegular, SHIFT_TIME_FONT_SIZE,
-                            x, rowTop - EMPLOYEE_ROW_HEIGHT, colDateW, EMPLOYEE_ROW_HEIGHT, true);
+                    // 1) collect all “raw” shifts for this user+date
+                    List<Shift> dateShifts = findAllShiftsForDate(u, d, allShifts, allMods, modMap);
+                    // 2) split them into segments (so leave segments are flagged)
+                    List<ShiftSegment> segments = dateShifts.stream()
+                        .flatMap(s -> buildShiftSegments(s, d, allLeaves).stream())
+                        .filter(seg -> !seg.getStartTime().equals(seg.getEndTime()))
+                        .collect(Collectors.toList());
+                    // 3) draw each segment in the cell, italic if on leave
+                    drawSegmentsInCell(csRef.get(), segments, x, rowTop - dynamicRowHeight, colDateW, dynamicRowHeight);
                     x += colDateW;
                 }
                 // bottom border
                 csRef.get().setLineWidth(0.25f);
-                csRef.get().moveTo(MARGIN, rowTop - EMPLOYEE_ROW_HEIGHT);
-                csRef.get().lineTo(MARGIN + colNameW + colDateW * dates.size(), rowTop - EMPLOYEE_ROW_HEIGHT);
+                csRef.get().moveTo(MARGIN, rowTop - dynamicRowHeight);
+                csRef.get().lineTo(MARGIN + colNameW + colDateW * dates.size(), rowTop - dynamicRowHeight);
                 csRef.get().stroke();
-                y -= EMPLOYEE_ROW_HEIGHT;
+                y -= dynamicRowHeight;
 
                 float groupBottom = y;
                 drawVerticalTableLines(csRef.get(), groupTop, groupBottom, colNameW, colDateW, dates.size());
@@ -859,10 +880,12 @@ public class ExportToolController extends PageController {
             );
             if (!onDate) continue;
 
-            // if there’s a “move‐away” mod for this instance, skip it:
-            String key = s.getShiftID() + "_" + date.toString();
+            String key = s.getShiftID() + "_" + date;
             Shift move = modMap.get(key);
-            if (move!=null && (move.getShiftStartDate()==null || !move.getShiftStartDate().equals(date))) {
+            if (move != null) {
+                // there is a modification for this exact original‐shift instance—
+                // whether it stayed on this day (just had its time changed) or
+                // was moved elsewhere—so skip the original entirely.
                 continue;
             }
             result.add(s);
@@ -918,22 +941,57 @@ public class ExportToolController extends PageController {
     }
 
 
-    private void drawDayHeaders(PDPageContentStream cs, List<LocalDate> datesInWeek,
-                                float empColW, float dateColW, float headerTopY) throws IOException {
-        float currentX = MARGIN;
-        // Employee column header text
-        drawTextInCell(cs, "Employee", fontBold, DAY_HEADER_FONT_SIZE, currentX, headerTopY - DAY_HEADER_ROW_HEIGHT, empColW, DAY_HEADER_ROW_HEIGHT, false);
-        currentX += empColW;
+    private void drawDayHeaders(PDPageContentStream cs,
+                                List<LocalDate> datesInWeek,
+                                float empColW,
+                                float dateColW,
+                                float headerTopY,
+                                Map<LocalDate,String> specialDateDesc) throws IOException {
+        float x = MARGIN;
+        // Employee column
+        drawTextInCell(cs, "Employee", fontBold,
+                DAY_HEADER_FONT_SIZE,
+                x, headerTopY - DAY_HEADER_ROW_HEIGHT,
+                empColW, DAY_HEADER_ROW_HEIGHT + DAY_HEADER_DESC_HEIGHT,
+                false);
+        x += empColW;
 
-        DateTimeFormatter dateFmtHeader = DateTimeFormatter.ofPattern("EEE dd/MM", Locale.ENGLISH);
+        DateTimeFormatter headerFmt = DateTimeFormatter.ofPattern("EEE dd/MM", Locale.ENGLISH);
+
         for (LocalDate date : datesInWeek) {
-            drawTextInCell(cs, date.format(dateFmtHeader), fontBold, DAY_HEADER_FONT_SIZE,
-                    currentX, headerTopY - DAY_HEADER_ROW_HEIGHT, dateColW, DAY_HEADER_ROW_HEIGHT, true);
-            currentX += dateColW;
+            // 1) draw the date (bold)
+            drawTextInCell(cs,
+                    date.format(headerFmt),
+                    fontBold,
+                    DAY_HEADER_FONT_SIZE,
+                    x, headerTopY - DAY_HEADER_ROW_HEIGHT,
+                    dateColW,
+                    DAY_HEADER_ROW_HEIGHT + DAY_HEADER_DESC_HEIGHT,
+                    true);
+
+            // 2) then look up & draw the italic description (if any)
+            String desc = specialDateDesc.get(date);
+            if (desc != null && !desc.isBlank()) {
+                // center it
+                cs.beginText();
+                cs.setFont(fontItalic, DAY_HEADER_DESC_FONT_SIZE);
+                float w = fontItalic.getStringWidth(desc) / 1000 * DAY_HEADER_DESC_FONT_SIZE;
+                float tx = x + (dateColW - w) / 2;
+                // y = headerTopY - DAY_HEADER_ROW_HEIGHT - DAY_HEADER_DESC_FONT_SIZE
+                float ty = headerTopY - DAY_HEADER_ROW_HEIGHT - (DAY_HEADER_DESC_FONT_SIZE);
+                cs.newLineAtOffset(tx, ty);
+                cs.showText(desc);
+                cs.endText();
+            }
+
+            x += dateColW;
         }
-        cs.setLineWidth(0.5f); // Line below day headers
-        cs.moveTo(MARGIN, headerTopY - DAY_HEADER_ROW_HEIGHT);
-        cs.lineTo(MARGIN + empColW + (dateColW * datesInWeek.size()), headerTopY - DAY_HEADER_ROW_HEIGHT);
+
+        // draw the horizontal line under both rows
+        float yLine = headerTopY - (DAY_HEADER_ROW_HEIGHT + DAY_HEADER_DESC_HEIGHT);
+        cs.setLineWidth(0.5f);
+        cs.moveTo(MARGIN, yLine);
+        cs.lineTo(MARGIN + empColW + dateColW * datesInWeek.size(), yLine);
         cs.stroke();
     }
 
@@ -972,7 +1030,7 @@ public class ExportToolController extends PageController {
         if (datesInWeek != null) {
             float employeeColWidth = 120; // Must match usage in drawTableForRoleGroup
             float dateColWidth = (pS.getWidth() - (2 * MARGIN) - employeeColWidth) / 7;
-            drawDayHeaders(csR.get(), datesInWeek, employeeColWidth, dateColWidth, currentY);
+            drawDayHeaders(csR.get(), datesInWeek, employeeColWidth, dateColWidth, currentY, null);
             currentY -= DAY_HEADER_ROW_HEIGHT;
         }
         cY.set(currentY);
@@ -1098,6 +1156,47 @@ public class ExportToolController extends PageController {
         }
         out.add(curr);
         return out;
+    }
+
+    private void drawSegmentsInCell(PDPageContentStream cs,
+                                    List<ShiftSegment> segments,
+                                    float cellX,
+                                    float cellBottomY,
+                                    float cellWidth,
+                                    float cellHeight) throws IOException {
+        // We'll always space lines based on the normal SHIFT_TIME_FONT_SIZE,
+        // so that leave lines don't overlap.
+        float leading = SHIFT_TIME_FONT_SIZE + 2f;
+        float blockHeight = segments.size() * leading;
+        // y‐origin for the *first* line
+        float yStart = cellBottomY
+                + (cellHeight - blockHeight) / 2
+                + (leading - SHIFT_TIME_FONT_SIZE);
+
+        for (int i = 0; i < segments.size(); i++) {
+            ShiftSegment seg = segments.get(i);
+            boolean onLeave = seg.isOnLeave();
+            // choose font & size
+            PDType1Font font = onLeave ? fontItalic : fontRegular;
+            float fontSize = onLeave ? LEAVE_SHIFT_TIME_FONT_SIZE : SHIFT_TIME_FONT_SIZE;
+
+            // build the display text
+            String times = formatTime(seg.getStartTime()) + " - " + formatTime(seg.getEndTime());
+            String line = onLeave ? "(" + times + ")" : times;
+
+            // measure width at this font size
+            float textWidth = font.getStringWidth(line) / 1000 * fontSize;
+            float xPos = cellX + (cellWidth - textWidth) / 2;
+
+            // stack lines from top of the block downward
+            float yPos = yStart + (segments.size() - 1 - i) * leading;
+
+            cs.beginText();
+            cs.setFont(font, fontSize);
+            cs.newLineAtOffset(xPos, yPos);
+            cs.showText(line);
+            cs.endText();
+        }
     }
 
     private static class TimeRange {

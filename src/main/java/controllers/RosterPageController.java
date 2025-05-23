@@ -1037,4 +1037,8 @@ public class RosterPageController extends PageController {
 
         return segments;
     }
+
+    public MFXDatePicker getDatePicker() {
+        return datePkr;
+    }
 }
