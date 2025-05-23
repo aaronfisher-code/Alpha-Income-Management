@@ -568,7 +568,6 @@ public class ExportToolController extends PageController {
     @FXML
     public void generatePDF() {
         LocalDate dateWithinDisplayedWeek = parent.getDatePicker().getValue();
-        System.out.println("Exporting PDF for date: " + dateWithinDisplayedWeek);
         fontBold    = PDType1Font.HELVETICA_BOLD;
         fontRegular = PDType1Font.HELVETICA;
         fontItalic  = PDType1Font.HELVETICA_OBLIQUE;
