@@ -18,6 +18,7 @@ import javafx.beans.binding.StringBinding;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
@@ -27,6 +28,8 @@ import javafx.scene.control.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.*;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
@@ -109,6 +112,29 @@ public class InvoiceEntryController extends DateSelectController{
 		}catch(IOException ex){
 			dialogPane.showError("Error","An error occurred while initialising the invoice service",ex);
 		}
+
+		contentDarken.setMouseTransparent(true);
+		StackPane rootPane = (StackPane) contentDarken.getParent();
+		rootPane.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
+			if (contentDarken.isVisible()) {
+				Node clicked = event.getPickResult().getIntersectedNode();
+				boolean inInvoice = isInside(addInvoicePopover, clicked);
+				boolean inCredit  = isInside(addCreditPopover, clicked);
+
+				if (!inInvoice && !inCredit) {
+					closeInvoicePopover();
+					closeCreditPopover();
+				}
+			}
+		});
+	}
+
+	private boolean isInside(Node parent, Node child) {
+		while(child != null) {
+			if (child == parent) return true;
+			child = child.getParent();
+		}
+		return false;
 	}
 
 	@Override
