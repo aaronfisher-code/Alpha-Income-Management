@@ -48,6 +48,7 @@ public class MonthlySummaryController extends DateSelectController{
 	@FXML private TableColumn<?, ?> tillBalanceCol;
 	@FXML private TableColumn<?, ?> totalIncomeCol;
 	@FXML private TableColumn<?, ?> wagesCol;
+	@FXML private TableColumn<?, ?> outgoingsCol;
 	@FXML private TableColumn<?, ?> zReportProfitCol;
 	@FXML private TableColumn<MonthlySummaryDataPoint,String> runningTillBalanceCol;
 	@FXML private TableView<MonthlySummaryDataPoint> totalsTable;
@@ -68,6 +69,7 @@ public class MonthlySummaryController extends DateSelectController{
 	@FXML private TableColumn<?, ?> totalsTillBalanceCol;
 	@FXML private TableColumn<?, ?> totalsTotalIncomeCol;
 	@FXML private TableColumn<?, ?> totalsWagesCol;
+	@FXML private TableColumn<?, ?> totalsOutgoingsCol;
 	@FXML private TableColumn<?, ?> totalsZReportProfitCol;
 	@FXML private TableColumn<MonthlySummaryDataPoint,String> totalsRunningTillBalanceCol;
 	@FXML private Button exportDataButton;
@@ -172,6 +174,7 @@ public class MonthlySummaryController extends DateSelectController{
 		totalsGpDollarCol.prefWidthProperty().bind(gpDollarCol.widthProperty());
 		totalsGpPercentCol.prefWidthProperty().bind(gpPercentCol.widthProperty());
 		totalsWagesCol.prefWidthProperty().bind(wagesCol.widthProperty());
+		totalsOutgoingsCol.prefWidthProperty().bind(outgoingsCol.widthProperty());
 		totalsRentAndOutgoingsCol.prefWidthProperty().bind(rentAndOutgoingsCol.widthProperty());
 		totalsRunningZProfitCol.prefWidthProperty().bind(runningZProfitCol.widthProperty());
 		totalsZReportProfitCol.prefWidthProperty().bind(zReportProfitCol.widthProperty());

@@ -22,7 +22,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane fx:id="backgroundPane" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.MonthlySummaryController">
+<StackPane fx:id="backgroundPane" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.MonthlySummaryController">
    <children>
       <BorderPane style="-fx-background-color: TRANSPARENT;">
          <center>
@@ -97,7 +97,7 @@
                            </graphic></TableColumn>
                         <TableColumn fx:id="rentAndOutgoingsCol" prefWidth="75.0" sortable="false" styleClass="orangeColumn">
                            <graphic>
-                              <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="100.0" minWidth="100.0" style="-fx-background-color: #fabf8f;" styleClass="orangeHeader" text="RENT AND&#10;OUTGOINGS">
+                              <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="100.0" minWidth="100.0" style="-fx-background-color: #fabf8f;" styleClass="orangeHeader" text="RENT &#10;(INCL BUILDING&#10;OUTGOINGS)">
                                  <padding>
                                     <Insets bottom="4.0" left="4.0" right="4.0" top="4.0" />
                                  </padding>
@@ -105,12 +105,21 @@
                            </graphic></TableColumn>
                         <TableColumn fx:id="wagesCol" prefWidth="75.0" sortable="false" styleClass="orangeColumn">
                            <graphic>
-                              <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="100.0" minWidth="100.0" style="-fx-background-color: #fabf8f;" styleClass="orangeHeader" text="WAGES">
+                              <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="100.0" minWidth="100.0" style="-fx-background-color: #fabf8f;" styleClass="orangeHeader" text="WAGES&#10;(EXCL SUPER)">
                                  <padding>
                                     <Insets bottom="4.0" left="4.0" right="4.0" top="4.0" />
                                  </padding>
                               </Label>
                            </graphic></TableColumn>
+                        <TableColumn fx:id="outgoingsCol" prefWidth="75.0" sortable="false" styleClass="orangeColumn">
+                           <graphic>
+                              <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="100.0" minWidth="100.0" style="-fx-background-color: #fabf8f;" styleClass="orangeHeader" text="OUTGOINGS">
+                                 <padding>
+                                    <Insets bottom="4.0" left="4.0" right="4.0" top="4.0" />
+                                 </padding>
+                              </Label>
+                           </graphic>
+                        </TableColumn>
                         <TableColumn fx:id="zReportProfitCol" prefWidth="75.0" sortable="false" styleClass="redColumn">
                            <graphic>
                               <Label alignment="CENTER" contentDisplay="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="100.0" minWidth="100.0" style="-fx-background-color: #e06666;" styleClass="redHeader" text="Z REPORT&#10;PROFIT">
@@ -165,6 +174,7 @@
                         <TableColumn fx:id="totalsGpPercentCol" prefWidth="75.0" sortable="false" styleClass="greenColumn" />
                         <TableColumn fx:id="totalsRentAndOutgoingsCol" prefWidth="75.0" sortable="false" styleClass="greenColumn" />
                         <TableColumn fx:id="totalsWagesCol" prefWidth="75.0" sortable="false" styleClass="greenColumn" />
+                        <TableColumn fx:id="totalsOutgoingsCol" prefWidth="75.0" sortable="false" styleClass="greenColumn" />
                         <TableColumn fx:id="totalsZReportProfitCol" prefWidth="75.0" sortable="false" styleClass="greenColumn" />
                         <TableColumn fx:id="totalsRunningZProfitCol" prefWidth="75.0" sortable="false" styleClass="greenColumn" />
                         <TableColumn fx:id="totalsTillBalanceCol" prefWidth="75.0" sortable="false" styleClass="greenColumn" />
