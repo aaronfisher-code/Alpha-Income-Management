@@ -54,9 +54,14 @@ public class AccountPaymentService {
     }
 
     public void updateAccountPayment(String originalInvoiceNo, AccountPayment payment) {
-        String url = apiBaseUrl + "/" + URLEncoder.encode(originalInvoiceNo, StandardCharsets.UTF_8);
-        HttpEntity<AccountPayment> entity = new HttpEntity<>(payment, createHeaders());
-        restTemplate.exchange(url, HttpMethod.PUT, entity, Void.class);
+        String urlTemplate = apiBaseUrl + "/{originalInvoiceNo}";
+        restTemplate.exchange(
+                urlTemplate,
+                HttpMethod.PUT,
+                new HttpEntity<>(payment, createHeaders()),
+                Void.class,
+                originalInvoiceNo   // RestTemplate will encode the '@' → "%40" exactly once
+        );
     }
 
     public void deleteAccountPayment(int storeId, String invoiceNumber) {
