@@ -1,6 +1,7 @@
 package controllers;
 
 import io.github.palexdev.materialfx.controls.MFXComboBox;
+import io.github.palexdev.materialfx.controls.MFXDatePicker;
 import io.github.palexdev.materialfx.controls.MFXProgressBar;
 import io.github.palexdev.materialfx.controls.MFXTextField;
 import javafx.concurrent.Task;
@@ -43,6 +44,8 @@ public class ExportToolController extends PageController {
     private MFXProgressBar progressBarExcel;
     @FXML
     private MFXProgressBar progressBarPDF;
+    @FXML
+    private MFXDatePicker pdfStartDatePicker;
 
     private RosterPageController parent;
     private RosterService rosterService;
@@ -108,6 +111,9 @@ public class ExportToolController extends PageController {
         // Set default value to current month and year
         monthPicker.selectItem(new DateFormatSymbols().getMonths()[LocalDate.now().getMonthValue() - 1]);
         yearPicker.setText(String.valueOf(LocalDate.now().getYear()));
+
+        // Set default date for PDF export
+        pdfStartDatePicker.setValue(parent.getDatePicker().getValue().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)));
     }
 
     private String calculateShiftDuration(LocalTime startTime, LocalTime endTime, int thirtyMinBreaks, int tenMinBreaks) {
@@ -567,16 +573,12 @@ public class ExportToolController extends PageController {
 
     @FXML
     public void generatePDF() {
-        LocalDate dateWithinDisplayedWeek = parent.getDatePicker().getValue();
         fontBold    = PDType1Font.HELVETICA_BOLD;
         fontRegular = PDType1Font.HELVETICA;
         fontItalic  = PDType1Font.HELVETICA_OBLIQUE;
 
         // compute fortnight
-        LocalDate weekStart = dateWithinDisplayedWeek.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-        LocalDate epoch    = LocalDate.of(2000,1,3);
-        long idx = ChronoUnit.DAYS.between(epoch,weekStart) / 14;
-        overallFortnightStartDate = epoch.plusDays(idx*14);
+        overallFortnightStartDate = pdfStartDatePicker.getValue().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         overallFortnightEndDate   = overallFortnightStartDate.plusDays(13);
 
         FileChooser chooser = new FileChooser();
