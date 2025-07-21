@@ -387,6 +387,8 @@ public class MonthlySummaryController extends DateSelectController{
 						.map(AccountPaymentContactDataPoint::getTotalValue)
 						.orElse(0.0);
 				outString.append(NumberFormat.getCurrencyInstance(Locale.US).format(totalIncome + medicareIncome + cpaIncome + lanternPayIncome + pharmaProgramsIncome + otherIncome)).append("\t");
+				// Actual Average T/over (incl other income)
+				outString.append(NumberFormat.getCurrencyInstance(Locale.US).format((totalIncome + medicareIncome + cpaIncome + lanternPayIncome + pharmaProgramsIncome + otherIncome) / rosterUtils.getOpenDays())).append("\t");
 				//Actual GP ($) (incl other income)
 				outString.append(NumberFormat.getCurrencyInstance(Locale.US).format((totalGP+medicareIncome)+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome)).append("\t");
 				//Actual Average GP (incl other income)
@@ -435,10 +437,16 @@ public class MonthlySummaryController extends DateSelectController{
 				outString.append(NumberFormat.getCurrencyInstance(Locale.US).format(totalExpenses)).append("\t");
 				//Average Expenses
 				outString.append(NumberFormat.getCurrencyInstance(Locale.US).format(totalExpenses/rosterUtils.getOpenDays())).append("\t");
+				//Rent (Incl building outgoings)
+				outString.append(NumberFormat.getCurrencyInstance(Locale.US).format(Double.parseDouble(totalsTable.getItems().getFirst().getRentAndOutgoingsValue().replace("$", "").replace(",", "")))).append("\t");
+				//Wages
+				outString.append(NumberFormat.getCurrencyInstance(Locale.US).format(Double.parseDouble(totalsTable.getItems().getFirst().getWagesValue().replace("$", "").replace(",", "")))).append("\t");
 				//% wages
 				outString.append(String.format("%.2f", 100 * Double.parseDouble(totalsTable.getItems().getFirst().getWagesValue().replace("$", "").replace(",", "")) / totalIncome)).append("%").append("\t");
+				//Outgoings
+				outString.append(NumberFormat.getCurrencyInstance(Locale.US).format(Double.parseDouble(totalsTable.getItems().getFirst().getOutgoingsValue().replace("$", "").replace(",", "")))).append("\t");
 				//% outgoings
-				outString.append(String.format("%.2f", 100 * Double.parseDouble(totalsTable.getItems().getFirst().getRentAndOutgoingsValue().replace("$", "").replace(",", "")) / totalIncome)).append("%").append("\t");
+				outString.append(String.format("%.2f", 100 * Double.parseDouble(totalsTable.getItems().getFirst().getOutgoingsValue().replace("$", "").replace(",", "")) / totalIncome)).append("%").append("\t");
 				//6CPA Income
 				outString.append(NumberFormat.getCurrencyInstance(Locale.US).format(cpaIncome)).append("\t");
 				//Lantern Pay Income
@@ -458,7 +466,9 @@ public class MonthlySummaryController extends DateSelectController{
 				//GP (banked income - Invoiced COGs + Stock not sold)
 				outString.append(NumberFormat.getCurrencyInstance(Locale.US).format((totalIncome+medicareIncome+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome-totalCOGS)+(endStockOnHand-initialStockOnHand))).append("\t");
 				//Profit (as per Xero)
-				outString.append(NumberFormat.getCurrencyInstance(Locale.US).format((totalIncome+medicareIncome+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome-totalCOGS)+(endStockOnHand-initialStockOnHand)-totalExpenses)).append("\r\n");
+				outString.append(NumberFormat.getCurrencyInstance(Locale.US).format((totalIncome+medicareIncome+cpaIncome+lanternPayIncome+pharmaProgramsIncome+otherIncome-totalCOGS)+(endStockOnHand-initialStockOnHand)-totalExpenses)).append("\t");
+				// Days in month
+				outString.append(String.format("%.2f", Double.parseDouble(totalsTable.getItems().getFirst().getDateDurationValue()))).append("\r\n");
 				return outString.toString();
 			}
 		};
@@ -510,8 +520,9 @@ public class MonthlySummaryController extends DateSelectController{
 				sb.append("Total Income (In-store sales only)").append("\t");
 				sb.append("GP $").append("\t");
 				sb.append("GP %").append("\t");
-				sb.append("Rent and Outgoings").append("\t");
-				sb.append("Wages").append("\t");
+				sb.append("Rent (Incl Building Outgoings)").append("\t");
+				sb.append("Wages (Excl Super)").append("\t");
+				sb.append("Outgoings").append("\t");
 				sb.append("Z Report Profit").append("\t");
 				sb.append("Running Z Profit").append("\t");
 				sb.append("Till Balance").append("\t");
