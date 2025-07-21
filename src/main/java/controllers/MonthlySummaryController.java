@@ -131,6 +131,7 @@ public class MonthlySummaryController extends DateSelectController{
 		zReportProfitCol.setCellValueFactory(new PropertyValueFactory<>("zReportProfitString"));
 		tillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("tillBalanceString"));
 		runningTillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("runningTillBalanceString"));
+		outgoingsCol.setCellValueFactory(new PropertyValueFactory<>("outgoingsString"));
 		TableUtils.resizeTableColumns(summaryTable,runningTillBalanceCol);
 		for(TableColumn<?, ?> tc: summaryTable.getColumns()){
 			if(tc.getGraphic()!=null){
@@ -160,6 +161,7 @@ public class MonthlySummaryController extends DateSelectController{
 		totalsZReportProfitCol.setCellValueFactory(new PropertyValueFactory<>("zReportProfitValue"));
 		totalsTillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("tillBalanceValue"));
 		totalsRunningTillBalanceCol.setCellValueFactory(new PropertyValueFactory<>("runningTillBalanceValue"));
+		totalsOutgoingsCol.setCellValueFactory(new PropertyValueFactory<>("outgoingsValue"));
 		totalsDateCol.prefWidthProperty().bind(dateCol.widthProperty());
 		totalsDurationCol.prefWidthProperty().bind(durationCol.widthProperty());
 		totalsCustomersCol.prefWidthProperty().bind(customersCol.widthProperty());
@@ -180,6 +182,7 @@ public class MonthlySummaryController extends DateSelectController{
 		totalsZReportProfitCol.prefWidthProperty().bind(zReportProfitCol.widthProperty());
 		totalsTillBalanceCol.prefWidthProperty().bind(tillBalanceCol.widthProperty());
 		totalsRunningTillBalanceCol.prefWidthProperty().bind(runningTillBalanceCol.widthProperty());
+		totalsOutgoingsCol.prefWidthProperty().bind(outgoingsCol.widthProperty());
 		totalsTable.setFixedCellSize(25.0);
 		totalsTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
 		Platform.runLater(() -> {
@@ -251,15 +254,17 @@ public class MonthlySummaryController extends DateSelectController{
 				double monthlyRent = 0;
 				double dailyOutgoings = 0;
 				double monthlyWages = 0;
+				double monthlyBuildingOutgoings = 0;
 				if (currentBudgetAndExpensesDataPoint != null) {
 					monthlyRent = currentBudgetAndExpensesDataPoint.getMonthlyRent();
 					dailyOutgoings = currentBudgetAndExpensesDataPoint.getDailyOutgoings();
 					monthlyWages = currentBudgetAndExpensesDataPoint.getMonthlyWages();
+					monthlyBuildingOutgoings = currentBudgetAndExpensesDataPoint.getBuildingOutgoings();
 				}
 				double totalOpenDuration = rosterUtils.getOpenDuration();
 				for (int i = 1; i <= daysInMonth; i++) {
 					LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(), i);
-					monthlySummaryPoints.add(new MonthlySummaryDataPoint(d, currentTillReportDataPoints, currentEODDataPoints, monthlySummaryPoints, rosterUtils, monthlyRent, dailyOutgoings, totalOpenDuration, monthlyWages));
+					monthlySummaryPoints.add(new MonthlySummaryDataPoint(d, currentTillReportDataPoints, currentEODDataPoints, monthlySummaryPoints, rosterUtils, monthlyRent, dailyOutgoings, totalOpenDuration, monthlyWages, monthlyBuildingOutgoings));
 				}
 				if (isCancelled()) return null;
 				Platform.runLater(() -> {

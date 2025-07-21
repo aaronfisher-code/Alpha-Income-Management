@@ -32,6 +32,7 @@ public class MonthlySummaryDataPoint {
 	private double runningZProfit;
 	private double tillBalance;
 	private double runningTillBalance;
+	private double outgoings;
 
 	private String dateValue;
 	private String dateDurationValue;
@@ -52,12 +53,13 @@ public class MonthlySummaryDataPoint {
 	private String runningZProfitValue;
 	private String tillBalanceValue;
 	private String runningTillBalanceValue;
+	private String outgoingsValue;
 
 
 	private double grossProfitDollars;
 	private double govtRecovery;
 	private double totalGovtContribution;
-	public MonthlySummaryDataPoint(LocalDate dayOfMonth, ObservableList<TillReportDataPoint> currentTillReportDataPoints, ObservableList<EODDataPoint> currentEODDataPoints, ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints, RosterUtils rosterUtils, double monthlyRent, double dailyOutgoing, double openDuration, double monthlyWages){
+	public MonthlySummaryDataPoint(LocalDate dayOfMonth, ObservableList<TillReportDataPoint> currentTillReportDataPoints, ObservableList<EODDataPoint> currentEODDataPoints, ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints, RosterUtils rosterUtils, double monthlyRent, double dailyOutgoing, double openDuration, double monthlyWages, double monthlyBuildingOutgoings){
 		date = dayOfMonth;
 		this.dayDuration = rosterUtils.getDayDuration(date);
 		double totalTakings = 0;
@@ -103,8 +105,8 @@ public class MonthlySummaryDataPoint {
 		gpDollars = grossProfitDollars+govtRecovery-totalGovtContribution;
 		gpPercentage = gpDollars/totalIncome;
 
-		rentAndOutgoings = ((monthlyRent/openDuration)*this.dayDuration) + (((dailyOutgoing*rosterUtils.getTotalDays())/openDuration)*this.dayDuration);
-
+		rentAndOutgoings = ((monthlyRent+monthlyBuildingOutgoings)/openDuration)*this.dayDuration;
+		outgoings = (dailyOutgoing*rosterUtils.getTotalDays())/openDuration*this.dayDuration;
 		wages = ((monthlyWages/openDuration)*this.dayDuration);
 		zReportProfit = gpDollars-rentAndOutgoings-wages;
 		runningZProfit = 0;
@@ -135,6 +137,7 @@ public class MonthlySummaryDataPoint {
 			gpPercentageValue = "-";
 			rentAndOutgoingsValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getRentAndOutgoings).sum());
 			wagesValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getWages).sum());
+			outgoingsValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getOutgoings).sum());
 			zReportProfitValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getZReportProfit).sum());
 			runningZProfitValue = "-";
 			tillBalanceValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTillBalance).sum());
@@ -166,6 +169,7 @@ public class MonthlySummaryDataPoint {
 				gpPercentageValue = "-";
 			}
 			rentAndOutgoingsValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getRentAndOutgoings).sum()/openDuration);
+			outgoingsValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getOutgoings).sum()/openDuration);
 			wagesValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getWages).sum()/openDuration);
 			zReportProfitValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getZReportProfit).sum()/openDuration);
 			runningZProfitValue = "-";
@@ -497,5 +501,22 @@ public class MonthlySummaryDataPoint {
 
 	public String getRunningTillBalanceValue() {
 		return runningTillBalanceValue;
+	}
+
+	public String getOutgoingsValue() {
+		return outgoingsValue;
+	}
+	public void setOutgoingsValue(String outgoingsValue) {
+		this.outgoingsValue = outgoingsValue;
+	}
+	public double getOutgoings() {
+		return outgoings;
+	}
+	public void setOutgoings(double outgoings) {
+		this.outgoings = outgoings;
+	}
+
+	public String getOutgoingsString() {
+		return (outgoings == 0)?"": NumberFormat.getCurrencyInstance(Locale.US).format(outgoings);
 	}
 }
