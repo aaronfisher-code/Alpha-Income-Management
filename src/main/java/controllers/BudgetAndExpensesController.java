@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 
 public class BudgetAndExpensesController extends DateSelectController{
 
-	@FXML private MFXTextField numDaysField,numOpenDaysField,numPartialDaysField,dailyRentField,totalAvgField,monthlyRentField,dailyOutgoingsField,monthlyLoanField,monthlyWagesField;
+	@FXML private MFXTextField numDaysField,numOpenDaysField,numPartialDaysField,dailyRentField,totalAvgField,monthlyRentField,dailyOutgoingsField,buildingOutgoingsField,monthlyLoanField,monthlyWagesField;
 	@FXML private MFXTextField cpaIncomeXero, cpaIncomeSpreadsheet,cpaIncomeVariance,lanternPayIncomeXero,lanternPayIncomeSpreadsheet,lanternPayIncomeVariance,otherIncomeXero,otherIncomeSpreadsheet,otherIncomeVariance,atoGSTrefundXero;
 	@FXML private MFXButton saveButton;
 	@FXML private Label errorLabel;
@@ -69,7 +69,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 
 	@Override
 	public void fill() {
-		for (MFXTextField mfxTextField : Arrays.asList(monthlyRentField, dailyOutgoingsField, monthlyLoanField, monthlyWagesField, cpaIncomeXero, lanternPayIncomeXero, otherIncomeXero, atoGSTrefundXero)) {
+		for (MFXTextField mfxTextField : Arrays.asList(monthlyRentField, dailyOutgoingsField, buildingOutgoingsField, monthlyLoanField, monthlyWagesField, cpaIncomeXero, lanternPayIncomeXero, otherIncomeXero, atoGSTrefundXero)) {
 			if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Budget - Edit"))) {
 				ValidatorUtils.setupRegexValidation(mfxTextField,errorLabel,ValidatorUtils.CASH_REGEX,ValidatorUtils.CASH_ERROR,"$",saveButton);
 			}else{
@@ -481,7 +481,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 		}
 
 		if (data == null) {
-			Arrays.asList(monthlyRentField, dailyRentField, dailyOutgoingsField, totalAvgField,
+			Arrays.asList(monthlyRentField, dailyRentField, dailyOutgoingsField, buildingOutgoingsField, totalAvgField,
 					monthlyLoanField, monthlyWagesField, cpaIncomeXero, lanternPayIncomeXero,
 					otherIncomeXero, atoGSTrefundXero).forEach(field -> field.setText("0.00"));
 		} else {
@@ -489,6 +489,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 			monthlyRentField.setText(String.format("%.2f", monthlyRent));
 			dailyRentField.setText(String.format("%.2f", monthlyRent / (rosterUtils != null ? rosterUtils.getTotalDays() : 30)));
 			dailyOutgoingsField.setText(String.format("%.2f", data.getDailyOutgoings()));
+			buildingOutgoingsField.setText(String.format("%.2f", data.getBuildingOutgoings()));
 			totalAvgField.setText(String.format("%.2f", data.getDailyOutgoings() + (monthlyRent / (rosterUtils != null ? rosterUtils.getTotalDays() : 30))));
 			monthlyLoanField.setText(String.format("%.2f", data.getMonthlyLoan()));
 			monthlyWagesField.setText(String.format("%.2f", data.getMonthlyWages()));
@@ -634,6 +635,13 @@ public class BudgetAndExpensesController extends DateSelectController{
 				dailyOutgoingsField.setText(String.format("%.2f", Double.parseDouble(dailyOutgoingsField.getText())));
 			}
 		}
+		if(buildingOutgoingsField.isValid()) {
+			if (buildingOutgoingsField.getText().isEmpty())
+				buildingOutgoingsField.setText("0.00");
+			else {
+				buildingOutgoingsField.setText(String.format("%.2f", Double.parseDouble(buildingOutgoingsField.getText())));
+			}
+		}
 		if(monthlyRentField.isValid() && dailyOutgoingsField.isValid()) {
 			totalAvgField.setText(String.format("%.2f", Double.parseDouble(dailyOutgoingsField.getText())+(Double.parseDouble(monthlyRentField.getText())/Integer.parseInt(numDaysField.getText().split(" ")[0]))));
 		}
@@ -671,13 +679,13 @@ public class BudgetAndExpensesController extends DateSelectController{
 	public void save() {
 		updateTotals();
 		// Validate all fields
-		if (!monthlyRentField.isValid() || !dailyOutgoingsField.isValid() || !monthlyLoanField.isValid() ||
-				!cpaIncomeXero.isValid() || !lanternPayIncomeXero.isValid() || !otherIncomeXero.isValid() ||
-				!atoGSTrefundXero.isValid() || !monthlyWagesField.isValid() || !noOfScriptsTarget1.isValid() ||
-				!noOfScriptsTarget2.isValid() || !otcCustomerTarget1.isValid() || !otcCustomerTarget2.isValid() ||
-				!gpDollarTarget1.isValid() || !gpDollarTarget2.isValid() || !scriptsOnFileTarget1.isValid() ||
-				!scriptsOnFileTarget2.isValid() || !medschecksTarget1.isValid() || !medschecksTarget2.isValid() ||
-				!smsPatientsTarget1.isValid() || !smsPatientsTarget2.isValid()) {
+		if (!monthlyRentField.isValid() || !dailyOutgoingsField.isValid() || !buildingOutgoingsField.isValid() ||
+				!monthlyLoanField.isValid() || !cpaIncomeXero.isValid() || !lanternPayIncomeXero.isValid() ||
+				!otherIncomeXero.isValid() || !atoGSTrefundXero.isValid() || !monthlyWagesField.isValid() ||
+				!noOfScriptsTarget1.isValid() || !noOfScriptsTarget2.isValid() || !otcCustomerTarget1.isValid() ||
+				!otcCustomerTarget2.isValid() || !gpDollarTarget1.isValid() || !gpDollarTarget2.isValid() ||
+				!scriptsOnFileTarget1.isValid() || !scriptsOnFileTarget2.isValid() || !medschecksTarget1.isValid() ||
+				!medschecksTarget2.isValid() || !smsPatientsTarget1.isValid() || !smsPatientsTarget2.isValid()) {
 			errorLabel.setText("Please ensure all fields are valid");
 			errorLabel.setVisible(true);
 			return;
@@ -693,6 +701,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 				newData.setStoreID(main.getCurrentStore().getStoreID());
 				newData.setMonthlyRent(Double.parseDouble(monthlyRentField.getText()));
 				newData.setDailyOutgoings(Double.parseDouble(dailyOutgoingsField.getText()));
+				newData.setBuildingOutgoings(Double.parseDouble(buildingOutgoingsField.getText()));
 				newData.setMonthlyLoan(Double.parseDouble(monthlyLoanField.getText()));
 				newData.setCpaIncome(Double.parseDouble(cpaIncomeXero.getText()));
 				newData.setLanternIncome(Double.parseDouble(lanternPayIncomeXero.getText()));

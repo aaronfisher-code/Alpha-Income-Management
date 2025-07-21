@@ -7,6 +7,7 @@ public class BudgetAndExpensesDataPoint {
     private int storeID;
     private double monthlyRent;
     private double dailyOutgoings;
+    private double buildingOutgoings;
     private double monthlyLoan;
     private double cpaIncome;
     private double lanternIncome;
@@ -46,6 +47,14 @@ public class BudgetAndExpensesDataPoint {
 
     public void setDailyOutgoings(double dailyOutgoings) {
         this.dailyOutgoings = dailyOutgoings;
+    }
+
+    public double getBuildingOutgoings() {
+        return buildingOutgoings;
+    }
+
+    public void setBuildingOutgoings(double buildingOutgoings) {
+        this.buildingOutgoings = buildingOutgoings;
     }
 
     public double getMonthlyLoan() {
