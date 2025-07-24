@@ -433,7 +433,7 @@ public class MonthlySummaryController extends DateSelectController{
 				//SMS patients
 				outString.append(smsPatients).append("\t");
 				//Total Expenses
-				double totalExpenses = Double.parseDouble(totalsTable.getItems().getFirst().getRentAndOutgoingsValue().replace("$", "").replace(",", ""))+Double.parseDouble(totalsTable.getItems().getFirst().getWagesValue().replace("$", "").replace(",", ""));
+				double totalExpenses = Double.parseDouble(totalsTable.getItems().getFirst().getRentAndOutgoingsValue().replace("$", "").replace(",", ""))+Double.parseDouble(totalsTable.getItems().getFirst().getWagesValue().replace("$", "").replace(",", ""))+Double.parseDouble(totalsTable.getItems().getFirst().getOutgoingsValue().replace("$", "").replace(",", ""));
 				outString.append(NumberFormat.getCurrencyInstance(Locale.US).format(totalExpenses)).append("\t");
 				//Average Expenses
 				outString.append(NumberFormat.getCurrencyInstance(Locale.US).format(totalExpenses/rosterUtils.getOpenDays())).append("\t");
