@@ -152,7 +152,6 @@ public class InvoiceEntryController extends DateSelectController{
 		//setup credit validation
 		ValidatorUtils.setupRegexValidation(creditAFX,creditAFXValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,creditSaveButton);
 		ValidatorUtils.setupRegexValidation(creditNoField,creditNoValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,creditSaveButton);
-		ValidatorUtils.setupRegexValidation(refInvNoField,refInvNoValidationLabel,ValidatorUtils.BLANK_REGEX,ValidatorUtils.BLANK_ERROR,null,creditSaveButton);
 		ValidatorUtils.setupRegexValidation(creditDateField,creditDateValidationLabel,ValidatorUtils.DATE_REGEX,ValidatorUtils.DATE_ERROR,null,creditSaveButton);
 		ValidatorUtils.setupRegexValidation(creditAmountField,creditAmountValidationLabel,ValidatorUtils.CASH_REGEX,ValidatorUtils.CASH_ERROR,"$",creditSaveButton);
 		//setup date parsers
@@ -891,7 +890,6 @@ public class InvoiceEntryController extends DateSelectController{
 	public void addCredit() {
 		if (!creditAFX.isValid()) {creditAFX.requestFocus();}
 		else if (!creditNoField.isValid()) {creditNoField.requestFocus();}
-		else if (!refInvNoField.isValid()) {refInvNoField.requestFocus();}
 		else if (!creditDateField.isValid()) {creditDateField.requestFocus();}
 		else if (!creditAmountField.isValid()) {creditAmountField.requestFocus();}
 		else {
@@ -933,7 +931,6 @@ public class InvoiceEntryController extends DateSelectController{
 	public void editCredit(Credit credit){
 		if (!creditAFX.isValid()) {creditAFX.requestFocus();}
 		else if (!creditNoField.isValid()) {creditNoField.requestFocus();}
-		else if (!refInvNoField.isValid()) {refInvNoField.requestFocus();}
 		else if (!creditDateField.isValid()) {creditDateField.requestFocus();}
 		else if (!creditAmountField.isValid()) {creditAmountField.requestFocus();}
 		else {
