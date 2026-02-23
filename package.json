@@ -15,6 +15,7 @@
             "-Dprism.lcdtext=false"
         ],
         "javaVersion": "22",
+        "winAppDir": "AppData\\Local\\Programs",
         "jar": "target/jpackage-input/Alpha-Income.jar",
         "javafx": true,
         "title": "Alpha Income"
