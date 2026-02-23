@@ -91,7 +91,23 @@ jobs:
           npm pkg set jdeploy.jdeployVersion='${{ github.event.inputs.jdeploy_version }}'
           npm pkg set jdeploy.commitHash="$GITHUB_SHA"
           npm pkg set jdeploy.gitTag="v${{ steps.increment_version.outputs.new_version }}"
-          GITHUB_REPOSITORY=${{ github.repository }} npx 'jdeploy@${{ github.event.inputs.jdeploy_version }}' github-prepare-release
+          ATTEMPT=1
+          MAX_ATTEMPTS=5
+          until [ "$ATTEMPT" -gt "$MAX_ATTEMPTS" ]
+          do
+            echo "Running jDeploy release prep (attempt $ATTEMPT/$MAX_ATTEMPTS)"
+            if GITHUB_REPOSITORY=${{ github.repository }} npx 'jdeploy@${{ github.event.inputs.jdeploy_version }}' github-prepare-release; then
+              break
+            fi
+            if [ "$ATTEMPT" -eq "$MAX_ATTEMPTS" ]; then
+              echo "jDeploy release prep failed after $MAX_ATTEMPTS attempts"
+              exit 1
+            fi
+            SLEEP_SECONDS=$((ATTEMPT * 20))
+            echo "jDeploy release prep failed; retrying in ${SLEEP_SECONDS}s..."
+            sleep "$SLEEP_SECONDS"
+            ATTEMPT=$((ATTEMPT + 1))
+          done
         env:
           GH_TOKEN: ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}
       - name: Replace 'master' in release notes
