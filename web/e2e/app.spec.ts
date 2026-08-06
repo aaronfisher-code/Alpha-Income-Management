@@ -40,6 +40,37 @@ test('adjusts target data to the selected calendar period', async ({ page }) => 
   await expect(rows).toHaveCount((new Date(year, 1, 29).getMonth() === 1 ? 366 : 365))
 })
 
+test('scrolls side-panel forms on short screens', async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 500 })
+  await page.getByRole('link', { name: 'EOD Data Entry' }).click()
+  await page.locator('.eod-table-card tbody tr').first().dblclick()
+
+  const panelBody = page.locator('.side-panel__body')
+  await expect(panelBody).toBeVisible()
+  await expect.poll(() => panelBody.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true)
+  await panelBody.evaluate((element) => element.scrollTo({ top: element.scrollHeight }))
+  await expect.poll(() => panelBody.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+  await expect(page.getByRole('button', { name: 'Save' })).toBeVisible()
+})
+
+test('keeps table column headers visible while rows scroll', async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 500 })
+  await page.getByRole('link', { name: 'EOD Data Entry' }).click()
+
+  const tableScroll = page.locator('.eod-table-card .table-scroll')
+  const firstHeader = tableScroll.locator('thead th').first()
+  const initialHeader = await firstHeader.boundingBox()
+  expect(initialHeader).not.toBeNull()
+
+  await tableScroll.evaluate((element) => element.scrollTo({ top: element.scrollHeight }))
+  await expect.poll(() => tableScroll.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+
+  const scrolledHeader = await firstHeader.boundingBox()
+  expect(scrolledHeader).not.toBeNull()
+  expect(Math.abs(scrolledHeader!.y - initialHeader!.y)).toBeLessThanOrEqual(1)
+  await expect(firstHeader).toBeVisible()
+})
+
 test('matches the JavaFX shell contract', async ({ page }, testInfo) => {
   await page.addStyleTag({ content: '*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important}' })
   await expect(page).toHaveScreenshot(`targets-${testInfo.project.name}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.01 })
