@@ -21,7 +21,8 @@ test('navigates every permitted workflow and switches store', async ({ page }) =
 test('creates an account payment through an accessible side panel', async ({ page }) => {
   await page.getByRole('link', { name: 'Account Payments' }).click()
   await page.getByRole('button', { name: 'Add payment' }).click()
-  await page.getByLabel('Supplier').selectOption({ label: 'NDIS' })
+  await page.getByRole('combobox', { name: 'Supplier' }).click()
+  await page.getByRole('option', { name: 'NDIS' }).click()
   await page.getByLabel('Invoice Number').fill('NDIS-100')
   await page.getByLabel('Unit Amount ($)').fill('450')
   await page.getByRole('button', { name: 'Save' }).click()
