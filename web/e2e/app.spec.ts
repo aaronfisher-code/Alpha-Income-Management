@@ -23,7 +23,7 @@ test('creates an account payment through an accessible side panel', async ({ pag
   await page.getByRole('button', { name: 'Add payment' }).click()
   await page.getByRole('combobox', { name: 'Supplier' }).click()
   await page.getByRole('option', { name: 'NDIS' }).click()
-  await page.getByLabel('Invoice Number').fill('NDIS-100')
+  await page.getByRole('textbox', { name: 'Invoice Number', exact: true }).fill('NDIS-100')
   await page.getByLabel('Unit Amount ($)').fill('450')
   await page.getByRole('button', { name: 'Save' }).click()
   await expect(page.getByText('NDIS-100')).toBeVisible()
@@ -81,6 +81,34 @@ test('slides side panels out before removing them', async ({ page }) => {
 
   await expect.poll(() => panel.evaluate((element) => getComputedStyle(element).animationName)).toBe('slide-out')
   await expect(panel).toHaveCount(0)
+})
+
+test('fits table columns by default and lets users resize them', async ({ page }) => {
+  await page.setViewportSize({ width: 1500, height: 800 })
+  await page.getByRole('link', { name: 'EOD Data Entry' }).click()
+
+  const tableScroll = page.locator('.eod-table-card .table-scroll')
+  await expect.poll(() => tableScroll.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(2)
+
+  const cashHeader = tableScroll.locator('thead th').filter({ hasText: /^CASH$/ })
+  const notesHeader = tableScroll.locator('thead th').filter({ hasText: /^NOTES$/ })
+  const initialCashWidth = await cashHeader.evaluate((element) => element.getBoundingClientRect().width)
+  const notesWidth = await notesHeader.evaluate((element) => element.getBoundingClientRect().width)
+  expect(notesWidth).toBeGreaterThan(initialCashWidth)
+
+  const resizeCash = page.getByRole('button', { name: 'Resize cash amount column' })
+  const handle = await resizeCash.boundingBox()
+  expect(handle).not.toBeNull()
+  await page.mouse.move(handle!.x + handle!.width / 2, handle!.y + handle!.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(handle!.x + handle!.width / 2 + 60, handle!.y + handle!.height / 2)
+  await page.mouse.up()
+  await expect.poll(() => cashHeader.evaluate((element) => element.getBoundingClientRect().width)).toBeGreaterThan(initialCashWidth + 50)
+
+  await resizeCash.focus()
+  const draggedWidth = await cashHeader.evaluate((element) => element.getBoundingClientRect().width)
+  await resizeCash.press('ArrowLeft')
+  await expect.poll(() => cashHeader.evaluate((element) => element.getBoundingClientRect().width)).toBeLessThan(draggedWidth)
 })
 
 test('matches the JavaFX shell contract', async ({ page }, testInfo) => {

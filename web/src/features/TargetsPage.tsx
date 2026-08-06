@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Icon } from '../components/Icon'
-import { Card } from '../components/UI'
+import { Card, DataTable } from '../components/UI'
 import { currency, number } from '../utils/format'
 import { targetPeriodLabel, targetPeriodRange, type TargetPeriod, type TargetPeriodRange } from '../utils/targetPeriods'
 
@@ -63,7 +63,7 @@ function LineChart({ name, period, points }: { name: string; period: TargetPerio
 function TargetTable({ name, points }: { name: string; points: SeriesPoint[] }) {
   const format = moneyTargets.has(name) ? currency.format : number.format
   const dateFormat = new Intl.DateTimeFormat('en-AU', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  return <div className="target-table-scroll"><table className="target-mini-table"><thead><tr><th>Date</th><th>Actual</th><th>Target 1</th><th>Target 2</th></tr></thead><tbody>{points.map((point) => <tr key={point.date.toISOString()}><td>{dateFormat.format(point.date)}</td><td>{point.actual === null ? '' : format(point.actual)}</td><td>{format(point.target1)}</td><td>{format(point.target2)}</td></tr>)}</tbody></table></div>
+  return <DataTable wrapperClassName="target-table-scroll" tableClassName="target-mini-table" rows={points} columns={[{ key: 'date', label: 'Date', render: (point: SeriesPoint) => dateFormat.format(point.date) }, { key: 'actual', label: 'Actual', render: (point: SeriesPoint) => point.actual === null ? '' : format(point.actual) }, { key: 'target1', label: 'Target 1', render: (point: SeriesPoint) => format(point.target1) }, { key: 'target2', label: 'Target 2', render: (point: SeriesPoint) => format(point.target2) }]} />
 }
 
 function varianceMessage(value: number, money: boolean, targetNumber: number) {
