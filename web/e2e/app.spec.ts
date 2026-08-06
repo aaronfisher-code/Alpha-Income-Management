@@ -71,6 +71,18 @@ test('keeps table column headers visible while rows scroll', async ({ page }) =>
   await expect(firstHeader).toBeVisible()
 })
 
+test('slides side panels out before removing them', async ({ page }) => {
+  await page.getByRole('link', { name: 'Account Payments' }).click()
+  await page.getByRole('button', { name: 'Add payment' }).click()
+
+  const panel = page.locator('.side-panel')
+  await expect(panel).toBeVisible()
+  await page.getByRole('button', { name: 'Close' }).click()
+
+  await expect.poll(() => panel.evaluate((element) => getComputedStyle(element).animationName)).toBe('slide-out')
+  await expect(panel).toHaveCount(0)
+})
+
 test('matches the JavaFX shell contract', async ({ page }, testInfo) => {
   await page.addStyleTag({ content: '*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important}' })
   await expect(page).toHaveScreenshot(`targets-${testInfo.project.name}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.01 })

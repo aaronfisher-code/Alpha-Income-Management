@@ -117,6 +117,7 @@ body{font-size:13px;background:var(--canvas);color:var(--text)}
 
 .overlay{background:rgba(25,29,38,.34)}.panel-overlay{padding:0}
 .side-panel{width:min(425px,100vw);height:100dvh;max-height:100dvh;display:flex;flex-direction:column;overflow:hidden;padding:0;background:#fafbfc;animation:slide-in .17s ease}
+.panel-overlay--closing{pointer-events:none;animation:panel-overlay-out .17s ease forwards}.panel-overlay--closing .side-panel{animation:slide-out .17s ease forwards}@keyframes slide-out{to{transform:translateX(100%)}}@keyframes panel-overlay-out{to{background:rgba(25,29,38,0)}}
 .side-panel>header{height:73px;min-height:73px;flex:0 0 73px;margin:0;padding:0 11px 0 13px;background:#f5f6f8;border-bottom:1px solid #f0f0f2;gap:4px}
 .side-panel h2{font-size:18px;font-weight:500;color:#303039}.side-panel>header .icon-button{width:42px;height:42px}.panel-header-spacer{margin-left:auto}.panel-back{font-size:27px}.side-panel__body{height:auto;min-height:0;flex:1 1 auto;padding:15px 12px 28px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
 .side-panel__body::-webkit-scrollbar{width:9px}.side-panel__body::-webkit-scrollbar-track{background:#eef0f4}.side-panel__body::-webkit-scrollbar-thumb{background:#b5bac5;border:2px solid #eef0f4;border-radius:8px}

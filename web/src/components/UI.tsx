@@ -63,8 +63,26 @@ export function Modal({ title, open, onClose, children, width = 520 }: { title: 
 }
 
 export function SidePanel({ title, open, onClose, onDelete, onBack, children }: { title: string; open: boolean; onClose: () => void; onDelete?: () => void; onBack?: () => void; children: ReactNode }) {
-  if (!open) return null
-  return <div className="overlay panel-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><aside className="side-panel" role="dialog" aria-modal="true" aria-label={title}><header>{onBack && <button className="icon-button panel-back" aria-label="Back" onClick={onBack}>‹</button>}<h2>{title}</h2><span className="panel-header-spacer" />{onDelete && <button className="icon-button" aria-label="Delete" onClick={onDelete}><Icon name="trash" /></button>}<button className="icon-button" aria-label="Close" onClick={onClose}><Icon name="close" /></button></header><div className="side-panel__body">{children}</div></aside></div>
+  const [mounted, setMounted] = useState(open)
+  const [closing, setClosing] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true)
+      setClosing(false)
+      return
+    }
+    if (!mounted) return
+    setClosing(true)
+    const timeout = window.setTimeout(() => {
+      setMounted(false)
+      setClosing(false)
+    }, 170)
+    return () => window.clearTimeout(timeout)
+  }, [open, mounted])
+
+  if (!mounted) return null
+  return <div className={`overlay panel-overlay ${closing ? 'panel-overlay--closing' : ''}`} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><aside className="side-panel" role="dialog" aria-modal="true" aria-label={title}><header>{onBack && <button className="icon-button panel-back" aria-label="Back" onClick={onBack}>‹</button>}<h2>{title}</h2><span className="panel-header-spacer" />{onDelete && <button className="icon-button" aria-label="Delete" onClick={onDelete}><Icon name="trash" /></button>}<button className="icon-button" aria-label="Close" onClick={onClose}><Icon name="close" /></button></header><div className="side-panel__body">{children}</div></aside></div>
 }
 
 export function FloatingButton({ label, onClick }: { label: string; onClick: () => void }) { return <button className="floating-button" aria-label={label} onClick={onClick}><Icon name="plus" /></button> }
