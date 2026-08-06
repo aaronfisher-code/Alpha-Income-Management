@@ -65,15 +65,15 @@ body{font-size:13px;background:var(--canvas);color:var(--text)}
 .desktop-toolbar__actions{margin-left:auto;display:flex;gap:10px}.desktop-toolbar__actions:empty{display:none}
 .month-selector{height:44px;padding:0;gap:10px;background:transparent;box-shadow:none;font-size:13px;font-weight:600}
 .month-selector>span{margin:0;color:#67647a}.month-picker-wrap{position:relative}
-.month-picker-trigger{width:199px;height:39px;display:flex;align-items:center;justify-content:space-between;border:1px solid #cbd0d9;border-radius:5px;background:#fff;padding:0 9px;color:#777487;font-weight:400}
+.month-selector .month-picker-trigger{width:199px;height:39px;display:flex;align-items:center;justify-content:space-between;border:1px solid #cbd0d9;border-radius:5px;background:#fff;padding:0 9px;color:#777487;font-weight:400}
 .month-picker-trigger b{font-size:13px;font-weight:400;text-transform:none}.month-picker-trigger svg{width:21px;height:21px;color:#595967}
 .month-step{width:18px!important;height:30px!important;padding:0!important;background:transparent!important;font-size:20px!important;color:#bbc1cd!important}
-.month-popover{position:absolute;z-index:80;top:44px;left:-53px;width:300px;padding:9px;background:#fff;border:1px solid #d7d9df;border-radius:9px;box-shadow:0 5px 12px rgba(0,0,0,.32);font-weight:400}
+.month-popover{position:absolute;z-index:80;top:44px;left:-28px;width:250px;padding:7px 6px 6px;background:#fff;border:1px solid #d7d9df;border-radius:9px;box-shadow:0 5px 12px rgba(0,0,0,.32);font-weight:400}
 .month-popover header{height:34px;display:grid;grid-template-columns:38px 1fr 38px;align-items:center;text-align:center}
-.month-popover header button,.month-popover>div button{border:0;background:#fff;color:#696779}
-.month-popover>div{display:grid;grid-template-columns:repeat(3,1fr)}
-.month-popover>div button{height:37px;border:1px solid #d9dce3;border-radius:14px;font-size:13px}
-.month-popover>div button.active{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600}
+.month-selector .month-popover header button,.month-selector .month-popover>div button{width:100%;border:0;background:#fff;color:#696779}
+.month-popover>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0}
+.month-selector .month-popover>div button{height:30px;border:1px solid #d9dce3;border-radius:12px;font-size:13px;padding:0}
+.month-selector .month-popover>div button.active{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600}
 .xero-button{height:42px;min-width:225px}.xero-mark{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#19b7d1;color:#fff;font-size:9px}
 
 .desktop-period-tabs{height:50px;margin:0 0 31px;border-radius:5px;box-shadow:0 4px 8px rgba(0,0,0,.2)}
