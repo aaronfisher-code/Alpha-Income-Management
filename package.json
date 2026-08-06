@@ -30,5 +30,11 @@
     "license": "ISC",
     "name": "Alpha-Income",
     "files": ["jdeploy-bundle"],
-    "scripts": {"test": "echo \"Error: no test specified\" && exit 1"}
+    "scripts": {
+        "test": "echo \"The JavaFX client has no automated test runner; use npm run web:test for the web migration.\"",
+        "web:dev": "npm --prefix web run dev",
+        "web:build": "npm --prefix web run build",
+        "web:test": "npm --prefix web test",
+        "web:test:e2e": "npm --prefix web run test:e2e"
+    }
 }
