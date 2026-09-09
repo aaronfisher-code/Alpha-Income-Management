@@ -2,8 +2,6 @@ package controllers;
 
 import com.dlsc.gemsfx.DialogPane;
 import com.dlsc.gemsfx.FilterView;
-import com.jfoenix.controls.JFXButton;
-import com.jfoenix.controls.JFXNodesList;
 import components.ActionableFilterComboBox;
 import components.CustomDateStringConverter;
 import io.github.palexdev.materialfx.controls.MFXButton;
@@ -71,8 +69,8 @@ public class InvoiceEntryController extends DateSelectController{
 	@FXML private MFXDatePicker creditDateField;
 	@FXML private MFXButton creditSaveButton;
 	@FXML private Button creditDeleteButton;
-	@FXML private JFXButton plusButton;
-	@FXML private JFXNodesList addList;
+	@FXML private Button plusButton;
+	@FXML private HBox addList;
 	@FXML private Button importDataButton,exportDataButton;
 	@FXML private MFXProgressSpinner progressSpinner;
 	private Label invoiceTotalLabel;
@@ -328,6 +326,7 @@ public class InvoiceEntryController extends DateSelectController{
 		Platform.runLater(this::addInvoiceDoubleClickFunction);
 		setDate(main.getCurrentDate());
 		plusButton.setOnAction(_ -> openInvoicePopover());
+		plusButton.setText("Manual invoice");
 		contentDarken.setOnMouseClicked(_ -> closeInvoicePopover());
 		amountField.delegateFocusedProperty().addListener((_, _, _) -> {
 			if (amountField.isValid()) {
@@ -426,6 +425,7 @@ public class InvoiceEntryController extends DateSelectController{
 		Platform.runLater(this::addCreditDoubleClickFunction);
 		addCreditDoubleClickFunction();
 		plusButton.setOnAction(_ -> openCreditPopover());
+		plusButton.setText("Manual credit");
 		contentDarken.setOnMouseClicked(_ -> closeCreditPopover());
 	}
 
@@ -512,6 +512,50 @@ public class InvoiceEntryController extends DateSelectController{
 		dialogController.setMain(this.main);
 		dialogController.fill();
 		return manageSuppliersDialog;
+	}
+
+	public void openAiScan() {
+		FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/AiInvoiceScan.fxml"));
+		try {
+			Node scanView = loader.load();
+			AiInvoiceScanController scanController = loader.getController();
+			scanController.configure(this, main, invoiceService, creditService, executor);
+			dialog = new DialogPane.Dialog<>(dialogPane, BLANK);
+			dialog.setPadding(false);
+			dialog.setMaximize(true);
+			dialog.setContent(scanView);
+			dialogPane.showDialog(dialog);
+		} catch (IOException exception) {
+			dialogPane.showError("Error", "An error occurred while opening AI invoice scan", exception);
+		}
+	}
+
+	/** Opens the existing manual form with OCR values, leaving the user in control of saving. */
+	public void openScannedTransaction(ScannedInvoice scanned) {
+		if (scanned.documentType() == ScannedInvoice.DocumentType.CREDIT) {
+			openCreditPopover();
+			creditNoField.setText(scanned.invoiceNo());
+			creditDateField.setValue(scanned.invoiceDate());
+			creditAmountField.setText(String.format(Locale.ROOT, "%.2f", Math.abs(scanned.amount())));
+			creditNotesField.setText("AI scanned from " + scanned.sourceFile() + "; verify before saving");
+			selectScannedSupplier(creditAFX, scanned.supplierName());
+			return;
+		}
+		openInvoicePopover();
+		invoiceNoField.setText(scanned.invoiceNo());
+		invoiceDateField.setValue(scanned.invoiceDate());
+		dueDateField.setValue(scanned.dueDate());
+		amountField.setText(String.format(Locale.ROOT, "%.2f", scanned.amount()));
+		notesField.setText("AI scanned from " + scanned.sourceFile() + "; verify before saving");
+		selectScannedSupplier(invoiceAFX, scanned.supplierName());
+	}
+
+	private void selectScannedSupplier(ActionableFilterComboBox<InvoiceSupplier> field, String supplierName) {
+		String normalized = InvoiceReconciler.supplier(supplierName);
+		field.getItems().stream()
+				.filter(supplier -> InvoiceReconciler.supplier(supplier.getSupplierName()).equals(normalized))
+				.findFirst()
+				.ifPresent(field::setValue);
 	}
 
 	public void fillContactList() {
@@ -1153,6 +1197,14 @@ public class InvoiceEntryController extends DateSelectController{
 			};
 
 			task.setOnSucceeded(_ -> {
+				YearMonth importedMonth = YearMonth.from(main.getCurrentDate());
+				props.setProperty(importSnapshotKey(main.getCurrentStore().getStoreID(), importedMonth), newfile.getAbsolutePath());
+				try (FileOutputStream output = new FileOutputStream(configFile)) {
+					props.store(output, "App configuration");
+				} catch (IOException exception) {
+					dialogPane.showError("Import saved, but reconciliation source was not retained",
+							"The Z-Office data was imported, but the selected export path could not be saved for reverse reconciliation.", exception);
+				}
 				progressSpinner.setVisible(false);
 				dialogPane.showInformation("Success", "Invoice data imported successfully");
 				fillInvoiceTable();
@@ -1167,6 +1219,10 @@ public class InvoiceEntryController extends DateSelectController{
 
 			executor.submit(task);
 		}
+	}
+
+	static String importSnapshotKey(int storeId, YearMonth month) {
+		return "invoiceImportFile." + storeId + "." + month;
 	}
 
 	public void exportToXero() {

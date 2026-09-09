@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import com.dlsc.gemsfx.DialogPane?>
-<?import com.jfoenix.controls.JFXButton?>
-<?import com.jfoenix.controls.JFXNodesList?>
 <?import io.github.palexdev.materialfx.controls.MFXButton?>
 <?import io.github.palexdev.materialfx.controls.MFXDatePicker?>
 <?import io.github.palexdev.materialfx.controls.MFXProgressSpinner?>
@@ -215,20 +213,21 @@
             </BorderPane>
          </center>
       </BorderPane>
-      <JFXNodesList fx:id="addList" alignment="CENTER_RIGHT" nodeOrientation="LEFT_TO_RIGHT" rotate="180.0" spacing="10.0" StackPane.alignment="BOTTOM_RIGHT">
+      <HBox fx:id="addList" alignment="CENTER_RIGHT" maxHeight="-Infinity" maxWidth="-Infinity" spacing="12.0" StackPane.alignment="BOTTOM_RIGHT">
          <children>
-            <JFXButton fx:id="plusButton" alignment="CENTER" buttonType="RAISED" contentDisplay="CENTER" graphicTextGap="0.0" onAction="#openInvoicePopover" scaleShape="false" styleClass="animated-option-button" text=" ">
+            <Button fx:id="aiScanButton" mnemonicParsing="false" onAction="#openAiScan" styleClass="ai-scan-launch-button" text="AI scan">
+               <graphic>
+                  <SVGPath content="M8 0.8 9.2 5l4.1 1.2-4.1 1.2L8 11.6 6.8 7.4 2.7 6.2 6.8 5 8 .8z M13.5 10l.7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7.7-2.3z" fill="WHITE" scaleX="1.2" scaleY="1.2" />
+               </graphic>
+            </Button>
+            <Button fx:id="plusButton" alignment="CENTER" contentDisplay="LEFT" graphicTextGap="8.0" mnemonicParsing="false" onAction="#openInvoicePopover" styleClass="manual-add-button" text="Manual invoice">
                <font>
-                  <Font name="System Bold" size="8.0" />
+                  <Font name="System Bold" size="12.0" />
                </font>
                <graphic>
-                  <SVGPath content="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" fill="WHITE" scaleX="3.0" scaleY="3.0" scaleZ="3.0" />
+                  <SVGPath content="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" fill="WHITE" scaleX="1.4" scaleY="1.4" />
                </graphic>
-               <stylesheets>
-                  <URL value="@../CSS/application.css" />
-                  <URL value="@../CSS/MainMenu.css" />
-               </stylesheets>
-            </JFXButton>
+            </Button>
          </children>
          <cursor>
             <Cursor fx:constant="HAND" />
@@ -236,7 +235,7 @@
          <StackPane.margin>
             <Insets bottom="50.0" right="50.0" />
          </StackPane.margin>
-      </JFXNodesList>
+      </HBox>
       <Region fx:id="contentDarken" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" onMouseClicked="#closeInvoicePopover" opacity="0.25" style="-fx-background-color: BLACK;" visible="false" />
       <VBox fx:id="addInvoicePopover" maxWidth="0.0" minWidth="425.0" prefWidth="425.0" spacing="30.0" style="-fx-background-color: #FFFFFF;" translateX="425.0" StackPane.alignment="TOP_RIGHT">
          <children>

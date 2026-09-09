@@ -1,0 +1,28 @@
+# Copy this file to src/main/resources/application.properties for local runs.
+# Do not commit the resulting file: it can contain credentials and is ignored.
+api.base.url=http://localhost:8080
+api.token=alpha-local-development
+gemini.api.key=
+gemini.model=gemini-3.8-flash
+# Long supplier statements can use a dedicated model and larger structured response.
+gemini.statement.model=gemini-3.8-flash
+gemini.statement.max-output-tokens=65536
+# Supplier statements are split into verified page chunks, then scanned concurrently.
+gemini.statement.pages-per-request=4
+gemini.statement.parallel.max-concurrent=3
+gemini.statement.completeness-attempts=2
+# Priority requires Gemini API usage Tier 2 or Tier 3 and has premium pricing.
+gemini.service-tier=priority
+# Maximum wait for each Gemini upload/extraction request, in seconds.
+gemini.request.timeout-seconds=600
+# Maximum wait for Gemini to finish preparing a Files API upload, in seconds.
+gemini.file-processing-timeout-seconds=300
+# Gemini 3 Flash supports low, medium, and high. Low keeps invoice scans responsive.
+gemini.thinking-level=low
+# Independent invoice PDFs selected together are scanned concurrently (1-8).
+gemini.parallel.max-concurrent=3
+# Retry temporary 408/429/5xx capacity and network failures with exponential backoff.
+gemini.retry.max-attempts=5
+gemini.retry.initial-delay-seconds=2
+gemini.retry.max-delay-seconds=30
+VERSION=local

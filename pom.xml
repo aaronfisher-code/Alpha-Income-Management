@@ -13,11 +13,16 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <javafx.version>22.0.1</javafx.version>
+        <prism.order>es2,sw</prism.order>
         <jpackageInputDirectory>${project.build.directory}/jpackage-input</jpackageInputDirectory>
         <maven.build.timestamp.format>yy.MM.ddHH.mmss</maven.build.timestamp.format>
     </properties>
 
     <repositories>
+        <repository>
+            <id>central</id>
+            <url>https://repo.maven.apache.org/maven2</url>
+        </repository>
         <repository>
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
@@ -57,11 +62,6 @@
         <dependency>
             <groupId>com.dlsc.gemsfx</groupId>
             <artifactId>gemsfx</artifactId>
-            <version>1.35.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.dlsc.gemsfx</groupId>
-            <artifactId>gemsfx-demo</artifactId>
             <version>1.35.0</version>
         </dependency>
         <dependency>
@@ -204,9 +204,23 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
                 <configuration>
-                    <source>22</source>
-                    <target>22</target>
+                    <release>22</release>
                     <parameters>true</parameters>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>0.0.8</version>
+                <configuration>
+                    <mainClass>application.Main</mainClass>
+                    <options>
+                        <option>-Xms256m</option>
+                        <option>-Xmx1024m</option>
+                        <option>-Dprism.order=${prism.order}</option>
+                        <option>-Dprism.lcdtext=false</option>
+                        <option>--enable-native-access=javafx.graphics</option>
+                    </options>
                 </configuration>
             </plugin>
             <plugin>

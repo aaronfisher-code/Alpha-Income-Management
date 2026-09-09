@@ -1,0 +1,297 @@
+.ai-scan-view {
+    -fx-background-color: #ffffff;
+    -fx-font-family: "Montserrat";
+}
+
+.ai-scan-eyebrow {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 10px;
+    -fx-text-fill: #0f60ff;
+}
+
+.ai-scan-title {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 24px;
+    -fx-text-fill: #283046;
+}
+
+.ai-scan-subtitle, .scan-summary, .scan-legend {
+    -fx-text-fill: #6e6b7b;
+}
+
+.secondary-scan-button, .review-add-button {
+    -fx-background-color: #f3f2f7;
+    -fx-border-color: #d7d5dd;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-text-fill: #4b4860;
+    -fx-cursor: hand;
+}
+
+/* Keep action cells from imposing a taller minimum on ordinary rows. */
+.ai-scan-view .table-view .review-add-button {
+    -fx-padding: 2 7 2 7;
+    -fx-min-height: 22px;
+    -fx-pref-height: 22px;
+    -fx-max-height: 22px;
+}
+
+.primary-scan-button {
+    -fx-background-color: #0f60ff;
+    -fx-background-radius: 5;
+    -fx-text-fill: white;
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-padding: 10 18 10 18;
+    -fx-cursor: hand;
+}
+
+.primary-scan-button:disabled {
+    -fx-opacity: 0.45;
+}
+
+.scan-source-bar {
+    -fx-background-color: #f8f8fb;
+    -fx-background-radius: 8;
+    -fx-padding: 12;
+}
+
+.scan-source-bar .list-view {
+    -fx-background-color: white;
+    -fx-border-color: #dedde3;
+    -fx-border-radius: 4;
+}
+
+.scan-source-bar .list-cell {
+    -fx-font-size: 10px;
+    -fx-padding: 3 6 3 6;
+}
+
+.scan-warning {
+    -fx-background-color: #fff5d8;
+    -fx-background-radius: 5;
+    -fx-text-fill: #7d5b00;
+    -fx-padding: 9 12 9 12;
+}
+
+.scan-summary {
+    -fx-font-family: "Montserrat SemiBold";
+}
+
+.statement-totals-bar {
+    -fx-background-color: #f4f6fb;
+    -fx-background-radius: 8;
+    -fx-padding: 10;
+}
+
+.statement-total-card {
+    -fx-background-color: white;
+    -fx-background-radius: 6;
+    -fx-border-color: #e1e4eb;
+    -fx-border-radius: 6;
+    -fx-padding: 9 12 9 12;
+}
+
+.statement-total-title {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 9px;
+    -fx-text-fill: #777487;
+}
+
+.statement-total-value {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 18px;
+    -fx-text-fill: #283046;
+}
+
+.statement-total-detail {
+    -fx-font-size: 9px;
+    -fx-text-fill: #8d8999;
+}
+
+.statement-total-good { -fx-text-fill: #27865e; }
+.statement-total-review { -fx-text-fill: #b77b00; }
+.statement-total-attention,
+.low-confidence-statement-total { -fx-text-fill: #c63748; }
+.statement-total-unavailable { -fx-text-fill: #8d8999; }
+
+.review-split {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.review-split > .split-pane-divider {
+    -fx-background-color: #e2e1e7;
+    -fx-padding: 0 1 0 1;
+}
+
+.review-workspace {
+    -fx-background-color: #f4f5f8;
+}
+
+.review-editor {
+    -fx-background-color: white;
+    -fx-border-color: #dedde3;
+    -fx-border-width: 0 0 0 1;
+    -fx-padding: 18;
+}
+
+.review-editor-scroll,
+.review-editor-scroll > .viewport {
+    -fx-background-color: white;
+}
+
+.review-editor-scroll {
+    -fx-padding: 0 0 12 0;
+}
+
+.review-editor-title {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 19px;
+    -fx-text-fill: #283046;
+}
+
+.review-editor-help {
+    -fx-font-size: 11px;
+    -fx-text-fill: #6e6b7b;
+}
+
+.review-editor-error {
+    -fx-background-color: #fff0f1;
+    -fx-background-radius: 5;
+    -fx-padding: 8 10 8 10;
+    -fx-text-fill: #a61b29;
+}
+
+.review-field-label {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 10px;
+    -fx-text-fill: #4b4860;
+}
+
+.review-editor .text-field,
+.review-editor .combo-box,
+.review-editor .choice-box,
+.review-editor .date-picker,
+.review-editor .text-area {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d7d5dd;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.review-editor .low-confidence-input {
+    -fx-border-color: #e05260;
+    -fx-border-width: 2;
+    -fx-background-color: #fff7f8;
+}
+
+.preview-section-title {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 12px;
+    -fx-text-fill: #283046;
+}
+
+.pdf-preview-panel {
+    -fx-background-color: #f8f8fb;
+    -fx-padding: 10;
+}
+
+.preview-document, .preview-page-label, .preview-hint {
+    -fx-font-size: 10px;
+    -fx-text-fill: #6e6b7b;
+}
+
+.evidence-legend {
+    -fx-font-size: 9px;
+    -fx-text-fill: #6e6b7b;
+}
+
+.evidence-key {
+    -fx-min-width: 9;
+    -fx-min-height: 9;
+    -fx-max-width: 9;
+    -fx-max-height: 9;
+    -fx-background-radius: 3;
+}
+
+.evidence-supplier { -fx-background-color: #2f80ed; }
+.evidence-reference { -fx-background-color: #e05260; }
+.evidence-date { -fx-background-color: #8e5bd9; }
+.evidence-amount { -fx-background-color: #2ca46f; }
+
+.preview-control {
+    -fx-background-color: white;
+    -fx-border-color: #d7d5dd;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-text-fill: #4b4860;
+    -fx-padding: 5 9 5 9;
+    -fx-cursor: hand;
+}
+
+.pdf-scroll {
+    -fx-background-color: #d9d9de;
+    -fx-border-color: #d1d0d6;
+}
+
+.pdf-scroll > .viewport {
+    -fx-background-color: #d9d9de;
+}
+
+.pdf-page {
+    -fx-background-color: white;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.22), 10, 0.15, 0, 2);
+}
+
+.ai-scan-view .table-view .table-row-cell {
+    -fx-cell-size: 32px;
+}
+
+.ai-scan-view .table-view .table-cell {
+    -fx-alignment: center-left;
+    -fx-padding: 2 8 2 8;
+    -fx-text-fill: #283046;
+}
+
+.ai-scan-view .table-view .table-cell.low-confidence-field,
+.ai-scan-view .table-view .table-row-cell:selected .table-cell.low-confidence-field {
+    -fx-background-color: #ffd9de;
+    -fx-text-fill: #a61b29;
+    -fx-font-family: "Montserrat SemiBold";
+}
+
+.ai-scan-view .table-view .table-row-cell:selected,
+.ai-scan-view .table-view .table-row-cell:selected .table-cell {
+    -fx-background-color: #cbdcff;
+    -fx-text-fill: #283046;
+}
+
+.table-row-cell.reconciliation-good {
+    -fx-background-color: #f0fbf5;
+}
+
+.table-row-cell.reconciliation-review {
+    -fx-background-color: #fff9e9;
+}
+
+.table-row-cell.reconciliation-attention {
+    -fx-background-color: #fff0f1;
+}
+
+.table-row-cell.reconciliation-good:selected,
+.table-row-cell.reconciliation-review:selected,
+.table-row-cell.reconciliation-attention:selected {
+    -fx-background-color: #dbe7ff;
+}
+
+.legend-good, .legend-review, .legend-attention {
+    -fx-min-height: 9;
+    -fx-min-width: 9;
+    -fx-max-height: 9;
+    -fx-max-width: 9;
+    -fx-background-radius: 10;
+}
+
+.legend-good { -fx-background-color: #36b37e; }
+.legend-review { -fx-background-color: #ffab00; }
+.legend-attention { -fx-background-color: #e05260; }

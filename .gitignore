@@ -21,3 +21,7 @@ jdeploy-bundle/*
 /jdeploy
 /jdeploy-bundle
 AlphaIncome.log
+
+# SQL exports can contain production data; keep them out of source control.
+local-db/*.sql
+!local-db/bootstrap.sql

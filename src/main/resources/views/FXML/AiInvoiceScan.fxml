@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.net.URL?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ChoiceBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.ProgressIndicator?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox minHeight="620.0" minWidth="1080.0" prefHeight="700.0" prefWidth="1180.0" spacing="18.0"
+      styleClass="ai-scan-view" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="controllers.AiInvoiceScanController">
+   <children>
+      <BorderPane>
+         <left>
+            <VBox spacing="4.0" BorderPane.alignment="CENTER_LEFT">
+               <Label styleClass="ai-scan-eyebrow" text="GEMINI FLASH DOCUMENT AI" />
+               <Label styleClass="ai-scan-title" text="Scan and reconcile invoices" />
+               <Label styleClass="ai-scan-subtitle" text="Review OCR evidence against the corresponding imported Z-Office totals before adding anything." />
+            </VBox>
+         </left>
+      </BorderPane>
+
+      <HBox fx:id="scanSourceBar" alignment="CENTER_LEFT" spacing="12.0" styleClass="scan-source-bar">
+         <Label text="Document type" />
+         <ChoiceBox fx:id="documentKindChoice" prefWidth="185.0" />
+         <Button fx:id="chooseFilesButton" onAction="#chooseFiles" styleClass="secondary-scan-button" text="Choose PDF" />
+         <ListView fx:id="selectedFilesList" maxHeight="62.0" prefHeight="62.0" prefWidth="390.0" HBox.hgrow="ALWAYS" />
+         <ProgressIndicator fx:id="scanProgress" managed="false" maxHeight="28.0" maxWidth="28.0" prefHeight="28.0" prefWidth="28.0" visible="false" />
+         <Button fx:id="scanButton" disable="true" onAction="#scanDocuments" styleClass="primary-scan-button" text="Scan with AI" />
+      </HBox>
+
+      <Label fx:id="configurationLabel" styleClass="scan-warning" text="Gemini Flash is not configured. Add gemini.api.key to application.properties or set GEMINI_API_KEY before launching." wrapText="true" />
+
+      <BorderPane fx:id="scanSummaryBar">
+         <left>
+            <Label fx:id="summaryLabel" styleClass="scan-summary" text="Choose PDFs to begin. No OCR result is saved automatically." BorderPane.alignment="CENTER_LEFT" />
+         </left>
+         <right>
+            <CheckBox fx:id="showMatchedCheck" selected="true" text="Show matched rows" BorderPane.alignment="CENTER_RIGHT" />
+         </right>
+      </BorderPane>
+
+      <HBox fx:id="statementTotalsBar" managed="false" spacing="10.0" styleClass="statement-totals-bar" visible="false">
+         <VBox maxWidth="1.7976931348623157E308" spacing="3.0" styleClass="statement-total-card" HBox.hgrow="ALWAYS">
+            <Label styleClass="statement-total-title" text="PRINTED STATEMENT AMOUNT" />
+            <Label fx:id="expectedStatementAmountLabel" styleClass="statement-total-value" text="Not found" />
+            <Label fx:id="expectedStatementConfidenceLabel" styleClass="statement-total-detail" text="Printed total confidence unavailable" />
+         </VBox>
+         <VBox maxWidth="1.7976931348623157E308" spacing="3.0" styleClass="statement-total-card" HBox.hgrow="ALWAYS">
+            <Label styleClass="statement-total-title" text="EXTRACTED INVOICES + CREDITS" />
+            <Label fx:id="extractedStatementTotalLabel" styleClass="statement-total-value" text="\$0.00" />
+            <Label styleClass="statement-total-detail" text="Credits are included as negative values" />
+         </VBox>
+         <VBox maxWidth="1.7976931348623157E308" spacing="3.0" styleClass="statement-total-card" HBox.hgrow="ALWAYS">
+            <Label styleClass="statement-total-title" text="STATEMENT VARIANCE" />
+            <Label fx:id="statementVarianceLabel" styleClass="statement-total-value statement-total-unavailable" text="Unavailable" />
+            <Label styleClass="statement-total-detail" text="Extracted total minus printed amount" />
+         </VBox>
+      </HBox>
+
+      <StackPane VBox.vgrow="ALWAYS">
+         <children>
+            <VBox fx:id="resultsView" spacing="8.0">
+               <Label styleClass="preview-section-title" text="Reconciliation results" />
+               <TableView fx:id="resultsTable" VBox.vgrow="ALWAYS" />
+               <HBox alignment="CENTER_LEFT" spacing="10.0" styleClass="scan-legend">
+                  <Region styleClass="legend-good" />
+                  <Label text="Matched / saved" />
+                  <Region styleClass="legend-review" />
+                  <Label text="Within 20¢ tolerance" />
+                  <Region styleClass="legend-attention" />
+                  <Label text="Needs attention" />
+                  <Region HBox.hgrow="ALWAYS" />
+                  <Label text="Double-click a scanned row to review." />
+               </HBox>
+            </VBox>
+
+            <BorderPane fx:id="reviewView" managed="false" styleClass="review-workspace" visible="false">
+               <center>
+                  <VBox minWidth="560.0" spacing="8.0" styleClass="pdf-preview-panel">
+                     <BorderPane>
+                        <left>
+                           <VBox spacing="2.0" BorderPane.alignment="CENTER_LEFT">
+                              <Label styleClass="preview-section-title" text="PDF evidence" />
+                              <Label fx:id="previewDocumentLabel" maxWidth="620.0" styleClass="preview-document" text="Select a result row" textOverrun="ELLIPSIS" />
+                           </VBox>
+                        </left>
+                        <right>
+                           <HBox alignment="CENTER_RIGHT" spacing="5.0" BorderPane.alignment="CENTER_RIGHT">
+                              <Button onAction="#zoomPreviewOut" styleClass="preview-control" text="−" />
+                              <Button onAction="#zoomPreviewIn" styleClass="preview-control" text="+" />
+                           </HBox>
+                        </right>
+                     </BorderPane>
+                     <HBox alignment="CENTER_LEFT" spacing="7.0" styleClass="evidence-legend">
+                        <Region styleClass="evidence-key evidence-supplier" />
+                        <Label text="Supplier" />
+                        <Region styleClass="evidence-key evidence-reference" />
+                        <Label text="Reference" />
+                        <Region styleClass="evidence-key evidence-date" />
+                        <Label text="Date" />
+                        <Region styleClass="evidence-key evidence-amount" />
+                        <Label text="Amount" />
+                     </HBox>
+                     <ScrollPane fx:id="pdfScrollPane" fitToHeight="false" fitToWidth="false" pannable="true" styleClass="pdf-scroll" VBox.vgrow="ALWAYS">
+                        <content>
+                           <StackPane fx:id="pdfPageStack" alignment="TOP_LEFT" maxHeight="-Infinity" maxWidth="-Infinity" styleClass="pdf-page">
+                              <children>
+                                 <ImageView fx:id="pdfPreviewImage" preserveRatio="false" smooth="true" StackPane.alignment="TOP_LEFT" />
+                                 <Pane fx:id="pdfOverlayPane" mouseTransparent="true" pickOnBounds="false" StackPane.alignment="TOP_LEFT" />
+                              </children>
+                           </StackPane>
+                        </content>
+                     </ScrollPane>
+                     <BorderPane>
+                        <left>
+                           <Button fx:id="previousPageButton" disable="true" onAction="#previousPreviewPage" styleClass="preview-control" text="‹ Previous" BorderPane.alignment="CENTER_LEFT" />
+                        </left>
+                        <center>
+                           <Label fx:id="previewPageLabel" styleClass="preview-page-label" text="No PDF loaded" BorderPane.alignment="CENTER" />
+                        </center>
+                        <right>
+                           <Button fx:id="nextPageButton" disable="true" onAction="#nextPreviewPage" styleClass="preview-control" text="Next ›" BorderPane.alignment="CENTER_RIGHT" />
+                        </right>
+                     </BorderPane>
+                     <Label fx:id="previewHintLabel" styleClass="preview-hint" text="Review the highlighted source values before saving." wrapText="true" />
+                  </VBox>
+               </center>
+               <right>
+                  <BorderPane minWidth="350.0" prefWidth="370.0" styleClass="review-editor">
+                     <center>
+                        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="review-editor-scroll">
+                           <content>
+                              <VBox spacing="10.0">
+                                 <Label fx:id="reviewTitleLabel" styleClass="review-editor-title" text="Review invoice" />
+                                 <Label styleClass="review-editor-help" text="Correct the scanned values, then save them to the current store." wrapText="true" />
+                                 <Label fx:id="reviewErrorLabel" managed="false" styleClass="review-editor-error" visible="false" wrapText="true" />
+                                 <Label styleClass="review-field-label" text="Supplier" />
+                                 <ComboBox fx:id="reviewSupplierChoice" maxWidth="1.7976931348623157E308" promptText="Select an existing supplier" />
+                                 <Label styleClass="review-field-label" text="Document type" />
+                                 <ChoiceBox fx:id="reviewTypeChoice" maxWidth="1.7976931348623157E308" />
+                                 <Label styleClass="review-field-label" text="Invoice / credit reference" />
+                                 <TextField fx:id="reviewReferenceField" promptText="Reference" />
+                                 <Label styleClass="review-field-label" text="Document date" />
+                                 <DatePicker fx:id="reviewDateField" maxWidth="1.7976931348623157E308" />
+                                 <Label fx:id="reviewDueDateLabel" styleClass="review-field-label" text="Due date" />
+                                 <DatePicker fx:id="reviewDueDateField" maxWidth="1.7976931348623157E308" />
+                                 <Label styleClass="review-field-label" text="Amount ($)" />
+                                 <TextField fx:id="reviewAmountField" promptText="0.00" />
+                                 <Label styleClass="review-field-label" text="Notes" />
+                                 <TextArea fx:id="reviewNotesField" prefRowCount="3" wrapText="true" />
+                              </VBox>
+                           </content>
+                        </ScrollPane>
+                     </center>
+                     <bottom>
+                        <VBox spacing="8.0">
+                           <ProgressIndicator fx:id="reviewSaveProgress" managed="false" maxHeight="28.0" maxWidth="28.0" visible="false" />
+                           <HBox spacing="8.0">
+                              <Button fx:id="reviewBackButton" maxWidth="1.7976931348623157E308" onAction="#backToResults" styleClass="secondary-scan-button" text="Back to scanned list" HBox.hgrow="ALWAYS" />
+                              <Button fx:id="reviewSaveButton" maxWidth="1.7976931348623157E308" onAction="#saveReview" styleClass="primary-scan-button" text="Save invoice" HBox.hgrow="ALWAYS" />
+                           </HBox>
+                        </VBox>
+                     </bottom>
+                  </BorderPane>
+               </right>
+            </BorderPane>
+         </children>
+      </StackPane>
+   </children>
+   <padding>
+      <Insets bottom="22.0" left="24.0" right="24.0" top="22.0" />
+   </padding>
+   <stylesheets>
+      <URL value="@../CSS/application.css" />
+      <URL value="@../CSS/AiInvoiceScan.css" />
+   </stylesheets>
+</VBox>

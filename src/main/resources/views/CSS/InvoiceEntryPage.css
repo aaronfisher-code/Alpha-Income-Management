@@ -36,4 +36,18 @@
     -fx-text-fill: BLACK;
 }
 
+.ai-scan-launch-button,
+.manual-add-button {
+    -fx-background-color: #0f60ff;
+    -fx-background-radius: 24;
+    -fx-padding: 12 18 12 18;
+    -fx-text-fill: white;
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 12px;
+    -fx-effect: dropshadow(gaussian, rgba(15, 96, 255, 0.28), 12, 0.2, 0, 4);
+}
+
+.ai-scan-launch-button {
+    -fx-background-color: #5b3fd1;
+}
 
