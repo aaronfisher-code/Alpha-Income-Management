@@ -23,7 +23,7 @@ import static models.InvoiceReconciliation.Status.WITHIN_TOLERANCE;
 /** Deterministic, side-effect free comparison of scanned evidence to Z-Office rows. */
 public final class InvoiceReconciler {
 	public static final long DEFAULT_TOLERANCE_CENTS = 20;
-	public static final double REVIEW_CONFIDENCE = 0.75;
+	public static final double REVIEW_CONFIDENCE = 0.90;
 	private static final Set<String> COMPANY_SUFFIXES = Set.of("PTY", "LTD", "LIMITED", "AUSTRALIA", "THE");
 
 	private InvoiceReconciler() {}
@@ -64,8 +64,8 @@ public final class InvoiceReconciler {
 				long importedCents = Math.round(imported.getImportedInvoiceAmount() * 100);
 				long variance = scanned.amountCents() - importedCents;
 				InvoiceReconciliation.Status status;
-				if (scanned.supplierName().isBlank() || scanned.confidence() == null
-						|| scanned.confidence() < REVIEW_CONFIDENCE) {
+				if (scanned.supplierName().isBlank() || scanned.requiredFieldConfidence() == null
+						|| scanned.requiredFieldConfidence() < REVIEW_CONFIDENCE) {
 					status = NEEDS_REVIEW;
 				} else {
 					status = variance == 0

@@ -8,6 +8,7 @@ import java.util.Locale;
 public final class InvoiceReconciliation {
 	public enum Status {
 		SAVED("Saved"),
+		ACCEPTED("Accepted"),
 		MATCHED("Matched"),
 		WITHIN_TOLERANCE("Within tolerance"),
 		AMOUNT_MISMATCH("Amount mismatch"),
@@ -95,6 +96,13 @@ public final class InvoiceReconciliation {
 		return new InvoiceReconciliation(newStatus, scanned, imported, varianceCents);
 	}
 
+	public boolean isAccepted() {
+		return status == Status.SAVED
+				|| status == Status.ACCEPTED
+				|| status == Status.MATCHED
+				|| status == Status.WITHIN_TOLERANCE;
+	}
+
 	public String getConfidenceString() {
 		if (scanned == null || scanned.confidence() == null) return "—";
 		return Math.round(scanned.confidence() * 100) + "%";
@@ -125,7 +133,7 @@ public final class InvoiceReconciliation {
 	}
 
 	public boolean isNotable() {
-		return status != Status.SAVED && status != Status.MATCHED && status != Status.WITHIN_TOLERANCE;
+		return !isAccepted();
 	}
 
 	private static String title(String value) {

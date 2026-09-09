@@ -43,9 +43,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 /**
- * Gemini Flash document adapter for invoice and supplier-statement extraction.
+ * Document AI adapter for invoice and supplier-statement extraction.
  *
- * <p>The Gemini Files API is used instead of embedding PDF bytes in requests.
+ * <p>The provider's Files API is used instead of embedding PDF bytes in requests.
  * Supplier statements are physically divided into small page chunks so every
  * page must produce an explicit completion record; independent chunks are
  * extracted concurrently and mapped back to the original PDF. The structured
@@ -89,8 +89,8 @@ public final class GeminiInvoiceScanService {
 			DateTimeFormatter.ofPattern("d.MM.uuuu"));
 
 	/**
-	 * Gemini's structured-output schema is deliberately self-contained. Some
-	 * Gemini API versions support a smaller JSON-Schema subset, so field boxes
+	 * The structured-output schema is deliberately self-contained. Some
+	 * API versions support a smaller JSON-Schema subset, so field boxes
 	 * are repeated rather than expressed through $defs/$ref.
 	 */
 	private static final String SCHEMA = """
@@ -273,7 +273,7 @@ public final class GeminiInvoiceScanService {
 			throws IOException, InterruptedException {
 		int pageCount = validatePdf(pdf);
 		if (!isConfigured()) {
-			throw new IllegalStateException("Gemini Flash is not configured. Set gemini.api.key in application.properties or GEMINI_API_KEY in the environment.");
+			throw new IllegalStateException("Document AI is not configured. Configure the document AI API key before launching Alpha Income.");
 		}
 		int pagesPerRequest = configuredInteger("gemini.statement.pages-per-request",
 				"GEMINI_STATEMENT_PAGES_PER_REQUEST", DEFAULT_STATEMENT_PAGES_PER_REQUEST, 1, 12);
@@ -310,12 +310,12 @@ public final class GeminiInvoiceScanService {
 					return shiftToOriginalPages(filtered, originalPageOffset);
 				}
 				if (attempt < completenessAttempts) {
-					System.err.println("Gemini statement chunk did not pass page coverage validation ("
+					System.err.println("Document AI statement chunk did not pass page coverage validation ("
 							+ completenessFailure + "); retrying extraction attempt " + (attempt + 1)
 							+ " of " + completenessAttempts + ".");
 				}
 			}
-			throw new IOException("Gemini could not verify every page in statement pages "
+			throw new IOException("Document AI could not verify every page in statement pages "
 					+ (originalPageOffset + 1) + "–" + (originalPageOffset + pageCount)
 					+ " after " + completenessAttempts + " attempts: " + completenessFailure);
 		} finally {
@@ -336,7 +336,7 @@ public final class GeminiInvoiceScanService {
 					firstChunk.startPageIndex(), firstChunk.pageCount(), true);
 			notifyProgress(progress, 1, chunks.size());
 			if (first.periodStart() == null || first.periodEnd() == null) {
-				throw new IOException("Gemini could not determine the statement period from pages 1–"
+				throw new IOException("Document AI could not determine the statement period from pages 1–"
 						+ firstChunk.pageCount());
 			}
 			StatementPeriod period = new StatementPeriod(first.periodStart(), first.periodEnd());
@@ -401,7 +401,7 @@ public final class GeminiInvoiceScanService {
 	private static String pageCompletenessFailure(ScanResult result, int expectedPageCount) {
 		Map<Integer, Integer> counts = result.pageTransactionCounts();
 		if (counts.size() != expectedPageCount) {
-			return "Gemini accounted for " + counts.size() + " of " + expectedPageCount + " pages";
+			return "Document AI accounted for " + counts.size() + " of " + expectedPageCount + " pages";
 		}
 		long total = 0;
 		for (int page = 1; page <= expectedPageCount; page++) {
@@ -509,7 +509,7 @@ public final class GeminiInvoiceScanService {
 						Thread.currentThread().interrupt();
 						throw interrupted;
 					}
-					throw new IOException("Gemini statement chunk extraction failed", cause);
+					throw new IOException("Document AI statement chunk extraction failed", cause);
 				}
 			}
 		} finally {
@@ -538,7 +538,7 @@ public final class GeminiInvoiceScanService {
 		return scan(pdf, kind);
 	}
 
-	/** Parses a Gemini response and converts normalized boxes into PDF-point locations. */
+	/** Parses a document AI response and converts normalized boxes into PDF-point locations. */
 	public ScanResult parseResponse(String rawResponse, File pdf) throws IOException {
 		if (pdf == null || !pdf.isFile()) throw new IOException("The source PDF is no longer available");
 		try (PDDocument document = PDDocument.load(pdf)) {
@@ -551,7 +551,7 @@ public final class GeminiInvoiceScanService {
 				if (annotation.isTextual()) annotation = mapper.readTree(annotation.asText());
 			}
 			if (annotation == null || !annotation.isObject()) {
-				throw new IOException("Gemini response did not contain a structured invoice document");
+				throw new IOException("Document AI response did not contain a structured invoice document");
 			}
 			String supplier = text(annotation, "supplier_name");
 			LocalDate documentDate = date(text(annotation, "document_date"));
@@ -587,7 +587,7 @@ public final class GeminiInvoiceScanService {
 		} catch (IOException exception) {
 			throw exception;
 		} catch (RuntimeException exception) {
-			throw new IOException("Gemini returned invalid structured invoice data", exception);
+			throw new IOException("Document AI returned invalid structured invoice data", exception);
 		}
 	}
 
@@ -598,7 +598,7 @@ public final class GeminiInvoiceScanService {
 			return parseResponse(rawResponse, source);
 		} catch (IOException exception) {
 			// Keep parser-only callers useful when no actual PDF is present. The
-			// extracted rows remain valid; Gemini boxes simply cannot be projected.
+			// extracted rows remain valid; document AI boxes simply cannot be projected.
 			if (!source.isFile()) return parseRowsWithoutLocations(rawResponse, source.getName());
 			throw exception;
 		}
@@ -618,10 +618,10 @@ public final class GeminiInvoiceScanService {
 						"{}",
 						StandardCharsets.UTF_8))
 				.build();
-		HttpResponse<String> startResponse = send(startRequest, "Gemini Files API upload setup");
+		HttpResponse<String> startResponse = send(startRequest, "Document AI file upload setup");
 		String uploadUrl = startResponse.headers().firstValue("X-Goog-Upload-URL")
 				.orElseGet(() -> startResponse.headers().firstValue("x-goog-upload-url").orElse(""));
-		if (uploadUrl.isBlank()) throw apiFailure("Gemini Files API did not return an upload URL", startResponse);
+		if (uploadUrl.isBlank()) throw apiFailure("Document AI file upload did not return an upload URL", startResponse);
 
 		HttpRequest dataRequest = HttpRequest.newBuilder(URI.create(uploadUrl.trim()))
 				.timeout(requestTimeout)
@@ -629,15 +629,15 @@ public final class GeminiInvoiceScanService {
 				.header("X-Goog-Upload-Command", "upload, finalize")
 				.POST(HttpRequest.BodyPublishers.ofByteArray(bytes))
 				.build();
-		HttpResponse<String> dataResponse = send(dataRequest, "Gemini Files API upload");
+		HttpResponse<String> dataResponse = send(dataRequest, "Document AI file upload");
 		JsonNode uploadRoot = mapper.readTree(dataResponse.body());
 		JsonNode file = uploadRoot.has("file") ? uploadRoot.get("file") : uploadRoot;
 		String uri = text(file, "uri");
 		String name = text(file, "name");
-		if (uri.isBlank()) throw apiFailure("Gemini Files API did not return a file URI", dataResponse);
+		if (uri.isBlank()) throw apiFailure("Document AI file upload did not return a file URI", dataResponse);
 		String state = text(file, "state");
 		if ("FAILED".equalsIgnoreCase(state)) {
-			throw new IOException("Gemini failed while processing " + pdf.getName() + " for model input");
+			throw new IOException("Document AI failed while processing " + pdf.getName() + " for model input");
 		}
 		if ("PROCESSING".equalsIgnoreCase(state) && !name.isBlank()) awaitFile(name);
 		return new UploadedFile(uri, name);
@@ -651,17 +651,17 @@ public final class GeminiInvoiceScanService {
 					.header("x-goog-api-key", apiKey)
 					.GET()
 					.build();
-			HttpResponse<String> response = send(request, "Gemini Files API status check");
+			HttpResponse<String> response = send(request, "Document AI file status check");
 			JsonNode fileRoot = mapper.readTree(response.body());
 			JsonNode file = fileRoot.has("file") ? fileRoot.get("file") : fileRoot;
 			String state = text(file, "state");
 			if ("ACTIVE".equalsIgnoreCase(state) || state.isBlank()) return;
 			if ("FAILED".equalsIgnoreCase(state)) {
-				throw new IOException("Gemini failed while preparing the uploaded PDF");
+				throw new IOException("Document AI failed while preparing the uploaded PDF");
 			}
 			Thread.sleep(1_000);
 		}
-		throw new IOException("Gemini did not finish preparing the uploaded PDF within "
+		throw new IOException("Document AI did not finish preparing the uploaded PDF within "
 				+ fileProcessingTimeout.toMinutes() + " minutes");
 	}
 
@@ -713,7 +713,7 @@ public final class GeminiInvoiceScanService {
 		try {
 			textFormat.set("schema", mapper.readTree(SCHEMA));
 		} catch (IOException exception) {
-			throw new IOException("The Gemini invoice schema is invalid", exception);
+			throw new IOException("The document AI invoice schema is invalid", exception);
 		}
 		if (supportsThinkingLevel(requestModel)) {
 			ObjectNode thinkingConfig = generationConfig.putObject("thinkingConfig");
@@ -727,25 +727,25 @@ public final class GeminiInvoiceScanService {
 				.header("Accept", "application/json")
 				.POST(HttpRequest.BodyPublishers.ofString(root.toString(), StandardCharsets.UTF_8))
 				.build();
-		HttpResponse<String> response = sendWithRetry(request, "Gemini Flash invoice extraction");
+		HttpResponse<String> response = sendWithRetry(request, "Document AI invoice extraction");
 		logPriorityDowngrade(response);
 		JsonNode responseRoot = mapper.readTree(response.body());
 		JsonNode candidates = responseRoot.path("candidates");
 		if (!candidates.isArray() || candidates.isEmpty()) {
 			String blockReason = text(responseRoot.path("promptFeedback"), "blockReason");
 			throw new IOException(blockReason.isBlank()
-					? "Gemini returned no extraction candidate"
-					: "Gemini blocked the PDF extraction: " + blockReason);
+					? "Document AI returned no extraction candidate"
+					: "Document AI blocked the PDF extraction: " + blockReason);
 		}
 		String finishReason = text(candidates.get(0), "finishReason");
 		if ("MAX_TOKENS".equalsIgnoreCase(finishReason)) {
-			throw new IOException("Gemini stopped because its statement response reached the output-token limit");
+			throw new IOException("Document AI stopped because its statement response reached the output-token limit");
 		}
 		StringBuilder output = new StringBuilder();
 		for (JsonNode part : candidates.get(0).path("content").path("parts")) {
 			if (part.has("text")) output.append(part.get("text").asText());
 		}
-		if (output.isEmpty()) throw new IOException("Gemini returned an empty structured invoice response");
+		if (output.isEmpty()) throw new IOException("Document AI returned an empty structured invoice response");
 		return stripCodeFence(output.toString());
 	}
 
@@ -775,7 +775,7 @@ public final class GeminiInvoiceScanService {
 				lastTransportFailure = exception;
 				if (attempt == maxAttempts) {
 					throw new IOException(operation + " failed after " + maxAttempts
-							+ " attempts because the Gemini API could not be reached", exception);
+							+ " attempts because the document AI service could not be reached", exception);
 				}
 				long delayMillis = retryDelayMillis(null, attempt);
 				logRetry(operation, "a network error", attempt, maxAttempts, delayMillis);
@@ -834,7 +834,7 @@ public final class GeminiInvoiceScanService {
 		if (!"priority".equals(serviceTier)) return;
 		String actualTier = response.headers().firstValue("x-gemini-service-tier").orElse("").trim();
 		if ("standard".equalsIgnoreCase(actualTier)) {
-			System.err.println("Gemini priority capacity was unavailable; this invoice scan was gracefully "
+			System.err.println("Document AI priority capacity was unavailable; this invoice scan was gracefully "
 					+ "processed at the standard service tier.");
 		}
 	}
@@ -1146,12 +1146,12 @@ public final class GeminiInvoiceScanService {
 		if (!pdf.getName().toLowerCase(Locale.ROOT).endsWith(".pdf")) throw new IOException("Only PDF documents can be scanned");
 		long size = Files.size(pdf.toPath());
 		if (size == 0) throw new IOException(pdf.getName() + " is empty");
-		if (size > MAX_PDF_BYTES) throw new IOException(pdf.getName() + " is larger than Gemini's 50 MB PDF limit");
+		if (size > MAX_PDF_BYTES) throw new IOException(pdf.getName() + " is larger than the document AI 50 MB PDF limit");
 		try (PDDocument document = PDDocument.load(pdf)) {
 			int pages = document.getNumberOfPages();
 			if (pages == 0) throw new IOException(pdf.getName() + " has no pages");
 			if (pages > MAX_PDF_PAGES) throw new IOException(pdf.getName() + " has " + pages
-					+ " pages; Gemini accepts at most " + MAX_PDF_PAGES + " pages per PDF");
+					+ " pages; document AI accepts at most " + MAX_PDF_PAGES + " pages per PDF");
 			return pages;
 		}
 	}

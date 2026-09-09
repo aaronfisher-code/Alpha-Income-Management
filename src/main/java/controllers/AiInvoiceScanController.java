@@ -8,6 +8,7 @@ import javafx.collections.transformation.FilteredList;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ComboBox;
@@ -29,6 +30,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -84,7 +86,7 @@ import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 
 /** Controller for the review-first PDF scan and reconciliation dialog. */
 public final class AiInvoiceScanController extends Controller {
-	private static final double LOW_FIELD_CONFIDENCE = 0.90;
+	private static final double LOW_FIELD_CONFIDENCE = InvoiceReconciler.REVIEW_CONFIDENCE;
 	private static final double EVIDENCE_FILL_OPACITY = 0.08;
 	private static final double EVIDENCE_STROKE_OPACITY = 0.72;
 	private static final DateTimeFormatter PERIOD_DATE = DateTimeFormatter.ofPattern("d MMM uuuu");
@@ -97,6 +99,9 @@ public final class AiInvoiceScanController extends Controller {
 	@FXML private ProgressIndicator scanProgress;
 	@FXML private Label configurationLabel;
 	@FXML private Label summaryLabel;
+	@FXML private Label acceptanceSummaryLabel;
+	@FXML private Button saveAcceptedButton;
+	@FXML private ProgressIndicator saveAcceptedProgress;
 	@FXML private Pane scanSourceBar;
 	@FXML private Pane scanSummaryBar;
 	@FXML private Pane statementTotalsBar;
@@ -125,13 +130,15 @@ public final class AiInvoiceScanController extends Controller {
 	@FXML private Label reviewDueDateLabel;
 	@FXML private DatePicker reviewDueDateField;
 	@FXML private TextField reviewAmountField;
+	@FXML private Label reviewExpectedAmountLabel;
+	@FXML private Label reviewVarianceLabel;
 	@FXML private TextArea reviewNotesField;
 	@FXML private Button reviewBackButton;
-	@FXML private Button reviewSaveButton;
-	@FXML private ProgressIndicator reviewSaveProgress;
+	@FXML private Button reviewAcceptButton;
 
 	private final ObservableList<File> selectedFiles = FXCollections.observableArrayList();
 	private final ObservableList<InvoiceReconciliation> allResults = FXCollections.observableArrayList();
+	private final Map<ScannedInvoice, AcceptedDocument> acceptedDocuments = new HashMap<>();
 	private final Map<ScannedInvoice, Map<PdfEvidenceField, PdfEvidenceLocation>> evidenceLocations = new HashMap<>();
 	private final Map<ScannedInvoice, File> evidenceFiles = new HashMap<>();
 	private final GeminiInvoiceScanService scanService = new GeminiInvoiceScanService();
@@ -139,6 +146,7 @@ public final class AiInvoiceScanController extends Controller {
 	private InvoiceService invoiceService;
 	private CreditService creditService;
 	private ExecutorService executor;
+	private List<InvoiceSupplier> availableSuppliers = List.of();
 	private InvoiceReconciliation currentReview;
 	private LocalDate currentStatementPeriodStart;
 	private LocalDate currentStatementPeriodEnd;
@@ -154,6 +162,7 @@ public final class AiInvoiceScanController extends Controller {
 	private double currentPageHeight;
 	private double previewZoom = 0.5;
 	private long previewRequest;
+	private boolean commitBusy;
 	private static final AtomicInteger SCAN_THREAD_NUMBER = new AtomicInteger();
 
 	@FXML
@@ -169,6 +178,7 @@ public final class AiInvoiceScanController extends Controller {
 		});
 		reviewTypeChoice.getItems().setAll("Invoice", "Credit");
 		reviewTypeChoice.getSelectionModel().selectedItemProperty().addListener((_, _, value) -> updateReviewType(value));
+		reviewAmountField.textProperty().addListener((_, _, _) -> updateReviewReconciliationValues());
 		selectedFiles.addListener((javafx.collections.ListChangeListener<File>) _ -> refreshSelectedFiles());
 		showMatchedCheck.selectedProperty().addListener((_, _, _) -> applyResultFilter());
 		configureTable();
@@ -190,8 +200,10 @@ public final class AiInvoiceScanController extends Controller {
 				reviewErrorLabel.setManaged(true);
 				return;
 			}
-			reviewSupplierChoice.getItems().setAll(suppliers);
+			availableSuppliers = suppliers == null ? List.of() : List.copyOf(suppliers);
+			reviewSupplierChoice.getItems().setAll(availableSuppliers);
 			if (currentReview != null) selectReviewSupplier(currentReview.getScanned().supplierName());
+			updateAcceptanceControls();
 		}));
 	}
 
@@ -218,8 +230,8 @@ public final class AiInvoiceScanController extends Controller {
 			return;
 		}
 		if (!scanService.isConfigured()) {
-			parent.getDialogPane().showError("Gemini Flash is not configured",
-					"Set gemini.api.key in the local application.properties file, or set GEMINI_API_KEY before launching Alpha Income.");
+			parent.getDialogPane().showError("Document AI is not configured",
+					"Configure the document AI API key before launching Alpha Income.");
 			return;
 		}
 
@@ -237,20 +249,18 @@ public final class AiInvoiceScanController extends Controller {
 				int parallelism = Math.min(files.size(), scanService.parallelScanLimit());
 				updateProgress(0, files.size());
 				updateMessage(files.size() == 1
-						? "Scanning " + files.get(0).getName() + (kind == GeminiInvoiceScanService.ScanKind.STATEMENT
-								? " and determining its statement period" : "") + " with Gemini Flash…"
-						: "Scanning " + files.size() + " invoice PDFs with up to " + parallelism
-							+ " parallel Gemini requests…");
+						? "Scanning 0 of 1 PDF" + (kind == GeminiInvoiceScanService.ScanKind.STATEMENT
+								? " and determining its statement period" : "") + " with document AI…"
+						: "Scanning 0 of " + files.size() + " invoice PDFs with document AI…");
 				BiConsumer<Integer, Integer> onStatementChunkProgress = (completed, total) -> {
 					updateProgress(completed, total);
-					updateMessage("Scanned " + completed + " of " + total
-							+ " statement chunks" + (total > 1 ? " (remaining chunks run in parallel)…" : "…"));
+					updateMessage("Scanning " + completed + " of " + total + " statement chunks…");
 				};
 				List<FileScan> fileScans = scanFilesInParallel(files, kind,
 						parallelism, this, completed -> {
 					updateProgress(completed, files.size());
-					updateMessage("Scanned " + completed + " of " + files.size()
-							+ (files.size() == 1 ? " PDF…" : " PDFs in parallel…"));
+					updateMessage("Scanning " + completed + " of " + files.size()
+							+ (files.size() == 1 ? " PDF…" : " PDFs…"));
 				}, onStatementChunkProgress);
 				LocalDate periodStart = null;
 				LocalDate periodEnd = null;
@@ -275,14 +285,14 @@ public final class AiInvoiceScanController extends Controller {
 				}
 				if (kind == GeminiInvoiceScanService.ScanKind.STATEMENT
 						&& (periodStart == null || periodEnd == null)) {
-					throw new IllegalStateException("Gemini could not determine the statement's reporting period. "
+					throw new IllegalStateException("Document AI could not determine the statement's reporting period. "
 							+ "Check that the statement date or period is visible in the PDF.");
 				}
 				if (scanned.isEmpty()) {
 					throw new IllegalStateException(kind == GeminiInvoiceScanService.ScanKind.STATEMENT
-							? "Gemini did not find any invoice or credit transactions inside the inferred statement period "
+							? "Document AI did not find any invoice or credit transactions inside the inferred statement period "
 									+ periodLabel(periodStart, periodEnd) + "."
-							: "Gemini did not find any invoice or credit transactions in the selected PDF.");
+							: "Document AI did not find any invoice or credit transactions in the selected PDF.");
 				}
 				updateMessage("Loading Z-Office data…");
 				List<Invoice> imported = loadImportedRows(scanned, kind, periodStart, periodEnd);
@@ -291,10 +301,8 @@ public final class AiInvoiceScanController extends Controller {
 			}
 		};
 		summaryLabel.textProperty().bind(task.messageProperty());
-		scanProgress.progressProperty().bind(task.progressProperty());
 		task.setOnSucceeded(_ -> {
 			summaryLabel.textProperty().unbind();
-			scanProgress.progressProperty().unbind();
 			evidenceLocations.clear();
 			evidenceLocations.putAll(task.getValue().locations());
 			evidenceFiles.clear();
@@ -304,6 +312,7 @@ public final class AiInvoiceScanController extends Controller {
 			currentResultIsStatement = kind == GeminiInvoiceScanService.ScanKind.STATEMENT;
 			currentStatementAmountCents = task.getValue().statementAmountCents();
 			currentStatementAmountConfidence = task.getValue().statementAmountConfidence();
+			acceptedDocuments.clear();
 			allResults.setAll(task.getValue().reconciliations());
 			applyResultFilter();
 			updateSummary(task.getValue().scanned().size());
@@ -313,7 +322,6 @@ public final class AiInvoiceScanController extends Controller {
 		});
 		task.setOnFailed(_ -> {
 			summaryLabel.textProperty().unbind();
-			scanProgress.progressProperty().unbind();
 			summaryLabel.setText("Scan failed. No invoices were changed.");
 			setBusy(false);
 			Throwable error = task.getException();
@@ -384,13 +392,13 @@ public final class AiInvoiceScanController extends Controller {
 			Thread.currentThread().interrupt();
 			throw exception;
 		} catch (IOException exception) {
-			throw new IOException("Gemini Flash failed for " + sourceFile.getName()
+			throw new IOException("Document AI failed for " + sourceFile.getName()
 					+ ". No data from this PDF was imported.", exception);
 		}
 
 		List<ScannedInvoice> extracted = result.rows();
-		// Prefer Gemini's best-estimate boxes. The local text locator fills only
-		// values Gemini could not place, especially for searchable digital PDFs.
+		// Prefer document AI's best-estimate boxes. The local text locator fills
+		// only values document AI could not place, especially for searchable PDFs.
 		Map<ScannedInvoice, Map<PdfEvidenceField, PdfEvidenceLocation>> fallback = Map.of();
 		try {
 			fallback = PdfEvidenceLocator.locateFields(sourceFile, extracted);
@@ -468,7 +476,12 @@ public final class AiInvoiceScanController extends Controller {
 							.findFirst()
 							.ifPresent(existing -> {
 								invoice.setSupplierName(existing.getSupplierName());
+								invoice.setSupplierID(existing.getSupplierID());
+								invoice.setStoreID(existing.getStoreID());
 								invoice.setInvoiceDate(existing.getInvoiceDate());
+								invoice.setDueDate(existing.getDueDate());
+								invoice.setDescription(existing.getDescription());
+								invoice.setNotes(existing.getNotes());
 							});
 					rows.add(invoice);
 				}
@@ -493,16 +506,20 @@ public final class AiInvoiceScanController extends Controller {
 				"OCR DATE", "scannedDateString", 90, InvoiceReconciliation::getDateConfidence);
 		TableColumn<InvoiceReconciliation, String> scanned = confidenceColumn(
 				"SCANNED", "scannedAmountString", 100, InvoiceReconciliation::getAmountConfidence);
-		TableColumn<InvoiceReconciliation, String> imported = column("Z-OFFICE", "importedAmountString", 100);
+		TableColumn<InvoiceReconciliation, String> imported = column("EXPECTED", "importedAmountString", 100);
 		TableColumn<InvoiceReconciliation, String> variance = column("VARIANCE", "varianceString", 100);
 		TableColumn<InvoiceReconciliation, Void> action = new TableColumn<>("ACTION");
-		action.setPrefWidth(105);
+		action.setPrefWidth(165);
 		action.setSortable(false);
 		action.setCellFactory(_ -> new TableCell<>() {
-			private final Button button = new Button("Review / add");
+			private final Button reviewButton = new Button("Review");
+			private final Button deleteButton = new Button("Delete");
+			private final HBox buttons = new HBox(5, reviewButton, deleteButton);
 			{
-				button.getStyleClass().add("review-add-button");
-				button.setOnAction(_ -> review(getTableView().getItems().get(getIndex())));
+				reviewButton.getStyleClass().add("review-add-button");
+				reviewButton.setOnAction(_ -> review(getTableView().getItems().get(getIndex())));
+				deleteButton.getStyleClass().add("delete-scan-button");
+				deleteButton.setOnAction(_ -> deleteScannedRow(getTableView().getItems().get(getIndex())));
 			}
 			@Override
 			protected void updateItem(Void item, boolean empty) {
@@ -510,9 +527,10 @@ public final class AiInvoiceScanController extends Controller {
 				InvoiceReconciliation row = empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()
 						? null : getTableView().getItems().get(getIndex());
 				boolean saved = row != null && row.getStatus() == InvoiceReconciliation.Status.SAVED;
-				button.setText(saved ? "Saved" : "Review / add");
-				button.setDisable(saved);
-				setGraphic(row == null || row.getScanned() == null ? null : button);
+				reviewButton.setText(saved ? "Saved" : "Review");
+				reviewButton.setDisable(saved || commitBusy);
+				deleteButton.setDisable(saved || commitBusy);
+				setGraphic(row == null || row.getScanned() == null ? null : buttons);
 			}
 		});
 		resultsTable.getColumns().setAll(status, supplier, reference, type, scannedDate, scanned, imported, variance, action);
@@ -533,6 +551,7 @@ public final class AiInvoiceScanController extends Controller {
 					getStyleClass().removeAll("reconciliation-good", "reconciliation-attention", "reconciliation-review");
 					if (!empty && item != null) {
 						if (item.getStatus() == InvoiceReconciliation.Status.SAVED
+								|| item.getStatus() == InvoiceReconciliation.Status.ACCEPTED
 								|| item.getStatus() == InvoiceReconciliation.Status.MATCHED) getStyleClass().add("reconciliation-good");
 						else if (item.getStatus() == InvoiceReconciliation.Status.WITHIN_TOLERANCE) getStyleClass().add("reconciliation-review");
 						else getStyleClass().add("reconciliation-attention");
@@ -701,7 +720,7 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	private static boolean hasLowConfidenceAnnotation(InvoiceReconciliation row) {
-		if (row == null || row.getScanned() == null) return false;
+		if (row == null || row.getScanned() == null || row.isAccepted()) return false;
 		ScannedInvoice.FieldConfidences confidence = row.getScanned().fieldConfidences();
 		// Only fields that render a warning line in the results table should
 		// increase its row height. Due date confidence is reviewed in the edit
@@ -731,11 +750,12 @@ public final class AiInvoiceScanController extends Controller {
 				Double score = confidence.apply(getTableRow().getItem());
 				Long percentage = score == null ? null : Math.round(score * 100);
 				String valueText = item == null || item.isBlank() ? "—" : item;
-				boolean concerning = score != null && score < LOW_FIELD_CONFIDENCE;
+				boolean concerning = !getTableRow().getItem().isAccepted()
+						&& score != null && score < LOW_FIELD_CONFIDENCE;
 				if (concerning) {
 					String confidenceText = "⚠ " + percentage + "% confidence";
 					setText(valueText + "\n" + confidenceText);
-					setTooltip(new Tooltip("Low Gemini confidence: " + percentage + "%"));
+					setTooltip(new Tooltip("Low document AI confidence: " + percentage + "%"));
 					getStyleClass().add("low-confidence-field");
 				} else {
 					setText(valueText);
@@ -750,22 +770,28 @@ public final class AiInvoiceScanController extends Controller {
 		if (row == null || row.getScanned() == null || row.getStatus() == InvoiceReconciliation.Status.SAVED) return;
 		currentReview = row;
 		ScannedInvoice scanned = row.getScanned();
-		reviewTitleLabel.setText("Review " + (scanned.documentType() == ScannedInvoice.DocumentType.CREDIT
+		AcceptedDocument accepted = acceptedDocuments.get(scanned);
+		ScannedInvoice.DocumentType type = accepted == null ? scanned.documentType() : accepted.documentType();
+		reviewTitleLabel.setText("Review " + (type == ScannedInvoice.DocumentType.CREDIT
 				? "credit" : "invoice"));
 		reviewTypeChoice.getSelectionModel().select(
-				scanned.documentType() == ScannedInvoice.DocumentType.CREDIT ? "Credit" : "Invoice");
-		reviewReferenceField.setText(scanned.invoiceNo());
-		reviewDateField.setValue(scanned.invoiceDate());
-		reviewDueDateField.setValue(scanned.dueDate() == null ? scanned.invoiceDate() : scanned.dueDate());
-		reviewAmountField.setText(String.format(java.util.Locale.ROOT, "%.2f", Math.abs(scanned.amount())));
-		reviewNotesField.setText("AI scanned from " + scanned.sourceFile() + "; verified against PDF before saving");
-		styleReviewConfidence(reviewSupplierChoice, row.getSupplierConfidence());
-		styleReviewConfidence(reviewTypeChoice, row.getTypeConfidence());
-		styleReviewConfidence(reviewReferenceField, row.getReferenceConfidence());
-		styleReviewConfidence(reviewDateField, row.getDateConfidence());
-		styleReviewConfidence(reviewDueDateField, row.getDueDateConfidence());
-		styleReviewConfidence(reviewAmountField, row.getAmountConfidence());
-		selectReviewSupplier(scanned.supplierName());
+				type == ScannedInvoice.DocumentType.CREDIT ? "Credit" : "Invoice");
+		reviewReferenceField.setText(accepted == null ? scanned.invoiceNo() : accepted.reference());
+		reviewDateField.setValue(accepted == null ? scanned.invoiceDate() : accepted.documentDate());
+		LocalDate dueDate = accepted == null ? scanned.dueDate() : accepted.dueDate();
+		reviewDueDateField.setValue(type == ScannedInvoice.DocumentType.CREDIT
+				? null : dueDateOrDefault(dueDate, scanned.invoiceDate()));
+		double amount = accepted == null ? Math.abs(scanned.amount()) : accepted.amount();
+		reviewAmountField.setText(String.format(java.util.Locale.ROOT, "%.2f", amount));
+		updateReviewReconciliationValues();
+		reviewNotesField.setText(accepted == null ? "" : accepted.notes());
+		styleReviewConfidence(reviewSupplierChoice, row.getSupplierConfidence(), row.isAccepted());
+		styleReviewConfidence(reviewTypeChoice, row.getTypeConfidence(), row.isAccepted());
+		styleReviewConfidence(reviewReferenceField, row.getReferenceConfidence(), row.isAccepted());
+		styleReviewConfidence(reviewDateField, row.getDateConfidence(), row.isAccepted());
+		styleReviewConfidence(reviewDueDateField, row.getDueDateConfidence(), row.isAccepted());
+		styleReviewConfidence(reviewAmountField, row.getAmountConfidence(), row.isAccepted());
+		selectReviewSupplier(accepted == null ? scanned.supplierName() : accepted.supplierName());
 		showReviewError(null);
 		resultsView.setVisible(false);
 		resultsView.setManaged(false);
@@ -775,8 +801,33 @@ public final class AiInvoiceScanController extends Controller {
 		Platform.runLater(() -> showEvidence(row));
 	}
 
+	private void deleteScannedRow(InvoiceReconciliation row) {
+		if (row == null || row.getScanned() == null
+				|| row.getStatus() == InvoiceReconciliation.Status.SAVED || commitBusy) return;
+		String reference = row.getInvoiceNo().isBlank() ? "this scanned document" : row.getInvoiceNo();
+		parent.getDialogPane().showWarning("Remove scanned row?",
+				"Remove " + reference + " from the current scan?\n"
+						+ "This does not delete anything already saved to the database.")
+				.thenAccept(buttonType -> {
+					if (!ButtonType.OK.equals(buttonType)) return;
+					ScannedInvoice scanned = row.getScanned();
+					allResults.remove(row);
+					acceptedDocuments.remove(scanned);
+					evidenceLocations.remove(scanned);
+					evidenceFiles.remove(scanned);
+					applyResultFilter();
+					updateSummary(allResults.size());
+					if (!resultsTable.getItems().isEmpty()) {
+						resultsTable.getSelectionModel().selectFirst();
+					} else {
+						resultsTable.getSelectionModel().clearSelection();
+					}
+				});
+	}
+
 	@FXML
 	private void backToResults() {
+		InvoiceReconciliation rowToSelect = currentReview;
 		previewRequest++;
 		currentReview = null;
 		reviewView.setVisible(false);
@@ -785,10 +836,76 @@ public final class AiInvoiceScanController extends Controller {
 		resultsView.setVisible(true);
 		resultsView.setManaged(true);
 		resultsTable.requestFocus();
+		if (rowToSelect != null) {
+			Platform.runLater(() -> selectResultRow(rowToSelect));
+		}
+	}
+
+	private void selectResultRow(InvoiceReconciliation row) {
+		int index = row == null ? -1 : resultsTable.getItems().indexOf(row);
+		if (index < 0) {
+			resultsTable.getSelectionModel().clearSelection();
+			return;
+		}
+		resultsTable.getSelectionModel().clearAndSelect(index);
+		resultsTable.scrollTo(index);
+	}
+
+	private void resetScan() {
+		if (summaryLabel.textProperty().isBound()) summaryLabel.textProperty().unbind();
+		previewRequest++;
+		currentReview = null;
+		currentStatementPeriodStart = null;
+		currentStatementPeriodEnd = null;
+		currentResultIsStatement = false;
+		currentStatementAmountCents = null;
+		currentStatementAmountConfidence = null;
+		currentPreviewFile = null;
+		currentEvidence = Map.of();
+		currentPreviewImage = null;
+		currentPageIndex = 0;
+		currentPageCount = 0;
+		currentPageWidth = 0;
+		currentPageHeight = 0;
+		acceptedDocuments.clear();
+		allResults.clear();
+		evidenceLocations.clear();
+		evidenceFiles.clear();
+		selectedFiles.clear();
+		documentKindChoice.getSelectionModel().selectFirst();
+		showMatchedCheck.setSelected(false);
+		resultsTable.getSelectionModel().clearSelection();
+		applyResultFilter();
+
+		summaryLabel.setText("Choose PDFs to begin. No OCR result is saved automatically.");
+		reviewTitleLabel.setText("Review invoice");
+		reviewSupplierChoice.setValue(null);
+		reviewTypeChoice.getSelectionModel().select("Invoice");
+		reviewReferenceField.clear();
+		reviewDateField.setValue(null);
+		reviewDueDateField.setValue(null);
+		reviewAmountField.clear();
+		reviewNotesField.clear();
+		showReviewError(null);
+
+		pdfPreviewImage.setImage(null);
+		pdfOverlayPane.getChildren().clear();
+		previewDocumentLabel.setText("Select a result row");
+		previewPageLabel.setText("No PDF loaded");
+		previewHintLabel.setText("Review the highlighted source values before accepting.");
+		previousPageButton.setDisable(true);
+		nextPageButton.setDisable(true);
+
+		setReviewChromeVisible(true);
+		resultsView.setVisible(true);
+		resultsView.setManaged(true);
+		reviewView.setVisible(false);
+		reviewView.setManaged(false);
+		setBusy(false);
 	}
 
 	@FXML
-	private void saveReview() {
+	private void acceptReview() {
 		if (currentReview == null) return;
 		InvoiceSupplier supplier = reviewSupplierChoice.getValue();
 		String reference = reviewReferenceField.getText() == null ? "" : reviewReferenceField.getText().trim();
@@ -808,11 +925,6 @@ public final class AiInvoiceScanController extends Controller {
 			reviewDateField.requestFocus();
 			return;
 		}
-		if (!credit && reviewDueDateField.getValue() == null) {
-			showReviewError("Enter the invoice due date.");
-			reviewDueDateField.requestFocus();
-			return;
-		}
 		BigDecimal amount;
 		try {
 			String rawAmount = reviewAmountField.getText() == null ? "" : reviewAmountField.getText()
@@ -825,59 +937,161 @@ public final class AiInvoiceScanController extends Controller {
 			return;
 		}
 
-		setReviewBusy(true);
 		showReviewError(null);
 		String notes = reviewNotesField.getText() == null ? "" : reviewNotesField.getText().trim();
 		java.time.LocalDate documentDate = reviewDateField.getValue();
-		java.time.LocalDate dueDate = reviewDueDateField.getValue();
-		Task<ScannedInvoice.DocumentType> task = new Task<>() {
+		java.time.LocalDate dueDate = credit
+				? null : dueDateOrDefault(reviewDueDateField.getValue(), documentDate);
+		if (!credit && reviewDueDateField.getValue() == null) reviewDueDateField.setValue(dueDate);
+		ScannedInvoice scanned = currentReview.getScanned();
+		acceptedDocuments.put(scanned, new AcceptedDocument(
+				supplier.getContactID(),
+				supplier.getSupplierName(),
+				credit ? ScannedInvoice.DocumentType.CREDIT : ScannedInvoice.DocumentType.INVOICE,
+				reference,
+				documentDate,
+				credit ? null : dueDate,
+				amount.doubleValue(),
+				notes));
+
+		int index = allResults.indexOf(currentReview);
+		if (index >= 0) {
+			currentReview = currentReview.withStatus(InvoiceReconciliation.Status.ACCEPTED);
+			allResults.set(index, currentReview);
+		}
+		applyResultFilter();
+		updateSummary(allResults.size());
+		backToResults();
+	}
+
+	@FXML
+	private void saveAccepted() {
+		if (commitBusy || allResults.isEmpty()) return;
+		if (allResults.stream().anyMatch(row -> !row.isAccepted())) {
+			parent.getDialogPane().showWarning("Documents still need review",
+					"Review and accept every document that needs attention before saving.");
+			return;
+		}
+
+		List<PendingSave> pending;
+		try {
+			pending = buildPendingSaves();
+		} catch (IllegalStateException exception) {
+			parent.getDialogPane().showWarning("Unable to save accepted documents", exception.getMessage());
+			return;
+		}
+		if (pending.isEmpty()) return;
+
+		setCommitBusy(true);
+		Task<CommitResult> task = new Task<>() {
 			@Override
-			protected ScannedInvoice.DocumentType call() {
-				if (credit) {
-					Credit newCredit = new Credit();
-					newCredit.setSupplierID(supplier.getContactID());
-					newCredit.setCreditNo(reference);
-					newCredit.setReferenceInvoiceNo("");
-					newCredit.setCreditDate(documentDate);
-					newCredit.setCreditAmount(amount.doubleValue());
-					newCredit.setNotes(notes);
-					newCredit.setStoreID(main.getCurrentStore().getStoreID());
-					creditService.addCredit(newCredit);
-					return ScannedInvoice.DocumentType.CREDIT;
+			protected CommitResult call() {
+				List<InvoiceReconciliation> saved = new ArrayList<>();
+				for (PendingSave pendingSave : pending) {
+					try {
+						saveDocument(pendingSave.row(), pendingSave.document());
+						saved.add(pendingSave.row());
+					} catch (Exception exception) {
+						String message = "Could not save " + pendingSave.row().getInvoiceNo() + ": "
+								+ errorMessage(exception);
+						return new CommitResult(saved, message);
+					}
 				}
-				if (invoiceService.checkDuplicateInvoice(reference, main.getCurrentStore().getStoreID(),
-						supplier.getContactID())) {
-					throw new IllegalStateException("This invoice already exists for the selected supplier.");
-				}
-				Invoice newInvoice = new Invoice();
-				newInvoice.setSupplierID(supplier.getContactID());
-				newInvoice.setInvoiceNo(reference);
-				newInvoice.setInvoiceDate(documentDate);
-				newInvoice.setDueDate(dueDate);
-				newInvoice.setDescription("pharmacy stock");
-				newInvoice.setUnitAmount(amount.doubleValue());
-				newInvoice.setNotes(notes);
-				newInvoice.setStoreID(main.getCurrentStore().getStoreID());
-				invoiceService.addInvoice(newInvoice);
-				return ScannedInvoice.DocumentType.INVOICE;
+				return new CommitResult(saved, null);
 			}
 		};
 		task.setOnSucceeded(_ -> {
-			InvoiceReconciliation reviewed = currentReview;
-			int index = allResults.indexOf(reviewed);
-			if (index >= 0) allResults.set(index, reviewed.withStatus(InvoiceReconciliation.Status.SAVED));
+			CommitResult result = task.getValue();
+			for (InvoiceReconciliation saved : result.savedRows()) {
+				int index = allResults.indexOf(saved);
+				if (index >= 0) allResults.set(index, saved.withStatus(InvoiceReconciliation.Status.SAVED));
+			}
 			applyResultFilter();
 			updateSummary(allResults.size());
-			if (task.getValue() == ScannedInvoice.DocumentType.CREDIT) parent.fillCreditTable();
-			else parent.fillInvoiceTable();
-			setReviewBusy(false);
-			backToResults();
+			setCommitBusy(false);
+			if (!result.savedRows().isEmpty()) {
+				parent.fillInvoiceTable();
+				parent.fillCreditTable();
+			}
+			if (result.failureMessage() != null) {
+				parent.getDialogPane().showError("Save incomplete", result.failureMessage());
+			} else {
+				resetScan();
+			}
 		});
 		task.setOnFailed(_ -> {
-			setReviewBusy(false);
-			showReviewError(rootCause(task.getException()).getMessage());
+			setCommitBusy(false);
+			parent.getDialogPane().showError("Save failed", errorMessage(task.getException()),
+					task.getException() instanceof Exception exception ? exception : new RuntimeException(task.getException()));
 		});
 		executor.submit(task);
+	}
+
+	private List<PendingSave> buildPendingSaves() {
+		List<PendingSave> pending = new ArrayList<>();
+		for (InvoiceReconciliation row : allResults) {
+			if (row.getStatus() == InvoiceReconciliation.Status.SAVED) continue;
+			ScannedInvoice scanned = row.getScanned();
+			if (scanned == null) continue;
+			AcceptedDocument accepted = acceptedDocuments.get(scanned);
+			if (accepted == null) accepted = acceptedDocumentFromScanned(row);
+			pending.add(new PendingSave(row, accepted));
+		}
+		return pending;
+	}
+
+	private AcceptedDocument acceptedDocumentFromScanned(InvoiceReconciliation row) {
+		ScannedInvoice scanned = row.getScanned();
+		InvoiceSupplier supplier = findAvailableSupplier(row.getSupplierName());
+		if (supplier == null) {
+			throw new IllegalStateException("Select an existing supplier for " + row.getInvoiceNo()
+					+ " before saving.");
+		}
+		if (scanned.invoiceDate() == null) {
+			throw new IllegalStateException("Enter a document date for " + row.getInvoiceNo()
+					+ " before saving.");
+		}
+		boolean credit = scanned.documentType() == ScannedInvoice.DocumentType.CREDIT;
+		LocalDate dueDate = credit ? null : dueDateOrDefault(scanned.dueDate(), scanned.invoiceDate());
+		return new AcceptedDocument(
+				supplier.getContactID(),
+				supplier.getSupplierName(),
+				scanned.documentType(),
+				scanned.invoiceNo(),
+				scanned.invoiceDate(),
+				dueDate,
+				Math.abs(scanned.amount()),
+				"");
+	}
+
+	private void saveDocument(InvoiceReconciliation row, AcceptedDocument accepted) {
+		if (accepted.documentType() == ScannedInvoice.DocumentType.CREDIT) {
+			Credit credit = new Credit();
+			credit.setSupplierID(accepted.supplierId());
+			credit.setCreditNo(accepted.reference());
+			credit.setReferenceInvoiceNo("");
+			credit.setCreditDate(accepted.documentDate());
+			credit.setCreditAmount(accepted.amount());
+			credit.setNotes(accepted.notes());
+			credit.setStoreID(main.getCurrentStore().getStoreID());
+			creditService.saveOrUpdateCredit(credit);
+			return;
+		}
+
+		Invoice invoice = new Invoice();
+		invoice.setSupplierID(accepted.supplierId());
+		invoice.setInvoiceNo(accepted.reference());
+		invoice.setInvoiceDate(accepted.documentDate());
+		invoice.setDueDate(accepted.dueDate());
+		Invoice imported = row.getImported();
+		String description = imported == null ? "" : imported.getDescription();
+		invoice.setDescription(description == null || description.isBlank() ? "pharmacy stock" : description);
+		invoice.setUnitAmount(accepted.amount());
+		invoice.setNotes(accepted.notes());
+		invoice.setStoreID(main.getCurrentStore().getStoreID());
+		String originalReference = imported == null ? "" : imported.getInvoiceNo();
+		int originalSupplierId = imported == null ? 0 : imported.getSupplierID();
+		invoiceService.saveOrUpdateInvoice(invoice, originalReference, originalSupplierId);
 	}
 
 	private void updateReviewType(String value) {
@@ -886,9 +1100,36 @@ public final class AiInvoiceScanController extends Controller {
 		reviewDueDateLabel.setManaged(invoice);
 		reviewDueDateField.setVisible(invoice);
 		reviewDueDateField.setManaged(invoice);
-		reviewDueDateField.setDisable(!invoice || reviewSaveProgress.isVisible());
-		reviewSaveButton.setText(invoice ? "Save invoice" : "Save credit");
+		reviewDueDateField.setDisable(!invoice);
+		reviewAcceptButton.setText("Accept");
 		if (currentReview != null) reviewTitleLabel.setText(invoice ? "Review invoice" : "Review credit");
+	}
+
+	private void updateReviewReconciliationValues() {
+		if (currentReview == null || currentReview.getImported() == null
+				|| !currentReview.getImported().isImportExists()) {
+			reviewExpectedAmountLabel.setText("N/A");
+			reviewVarianceLabel.setText("N/A");
+			reviewVarianceLabel.getStyleClass().remove("review-variance-attention");
+			return;
+		}
+
+		double expected = currentReview.getImported().getImportedInvoiceAmount();
+		reviewExpectedAmountLabel.setText(CURRENCY.format(expected));
+		String rawAmount = reviewAmountField.getText() == null
+				? "" : reviewAmountField.getText().replace("$", "").replace(",", "").trim();
+		try {
+			double entered = Double.parseDouble(rawAmount);
+			double variance = entered - expected;
+			reviewVarianceLabel.setText(CURRENCY.format(variance));
+			reviewVarianceLabel.getStyleClass().remove("review-variance-attention");
+			if (Math.abs(variance) > InvoiceReconciler.DEFAULT_TOLERANCE_CENTS / 100.0) {
+				reviewVarianceLabel.getStyleClass().add("review-variance-attention");
+			}
+		} catch (NumberFormatException exception) {
+			reviewVarianceLabel.setText("N/A");
+			reviewVarianceLabel.getStyleClass().remove("review-variance-attention");
+		}
 	}
 
 	private void selectReviewSupplier(String supplierName) {
@@ -899,18 +1140,12 @@ public final class AiInvoiceScanController extends Controller {
 				.ifPresentOrElse(reviewSupplierChoice::setValue, () -> reviewSupplierChoice.setValue(null));
 	}
 
-	private void setReviewBusy(boolean busy) {
-		reviewSaveProgress.setVisible(busy);
-		reviewSaveProgress.setManaged(busy);
-		reviewSaveButton.setDisable(busy);
-		reviewBackButton.setDisable(busy);
-		reviewSupplierChoice.setDisable(busy);
-		reviewTypeChoice.setDisable(busy);
-		reviewReferenceField.setDisable(busy);
-		reviewDateField.setDisable(busy);
-		reviewDueDateField.setDisable(busy || "Credit".equals(reviewTypeChoice.getValue()));
-		reviewAmountField.setDisable(busy);
-		reviewNotesField.setDisable(busy);
+	private InvoiceSupplier findAvailableSupplier(String supplierName) {
+		String normalized = InvoiceReconciler.supplier(supplierName);
+		return availableSuppliers.stream()
+				.filter(supplier -> InvoiceReconciler.supplier(supplier.getSupplierName()).equals(normalized))
+				.findFirst()
+				.orElse(null);
 	}
 
 	private void showReviewError(String message) {
@@ -920,14 +1155,18 @@ public final class AiInvoiceScanController extends Controller {
 		reviewErrorLabel.setManaged(visible);
 	}
 
-	private static void styleReviewConfidence(Control control, Double score) {
+	private static void styleReviewConfidence(Control control, Double score, boolean accepted) {
 		control.getStyleClass().remove("low-confidence-input");
+		if (accepted) {
+			control.setTooltip(null);
+			return;
+		}
 		Long percentage = score == null ? null : Math.round(score * 100);
 		if (score != null && score < LOW_FIELD_CONFIDENCE) {
-			control.setTooltip(new Tooltip("Low Gemini confidence: " + percentage + "%"));
+			control.setTooltip(new Tooltip("Low document AI confidence: " + percentage + "%"));
 			control.getStyleClass().add("low-confidence-input");
 		} else if (score == null) {
-			control.setTooltip(new Tooltip("Gemini confidence unavailable"));
+			control.setTooltip(new Tooltip("Document AI confidence unavailable"));
 		} else {
 			control.setTooltip(null);
 		}
@@ -954,13 +1193,31 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	private void updateSummary(int extractedCount) {
-		long notable = allResults.stream().filter(InvoiceReconciliation::isNotable).count();
-		long matched = allResults.size() - notable;
+		long accepted = allResults.stream().filter(InvoiceReconciliation::isAccepted).count();
+		long notable = allResults.size() - accepted;
 		String period = !currentResultIsStatement || currentStatementPeriodStart == null || currentStatementPeriodEnd == null ? ""
 				: "Statement period " + periodLabel(currentStatementPeriodStart, currentStatementPeriodEnd) + " · ";
-		summaryLabel.setText(period + extractedCount + " extracted · " + matched + " matched/within tolerance/saved · "
+		summaryLabel.setText(period + extractedCount + " extracted · " + accepted + " accepted · "
 				+ notable + " need attention. Variance is scanned minus Z-Office.");
+		updateAcceptanceControls();
 		updateStatementTotals();
+	}
+
+	private void updateAcceptanceControls() {
+		long accepted = allResults.stream().filter(InvoiceReconciliation::isAccepted).count();
+		long pendingSave = allResults.stream()
+				.filter(row -> row.getStatus() != InvoiceReconciliation.Status.SAVED)
+				.count();
+		boolean allAccepted = !allResults.isEmpty() && accepted == allResults.size();
+		if (allAccepted && !showMatchedCheck.isSelected()) showMatchedCheck.setSelected(true);
+		boolean showSave = allAccepted && pendingSave > 0;
+		acceptanceSummaryLabel.setText(allResults.isEmpty()
+				? "" : pendingSave == 0
+						? "Saved " + accepted + "/" + allResults.size()
+						: accepted + "/" + allResults.size() + " accepted");
+		saveAcceptedButton.setVisible(showSave || commitBusy);
+		saveAcceptedButton.setManaged(showSave || commitBusy);
+		saveAcceptedButton.setDisable(!showSave || commitBusy);
 	}
 
 	private void updateStatementTotals() {
@@ -994,10 +1251,10 @@ public final class AiInvoiceScanController extends Controller {
 				? null : Math.round(currentStatementAmountConfidence * 100);
 		expectedStatementConfidenceLabel.setText(confidencePercent == null
 				? "Printed total confidence unavailable"
-				: confidencePercent + "% Gemini confidence");
+				: confidencePercent + "% document AI confidence");
 		expectedStatementAmountLabel.getStyleClass().remove("low-confidence-statement-total");
 		if (currentStatementAmountConfidence != null && currentStatementAmountConfidence < LOW_FIELD_CONFIDENCE) {
-			expectedStatementConfidenceLabel.setText("⚠ Low Gemini confidence: " + confidencePercent + "%");
+			expectedStatementConfidenceLabel.setText("⚠ Low document AI confidence: " + confidencePercent + "%");
 			expectedStatementAmountLabel.getStyleClass().add("low-confidence-statement-total");
 		} else if (currentStatementAmountConfidence == null) {
 			expectedStatementConfidenceLabel.setText("Printed total confidence unavailable");
@@ -1017,9 +1274,13 @@ public final class AiInvoiceScanController extends Controller {
 		return PERIOD_DATE.format(start) + " – " + PERIOD_DATE.format(end);
 	}
 
+	private static LocalDate dueDateOrDefault(LocalDate dueDate, LocalDate invoiceDate) {
+		return dueDate == null && invoiceDate != null ? invoiceDate.plusDays(30) : dueDate;
+	}
+
 	private void refreshSelectedFiles() {
 		selectedFilesList.getItems().setAll(selectedFiles.stream().map(File::getName).toList());
-		scanButton.setDisable(selectedFiles.isEmpty());
+		scanButton.setDisable(commitBusy || selectedFiles.isEmpty());
 		chooseFilesButton.setText(selectedFiles.isEmpty() ? "Choose PDF" : "Change selection");
 	}
 
@@ -1028,11 +1289,32 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	private void setBusy(boolean busy) {
+		if (busy) scanProgress.setProgress(ProgressIndicator.INDETERMINATE_PROGRESS);
 		scanProgress.setVisible(busy);
 		scanProgress.setManaged(busy);
+		scanButton.setDisable(busy || commitBusy || selectedFiles.isEmpty());
+		chooseFilesButton.setDisable(busy || commitBusy);
+		documentKindChoice.setDisable(busy || commitBusy);
+		showMatchedCheck.setDisable(busy || commitBusy);
+		resultsTable.setDisable(busy || commitBusy);
+		if (busy) {
+			saveAcceptedButton.setVisible(false);
+			saveAcceptedButton.setManaged(false);
+		} else {
+			updateAcceptanceControls();
+		}
+	}
+
+	private void setCommitBusy(boolean busy) {
+		commitBusy = busy;
+		saveAcceptedProgress.setVisible(busy);
+		saveAcceptedProgress.setManaged(busy);
+		showMatchedCheck.setDisable(busy);
+		resultsTable.setDisable(busy);
 		scanButton.setDisable(busy || selectedFiles.isEmpty());
 		chooseFilesButton.setDisable(busy);
 		documentKindChoice.setDisable(busy);
+		updateAcceptanceControls();
 	}
 
 	private static Throwable rootCause(Throwable value) {
@@ -1050,6 +1332,19 @@ public final class AiInvoiceScanController extends Controller {
 		if (root == value || rootMessage.isBlank() || message.contains(rootMessage)) return message;
 		return message + "\n\nCause: " + rootMessage;
 	}
+
+	private record AcceptedDocument(int supplierId,
+			String supplierName,
+			ScannedInvoice.DocumentType documentType,
+			String reference,
+			LocalDate documentDate,
+			LocalDate dueDate,
+			double amount,
+			String notes) {}
+
+	private record PendingSave(InvoiceReconciliation row, AcceptedDocument document) {}
+
+	private record CommitResult(List<InvoiceReconciliation> savedRows, String failureMessage) {}
 
 	private record ScanRun(List<ScannedInvoice> scanned,
 			List<InvoiceReconciliation> reconciliations,

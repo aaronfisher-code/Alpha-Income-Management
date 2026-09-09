@@ -28,8 +28,18 @@
     -fx-cursor: hand;
 }
 
+.delete-scan-button {
+    -fx-background-color: #fff0f1;
+    -fx-border-color: #e8aab2;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-text-fill: #a61b29;
+    -fx-cursor: hand;
+}
+
 /* Keep action cells from imposing a taller minimum on ordinary rows. */
-.ai-scan-view .table-view .review-add-button {
+.ai-scan-view .table-view .review-add-button,
+.ai-scan-view .table-view .delete-scan-button {
     -fx-padding: 2 7 2 7;
     -fx-min-height: 22px;
     -fx-pref-height: 22px;
@@ -168,6 +178,28 @@
     -fx-text-fill: #4b4860;
 }
 
+.review-reconciliation-summary {
+    -fx-padding: 5 0 3 0;
+}
+
+.review-reconciliation-label {
+    -fx-font-size: 10px;
+    -fx-text-fill: #6e6b7b;
+}
+
+.review-reconciliation-value {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 18px;
+    -fx-text-fill: #283046;
+}
+
+.review-reconciliation-value.review-variance-attention {
+    -fx-background-color: #fff0f1;
+    -fx-background-radius: 4;
+    -fx-padding: 2 6 2 6;
+    -fx-text-fill: #a61b29;
+}
+
 .review-editor .text-field,
 .review-editor .combo-box,
 .review-editor .choice-box,
@@ -281,6 +313,25 @@
 .table-row-cell.reconciliation-good:selected,
 .table-row-cell.reconciliation-review:selected,
 .table-row-cell.reconciliation-attention:selected {
+    -fx-background-color: #dbe7ff;
+}
+
+/* application.css gives focused rows a white background; retain scan status colours. */
+.ai-scan-view .table-view:focused .table-row-cell.reconciliation-good:focused {
+    -fx-background-color: #f0fbf5;
+}
+
+.ai-scan-view .table-view:focused .table-row-cell.reconciliation-review:focused {
+    -fx-background-color: #fff9e9;
+}
+
+.ai-scan-view .table-view:focused .table-row-cell.reconciliation-attention:focused {
+    -fx-background-color: #fff0f1;
+}
+
+.ai-scan-view .table-view:focused .table-row-cell.reconciliation-good:focused:selected,
+.ai-scan-view .table-view:focused .table-row-cell.reconciliation-review:focused:selected,
+.ai-scan-view .table-view:focused .table-row-cell.reconciliation-attention:focused:selected {
     -fx-background-color: #dbe7ff;
 }
 

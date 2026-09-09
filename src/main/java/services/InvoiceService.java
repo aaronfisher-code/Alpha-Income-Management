@@ -100,6 +100,24 @@ public class InvoiceService {
         restTemplate.exchange(apiBaseUrl, HttpMethod.POST, entity, Void.class);
     }
 
+    public void saveOrUpdateInvoice(Invoice invoice, String originalInvoiceNo, int originalSupplierId) {
+        boolean duplicate = checkDuplicateInvoice(invoice.getInvoiceNo(), invoice.getStoreID(), invoice.getSupplierID());
+        if (!duplicate && originalInvoiceNo != null && !originalInvoiceNo.isBlank()
+                && originalSupplierId > 0
+                && (!originalInvoiceNo.equals(invoice.getInvoiceNo()) || originalSupplierId != invoice.getSupplierID())
+                && checkDuplicateInvoice(originalInvoiceNo, invoice.getStoreID(), originalSupplierId)) {
+            updateInvoice(invoice, originalInvoiceNo, invoice.getStoreID(), originalSupplierId);
+            return;
+        }
+        if (!duplicate) {
+            addInvoice(invoice);
+            return;
+        }
+        // Updating by the duplicate's natural key deliberately overwrites it,
+        // which also handles an accepted row whose reference did not change.
+        updateInvoice(invoice, invoice.getInvoiceNo(), invoice.getStoreID(), invoice.getSupplierID());
+    }
+
     public void updateInvoice(Invoice invoice, String originalInvoiceNo, int storeId, int supplierId) {
         String url = apiBaseUrl + "/"
                 + URLEncoder.encode(originalInvoiceNo, UTF_8)

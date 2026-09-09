@@ -537,7 +537,7 @@ public class InvoiceEntryController extends DateSelectController{
 			creditNoField.setText(scanned.invoiceNo());
 			creditDateField.setValue(scanned.invoiceDate());
 			creditAmountField.setText(String.format(Locale.ROOT, "%.2f", Math.abs(scanned.amount())));
-			creditNotesField.setText("AI scanned from " + scanned.sourceFile() + "; verify before saving");
+			creditNotesField.clear();
 			selectScannedSupplier(creditAFX, scanned.supplierName());
 			return;
 		}
@@ -546,7 +546,7 @@ public class InvoiceEntryController extends DateSelectController{
 		invoiceDateField.setValue(scanned.invoiceDate());
 		dueDateField.setValue(scanned.dueDate());
 		amountField.setText(String.format(Locale.ROOT, "%.2f", scanned.amount()));
-		notesField.setText("AI scanned from " + scanned.sourceFile() + "; verify before saving");
+		notesField.clear();
 		selectScannedSupplier(invoiceAFX, scanned.supplierName());
 	}
 

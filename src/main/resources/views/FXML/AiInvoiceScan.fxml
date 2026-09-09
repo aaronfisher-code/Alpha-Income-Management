@@ -29,9 +29,9 @@
       <BorderPane>
          <left>
             <VBox spacing="4.0" BorderPane.alignment="CENTER_LEFT">
-               <Label styleClass="ai-scan-eyebrow" text="GEMINI FLASH DOCUMENT AI" />
+               <Label styleClass="ai-scan-eyebrow" text="DOCUMENT AI" />
                <Label styleClass="ai-scan-title" text="Scan and reconcile invoices" />
-               <Label styleClass="ai-scan-subtitle" text="Review OCR evidence against the corresponding imported Z-Office totals before adding anything." />
+               <Label styleClass="ai-scan-subtitle" text="Review OCR evidence against the corresponding imported invoice totals before adding anything." />
             </VBox>
          </left>
       </BorderPane>
@@ -41,18 +41,23 @@
          <ChoiceBox fx:id="documentKindChoice" prefWidth="185.0" />
          <Button fx:id="chooseFilesButton" onAction="#chooseFiles" styleClass="secondary-scan-button" text="Choose PDF" />
          <ListView fx:id="selectedFilesList" maxHeight="62.0" prefHeight="62.0" prefWidth="390.0" HBox.hgrow="ALWAYS" />
-         <ProgressIndicator fx:id="scanProgress" managed="false" maxHeight="28.0" maxWidth="28.0" prefHeight="28.0" prefWidth="28.0" visible="false" />
+         <ProgressIndicator fx:id="scanProgress" managed="false" maxHeight="28.0" maxWidth="28.0" prefHeight="28.0" prefWidth="28.0" progress="-1.0" visible="false" />
          <Button fx:id="scanButton" disable="true" onAction="#scanDocuments" styleClass="primary-scan-button" text="Scan with AI" />
       </HBox>
 
-      <Label fx:id="configurationLabel" styleClass="scan-warning" text="Gemini Flash is not configured. Add gemini.api.key to application.properties or set GEMINI_API_KEY before launching." wrapText="true" />
+      <Label fx:id="configurationLabel" styleClass="scan-warning" text="Document AI is not configured. Configure the document AI API key before launching Alpha Income." wrapText="true" />
 
       <BorderPane fx:id="scanSummaryBar">
          <left>
             <Label fx:id="summaryLabel" styleClass="scan-summary" text="Choose PDFs to begin. No OCR result is saved automatically." BorderPane.alignment="CENTER_LEFT" />
          </left>
          <right>
-            <CheckBox fx:id="showMatchedCheck" selected="true" text="Show matched rows" BorderPane.alignment="CENTER_RIGHT" />
+            <HBox alignment="CENTER_RIGHT" spacing="10.0" BorderPane.alignment="CENTER_RIGHT">
+               <CheckBox fx:id="showMatchedCheck" selected="false" text="Show accepted rows" />
+               <Label fx:id="acceptanceSummaryLabel" styleClass="scan-summary" text="" />
+               <ProgressIndicator fx:id="saveAcceptedProgress" managed="false" maxHeight="24.0" maxWidth="24.0" prefHeight="24.0" prefWidth="24.0" progress="-1.0" visible="false" />
+               <Button fx:id="saveAcceptedButton" disable="true" managed="false" onAction="#saveAccepted" styleClass="primary-scan-button" text="Save accepted documents" visible="false" />
+            </HBox>
          </right>
       </BorderPane>
 
@@ -81,7 +86,7 @@
                <TableView fx:id="resultsTable" VBox.vgrow="ALWAYS" />
                <HBox alignment="CENTER_LEFT" spacing="10.0" styleClass="scan-legend">
                   <Region styleClass="legend-good" />
-                  <Label text="Matched / saved" />
+                  <Label text="Matched / accepted / saved" />
                   <Region styleClass="legend-review" />
                   <Label text="Within 20¢ tolerance" />
                   <Region styleClass="legend-attention" />
@@ -139,7 +144,7 @@
                            <Button fx:id="nextPageButton" disable="true" onAction="#nextPreviewPage" styleClass="preview-control" text="Next ›" BorderPane.alignment="CENTER_RIGHT" />
                         </right>
                      </BorderPane>
-                     <Label fx:id="previewHintLabel" styleClass="preview-hint" text="Review the highlighted source values before saving." wrapText="true" />
+                     <Label fx:id="previewHintLabel" styleClass="preview-hint" text="Review the highlighted source values before accepting." wrapText="true" />
                   </VBox>
                </center>
                <right>
@@ -149,7 +154,7 @@
                            <content>
                               <VBox spacing="10.0">
                                  <Label fx:id="reviewTitleLabel" styleClass="review-editor-title" text="Review invoice" />
-                                 <Label styleClass="review-editor-help" text="Correct the scanned values, then save them to the current store." wrapText="true" />
+                                 <Label styleClass="review-editor-help" text="Correct the scanned values, then accept this document for the final save." wrapText="true" />
                                  <Label fx:id="reviewErrorLabel" managed="false" styleClass="review-editor-error" visible="false" wrapText="true" />
                                  <Label styleClass="review-field-label" text="Supplier" />
                                  <ComboBox fx:id="reviewSupplierChoice" maxWidth="1.7976931348623157E308" promptText="Select an existing supplier" />
@@ -163,6 +168,16 @@
                                  <DatePicker fx:id="reviewDueDateField" maxWidth="1.7976931348623157E308" />
                                  <Label styleClass="review-field-label" text="Amount ($)" />
                                  <TextField fx:id="reviewAmountField" promptText="0.00" />
+                                 <HBox alignment="CENTER" spacing="28.0" styleClass="review-reconciliation-summary">
+                                    <VBox alignment="CENTER" spacing="3.0">
+                                       <Label styleClass="review-reconciliation-label" text="Expected unit amount" />
+                                       <Label fx:id="reviewExpectedAmountLabel" styleClass="review-reconciliation-value" text="N/A" />
+                                    </VBox>
+                                    <VBox alignment="CENTER" spacing="3.0">
+                                       <Label styleClass="review-reconciliation-label" text="Variance" />
+                                       <Label fx:id="reviewVarianceLabel" styleClass="review-reconciliation-value" text="N/A" />
+                                    </VBox>
+                                 </HBox>
                                  <Label styleClass="review-field-label" text="Notes" />
                                  <TextArea fx:id="reviewNotesField" prefRowCount="3" wrapText="true" />
                               </VBox>
@@ -171,10 +186,9 @@
                      </center>
                      <bottom>
                         <VBox spacing="8.0">
-                           <ProgressIndicator fx:id="reviewSaveProgress" managed="false" maxHeight="28.0" maxWidth="28.0" visible="false" />
                            <HBox spacing="8.0">
                               <Button fx:id="reviewBackButton" maxWidth="1.7976931348623157E308" onAction="#backToResults" styleClass="secondary-scan-button" text="Back to scanned list" HBox.hgrow="ALWAYS" />
-                              <Button fx:id="reviewSaveButton" maxWidth="1.7976931348623157E308" onAction="#saveReview" styleClass="primary-scan-button" text="Save invoice" HBox.hgrow="ALWAYS" />
+                              <Button fx:id="reviewAcceptButton" maxWidth="1.7976931348623157E308" onAction="#acceptReview" styleClass="primary-scan-button" text="Accept" HBox.hgrow="ALWAYS" />
                            </HBox>
                         </VBox>
                      </bottom>

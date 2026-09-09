@@ -48,6 +48,15 @@ public record ScannedInvoice(
 			}
 			return result;
 		}
+
+		/** Lowest confidence for fields that determine whether reconciliation needs review. */
+		public Double minimumRequired() {
+			Double result = null;
+			for (Double value : new Double[] {supplier, reference, date, type, amount}) {
+				if (value != null && (result == null || value < result)) result = value;
+			}
+			return result;
+		}
 	}
 
 	public ScannedInvoice {
@@ -75,6 +84,10 @@ public record ScannedInvoice(
 	/** Lowest per-field score for legacy reconciliation rules. */
 	public Double confidence() {
 		return fieldConfidences.minimum();
+	}
+
+	public Double requiredFieldConfidence() {
+		return fieldConfidences.minimumRequired();
 	}
 
 	public double amount() {

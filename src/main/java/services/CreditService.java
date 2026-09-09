@@ -54,6 +54,21 @@ public class CreditService {
         restTemplate.exchange(apiBaseUrl, HttpMethod.POST, entity, Void.class);
     }
 
+    public void saveOrUpdateCredit(Credit credit) {
+        Credit duplicate = getAllCredits(credit.getStoreID(), YearMonth.from(credit.getCreditDate())).stream()
+                .filter(existing -> existing.getSupplierID() == credit.getSupplierID()
+                        && existing.getCreditNo() != null
+                        && existing.getCreditNo().equalsIgnoreCase(credit.getCreditNo()))
+                .findFirst()
+                .orElse(null);
+        if (duplicate == null) {
+            addCredit(credit);
+            return;
+        }
+        credit.setCreditID(duplicate.getCreditID());
+        updateCredit(credit);
+    }
+
     public void updateCredit(Credit credit) {
         String url = apiBaseUrl + "/" + credit.getCreditID();
         HttpEntity<Credit> entity = new HttpEntity<>(credit, createHeaders());
