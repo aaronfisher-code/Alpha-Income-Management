@@ -52,6 +52,7 @@ public class TargetGraphsPageController extends PageController {
 		try {
 			// 1) Eagerly create graphPane so it’s never null:
 			graphPane = new BootstrapPane();
+			bindWidthToViewport(graphPane);
 			// 2) Set up your listener
 			graphScrollPane.heightProperty().addListener((obs, oldValue, newValue) -> {
 				graphPane.setPrefHeight(newValue.doubleValue());
@@ -208,6 +209,8 @@ public class TargetGraphsPageController extends PageController {
 					Platform.runLater(() -> {
 						graphScrollPane.setContent(null);
 						outerPane = new BootstrapPane();
+						bindWidthToViewport(outerPane);
+						bindHeightToViewport(outerPane);
 						outerPane.setVgap(15);
 						outerPane.setHgap(15);
 						outerPane.setPadding(new Insets(10));
@@ -237,14 +240,6 @@ public class TargetGraphsPageController extends PageController {
 						graph4.setBreakpointColumnWidth(Breakpoint.SMALL, 12);
 						graph4.setBreakpointColumnWidth(Breakpoint.MEDIUM, 6);
 						graph4.setBreakpointColumnWidth(Breakpoint.LARGE, 6);
-						DoubleBinding graphHeight = Bindings.min(420.0, Bindings.max(300.0,
-								main.getStg().heightProperty().subtract(392.0).divide(2.0)));
-						for (BootstrapColumn graph : List.of(graph1, graph2, graph3, graph4)) {
-							if (graph.getContent() instanceof Region content) {
-								content.prefHeightProperty().bind(graphHeight);
-								content.maxHeightProperty().bind(graphHeight);
-							}
-						}
 						graphRow.addColumn(graph1);
 						graphRow.addColumn(graph2);
 						graphRow.addColumn(graph3);
@@ -289,6 +284,25 @@ public class TargetGraphsPageController extends PageController {
 					});
 				}
 			});
+	}
+
+	private void bindWidthToViewport(Region content) {
+		content.setMaxWidth(Double.MAX_VALUE);
+		DoubleBinding viewportWidth = Bindings.createDoubleBinding(
+				() -> graphScrollPane.getViewportBounds().getWidth(),
+				graphScrollPane.viewportBoundsProperty()
+		);
+		content.minWidthProperty().bind(viewportWidth);
+		content.prefWidthProperty().bind(viewportWidth);
+	}
+
+	private void bindHeightToViewport(Region content) {
+		DoubleBinding viewportHeight = Bindings.createDoubleBinding(
+				() -> graphScrollPane.getViewportBounds().getHeight(),
+				graphScrollPane.viewportBoundsProperty()
+		);
+		content.minHeightProperty().bind(viewportHeight);
+		content.prefHeightProperty().bind(viewportHeight);
 	}
 
 	public BorderPane loadGraph(LineGraphTargetStrategy strategy){

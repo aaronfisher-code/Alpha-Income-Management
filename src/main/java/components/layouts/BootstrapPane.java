@@ -1,10 +1,12 @@
 package components.layouts;
 
 import io.github.palexdev.materialfx.controls.MFXScrollPane;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Priority;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,20 +15,67 @@ public class BootstrapPane extends GridPane {
 
     private final List<BootstrapRow> rows = new ArrayList<>();
     private Breakpoint currentWindowSize = Breakpoint.XSMALL;
+    private double requestedHgap;
+    private double requestedVgap;
+    private boolean normalizingGaps;
 
     public BootstrapPane() {
         super();
+        setMinSize(0, 0);
+        setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         setAlignment(Pos.TOP_CENTER);
         setColumnConstraints();
+        installGapHandling();
         setWidthEventHandlers();
     }
 
     public BootstrapPane(MFXScrollPane p) {
         super();
+        setMinSize(0, 0);
+        setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         setAlignment(Pos.TOP_CENTER);
         setColumnConstraints();
+        installGapHandling();
         setWidthEventHandlers(p);
         this.setPrefHeight(p.getHeight());
+    }
+
+    private void installGapHandling() {
+        hgapProperty().addListener((_, _, newValue) -> {
+            if (normalizingGaps) return;
+            requestedHgap = Math.max(0, newValue.doubleValue());
+            normalizeGaps();
+        });
+        vgapProperty().addListener((_, _, newValue) -> {
+            if (normalizingGaps) return;
+            requestedVgap = Math.max(0, newValue.doubleValue());
+            normalizeGaps();
+        });
+    }
+
+    /**
+     * JavaFX 26 no longer includes gaps for the empty columns inside a
+     * column-spanning child. Bootstrap's 12-column layout relies on those
+     * gaps being part of each span, so represent them as half-margins while
+     * leaving the actual grid gap at zero.
+     */
+    private void normalizeGaps() {
+        normalizingGaps = true;
+        try {
+            setHgap(0);
+            setVgap(0);
+        } finally {
+            normalizingGaps = false;
+        }
+        Insets margin = new Insets(
+                requestedVgap / 2,
+                requestedHgap / 2,
+                requestedVgap / 2,
+                requestedHgap / 2
+        );
+        for (Node child : getChildren()) {
+            GridPane.setMargin(child, margin);
+        }
     }
 
     private void setWidthEventHandlers() {
@@ -72,7 +121,12 @@ public class BootstrapPane extends GridPane {
         double width = 100.0 / 12.0;
         for (int i = 0; i < 12; i++) {
             ColumnConstraints columnConstraints = new ColumnConstraints();
+            columnConstraints.setMinWidth(0);
+            columnConstraints.setPrefWidth(0);
+            columnConstraints.setMaxWidth(Double.MAX_VALUE);
             columnConstraints.setPercentWidth(width);
+            columnConstraints.setHgrow(Priority.ALWAYS);
+            columnConstraints.setFillWidth(true);
             getColumnConstraints().add(columnConstraints);
         }
     }
@@ -101,7 +155,10 @@ public class BootstrapPane extends GridPane {
             getChildren().add(column.getContent());
             GridPane.setFillWidth(column.getContent(), true);
             GridPane.setFillHeight(column.getContent(), true);
+            GridPane.setHgrow(column.getContent(), Priority.ALWAYS);
+            GridPane.setVgrow(column.getContent(), Priority.ALWAYS);
         }
+        normalizeGaps();
     }
 
     /**
