@@ -16,6 +16,7 @@ import javafx.stage.StageStyle;
 import models.Store;
 import models.User;
 import utils.LogRedirector;
+import utils.PerformanceSettings;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,6 +43,7 @@ public class Main extends Application {
 		LogRedirector.redirectOutputToFile("AlphaIncome.log");
 		Thread.setDefaultUncaughtExceptionHandler(this::handleGlobalException);
 		System.out.println("Application initializing...");
+		System.out.println("GTK display backend: " + System.getenv().getOrDefault("GDK_BACKEND", "default"));
 
 		splashScreen = new SplashScreen();
 		Platform.runLater(() -> splashScreen.showSplash());
@@ -89,6 +91,7 @@ public class Main extends Application {
 
 	private void showMainStage(Stage primaryStage) throws IOException {
 		System.out.println("Main application stage loading...");
+		System.out.println("Rendering mode: " + PerformanceSettings.mode());
 		stg = primaryStage;
 		setupScene("/views/FXML/LogIn.fxml", true);
 		System.out.println("Application started successfully. Running version " + version);
@@ -106,9 +109,13 @@ public class Main extends Application {
 		c = loader.getController();
 		c.setMain(this);
 		stg.setTitle("Alpha Income Management " + version);
-		bs = new BorderlessScene(stg, StageStyle.TRANSPARENT, root);
+		boolean transparentWindow = Boolean.parseBoolean(
+				System.getProperty("alpha.window.transparent", "false"));
+		bs = new BorderlessScene(stg,
+				transparentWindow ? StageStyle.TRANSPARENT : StageStyle.UNDECORATED,
+				root);
 		bs.removeDefaultCSS();
-		bs.setFill(Color.TRANSPARENT);
+		bs.setFill(transparentWindow ? Color.TRANSPARENT : Color.WHITE);
 		stg.setScene(bs);
 		stg.getIcons().add(icon);
 		stg.show();

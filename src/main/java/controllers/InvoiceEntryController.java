@@ -433,14 +433,14 @@ public class InvoiceEntryController extends DateSelectController{
 		MFXButton addSupplierButton = new MFXButton("Create New");
 		addSupplierButton.setOnAction(_ -> {
 			dialog = new DialogPane.Dialog<>(dialogPane, BLANK);
-			dialog.setPadding(false);
+			dialog.setUsingPadding(false);
 			dialog.setContent(createAddNewSupplierDialog());
 			dialogPane.showDialog(dialog);
 		});
 		MFXButton manageSuppliersButton = new MFXButton("Manage Contacts");
 		manageSuppliersButton.setOnAction(_ -> {
 			dialog = new DialogPane.Dialog<>(dialogPane, BLANK);
-			dialog.setPadding(false);
+			dialog.setUsingPadding(false);
 			dialog.setContent(createManageSuppliersDialog());
 			dialogPane.showDialog(dialog);
 		});
@@ -521,7 +521,7 @@ public class InvoiceEntryController extends DateSelectController{
 			AiInvoiceScanController scanController = loader.getController();
 			scanController.configure(this, main, invoiceService, creditService, executor);
 			dialog = new DialogPane.Dialog<>(dialogPane, BLANK);
-			dialog.setPadding(false);
+			dialog.setUsingPadding(false);
 			dialog.setMaximize(true);
 			dialog.setContent(scanView);
 			dialogPane.showDialog(dialog);
@@ -906,7 +906,7 @@ public class InvoiceEntryController extends DateSelectController{
 	public void deleteInvoice(Invoice invoice) {
 		dialogPane.showWarning("Confirm Delete",
 				"This action will permanently delete this Invoice from all systems,\n" +
-						"Are you sure you still want to delete this Invoice?").thenAccept(buttonType -> {
+						"Are you sure you still want to delete this Invoice?").onClose(buttonType -> {
 			if (buttonType.equals(ButtonType.OK)) {
 				progressSpinner.setVisible(true);
 				Task<Void> task = new Task<>() {
@@ -1010,7 +1010,7 @@ public class InvoiceEntryController extends DateSelectController{
 	public void deleteCredit(Credit credit) {
 		dialogPane.showWarning("Confirm Delete",
 				"This action will permanently delete this Credit from all systems,\n" +
-						"Are you sure you still want to delete this Credit?").thenAccept(buttonType -> {
+						"Are you sure you still want to delete this Credit?").onClose(buttonType -> {
 			if (buttonType.equals(ButtonType.OK)) {
 				progressSpinner.setVisible(true);
 				Task<Void> task = new Task<>() {

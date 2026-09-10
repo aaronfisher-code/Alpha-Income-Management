@@ -1,7 +1,5 @@
 package controllers;
 
-import javafx.animation.Animation;
-import javafx.animation.Transition;
 import javafx.fxml.FXML;
 import javafx.scene.Cursor;
 import javafx.scene.control.Label;
@@ -11,8 +9,8 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
-import javafx.util.Duration;
 import models.Shift;
+import utils.AnimationUtils;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
@@ -108,20 +106,6 @@ public class ShiftCardController extends PageController {
 	}
 
 	public void slide(double duration, double targetMargin, StackPane targetButton){
-		Animation animation = new Transition() {
-			{
-				setCycleDuration(Duration.millis(duration));
-			}
-			final double previousMargin = targetButton.getTranslateY();
-
-			@Override
-			protected void interpolate(double progress) {
-				double total = targetMargin - previousMargin;
-				double current = previousMargin+(progress * total);
-
-				targetButton.setTranslateY(current);
-			}
-		};
-		animation.playFromStart();
+		AnimationUtils.translateY(targetButton, targetMargin, duration);
 	}
 }

@@ -1,5 +1,6 @@
 package services;
 
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.rendering.ImageType;
@@ -17,7 +18,7 @@ public final class PdfPreviewService {
 	private PdfPreviewService() {}
 
 	public static RenderedPage render(File pdf, int requestedPage) throws IOException {
-		try (PDDocument document = PDDocument.load(pdf)) {
+		try (PDDocument document = Loader.loadPDF(pdf)) {
 			if (document.getNumberOfPages() == 0) throw new IOException("The PDF has no pages");
 			int pageIndex = Math.max(0, Math.min(requestedPage, document.getNumberOfPages() - 1));
 			PDFRenderer renderer = new PDFRenderer(document);

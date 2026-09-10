@@ -15,7 +15,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="300.0" minWidth="413.0" prefHeight="1440.0" prefWidth="2560.0" styleClass="tile" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.GraphTileController">
+<BorderPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="300.0" minWidth="413.0" prefHeight="1440.0" prefWidth="2560.0" styleClass="tile" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.GraphTileController">
    <center>
       <StackPane fx:id="graphPane" BorderPane.alignment="CENTER" />
    </center>

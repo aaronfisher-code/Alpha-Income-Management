@@ -10,7 +10,7 @@
 <?import javafx.scene.paint.Color?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="250.0" minWidth="200.0" prefHeight="1440.0" prefWidth="2560.0" styleClass="tile" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.GaugeTileController">
+<BorderPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="250.0" minWidth="200.0" prefHeight="1440.0" prefWidth="2560.0" styleClass="tile" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.GaugeTileController">
    <center>
       <StackPane fx:id="gaugePane" BorderPane.alignment="CENTER">
          <BorderPane.margin>

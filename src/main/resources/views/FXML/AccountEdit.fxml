@@ -28,7 +28,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<StackPane fx:id="backgroundPane" prefHeight="900.0" prefWidth="998.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EditAccountController">
+<StackPane fx:id="backgroundPane" prefHeight="900.0" prefWidth="998.0" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EditAccountController">
    <children>
       <BorderPane style="-fx-background-color: TRANSPARENT;">
          <top>

@@ -7,7 +7,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<VBox alignment="CENTER" onMouseClicked="#singleClick" snapToPixel="false" style="-fx-background-color: #FFFFFF; -fx-background-radius: 5;" stylesheets="@../CSS/RosterDayCard.css" xmlns="http://javafx.com/javafx/9.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.RosterDayCardController">
+<VBox alignment="CENTER" onMouseClicked="#singleClick" snapToPixel="false" style="-fx-background-color: #FFFFFF; -fx-background-radius: 5;" stylesheets="@../CSS/RosterDayCard.css" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.RosterDayCardController">
    <children>
       <Label fx:id="weekdayLbl" alignment="CENTER" contentDisplay="CENTER" snapToPixel="false" styleClass="weekdayText" text="MONDAY" textAlignment="CENTER" textFill="#5e5873">
          <font>

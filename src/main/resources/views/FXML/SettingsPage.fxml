@@ -15,7 +15,7 @@
 <?import javafx.scene.paint.Color?>
 <?import javafx.scene.text.Font?>
 
-<StackPane fx:id="backgroundPane" prefHeight="724.0" prefWidth="1080.0" styleClass="HeaderText" xmlns="http://javafx.com/javafx/18" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.SettingsController">
+<StackPane fx:id="backgroundPane" prefHeight="724.0" prefWidth="1080.0" styleClass="HeaderText" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.SettingsController">
    <children>
       <BorderPane prefWidth="955.0" style="-fx-background-color: TRANSPARENT;">
          <padding>

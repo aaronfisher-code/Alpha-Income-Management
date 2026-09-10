@@ -15,6 +15,7 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import services.LeaveService;
 import services.RosterService;
 import services.UserService;
@@ -573,9 +574,9 @@ public class ExportToolController extends PageController {
 
     @FXML
     public void generatePDF() {
-        fontBold    = PDType1Font.HELVETICA_BOLD;
-        fontRegular = PDType1Font.HELVETICA;
-        fontItalic  = PDType1Font.HELVETICA_OBLIQUE;
+        fontBold    = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
+        fontRegular = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
+        fontItalic  = new PDType1Font(Standard14Fonts.FontName.HELVETICA_OBLIQUE);
 
         // compute fortnight
         overallFortnightStartDate = pdfStartDatePicker.getValue().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));

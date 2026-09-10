@@ -323,7 +323,7 @@ public class EODDataEntryPageController extends DateSelectController{
 			dialogPane.showWarning(
 					"Import Warnings",
 					combinedWarnings + "\n\nPress OK to proceed with import, or Cancel to stop."
-			).thenAccept(buttonType -> {
+			).onClose(buttonType -> {
 				if (buttonType == ButtonType.OK) {
 					importFilesSequentially(selectedFiles, targetDate, 0);
 				}
@@ -399,7 +399,7 @@ public class EODDataEntryPageController extends DateSelectController{
 						String.format("Importing file %d of %d:\n%s",
 								(index + 1), files.size(), currentFile.getName())
 				)
-				.thenAccept(btn -> {
+				.onClose(btn -> {
 					// 2) Only after they close the above dialog, do the actual import
 					doSingleFileImport(currentFile, targetDate)
 							.thenRun(() -> {
@@ -438,7 +438,7 @@ public class EODDataEntryPageController extends DateSelectController{
 			importTask.setOnSucceeded(e -> {
 				progressSpinner.setVisible(false);
 				dialogPane.showInformation("Success", "Data imported successfully")
-						.thenAccept(btn -> {
+						.onClose(btn -> {
 							fillTable();
 							future.complete(null); // signal done
 						});
@@ -449,11 +449,11 @@ public class EODDataEntryPageController extends DateSelectController{
 				Throwable exception = importTask.getException();
 				if (exception instanceof IllegalArgumentException) {
 					dialogPane.showWarning("Import Warning", exception.getMessage())
-							.thenAccept(btn -> future.complete(null));
+							.onClose(btn -> future.complete(null));
 				} else {
 					dialogPane.showError("Failed to Import Data",
 									"Error while processing file: " + newFile.getName())
-							.thenAccept(btn -> future.complete(null));
+							.onClose(btn -> future.complete(null));
 				}
 			});
 
@@ -462,7 +462,7 @@ public class EODDataEntryPageController extends DateSelectController{
 		} catch (IOException | RuntimeException e) {
 			dialogPane.showError("File Error",
 							"Cannot read file: " + newFile.getName() + "\n" + e.getMessage())
-					.thenAccept(btn -> future.complete(null));
+					.onClose(btn -> future.complete(null));
 		}
 
 		return future;

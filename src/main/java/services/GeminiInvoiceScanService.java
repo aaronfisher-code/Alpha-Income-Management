@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import models.PdfEvidenceField;
 import models.PdfEvidenceLocation;
 import models.ScannedInvoice;
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 
@@ -366,7 +367,7 @@ public final class GeminiInvoiceScanService {
 			throws IOException {
 		Path temporaryDirectory = Files.createTempDirectory("alpha-gemini-statement-");
 		List<PdfChunk> chunks = new ArrayList<>();
-		try (PDDocument source = PDDocument.load(sourcePdf)) {
+		try (PDDocument source = Loader.loadPDF(sourcePdf)) {
 			for (int start = 0; start < pageCount; start += pagesPerRequest) {
 				int count = Math.min(pagesPerRequest, pageCount - start);
 				Path chunkPath = temporaryDirectory.resolve(String.format(Locale.ROOT,
@@ -541,7 +542,7 @@ public final class GeminiInvoiceScanService {
 	/** Parses a document AI response and converts normalized boxes into PDF-point locations. */
 	public ScanResult parseResponse(String rawResponse, File pdf) throws IOException {
 		if (pdf == null || !pdf.isFile()) throw new IOException("The source PDF is no longer available");
-		try (PDDocument document = PDDocument.load(pdf)) {
+		try (PDDocument document = Loader.loadPDF(pdf)) {
 			JsonNode root = mapper.readTree(rawResponse == null ? "" : rawResponse);
 			JsonNode annotation = root;
 			// This also accepts a response copied from an Interactions API adapter,
@@ -1147,7 +1148,7 @@ public final class GeminiInvoiceScanService {
 		long size = Files.size(pdf.toPath());
 		if (size == 0) throw new IOException(pdf.getName() + " is empty");
 		if (size > MAX_PDF_BYTES) throw new IOException(pdf.getName() + " is larger than the document AI 50 MB PDF limit");
-		try (PDDocument document = PDDocument.load(pdf)) {
+		try (PDDocument document = Loader.loadPDF(pdf)) {
 			int pages = document.getNumberOfPages();
 			if (pages == 0) throw new IOException(pdf.getName() + " has no pages");
 			if (pages > MAX_PDF_PAGES) throw new IOException(pdf.getName() + " has " + pages

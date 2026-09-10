@@ -9,23 +9,24 @@
     "jdeploy": {
         "jdk": false,
         "args": [
-            "-Xms256m",
+            "-Xms64m",
             "-Xmx1024m",
-            "-Dprism.order=es2,d3d,sw",
-            "-Dprism.lcdtext=false"
+            "-D[win]prism.order=d3d,sw",
+            "-D[linux]prism.order=es2,sw",
+            "-Dalpha.performance.mode=balanced",
+            "-Dalpha.window.transparent=false"
         ],
-        "javaVersion": "22",
+        "javaVersion": "26",
         "winAppDir": "AppData\\Local\\Programs",
         "jar": "target/jpackage-input/Alpha-Income.jar",
         "javafx": true,
         "title": "Alpha Income"
     },
     "dependencies": {
-        "command-exists-promise": "^2.0.2",
-        "node-fetch": "2.6.7",
-        "tar": "^4.4.8",
-        "yauzl": "^2.10.0",
-        "shelljs": "^0.8.4"
+        "node-fetch": "2.7.0",
+        "tar": "^7.5.22",
+        "yauzl": "^3.4.0",
+        "shelljs": "^0.10.0"
     },
     "license": "ISC",
     "name": "Alpha-Income",

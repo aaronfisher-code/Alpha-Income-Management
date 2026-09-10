@@ -84,7 +84,7 @@ public class RosterPageController extends PageController {
         datePkr.getStylesheets().add("/views/CSS/RosterPage.css");
         exportDataButton.setOnAction(_ -> {
             dialog = new DialogPane.Dialog<>(dialogPane, DialogPane.Type.BLANK);
-            dialog.setPadding(false);
+            dialog.setUsingPadding(false);
             dialog.setContent(createExportDialog());
             dialogPane.showDialog(dialog);
         });
@@ -521,7 +521,7 @@ public class RosterPageController extends PageController {
         saveButton.setOnAction(_ -> {
             if(s.isRepeating()){
                 dialog = new DialogPane.Dialog<>(dialogPane, BLANK);
-                dialog.setPadding(false);
+                dialog.setUsingPadding(false);
                 dialog.setContent(createCalendarEditDialog(s,shiftCardDate));
                 dialogPane.showDialog(dialog);
             }else{
@@ -530,7 +530,7 @@ public class RosterPageController extends PageController {
         });
         deleteButton.setOnAction(_ -> {
             dialog = new DialogPane.Dialog<>(dialogPane, BLANK);
-            dialog.setPadding(false);
+            dialog.setUsingPadding(false);
             dialog.setContent(createCalendarDeleteDialog(s,shiftCardDate));
             dialogPane.showDialog(dialog);
         });
@@ -906,7 +906,7 @@ public class RosterPageController extends PageController {
         dialogController.setRosterDayDate(date);
         dialogController.fill();
         dialog = new DialogPane.Dialog<>(dialogPane, BLANK);
-        dialog.setPadding(false);
+        dialog.setUsingPadding(false);
         dialog.setContent(rosterDayEdit);
         dialogPane.showDialog(dialog);
     }

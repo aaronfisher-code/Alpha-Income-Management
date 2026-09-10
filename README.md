@@ -4,7 +4,7 @@
 
 The desktop client requires:
 
-- JDK 22 or newer (a JDK, not only a JRE)
+- JDK 26 or newer (a JDK, not only a JRE)
 - Maven 3.8 or newer
 - Docker (for the local MySQL database)
 - `curl` and `setsid` (normally provided by `curl` and `util-linux`)
@@ -17,7 +17,7 @@ On Arch Linux/CachyOS, install those dependencies with:
 sudo pacman -S jdk-openjdk maven docker curl util-linux gtk3 xorg-xwayland
 ```
 
-The application currently uses JavaFX 22 and `FX-BorderlessScene`. That windowing combination runs through XWayland; the launcher selects the GTK X11 backend automatically when it detects a Wayland session.
+The application uses JavaFX 26 and `FX-BorderlessScene`. That windowing combination runs through XWayland. Both the development script and the packaged application launcher select the GTK X11 backend before JavaFX starts when they detect a Wayland session.
 
 Run:
 
@@ -123,6 +123,24 @@ mvn package
 ```
 
 The packaged jDeploy input is written to `target/jpackage-input`. The JAR there intentionally does not bundle JavaFX; use `./run-linux.sh` for development rather than `java -jar`.
+
+The packaged runtime defaults to the balanced rendering profile. It keeps
+transform-based transitions, avoids layout animation on the main sidebar, and
+uses opaque top-level windows to reduce compositor work on integrated graphics.
+The profile can be overridden when diagnosing a machine:
+
+```text
+-Dalpha.performance.mode=quality    # original, longer layout animations
+-Dalpha.performance.mode=balanced   # packaged default
+-Dalpha.performance.mode=low-power  # shorter transform animations
+-Dalpha.performance.mode=off        # no animations
+-Dalpha.window.transparent=true     # restore transparent top-level windows
+```
+
+jDeploy uses Direct3D with a software fallback on Windows and OpenGL ES with a
+software fallback on Linux. The options are platform-qualified in
+`package.json`, so a Windows renderer is never requested on Linux (or vice
+versa).
 
 ### Troubleshooting
 

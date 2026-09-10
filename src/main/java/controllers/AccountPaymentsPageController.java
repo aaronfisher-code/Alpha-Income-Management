@@ -76,14 +76,14 @@ public class AccountPaymentsPageController extends DateSelectController{
 		MFXButton addContactButton = new MFXButton("Create New");
 		addContactButton.setOnAction(_ -> {
 			dialog = new Dialog<>(dialogPane, DialogPane.Type.BLANK);
-			dialog.setPadding(false);
+			dialog.setUsingPadding(false);
 			dialog.setContent(createAddNewContactDialog());
 			dialogPane.showDialog(dialog);
 		});
 		MFXButton manageContactsButton = new MFXButton("Manage Contacts");
 		manageContactsButton.setOnAction(_ -> {
 			dialog = new Dialog<>(dialogPane, DialogPane.Type.BLANK);
-			dialog.setPadding(false);
+			dialog.setUsingPadding(false);
 			dialog.setContent(createManageContactsDialog());
 			dialogPane.showDialog(dialog);
 		});
@@ -505,7 +505,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 	public void deletePayment(AccountPayment accountPayment) {
 		dialogPane.showWarning("Confirm Delete",
 				"This action will permanently delete this Account payment from all systems,\n" +
-						"Are you sure you still want to delete this Account payment?").thenAccept(buttonType -> {
+						"Are you sure you still want to delete this Account payment?").onClose(buttonType -> {
 			if (buttonType.equals(ButtonType.OK)) {
 				progressSpinner.setVisible(true);
 				Task<Void> deletePaymentTask = new Task<>() {

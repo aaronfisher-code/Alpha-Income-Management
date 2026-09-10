@@ -804,7 +804,7 @@ public class EditAccountController extends PageController {
 	public void deleteStore(Store store) {
 		dialogPane.showWarning("Confirm Delete",
 				"This action will permanently delete the store from all systems,\n" +
-						"Are you sure you still want to delete this store?").thenAccept(buttonType -> {
+						"Are you sure you still want to delete this store?").onClose(buttonType -> {
 			if (buttonType.equals(ButtonType.OK)) {
 				storeSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
 				Task<Void> deleteStoreTask = new Task<>() {
@@ -834,7 +834,7 @@ public class EditAccountController extends PageController {
 				"This action will permanently delete the user from all systems,\n" +
 						"if the archived information for this user must be saved, it's instead \n" +
 						"preferred that you mark them as a now inactive user\n\n" +
-						"Are you sure you still want to delete this user?").thenAccept(buttonType -> {
+						"Are you sure you still want to delete this user?").onClose(buttonType -> {
 			if (buttonType.equals(ButtonType.OK)) {
 				storeSpinner.setMaxWidth(Region.USE_COMPUTED_SIZE);
 				Task<Void> deleteUserTask = new Task<>() {

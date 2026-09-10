@@ -7,7 +7,7 @@
 <?import javafx.scene.paint.Color?>
 
 
-<StackPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" style="-fx-background-color: TRANSPARENT;" xmlns="http://javafx.com/javafx/15.0.1" xmlns:fx="http://javafx.com/fxml/1">
+<StackPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" style="-fx-background-color: TRANSPARENT;" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1">
    <children>
       <MFXTextField />
       <MFXButton contentDisplay="GRAPHIC_ONLY" StackPane.alignment="CENTER_RIGHT">

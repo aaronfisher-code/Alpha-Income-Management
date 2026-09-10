@@ -3,6 +3,7 @@ package services;
 import models.PdfEvidenceField;
 import models.PdfEvidenceLocation;
 import models.ScannedInvoice;
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -58,7 +59,7 @@ public final class PdfEvidenceLocator {
 	/** Locates supplier, reference, date, and amount boxes for every scanned row. */
 	public static Map<ScannedInvoice, Map<PdfEvidenceField, PdfEvidenceLocation>> locateFields(
 			File pdf, List<ScannedInvoice> rows) throws IOException {
-		try (PDDocument document = PDDocument.load(pdf)) {
+		try (PDDocument document = Loader.loadPDF(pdf)) {
 			GlyphCollector collector = new GlyphCollector();
 			collector.setSortByPosition(true);
 			collector.getText(document);

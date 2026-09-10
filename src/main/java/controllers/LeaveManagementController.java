@@ -266,7 +266,7 @@ public class LeaveManagementController extends DateSelectController {
     public void deleteLeaveRequest(LeaveRequest leaveRequest){
         dialogPane.showWarning("Confirm Delete",
                 "This action will permanently delete this Leave Request from all systems,\n" +
-                        "Are you sure you still want to delete this Leave Request?").thenAccept(buttonType -> {
+                        "Are you sure you still want to delete this Leave Request?").onClose(buttonType -> {
             if (buttonType.equals(ButtonType.OK)) {
                 try {
                     leaveService.deleteLeaveRequest(leaveRequest.getLeaveID());

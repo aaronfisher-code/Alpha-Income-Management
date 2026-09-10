@@ -808,7 +808,7 @@ public final class AiInvoiceScanController extends Controller {
 		parent.getDialogPane().showWarning("Remove scanned row?",
 				"Remove " + reference + " from the current scan?\n"
 						+ "This does not delete anything already saved to the database.")
-				.thenAccept(buttonType -> {
+				.onClose(buttonType -> {
 					if (!ButtonType.OK.equals(buttonType)) return;
 					ScannedInvoice scanned = row.getScanned();
 					allResults.remove(row);

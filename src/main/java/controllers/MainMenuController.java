@@ -4,7 +4,6 @@ package controllers;
 import application.Main;
 import io.github.palexdev.materialfx.controls.MFXFilterComboBox;
 import io.github.palexdev.materialfx.controls.MFXScrollPane;
-import javafx.animation.*;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -21,15 +20,12 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.SVGPath;
 import javafx.stage.Stage;
-import javafx.util.Duration;
 import models.Store;
 import org.controlsfx.control.PopOver;
 import services.UserService;
 import utils.AnimationUtils;
 
 import java.io.IOException;
-import java.sql.SQLException;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -201,22 +197,9 @@ public class MainMenuController extends PageController {
     }
 
     public void slide(double duration, double targetPadding, Button targetButton){
-        Animation animation = new Transition() {
-            {
-                setCycleDuration(Duration.millis(duration));
-            }
-            final double previousPadding = targetButton.getPadding().getLeft();
-
-            @Override
-            protected void interpolate(double progress) {
-                double total = targetPadding - previousPadding;
-                double current = previousPadding+(progress * total);
-
-                targetButton.setPadding(new Insets(9, 0, 9, current));
-            }
-        };
-
-        animation.playFromStart();
+        // Padding invalidates the sidebar layout on every animation pulse. A
+        // direct update is visually equivalent for this five-pixel hover cue.
+        targetButton.setPadding(new Insets(9, 0, 9, targetPadding));
     }
 
     public void formatSelected(Button b){
@@ -333,4 +316,3 @@ public class MainMenuController extends PageController {
         currentPageController.fill();
     }
 }
-
