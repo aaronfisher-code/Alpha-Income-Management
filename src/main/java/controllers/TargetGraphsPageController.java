@@ -16,6 +16,8 @@ import components.layouts.BootstrapRow;
 import components.layouts.Breakpoint;
 import io.github.palexdev.materialfx.controls.MFXScrollPane;
 import javafx.application.Platform;
+import javafx.beans.binding.DoubleBinding;
+import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
@@ -206,14 +208,14 @@ public class TargetGraphsPageController extends PageController {
 					Platform.runLater(() -> {
 						graphScrollPane.setContent(null);
 						outerPane = new BootstrapPane();
-						outerPane.setVgap(20);
-						outerPane.setHgap(20);
-						outerPane.setPadding(new Insets(20));
+						outerPane.setVgap(15);
+						outerPane.setHgap(15);
+						outerPane.setPadding(new Insets(10));
 						BootstrapRow contentRow = new BootstrapRow();
 						//Setup line graphs
 						graphPane = new BootstrapPane(graphScrollPane);
-						graphPane.setVgap(20);
-						graphPane.setHgap(20);
+						graphPane.setVgap(15);
+						graphPane.setHgap(15);
 						BootstrapRow graphRow = new BootstrapRow();
 						BootstrapColumn graph1 = new BootstrapColumn(loadGraph(new NumberOfScriptsStrategy(startDate, endDate, this, scriptCountTillReportDataPoints, rosterUtils, noOfScriptsTargets)));
 						BootstrapColumn graph2 = new BootstrapColumn(loadGraph(new OTCDollarPerCustomerStrategy(startDate, endDate, this, otcDollarTillReportDataPoints, rosterUtils, otcCustomerTargets)));
@@ -221,20 +223,28 @@ public class TargetGraphsPageController extends PageController {
 						BootstrapColumn graph4 = new BootstrapColumn(loadGraph(new ScriptsOnFileStrategy(startDate, endDate, this, scriptsOnFileDataPoints, rosterUtils, scriptsOnFileTargets)));
 						graph1.setBreakpointColumnWidth(Breakpoint.XSMALL, 12);
 						graph1.setBreakpointColumnWidth(Breakpoint.SMALL, 12);
+						graph1.setBreakpointColumnWidth(Breakpoint.MEDIUM, 6);
 						graph1.setBreakpointColumnWidth(Breakpoint.LARGE, 6);
 						graph2.setBreakpointColumnWidth(Breakpoint.XSMALL, 12);
 						graph2.setBreakpointColumnWidth(Breakpoint.SMALL, 12);
+						graph2.setBreakpointColumnWidth(Breakpoint.MEDIUM, 6);
 						graph2.setBreakpointColumnWidth(Breakpoint.LARGE, 6);
 						graph3.setBreakpointColumnWidth(Breakpoint.XSMALL, 12);
 						graph3.setBreakpointColumnWidth(Breakpoint.SMALL, 12);
+						graph3.setBreakpointColumnWidth(Breakpoint.MEDIUM, 6);
 						graph3.setBreakpointColumnWidth(Breakpoint.LARGE, 6);
 						graph4.setBreakpointColumnWidth(Breakpoint.XSMALL, 12);
 						graph4.setBreakpointColumnWidth(Breakpoint.SMALL, 12);
+						graph4.setBreakpointColumnWidth(Breakpoint.MEDIUM, 6);
 						graph4.setBreakpointColumnWidth(Breakpoint.LARGE, 6);
-						graph1.getContent().maxHeight((main.getStg().getHeight() - 392) / 2);
-						graph2.getContent().maxHeight((main.getStg().getHeight() - 392) / 2);
-						graph3.getContent().maxHeight((main.getStg().getHeight() - 392) / 2);
-						graph4.getContent().maxHeight((main.getStg().getHeight() - 392) / 2);
+						DoubleBinding graphHeight = Bindings.min(420.0, Bindings.max(300.0,
+								main.getStg().heightProperty().subtract(392.0).divide(2.0)));
+						for (BootstrapColumn graph : List.of(graph1, graph2, graph3, graph4)) {
+							if (graph.getContent() instanceof Region content) {
+								content.prefHeightProperty().bind(graphHeight);
+								content.maxHeightProperty().bind(graphHeight);
+							}
+						}
 						graphRow.addColumn(graph1);
 						graphRow.addColumn(graph2);
 						graphRow.addColumn(graph3);
@@ -247,8 +257,8 @@ public class TargetGraphsPageController extends PageController {
 						contentRow.addColumn(graphCol);
 						//Setup Gauges
 						gaugePane = new BootstrapPane(graphScrollPane);
-						gaugePane.setVgap(20);
-						gaugePane.setHgap(20);
+						gaugePane.setVgap(15);
+						gaugePane.setHgap(15);
 						BootstrapRow gaugeRow = new BootstrapRow();
 						BootstrapColumn gauge1 = new BootstrapColumn(loadGauge(new MedschecksStrategy()));
 						BootstrapColumn gauge2 = new BootstrapColumn(loadGauge(new MedschecksStrategy()));

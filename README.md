@@ -124,17 +124,19 @@ mvn package
 
 The packaged jDeploy input is written to `target/jpackage-input`. The JAR there intentionally does not bundle JavaFX; use `./run-linux.sh` for development rather than `java -jar`.
 
-The packaged runtime defaults to the balanced rendering profile. It keeps
-transform-based transitions, avoids layout animation on the main sidebar, and
-uses opaque top-level windows to reduce compositor work on integrated graphics.
+The packaged runtime defaults to the quality rendering profile, preserving the
+original transitions and transparent-window appearance. On lower-power PCs the
+balanced or low-power profile can be selected to reduce animation and compositor
+work.
 The profile can be overridden when diagnosing a machine:
 
 ```text
--Dalpha.performance.mode=quality    # original, longer layout animations
--Dalpha.performance.mode=balanced   # packaged default
+-Dalpha.performance.mode=quality    # packaged default; original animations
+-Dalpha.performance.mode=balanced   # shorter animations; no layout animation
 -Dalpha.performance.mode=low-power  # shorter transform animations
 -Dalpha.performance.mode=off        # no animations
--Dalpha.window.transparent=true     # restore transparent top-level windows
+-Dalpha.window.transparent=true     # packaged default; original window styling
+-Dalpha.window.transparent=false    # lower compositor cost on integrated GPUs
 ```
 
 jDeploy uses Direct3D with a software fallback on Windows and OpenGL ES with a

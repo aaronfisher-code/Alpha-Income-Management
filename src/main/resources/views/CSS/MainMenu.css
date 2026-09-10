@@ -4,6 +4,15 @@
     -fx-font-smoothing-type: gray;
 }
 
+#sidebar,
+#sidebarScroll,
+#sidebarScroll > .viewport,
+#sidebarScroll .viewport,
+#buttonPane {
+    -fx-background-color: #283046;
+    -fx-background-insets: 0;
+}
+
 .logOutButton {
     -fx-font-family: "Montserrat SemiBold";
     -fx-font-size: 12px;
@@ -52,6 +61,5 @@
 .mfx-combo-box .caret .mfx-ripple-generator {
     -mfx-ripple-color: rgba(255, 255, 255, 0.5);
 }
-
 
 

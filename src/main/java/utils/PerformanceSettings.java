@@ -38,7 +38,7 @@ public final class PerformanceSettings {
     }
 
     private static Mode readMode() {
-        String value = System.getProperty("alpha.performance.mode", "balanced")
+        String value = System.getProperty("alpha.performance.mode", "quality")
                 .trim()
                 .toLowerCase(Locale.ROOT);
         return switch (value) {
@@ -47,8 +47,8 @@ public final class PerformanceSettings {
             case "off", "none", "disabled" -> Mode.OFF;
             case "balanced" -> Mode.BALANCED;
             default -> {
-                System.err.println("Unknown alpha.performance.mode '" + value + "'; using balanced.");
-                yield Mode.BALANCED;
+                System.err.println("Unknown alpha.performance.mode '" + value + "'; using quality.");
+                yield Mode.QUALITY;
             }
         };
     }

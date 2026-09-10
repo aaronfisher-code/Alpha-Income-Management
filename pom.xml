@@ -90,7 +90,9 @@
         <dependency>
             <groupId>io.github.palexdev</groupId>
             <artifactId>materialfx</artifactId>
-            <version>11.17.0</version>
+            <!-- 11.17 installs a new global theme and breaks the application's
+                 established control skins. Keep the last UI-compatible release. -->
+            <version>11.13.8</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.openjfx</groupId>
@@ -301,8 +303,8 @@
                     <options>
                         <option>-Xms64m</option>
                         <option>-Xmx1024m</option>
-                        <option>-Dalpha.performance.mode=balanced</option>
-                        <option>-Dalpha.window.transparent=false</option>
+                        <option>-Dalpha.performance.mode=quality</option>
+                        <option>-Dalpha.window.transparent=true</option>
                         <option>--enable-native-access=javafx.graphics</option>
                     </options>
                 </configuration>

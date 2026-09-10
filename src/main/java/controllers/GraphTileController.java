@@ -20,6 +20,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import models.TargetDataPoint;
 import java.text.NumberFormat;
+import java.net.URL;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.Locale;
@@ -157,8 +158,10 @@ public class GraphTileController extends PageController {
 		yAxis.setMinorTickVisible(false);
 		yAxis.setAutoRanging(false);
 		yAxis.setLowerBound(0);
-		yAxis.setUpperBound(Math.ceil(maxY / calculateTickUnit(maxY*1.25)) * calculateTickUnit(maxY*1.25));
-		yAxis.setTickUnit(calculateTickUnit(maxY*1.25));
+		double paddedMaxY = Double.isFinite(maxY) && maxY > 0.0 ? maxY * 1.25 : 1.0;
+		double tickUnit = calculateTickUnit(paddedMaxY);
+		yAxis.setUpperBound(Math.max(tickUnit, Math.ceil(maxY / tickUnit) * tickUnit));
+		yAxis.setTickUnit(tickUnit);
 		ValueAxis<Number> xAxis;
 		CurvedFittedAreaChart areaChart;
 		if(strategy.getLength()<=7) {
@@ -215,20 +218,23 @@ public class GraphTileController extends PageController {
 		target1Chart.setCreateSymbols(false);
 		target1Chart.setLegendVisible(false);
 		target1Chart.setStyle("-fx-stroke: #FFBD29;" + "-fx-stroke-width: 2px;");
-		target1Chart.getStylesheets().add("views/CSS/Target1LineChart.css");
+		target1Chart.getStylesheets().add(stylesheet("/views/CSS/Target1LineChart.css"));
 		target2Chart.setHorizontalGridLinesVisible(false);
 		target2Chart.setVerticalGridLinesVisible(false);
 		target2Chart.setAnimated(false);
 		target2Chart.setCreateSymbols(false);
 		target2Chart.setLegendVisible(false);
 		target2Chart.setStyle("-fx-stroke: #FF298D;" + "-fx-stroke-width: 2px;");
-		target2Chart.getStylesheets().add("views/CSS/Target2LineChart.css");
+		target2Chart.getStylesheets().add(stylesheet("/views/CSS/Target2LineChart.css"));
 		StackPane finalPane = layerCharts(target2Chart, target1Chart, areaChart);
 		finalPane.setFocusTraversable(false);
 		return finalPane;
 	}
 
 	private double calculateTickUnit(double range) {
+		if (!Double.isFinite(range) || range <= 0.0) {
+			return 1.0;
+		}
 		double rawTickUnit = range / 10;
 		double scaleFactor = Math.pow(10, Math.floor(Math.log10(rawTickUnit)));
 		double normalizedTickUnit = Math.ceil(rawTickUnit / scaleFactor);
@@ -240,6 +246,14 @@ public class GraphTileController extends PageController {
 			normalizedTickUnit = 5;
 		}
 		return normalizedTickUnit * scaleFactor;
+	}
+
+	private String stylesheet(String resourcePath) {
+		URL resource = getClass().getResource(resourcePath);
+		if (resource == null) {
+			throw new IllegalStateException("Missing chart stylesheet: " + resourcePath);
+		}
+		return resource.toExternalForm();
 	}
 
 	public void incrementXValues(XYChart.Series<Number, Number> originalSeries) {

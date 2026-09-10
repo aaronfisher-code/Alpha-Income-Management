@@ -4,6 +4,10 @@ package controllers;
 import application.Main;
 import io.github.palexdev.materialfx.controls.MFXFilterComboBox;
 import io.github.palexdev.materialfx.controls.MFXScrollPane;
+import javafx.animation.Interpolator;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -20,10 +24,12 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.SVGPath;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import models.Store;
 import org.controlsfx.control.PopOver;
 import services.UserService;
 import utils.AnimationUtils;
+import utils.PerformanceSettings;
 
 import java.io.IOException;
 import java.util.List;
@@ -197,9 +203,15 @@ public class MainMenuController extends PageController {
     }
 
     public void slide(double duration, double targetPadding, Button targetButton){
-        // Padding invalidates the sidebar layout on every animation pulse. A
-        // direct update is visually equivalent for this five-pixel hover cue.
-        targetButton.setPadding(new Insets(9, 0, 9, targetPadding));
+        Insets target = new Insets(9, 0, 9, targetPadding);
+        if (!PerformanceSettings.layoutAnimationsEnabled()) {
+            targetButton.setPadding(target);
+            return;
+        }
+        Timeline timeline = new Timeline(new KeyFrame(
+                Duration.millis(PerformanceSettings.animationDuration(duration)),
+                new KeyValue(targetButton.paddingProperty(), target, Interpolator.EASE_BOTH)));
+        timeline.playFromStart();
     }
 
     public void formatSelected(Button b){
@@ -284,8 +296,9 @@ public class MainMenuController extends PageController {
             main.setCurrentStore((Store) storeSearchCombo.getSelectedItem());
             changePage(b,fxml);
         });
-        formatSelected(b);
-        updatePageFXML(fxml);
+        if (updatePageFXML(fxml)) {
+            formatSelected(b);
+        }
     }
 
     public void changePage(String fxml){
@@ -296,23 +309,55 @@ public class MainMenuController extends PageController {
         updatePageFXML(fxml);
     }
 
-    private void updatePageFXML(String fxml) {
-        if (currentPageController != null && currentPageController.getExecutor() != null && !currentPageController.getExecutor().isShutdown())
-            currentPageController.shutdownExecutor();
+    private boolean updatePageFXML(String fxml) {
         FXMLLoader loader = new FXMLLoader(getClass().getResource(fxml));
-        StackPane pageContent = null;
+        final StackPane pageContent;
+        final PageController nextPageController;
         try {
             pageContent = loader.load();
-        } catch (IOException e) {
+            nextPageController = loader.getController();
+            if (nextPageController == null) {
+                throw new IOException("No controller was created for " + fxml);
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to load page FXML: " + fxml);
+            e.printStackTrace(System.err);
             dialogPane.showError("Failed to load page", e);
+            return false;
         }
-        currentPageController = loader.getController();
-        currentPageController.setMain(main);
-        main.setDialogPane(currentPageController.getDialogPane());
+
+        PageController previousPageController = currentPageController;
+        Node previousPageContent = contentPane.getCenter();
+        nextPageController.setMain(main);
+        contentPane.setCenter(pageContent);
+
+        try {
+            nextPageController.fill();
+        } catch (RuntimeException e) {
+            contentPane.setCenter(previousPageContent);
+            main.setDialogPane(previousPageController == null
+                    ? dialogPane
+                    : previousPageController.getDialogPane());
+            if (nextPageController.getExecutor() != null
+                    && !nextPageController.getExecutor().isShutdown()) {
+                nextPageController.shutdownExecutor();
+            }
+            System.err.println("Failed to initialize page: " + fxml);
+            e.printStackTrace(System.err);
+            dialogPane.showError("Failed to initialize page", e);
+            return false;
+        }
+
+        currentPageController = nextPageController;
+        main.setDialogPane(nextPageController.getDialogPane());
+        if (previousPageController != null
+                && previousPageController.getExecutor() != null
+                && !previousPageController.getExecutor().isShutdown()) {
+            previousPageController.shutdownExecutor();
+        }
         Platform.runLater(() -> {
             Thread.currentThread().setUncaughtExceptionHandler(main::handleGlobalException);
         });
-        contentPane.setCenter(pageContent);
-        currentPageController.fill();
+        return true;
     }
 }

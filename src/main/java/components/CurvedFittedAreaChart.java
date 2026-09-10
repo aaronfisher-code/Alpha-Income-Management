@@ -44,7 +44,9 @@ public class CurvedFittedAreaChart extends AreaChart<Number,Number> {
     }
 
     private static void smooth(ObservableList<PathElement> strokeElements, ObservableList<PathElement> fillElements) {
-        if(strokeElements.isEmpty()) return;
+        // A single point has no curve segment. Older JavaFX versions happened not
+        // to lay this case out; JavaFX 26 does, so leave the original path intact.
+        if(strokeElements.size() < 2 || fillElements.isEmpty()) return;
         // as we do not have direct access to the data, first recreate the list of all the data points we have
         final Point2D[] dataPoints = new Point2D[strokeElements.size()];
         for (int i = 0; i < strokeElements.size(); i++) {

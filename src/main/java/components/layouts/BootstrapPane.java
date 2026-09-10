@@ -5,7 +5,6 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
-import javafx.scene.layout.RowConstraints;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,52 +30,38 @@ public class BootstrapPane extends GridPane {
     }
 
     private void setWidthEventHandlers() {
-        this.widthProperty().addListener((observable, oldValue, newValue) -> {
-            Breakpoint newBreakpoint = Breakpoint.XSMALL;
-            if (newValue.doubleValue() > 576) newBreakpoint = Breakpoint.SMALL;
-            if (newValue.doubleValue() > 768) newBreakpoint = Breakpoint.MEDIUM;
-            if (newValue.doubleValue() > 992) newBreakpoint = Breakpoint.LARGE;
-            if (newValue.doubleValue() > 1200) newBreakpoint = Breakpoint.XLARGE;
-
-            if (newBreakpoint != currentWindowSize) {
-                currentWindowSize = newBreakpoint;
-                calculateNodePositions();
-            }
-        });
+        widthProperty().addListener((_, _, newValue) -> updateBreakpoint(newValue.doubleValue()));
     }
 
     private void setWidthEventHandlers(MFXScrollPane p) {
-        this.widthProperty().addListener((observable, oldValue, newValue) -> {
-            Breakpoint newBreakpoint = Breakpoint.XSMALL;
-            if (newValue.doubleValue() > 576) newBreakpoint = Breakpoint.SMALL;
-            if (newValue.doubleValue() > 768) newBreakpoint = Breakpoint.MEDIUM;
-            if (newValue.doubleValue() > 992) newBreakpoint = Breakpoint.LARGE;
-            if (newValue.doubleValue() > 1200) newBreakpoint = Breakpoint.XLARGE;
+        widthProperty().addListener((_, _, newValue) -> updateBreakpoint(newValue.doubleValue()));
+        p.heightProperty().addListener((_, _, newValue) -> setPrefHeight(newValue.doubleValue()));
+    }
 
-            if (newBreakpoint != currentWindowSize) {
-                currentWindowSize = newBreakpoint;
-                calculateNodePositions();
-            }
-            this.setPrefHeight(p.getHeight());
+    private void updateBreakpoint(double width) {
+        Breakpoint newBreakpoint = breakpointForWidth(width);
+        if (newBreakpoint != currentWindowSize) {
+            currentWindowSize = newBreakpoint;
+            calculateNodePositions();
+            requestLayout();
+        }
+    }
 
-        });
+    private Breakpoint breakpointForWidth(double width) {
+        if (width > 1200) return Breakpoint.XLARGE;
+        if (width > 992) return Breakpoint.LARGE;
+        if (width > 768) return Breakpoint.MEDIUM;
+        if (width > 576) return Breakpoint.SMALL;
+        return Breakpoint.XSMALL;
+    }
 
-        p.heightProperty().addListener((obs, oldVal, newVal) -> {
-            this.setPrefHeight(p.getHeight());
-        });
-        p.widthProperty().addListener((obs, oldVal, newVal) -> {
-            Breakpoint newBreakpoint = Breakpoint.XSMALL;
-            if (this.getWidth() > 576) newBreakpoint = Breakpoint.SMALL;
-            if (this.getWidth() > 768) newBreakpoint = Breakpoint.MEDIUM;
-            if (this.getWidth() > 992) newBreakpoint = Breakpoint.LARGE;
-            if (this.getWidth() > 1200) newBreakpoint = Breakpoint.XLARGE;
-
-            if (newBreakpoint != currentWindowSize) {
-                currentWindowSize = newBreakpoint;
-                calculateNodePositions();
-            }
-            this.setPrefHeight(p.getHeight());
-        });
+    @Override
+    protected void layoutChildren() {
+        // A nested pane can be resized by its parent after the scroll-pane width
+        // notification. Re-evaluate from the pane's real allocated width so its
+        // column constraints cannot remain stuck at a stale breakpoint.
+        updateBreakpoint(getWidth());
+        super.layoutChildren();
     }
 
     private void setColumnConstraints() {
@@ -109,6 +94,7 @@ public class BootstrapPane extends GridPane {
         if (rows.contains(row)) return; //prevent duplicate children error
 
         rows.add(row);
+        updateBreakpoint(getWidth());
         calculateNodePositions();
 
         for (BootstrapColumn column : row.getColumns()) {

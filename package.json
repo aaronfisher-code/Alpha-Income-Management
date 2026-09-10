@@ -13,8 +13,8 @@
             "-Xmx1024m",
             "-D[win]prism.order=d3d,sw",
             "-D[linux]prism.order=es2,sw",
-            "-Dalpha.performance.mode=balanced",
-            "-Dalpha.window.transparent=false"
+            "-Dalpha.performance.mode=quality",
+            "-Dalpha.window.transparent=true"
         ],
         "javaVersion": "26",
         "winAppDir": "AppData\\Local\\Programs",

@@ -5,7 +5,7 @@ import io.github.palexdev.materialfx.controls.cell.MFXFilterComboBoxCell;
 import io.github.palexdev.materialfx.enums.FloatMode;
 import io.github.palexdev.materialfx.skins.MFXFilterComboBoxSkin;
 import io.github.palexdev.materialfx.i18n.I18N;
-import io.github.palexdev.virtualizedfx.unused.simple.SimpleVirtualFlow;
+import io.github.palexdev.virtualizedfx.flow.simple.SimpleVirtualFlow;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;

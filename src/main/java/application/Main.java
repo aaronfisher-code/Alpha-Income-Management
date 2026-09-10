@@ -110,7 +110,7 @@ public class Main extends Application {
 		c.setMain(this);
 		stg.setTitle("Alpha Income Management " + version);
 		boolean transparentWindow = Boolean.parseBoolean(
-				System.getProperty("alpha.window.transparent", "false"));
+				System.getProperty("alpha.window.transparent", "true"));
 		bs = new BorderlessScene(stg,
 				transparentWindow ? StageStyle.TRANSPARENT : StageStyle.UNDECORATED,
 				root);
