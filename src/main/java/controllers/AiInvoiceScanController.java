@@ -51,6 +51,7 @@ import services.GeminiInvoiceScanService;
 import services.PdfEvidenceLocator;
 import services.PdfPreviewService;
 import utils.InvoiceReconciler;
+import utils.SupplierMatcher;
 import utils.WorkbookProcessor;
 
 import java.io.File;
@@ -73,6 +74,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.Properties;
 import java.util.concurrent.CompletionService;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
@@ -147,6 +149,7 @@ public final class AiInvoiceScanController extends Controller {
 	private CreditService creditService;
 	private ExecutorService executor;
 	private List<InvoiceSupplier> availableSuppliers = List.of();
+	private CompletableFuture<List<InvoiceSupplier>> supplierLoad = CompletableFuture.completedFuture(List.of());
 	private InvoiceReconciliation currentReview;
 	private LocalDate currentStatementPeriodStart;
 	private LocalDate currentStatementPeriodEnd;
@@ -193,14 +196,16 @@ public final class AiInvoiceScanController extends Controller {
 		this.invoiceService = invoiceService;
 		this.creditService = creditService;
 		this.executor = executor;
-		parent.fetchContactData().whenComplete((suppliers, error) -> Platform.runLater(() -> {
+		supplierLoad = parent.fetchContactData().thenApply(suppliers ->
+				suppliers == null ? List.of() : List.copyOf(suppliers));
+		supplierLoad.whenComplete((suppliers, error) -> Platform.runLater(() -> {
 			if (error != null) {
 				reviewErrorLabel.setText("Unable to load suppliers: " + rootCause(error).getMessage());
 				reviewErrorLabel.setVisible(true);
 				reviewErrorLabel.setManaged(true);
 				return;
 			}
-			availableSuppliers = suppliers == null ? List.of() : List.copyOf(suppliers);
+			availableSuppliers = suppliers;
 			reviewSupplierChoice.getItems().setAll(availableSuppliers);
 			if (currentReview != null) selectReviewSupplier(currentReview.getScanned().supplierName());
 			updateAcceptanceControls();
@@ -243,6 +248,13 @@ public final class AiInvoiceScanController extends Controller {
 		Task<ScanRun> task = new Task<>() {
 			@Override
 			protected ScanRun call() throws Exception {
+				updateMessage("Loading saved supplier contacts…");
+				List<InvoiceSupplier> suppliers;
+				try {
+					suppliers = supplierLoad.get();
+				} catch (ExecutionException exception) {
+					throw new IllegalStateException("Could not load the saved supplier contacts.", exception.getCause());
+				}
 				List<ScannedInvoice> scanned = new ArrayList<>();
 				Map<ScannedInvoice, Map<PdfEvidenceField, PdfEvidenceLocation>> locations = new HashMap<>();
 				Map<ScannedInvoice, File> filesByRow = new HashMap<>();
@@ -261,7 +273,9 @@ public final class AiInvoiceScanController extends Controller {
 					updateProgress(completed, files.size());
 					updateMessage("Scanning " + completed + " of " + files.size()
 							+ (files.size() == 1 ? " PDF…" : " PDFs…"));
-				}, onStatementChunkProgress);
+				}, onStatementChunkProgress).stream()
+						.map(fileScan -> correlateSuppliers(fileScan, suppliers))
+						.toList();
 				LocalDate periodStart = null;
 				LocalDate periodEnd = null;
 				Long statementAmountCents = null;
@@ -297,7 +311,7 @@ public final class AiInvoiceScanController extends Controller {
 				updateMessage("Loading Z-Office data…");
 				List<Invoice> imported = loadImportedRows(scanned, kind, periodStart, periodEnd);
 				return new ScanRun(scanned, InvoiceReconciler.reconcile(scanned, imported), locations, filesByRow,
-						periodStart, periodEnd, statementAmountCents, statementAmountConfidence);
+						periodStart, periodEnd, statementAmountCents, statementAmountConfidence, suppliers);
 			}
 		};
 		summaryLabel.textProperty().bind(task.messageProperty());
@@ -312,6 +326,8 @@ public final class AiInvoiceScanController extends Controller {
 			currentResultIsStatement = kind == GeminiInvoiceScanService.ScanKind.STATEMENT;
 			currentStatementAmountCents = task.getValue().statementAmountCents();
 			currentStatementAmountConfidence = task.getValue().statementAmountConfidence();
+			availableSuppliers = task.getValue().suppliers();
+			reviewSupplierChoice.getItems().setAll(availableSuppliers);
 			acceptedDocuments.clear();
 			allResults.setAll(task.getValue().reconciliations());
 			applyResultFilter();
@@ -331,6 +347,20 @@ public final class AiInvoiceScanController extends Controller {
 					error instanceof Exception exception ? exception : new RuntimeException(error));
 		});
 		executor.submit(task);
+	}
+
+	private static FileScan correlateSuppliers(FileScan fileScan, List<InvoiceSupplier> suppliers) {
+		List<ScannedInvoice> rows = new ArrayList<>(fileScan.rows().size());
+		Map<ScannedInvoice, Map<PdfEvidenceField, PdfEvidenceLocation>> locations = new HashMap<>();
+		for (ScannedInvoice original : fileScan.rows()) {
+			ScannedInvoice correlated = SupplierMatcher.correlate(original, suppliers);
+			rows.add(correlated);
+			Map<PdfEvidenceField, PdfEvidenceLocation> rowLocations = fileScan.locations().get(original);
+			if (rowLocations != null) locations.put(correlated, rowLocations);
+		}
+		return new FileScan(fileScan.index(), fileScan.file(), List.copyOf(rows), Map.copyOf(locations),
+				fileScan.periodStart(), fileScan.periodEnd(), fileScan.statementAmountCents(),
+				fileScan.statementAmountConfidence());
 	}
 
 	private List<FileScan> scanFilesInParallel(List<File> files, GeminiInvoiceScanService.ScanKind kind,
@@ -497,15 +527,16 @@ public final class AiInvoiceScanController extends Controller {
 	private void configureTable() {
 		TableColumn<InvoiceReconciliation, String> status = column("STATUS", "statusLabel", 135);
 		TableColumn<InvoiceReconciliation, String> supplier = confidenceColumn(
-				"SUPPLIER", "supplierName", 180, InvoiceReconciliation::getSupplierConfidence);
+				"SUPPLIER", "supplierName", 180, InvoiceReconciliation::getSupplierConfidence,
+				"supplier selection");
 		TableColumn<InvoiceReconciliation, String> reference = confidenceColumn(
-				"REFERENCE", "invoiceNo", 135, InvoiceReconciliation::getReferenceConfidence);
+				"REFERENCE", "invoiceNo", 135, InvoiceReconciliation::getReferenceConfidence, "document AI");
 		TableColumn<InvoiceReconciliation, String> type = confidenceColumn(
-				"TYPE", "documentType", 80, InvoiceReconciliation::getTypeConfidence);
+				"TYPE", "documentType", 80, InvoiceReconciliation::getTypeConfidence, "document AI");
 		TableColumn<InvoiceReconciliation, String> scannedDate = confidenceColumn(
-				"OCR DATE", "scannedDateString", 90, InvoiceReconciliation::getDateConfidence);
+				"OCR DATE", "scannedDateString", 90, InvoiceReconciliation::getDateConfidence, "document AI");
 		TableColumn<InvoiceReconciliation, String> scanned = confidenceColumn(
-				"SCANNED", "scannedAmountString", 100, InvoiceReconciliation::getAmountConfidence);
+				"SCANNED", "scannedAmountString", 100, InvoiceReconciliation::getAmountConfidence, "document AI");
 		TableColumn<InvoiceReconciliation, String> imported = column("EXPECTED", "importedAmountString", 100);
 		TableColumn<InvoiceReconciliation, String> variance = column("VARIANCE", "varianceString", 100);
 		TableColumn<InvoiceReconciliation, Void> action = new TableColumn<>("ACTION");
@@ -735,7 +766,7 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	private static TableColumn<InvoiceReconciliation, String> confidenceColumn(String title, String property,
-			double width, Function<InvoiceReconciliation, Double> confidence) {
+			double width, Function<InvoiceReconciliation, Double> confidence, String confidenceSource) {
 		TableColumn<InvoiceReconciliation, String> column = column(title, property, width);
 		column.setCellFactory(_ -> new TableCell<>() {
 			@Override
@@ -755,7 +786,7 @@ public final class AiInvoiceScanController extends Controller {
 				if (concerning) {
 					String confidenceText = "⚠ " + percentage + "% confidence";
 					setText(valueText + "\n" + confidenceText);
-					setTooltip(new Tooltip("Low document AI confidence: " + percentage + "%"));
+					setTooltip(new Tooltip("Low " + confidenceSource + " confidence: " + percentage + "%"));
 					getStyleClass().add("low-confidence-field");
 				} else {
 					setText(valueText);
@@ -785,12 +816,12 @@ public final class AiInvoiceScanController extends Controller {
 		reviewAmountField.setText(String.format(java.util.Locale.ROOT, "%.2f", amount));
 		updateReviewReconciliationValues();
 		reviewNotesField.setText(accepted == null ? "" : accepted.notes());
-		styleReviewConfidence(reviewSupplierChoice, row.getSupplierConfidence(), row.isAccepted());
-		styleReviewConfidence(reviewTypeChoice, row.getTypeConfidence(), row.isAccepted());
-		styleReviewConfidence(reviewReferenceField, row.getReferenceConfidence(), row.isAccepted());
-		styleReviewConfidence(reviewDateField, row.getDateConfidence(), row.isAccepted());
-		styleReviewConfidence(reviewDueDateField, row.getDueDateConfidence(), row.isAccepted());
-		styleReviewConfidence(reviewAmountField, row.getAmountConfidence(), row.isAccepted());
+		styleReviewConfidence(reviewSupplierChoice, row.getSupplierConfidence(), row.isAccepted(), "supplier selection");
+		styleReviewConfidence(reviewTypeChoice, row.getTypeConfidence(), row.isAccepted(), "document AI");
+		styleReviewConfidence(reviewReferenceField, row.getReferenceConfidence(), row.isAccepted(), "document AI");
+		styleReviewConfidence(reviewDateField, row.getDateConfidence(), row.isAccepted(), "document AI");
+		styleReviewConfidence(reviewDueDateField, row.getDueDateConfidence(), row.isAccepted(), "document AI");
+		styleReviewConfidence(reviewAmountField, row.getAmountConfidence(), row.isAccepted(), "document AI");
 		selectReviewSupplier(accepted == null ? scanned.supplierName() : accepted.supplierName());
 		showReviewError(null);
 		resultsView.setVisible(false);
@@ -1155,7 +1186,7 @@ public final class AiInvoiceScanController extends Controller {
 		reviewErrorLabel.setManaged(visible);
 	}
 
-	private static void styleReviewConfidence(Control control, Double score, boolean accepted) {
+	private static void styleReviewConfidence(Control control, Double score, boolean accepted, String confidenceSource) {
 		control.getStyleClass().remove("low-confidence-input");
 		if (accepted) {
 			control.setTooltip(null);
@@ -1163,10 +1194,10 @@ public final class AiInvoiceScanController extends Controller {
 		}
 		Long percentage = score == null ? null : Math.round(score * 100);
 		if (score != null && score < LOW_FIELD_CONFIDENCE) {
-			control.setTooltip(new Tooltip("Low document AI confidence: " + percentage + "%"));
+			control.setTooltip(new Tooltip("Low " + confidenceSource + " confidence: " + percentage + "%"));
 			control.getStyleClass().add("low-confidence-input");
 		} else if (score == null) {
-			control.setTooltip(new Tooltip("Document AI confidence unavailable"));
+			control.setTooltip(new Tooltip(confidenceSource + " confidence unavailable"));
 		} else {
 			control.setTooltip(null);
 		}
@@ -1353,7 +1384,8 @@ public final class AiInvoiceScanController extends Controller {
 			LocalDate periodStart,
 			LocalDate periodEnd,
 			Long statementAmountCents,
-			Double statementAmountConfidence) {}
+			Double statementAmountConfidence,
+			List<InvoiceSupplier> suppliers) {}
 
 	private record FileScan(int index, File file, List<ScannedInvoice> rows,
 			Map<ScannedInvoice, Map<PdfEvidenceField, PdfEvidenceLocation>> locations,
