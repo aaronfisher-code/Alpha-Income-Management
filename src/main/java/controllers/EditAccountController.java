@@ -1,6 +1,7 @@
 package controllers;
 
 import com.dlsc.gemsfx.FilterView;
+import components.CompatibleFilterView;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXNodesList;
 import io.github.palexdev.materialfx.controls.*;
@@ -55,11 +56,11 @@ public class EditAccountController extends PageController {
 	private MFXTableColumn<User> firstNameCol;
 	private MFXTableColumn<User> lastNameCol;
 	private MFXTableColumn<User> roleCol;
-	private FilterView<User> userFilterView = new FilterView<>();
+	private FilterView<User> userFilterView = new CompatibleFilterView<>();
 	private MFXTableView<Store> storesTable = new MFXTableView<>();
 	private MFXTableColumn<Store> storeNameCol;
 	private MFXTableColumn<Store> storeHoursCol;
-	private FilterView<Store> storeFilterView = new FilterView<>();
+	private FilterView<Store> storeFilterView = new CompatibleFilterView<>();
 	private UserService userService;
 	private StoreService storeService;
 	private PermissionService permissionService;
@@ -96,7 +97,7 @@ public class EditAccountController extends PageController {
 		GUIUtils.formatTabSelect(usersButton);
 		GUIUtils.formatTabDeselect(storesButton);
 		addButton.setOnAction(_ -> openUserPopover());
-		userFilterView = new FilterView<>();
+		userFilterView = new CompatibleFilterView<>();
 		userFilterView.setTitle("Current Users");
 		userFilterView.setSubtitle("Double click a user to edit");
 		userFilterView.setTextFilterProvider(text -> user -> user.getNickname().toLowerCase().contains(text) || user.getFirst_name().toLowerCase().contains(text) || user.getLast_name().toLowerCase().contains(text) || user.getRole().toLowerCase().contains(text));
@@ -178,7 +179,7 @@ public class EditAccountController extends PageController {
 		GUIUtils.formatTabSelect(storesButton);
 		GUIUtils.formatTabDeselect(usersButton);
 		addButton.setOnAction(_ -> openStorePopover());
-		storeFilterView = new FilterView<>();
+		storeFilterView = new CompatibleFilterView<>();
 		storeFilterView.setTitle("Current Stores");
 		storeFilterView.setSubtitle("Double click a store to edit");
 		storeFilterView.setTextFilterProvider(text -> store -> store.getStoreName().toLowerCase().contains(text));

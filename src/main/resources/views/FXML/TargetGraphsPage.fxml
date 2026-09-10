@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import com.dlsc.gemsfx.DialogPane?>
+<?import components.CloseableDialogPane?>
 <?import io.github.palexdev.materialfx.controls.MFXProgressBar?>
 <?import io.github.palexdev.materialfx.controls.MFXScrollPane?>
 <?import java.net.URL?>
@@ -95,6 +95,6 @@
             <MFXScrollPane fx:id="graphScrollPane" fitToHeight="true" fitToWidth="true" hbarPolicy="NEVER" maxHeight="1.7976931348623157E308" style="-fx-background-color: TRANSPARENT;" BorderPane.alignment="CENTER" />
          </center>
       </BorderPane>
-      <DialogPane fx:id="dialogPane" />
+      <CloseableDialogPane fx:id="dialogPane" />
    </children>
 </StackPane>

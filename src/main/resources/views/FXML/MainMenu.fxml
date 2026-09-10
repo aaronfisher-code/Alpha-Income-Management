@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import com.dlsc.gemsfx.DialogPane?>
+<?import components.CloseableDialogPane?>
 <?import io.github.palexdev.materialfx.controls.MFXFilterComboBox?>
 <?import io.github.palexdev.materialfx.controls.MFXScrollPane?>
 <?import java.net.URL?>
@@ -351,7 +351,7 @@
             </MFXScrollPane>
          </children>
       </VBox>
-      <DialogPane fx:id="dialogPane" />
+      <CloseableDialogPane fx:id="dialogPane" />
    </children>
    <stylesheets>
       <URL value="@../CSS/application.css" />

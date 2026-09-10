@@ -341,6 +341,27 @@ Popup
     -fx-font-size: 14px;
 }
 
+/* Preserve the GemsFX 1.x FilterView layout after the 4.x upgrade. */
+.filter-view > .filter-container {
+    -fx-spacing: 25px;
+}
+
+.filter-view > .filter-container > .header-box {
+    -fx-min-height: 49px;
+}
+
+.filter-view > .filter-container > .filters {
+    -fx-hgap: 10px;
+    -fx-vgap: 5px;
+    -fx-padding: 0;
+}
+
+.filter-view .clear-filter-label {
+    -fx-underline: true;
+    -fx-cursor: hand;
+    -fx-text-fill: -fx-accent;
+}
+
 
 
 

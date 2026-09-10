@@ -75,14 +75,14 @@ public class AccountPaymentsPageController extends DateSelectController{
 		accountTotalsTable.autosizeColumnsOnInitialization();
 		MFXButton addContactButton = new MFXButton("Create New");
 		addContactButton.setOnAction(_ -> {
-			dialog = new Dialog<>(dialogPane, DialogPane.Type.BLANK);
+			dialog = createDialog(DialogPane.Type.BLANK);
 			dialog.setUsingPadding(false);
 			dialog.setContent(createAddNewContactDialog());
 			dialogPane.showDialog(dialog);
 		});
 		MFXButton manageContactsButton = new MFXButton("Manage Contacts");
 		manageContactsButton.setOnAction(_ -> {
-			dialog = new Dialog<>(dialogPane, DialogPane.Type.BLANK);
+			dialog = createDialog(DialogPane.Type.BLANK);
 			dialog.setUsingPadding(false);
 			dialog.setContent(createManageContactsDialog());
 			dialogPane.showDialog(dialog);

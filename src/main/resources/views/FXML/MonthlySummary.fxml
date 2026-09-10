@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import com.dlsc.gemsfx.DialogPane?>
+<?import components.CloseableDialogPane?>
 <?import io.github.palexdev.materialfx.controls.MFXButton?>
 <?import io.github.palexdev.materialfx.controls.MFXProgressSpinner?>
 <?import io.github.palexdev.materialfx.controls.MFXTextField?>
@@ -299,7 +299,7 @@
             <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
          </StackPane.margin>
       </BorderPane>
-      <DialogPane fx:id="dialogPane" />
+      <CloseableDialogPane fx:id="dialogPane" />
    </children>
    <stylesheets>
       <URL value="@../CSS/MonthlySummaryPage.css" />

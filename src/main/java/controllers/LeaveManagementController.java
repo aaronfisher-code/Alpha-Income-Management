@@ -1,6 +1,7 @@
 package controllers;
 
 import com.dlsc.gemsfx.FilterView;
+import components.CompatibleFilterView;
 import components.CustomDateStringConverter;
 import io.github.palexdev.materialfx.controls.*;
 import javafx.application.Platform;
@@ -81,7 +82,7 @@ public class LeaveManagementController extends DateSelectController {
             openTimePicker(endTimeField,endTime);
         });
         controlBox.getChildren().clear();
-        leaveRequestFilterView = new FilterView<>();
+        leaveRequestFilterView = new CompatibleFilterView<>();
         leaveRequestFilterView.setTitle("Leave Requests this month");
         leaveRequestFilterView.setTextFilterProvider(text -> leaveRequest -> leaveRequest.getEmployeeName().toLowerCase().contains(text) || leaveRequest.getLeaveType().toLowerCase().contains(text));
         ObservableList<LeaveRequest> leaveRequests = leaveRequestFilterView.getFilteredItems();

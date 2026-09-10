@@ -3,6 +3,7 @@ package controllers;
 import com.dlsc.gemsfx.DialogPane;
 import com.dlsc.gemsfx.FilterView;
 import components.ActionableFilterComboBox;
+import components.CompatibleFilterView;
 import components.CustomDateStringConverter;
 import io.github.palexdev.materialfx.controls.MFXButton;
 import io.github.palexdev.materialfx.controls.MFXDatePicker;
@@ -92,8 +93,8 @@ public class InvoiceEntryController extends DateSelectController{
 	private TableColumn<Credit,LocalDate> creditDateCol;
 	private TableColumn<Credit,Double> creditAmountCol;
 	private TableColumn<Credit,String> creditNotesCol;
-	private FilterView<Invoice> invoiceFilterView = new FilterView<>();
-	private FilterView<Credit> creditFilterView = new FilterView<>();
+	private FilterView<Invoice> invoiceFilterView = new CompatibleFilterView<>();
+	private FilterView<Credit> creditFilterView = new CompatibleFilterView<>();
 	private ActionableFilterComboBox<InvoiceSupplier> invoiceAFX,creditAFX;
 	private InvoiceService invoiceService;
 	private InvoiceSupplierService invoiceSupplierService;
@@ -241,7 +242,7 @@ public class InvoiceEntryController extends DateSelectController{
 		GUIUtils.formatTabSelect(invoicesButton);
 		GUIUtils.formatTabDeselect(creditsButton);
 		controlBox.getChildren().clear();
-		invoiceFilterView = new FilterView<>();
+		invoiceFilterView = new CompatibleFilterView<>();
 		invoiceFilterView.setTitle("Current Invoices");
 		invoiceFilterView.setTextFilterProvider(text -> invoice -> invoice.getInvoiceNo().toLowerCase().contains(text) || invoice.getSupplierName().toLowerCase().contains(text));
         ObservableList<Invoice> allInvoices = invoiceFilterView.getFilteredItems();
@@ -393,7 +394,7 @@ public class InvoiceEntryController extends DateSelectController{
 		GUIUtils.formatTabSelect(creditsButton);
 		GUIUtils.formatTabDeselect(invoicesButton);
 		controlBox.getChildren().clear();
-		creditFilterView = new FilterView<>();
+		creditFilterView = new CompatibleFilterView<>();
 		creditFilterView.setTitle("Current Credits");
 		creditFilterView.setTextFilterProvider(text -> credit -> credit.getSupplierName().toLowerCase().contains(text) || credit.getCreditNo().toLowerCase().contains(text) || credit.getReferenceInvoiceNo().toLowerCase().contains(text));
         ObservableList<Credit> allCredits = creditFilterView.getFilteredItems();
@@ -432,14 +433,14 @@ public class InvoiceEntryController extends DateSelectController{
 	public ActionableFilterComboBox<InvoiceSupplier> createAFX(){
 		MFXButton addSupplierButton = new MFXButton("Create New");
 		addSupplierButton.setOnAction(_ -> {
-			dialog = new DialogPane.Dialog<>(dialogPane, BLANK);
+			dialog = createDialog(BLANK);
 			dialog.setUsingPadding(false);
 			dialog.setContent(createAddNewSupplierDialog());
 			dialogPane.showDialog(dialog);
 		});
 		MFXButton manageSuppliersButton = new MFXButton("Manage Contacts");
 		manageSuppliersButton.setOnAction(_ -> {
-			dialog = new DialogPane.Dialog<>(dialogPane, BLANK);
+			dialog = createDialog(BLANK);
 			dialog.setUsingPadding(false);
 			dialog.setContent(createManageSuppliersDialog());
 			dialogPane.showDialog(dialog);
@@ -520,7 +521,7 @@ public class InvoiceEntryController extends DateSelectController{
 			Node scanView = loader.load();
 			AiInvoiceScanController scanController = loader.getController();
 			scanController.configure(this, main, invoiceService, creditService, executor);
-			dialog = new DialogPane.Dialog<>(dialogPane, BLANK);
+			dialog = createDialog(BLANK);
 			dialog.setUsingPadding(false);
 			dialog.setMaximize(true);
 			dialog.setContent(scanView);
