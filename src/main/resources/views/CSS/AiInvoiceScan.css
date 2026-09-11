@@ -28,6 +28,25 @@
     -fx-cursor: hand;
 }
 
+.refresh-icon-button {
+    -fx-background-color: #f3f2f7;
+    -fx-border-color: #d7d5dd;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-min-width: 32px;
+    -fx-pref-width: 32px;
+    -fx-max-width: 32px;
+    -fx-min-height: 32px;
+    -fx-pref-height: 32px;
+    -fx-max-height: 32px;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+}
+
+.refresh-icon-button:disabled {
+    -fx-opacity: 0.45;
+}
+
 .delete-scan-button {
     -fx-background-color: #fff0f1;
     -fx-border-color: #e8aab2;
@@ -63,6 +82,11 @@
     -fx-background-color: #f8f8fb;
     -fx-background-radius: 8;
     -fx-padding: 12;
+}
+
+.scan-source-description {
+    -fx-text-fill: #6e6b7b;
+    -fx-font-size: 11px;
 }
 
 .scan-source-bar .list-view {
@@ -165,6 +189,14 @@
     -fx-text-fill: #6e6b7b;
 }
 
+.review-estimated-hint {
+    -fx-background-color: #fff5d8;
+    -fx-background-radius: 4;
+    -fx-padding: 5 8 5 8;
+    -fx-text-fill: #8a6200;
+    -fx-font-size: 10px;
+}
+
 .review-editor-error {
     -fx-background-color: #fff0f1;
     -fx-background-radius: 5;
@@ -200,6 +232,13 @@
     -fx-text-fill: #a61b29;
 }
 
+.review-reconciliation-value.review-reconciliation-attention {
+    -fx-background-color: #fff0f1;
+    -fx-background-radius: 4;
+    -fx-padding: 2 6 2 6;
+    -fx-text-fill: #a61b29;
+}
+
 .review-editor .text-field,
 .review-editor .combo-box,
 .review-editor .choice-box,
@@ -211,10 +250,31 @@
     -fx-background-radius: 4;
 }
 
+.review-editor .secondary-scan-button {
+    -fx-padding: 7 10 7 10;
+    -fx-font-size: 10px;
+}
+
+.review-editor .custom-supplier-button {
+    -fx-min-width: 34px;
+    -fx-pref-width: 34px;
+    -fx-max-width: 34px;
+    -fx-min-height: 32px;
+    -fx-pref-height: 32px;
+    -fx-max-height: 32px;
+    -fx-padding: 7;
+}
+
 .review-editor .low-confidence-input {
     -fx-border-color: #e05260;
     -fx-border-width: 2;
     -fx-background-color: #fff7f8;
+}
+
+.review-editor .estimated-date-input {
+    -fx-border-color: #d99b22;
+    -fx-border-width: 2;
+    -fx-background-color: #fffaf0;
 }
 
 .preview-section-title {
@@ -259,6 +319,13 @@
     -fx-text-fill: #4b4860;
     -fx-padding: 5 9 5 9;
     -fx-cursor: hand;
+}
+
+.preview-rotate-control {
+    -fx-min-width: 32px;
+    -fx-pref-width: 32px;
+    -fx-padding: 5 7 5 7;
+    -fx-font-size: 14px;
 }
 
 .pdf-scroll {

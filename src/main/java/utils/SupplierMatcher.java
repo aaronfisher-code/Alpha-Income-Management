@@ -60,7 +60,7 @@ public final class SupplierMatcher {
 		return new ScannedInvoice(scanned.sourceFile(), supplierName, scanned.invoiceNo(),
 				scanned.invoiceDate(), scanned.dueDate(), scanned.documentType(), scanned.amountCents(),
 				new ScannedInvoice.FieldConfidences(supplierConfidence, fields.reference(), fields.date(),
-						fields.dueDate(), fields.type(), fields.amount()));
+						fields.dueDate(), fields.type(), fields.amount()), scanned.dueDateEstimated());
 	}
 
 	private static double similarity(String left, String right) {

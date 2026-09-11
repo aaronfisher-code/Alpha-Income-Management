@@ -1,20 +1,105 @@
-.HeaderText{
-    -fx-font-family: "Montserrat Medium";
-    -fx-font-size: 23px;
-    -fx-text-fill: #6e6b7b;
-
+.settings-scroll,
+.settings-scroll > .viewport {
+    -fx-background-color: #f4f5f8;
 }
 
-.filePathField{
-     -fx-font-size: 18px;
-}
-
-.locateButton{
-    -fx-background-color: #F3F2F7;
-}
-
-.mfx-radio-button{
-    -mfx-main: #0F60FF;
+.settings-page {
+    -fx-background-color: #f4f5f8;
     -fx-font-family: "Montserrat";
-    -fx-font-size: 14px;
+}
+
+.settings-eyebrow {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 10px;
+    -fx-text-fill: #0f60ff;
+}
+
+.settings-title {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 25px;
+    -fx-text-fill: #283046;
+}
+
+.settings-subtitle,
+.settings-help,
+.settings-status {
+    -fx-text-fill: #6e6b7b;
+}
+
+.settings-store {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 13px;
+    -fx-text-fill: #0f60ff;
+}
+
+.settings-card {
+    -fx-background-color: white;
+    -fx-background-radius: 10;
+    -fx-border-color: #e2e1e7;
+    -fx-border-radius: 10;
+    -fx-padding: 18;
+    -fx-effect: dropshadow(three-pass-box, rgba(40, 48, 70, 0.08), 12, 0, 0, 3);
+}
+
+.settings-section-title {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 17px;
+    -fx-text-fill: #283046;
+}
+
+.settings-value {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-text-fill: #4b4860;
+}
+
+.settings-primary-button {
+    -fx-background-color: #0f60ff;
+    -fx-background-radius: 5;
+    -fx-text-fill: white;
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-padding: 9 16 9 16;
+    -fx-cursor: hand;
+}
+
+.settings-secondary-button {
+    -fx-background-color: white;
+    -fx-border-color: #d7d5dd;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-text-fill: #4b4860;
+    -fx-padding: 9 16 9 16;
+    -fx-cursor: hand;
+}
+
+.settings-danger-button {
+    -fx-background-color: #fff0f1;
+    -fx-border-color: #e8aab2;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-text-fill: #a61b29;
+    -fx-padding: 9 16 9 16;
+    -fx-cursor: hand;
+}
+
+.settings-primary-button:disabled,
+.settings-secondary-button:disabled,
+.settings-danger-button:disabled {
+    -fx-opacity: 0.45;
+}
+
+.settings-card .list-view {
+    -fx-background-color: #fbfbfd;
+    -fx-border-color: #dedde3;
+    -fx-border-radius: 5;
+}
+
+.settings-card .list-cell {
+    -fx-padding: 8 10 8 10;
+}
+
+.settings-error {
+    -fx-background-color: #fff0f1;
+    -fx-background-radius: 5;
+    -fx-padding: 8 10 8 10;
+    -fx-text-fill: #a61b29;
 }

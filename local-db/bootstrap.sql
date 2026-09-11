@@ -285,7 +285,9 @@ INSERT INTO permissions (permissionName) VALUES
     ('BAS - Edit'),
     ('Budget - View'),
     ('Budget - Edit'),
-    ('Monthly Summary - View')
+    ('Monthly Summary - View'),
+    ('Document AI - Review'),
+    ('Document AI - Configure')
 ON DUPLICATE KEY UPDATE permissionName = VALUES(permissionName);
 
 INSERT IGNORE INTO employments (userID, storeID)

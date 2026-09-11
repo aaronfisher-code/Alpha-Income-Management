@@ -87,6 +87,22 @@ class SupplierMatcherTest {
 
 		assertEquals(SIGMA.getSupplierName(), correlated.supplierName());
 		assertTrue(correlated.fieldConfidences().supplier() >= InvoiceReconciler.REVIEW_CONFIDENCE);
+		assertTrue(correlated.dueDateEstimated());
+		assertEquals(LocalDate.of(2026, 10, 10), correlated.dueDate());
+	}
+
+	@Test
+	void legacyFallbackDueDateIsStillRecognizedAsEstimated() {
+		LocalDate invoiceDate = LocalDate.of(2026, 9, 10);
+		ScannedInvoice legacy = new ScannedInvoice("invoice.pdf", "Sigma", "INV-legacy",
+				invoiceDate, invoiceDate.plusDays(30), ScannedInvoice.DocumentType.INVOICE, 12345,
+				new ScannedInvoice.FieldConfidences(0.99, 0.99, 0.99, null, 0.99, 0.99));
+
+		InvoiceReconciliation row = new InvoiceReconciliation(InvoiceReconciliation.Status.NEEDS_REVIEW,
+				legacy, null, null);
+
+		assertFalse(legacy.dueDateEstimated());
+		assertTrue(row.isDueDateEstimated());
 	}
 
 	@Test

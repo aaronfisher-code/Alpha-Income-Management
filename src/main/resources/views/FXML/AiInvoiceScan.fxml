@@ -14,6 +14,7 @@
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
@@ -21,6 +22,7 @@
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.SVGPath?>
 
 <VBox minHeight="620.0" minWidth="1080.0" prefHeight="700.0" prefWidth="1180.0" spacing="18.0"
       styleClass="ai-scan-view" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1"
@@ -30,29 +32,32 @@
          <left>
             <VBox spacing="4.0" BorderPane.alignment="CENTER_LEFT">
                <Label styleClass="ai-scan-eyebrow" text="DOCUMENT AI" />
-               <Label styleClass="ai-scan-title" text="Scan and reconcile invoices" />
-               <Label styleClass="ai-scan-subtitle" text="Review OCR evidence against the corresponding imported invoice totals before adding anything." />
+               <Label styleClass="ai-scan-title" text="Document review queue" />
+               <Label styleClass="ai-scan-subtitle" text="Review invoices and statements discovered in this store's watched Google Drive folders." />
             </VBox>
          </left>
       </BorderPane>
 
       <HBox fx:id="scanSourceBar" alignment="CENTER_LEFT" spacing="12.0" styleClass="scan-source-bar">
-         <Label text="Document type" />
-         <ChoiceBox fx:id="documentKindChoice" prefWidth="185.0" />
-         <Button fx:id="chooseFilesButton" onAction="#chooseFiles" styleClass="secondary-scan-button" text="Choose PDF" />
-         <ListView fx:id="selectedFilesList" maxHeight="62.0" prefHeight="62.0" prefWidth="390.0" HBox.hgrow="ALWAYS" />
-         <ProgressIndicator fx:id="scanProgress" managed="false" maxHeight="28.0" maxWidth="28.0" prefHeight="28.0" prefWidth="28.0" progress="-1.0" visible="false" />
-         <Button fx:id="scanButton" disable="true" onAction="#scanDocuments" styleClass="primary-scan-button" text="Scan with AI" />
+         <Label styleClass="scan-source-description" text="Source folders and automatic scanning are managed from Settings." wrapText="true" HBox.hgrow="ALWAYS" />
+         <Button fx:id="scanButton" onAction="#scanDocuments" styleClass="primary-scan-button" text="Scan now" />
+         <Button fx:id="refreshQueueButton" accessibleText="Refresh document review queue" contentDisplay="GRAPHIC_ONLY" onAction="#refreshQueue" styleClass="refresh-icon-button">
+            <graphic>
+               <SVGPath content="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z" fill="#4b4860" scaleX="1.15" scaleY="1.15" />
+            </graphic>
+            <tooltip>
+               <Tooltip text="Refresh document review queue" />
+            </tooltip>
+         </Button>
+         <ProgressIndicator fx:id="scanProgress" managed="true" maxHeight="28.0" maxWidth="28.0" prefHeight="28.0" prefWidth="28.0" progress="-1.0" visible="false" />
       </HBox>
-
-      <Label fx:id="configurationLabel" styleClass="scan-warning" text="Document AI is not configured. Configure the document AI API key before launching Alpha Income." wrapText="true" />
 
       <BorderPane fx:id="scanSummaryBar">
          <left>
-            <Label fx:id="summaryLabel" styleClass="scan-summary" text="Choose PDFs to begin. No OCR result is saved automatically." BorderPane.alignment="CENTER_LEFT" />
+            <Label fx:id="summaryLabel" styleClass="scan-summary" text="Loading the store review queue…" BorderPane.alignment="CENTER_LEFT" />
          </left>
          <right>
-            <HBox alignment="CENTER_RIGHT" spacing="10.0" BorderPane.alignment="CENTER_RIGHT">
+            <HBox fx:id="reviewBatchControls" alignment="CENTER_RIGHT" managed="false" spacing="10.0" visible="false" BorderPane.alignment="CENTER_RIGHT">
                <CheckBox fx:id="showMatchedCheck" selected="false" text="Show accepted rows" />
                <Label fx:id="acceptanceSummaryLabel" styleClass="scan-summary" text="" />
                <ProgressIndicator fx:id="saveAcceptedProgress" managed="false" maxHeight="24.0" maxWidth="24.0" prefHeight="24.0" prefWidth="24.0" progress="-1.0" visible="false" />
@@ -81,8 +86,17 @@
 
       <StackPane VBox.vgrow="ALWAYS">
          <children>
-            <VBox fx:id="resultsView" spacing="8.0">
-               <Label styleClass="preview-section-title" text="Reconciliation results" />
+            <VBox fx:id="queueView" spacing="8.0">
+               <Label styleClass="preview-section-title" text="Waiting for review" />
+               <TableView fx:id="queueTable" VBox.vgrow="ALWAYS" />
+               <Label styleClass="preview-hint" text="Queued means waiting for the worker; Scanning means Gemini is processing; Failed rows show a reason and can be retried. This table refreshes every 5 seconds." />
+            </VBox>
+
+            <VBox fx:id="resultsView" managed="false" spacing="8.0" visible="false">
+               <HBox alignment="CENTER_LEFT" spacing="10.0">
+                  <Button onAction="#backToQueue" styleClass="secondary-scan-button" text="‹ Back to queue" />
+                  <Label styleClass="preview-section-title" text="Reconciliation results" />
+               </HBox>
                <TableView fx:id="resultsTable" VBox.vgrow="ALWAYS" />
                <HBox alignment="CENTER_LEFT" spacing="10.0" styleClass="scan-legend">
                   <Region styleClass="legend-good" />
@@ -110,6 +124,11 @@
                            <HBox alignment="CENTER_RIGHT" spacing="5.0" BorderPane.alignment="CENTER_RIGHT">
                               <Button onAction="#zoomPreviewOut" styleClass="preview-control" text="−" />
                               <Button onAction="#zoomPreviewIn" styleClass="preview-control" text="+" />
+                              <Button fx:id="rotatePreviewButton" accessibleText="Rotate PDF preview clockwise" disable="true" onAction="#rotatePreview" styleClass="preview-control preview-rotate-control" text="↻">
+                                 <tooltip>
+                                    <Tooltip text="Rotate preview 90° clockwise" />
+                                 </tooltip>
+                              </Button>
                            </HBox>
                         </right>
                      </BorderPane>
@@ -157,7 +176,19 @@
                                  <Label styleClass="review-editor-help" text="Correct the scanned values, then accept this document for the final save." wrapText="true" />
                                  <Label fx:id="reviewErrorLabel" managed="false" styleClass="review-editor-error" visible="false" wrapText="true" />
                                  <Label styleClass="review-field-label" text="Supplier" />
-                                 <ComboBox fx:id="reviewSupplierChoice" maxWidth="1.7976931348623157E308" promptText="Select an existing supplier" />
+                                 <HBox alignment="CENTER_LEFT" spacing="8.0">
+                                    <ComboBox fx:id="reviewSupplierChoice" maxWidth="1.7976931348623157E308" promptText="Select an existing supplier" HBox.hgrow="ALWAYS" />
+                                    <Button fx:id="customSupplierButton" accessibleText="Use a custom supplier name" contentDisplay="GRAPHIC_ONLY" onAction="#toggleCustomSupplier" styleClass="secondary-scan-button custom-supplier-button">
+                                       <graphic>
+                                          <SVGPath content="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z M20.71 7.04c.39-.39.39-1.03 0-1.42l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.82z" fill="#4b4860" scaleX="0.72" scaleY="0.72" />
+                                       </graphic>
+                                       <tooltip>
+                                          <Tooltip text="Use a custom supplier name" />
+                                       </tooltip>
+                                    </Button>
+                                 </HBox>
+                                 <TextField fx:id="customSupplierNameField" managed="false" promptText="Custom supplier name" visible="false" />
+                                 <Label fx:id="customSupplierHelpLabel" managed="false" styleClass="review-editor-help" text="This name will be added to this store's supplier list when the document is saved." visible="false" wrapText="true" />
                                  <Label styleClass="review-field-label" text="Document type" />
                                  <ChoiceBox fx:id="reviewTypeChoice" maxWidth="1.7976931348623157E308" />
                                  <Label styleClass="review-field-label" text="Invoice / credit reference" />
@@ -166,6 +197,7 @@
                                  <DatePicker fx:id="reviewDateField" maxWidth="1.7976931348623157E308" />
                                  <Label fx:id="reviewDueDateLabel" styleClass="review-field-label" text="Due date" />
                                  <DatePicker fx:id="reviewDueDateField" maxWidth="1.7976931348623157E308" />
+                                 <Label fx:id="reviewDueDateHintLabel" managed="false" styleClass="review-estimated-hint" text="Due date was estimated 30 days from the invoice date." visible="false" wrapText="true" />
                                  <Label styleClass="review-field-label" text="Amount ($)" />
                                  <TextField fx:id="reviewAmountField" promptText="0.00" />
                                  <HBox alignment="CENTER" spacing="28.0" styleClass="review-reconciliation-summary">

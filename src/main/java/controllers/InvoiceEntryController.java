@@ -70,7 +70,7 @@ public class InvoiceEntryController extends DateSelectController{
 	@FXML private MFXDatePicker creditDateField;
 	@FXML private MFXButton creditSaveButton;
 	@FXML private Button creditDeleteButton;
-	@FXML private Button plusButton;
+	@FXML private Button plusButton,aiScanButton;
 	@FXML private HBox addList;
 	@FXML private Button importDataButton,exportDataButton;
 	@FXML private MFXProgressSpinner progressSpinner;
@@ -157,13 +157,15 @@ public class InvoiceEntryController extends DateSelectController{
 		invoiceDateField.setConverterSupplier(() -> new CustomDateStringConverter("dd/MM/yyyy"));
 		dueDateField.setConverterSupplier(() -> new CustomDateStringConverter("dd/MM/yyyy"));
 		creditDateField.setConverterSupplier(() -> new CustomDateStringConverter("dd/MM/yyyy"));
-		if(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Invoicing - Edit"))) {
-			addList.setVisible(true);
-			importDataButton.setDisable(false);
-		}else{
-			addList.setVisible(false);
-			importDataButton.setDisable(true);
-		}
+		boolean canEditInvoices = hasPermission("Invoicing - Edit");
+		boolean canReviewDocuments = hasPermission("Document AI - Review");
+		addList.setVisible(canEditInvoices || canReviewDocuments);
+		addList.setManaged(canEditInvoices || canReviewDocuments);
+		plusButton.setVisible(canEditInvoices);
+		plusButton.setManaged(canEditInvoices);
+		aiScanButton.setVisible(canReviewDocuments);
+		aiScanButton.setManaged(canReviewDocuments);
+		importDataButton.setDisable(!canEditInvoices);
 		exportDataButton.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Invoicing - Export")));
 		//Live update expected unit amount if invoice is recognised
 		invoiceNoField.delegateFocusedProperty().addListener((_, _, _) -> {
@@ -516,6 +518,10 @@ public class InvoiceEntryController extends DateSelectController{
 	}
 
 	public void openAiScan() {
+		if (!hasPermission("Document AI - Review")) {
+			dialogPane.showError("Access denied", "Document AI - Review permission is required.");
+			return;
+		}
 		FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/FXML/AiInvoiceScan.fxml"));
 		try {
 			Node scanView = loader.load();
@@ -525,10 +531,16 @@ public class InvoiceEntryController extends DateSelectController{
 			dialog.setUsingPadding(false);
 			dialog.setMaximize(true);
 			dialog.setContent(scanView);
+			dialog.onClose(_ -> scanController.dispose());
 			dialogPane.showDialog(dialog);
 		} catch (IOException exception) {
 			dialogPane.showError("Error", "An error occurred while opening AI invoice scan", exception);
 		}
+	}
+
+	private boolean hasPermission(String permissionName) {
+		return main.getCurrentUser().getPermissions().stream()
+				.anyMatch(permission -> permissionName.equals(permission.getPermissionName()));
 	}
 
 	/** Opens the existing manual form with OCR values, leaving the user in control of saving. */

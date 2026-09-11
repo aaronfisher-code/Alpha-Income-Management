@@ -15,7 +15,8 @@ public record ScannedInvoice(
 		LocalDate dueDate,
 		DocumentType documentType,
 		long amountCents,
-		FieldConfidences fieldConfidences) {
+		FieldConfidences fieldConfidences,
+		boolean dueDateEstimated) {
 
 	public enum DocumentType {
 		INVOICE,
@@ -68,17 +69,25 @@ public record ScannedInvoice(
 				? new FieldConfidences(null, null, null, null, null, null) : fieldConfidences;
 		if (documentType == DocumentType.INVOICE && dueDate == null && invoiceDate != null) {
 			dueDate = invoiceDate.plusDays(30);
+			dueDateEstimated = true;
 		}
 		if (documentType == DocumentType.CREDIT) {
 			amountCents = -Math.abs(amountCents);
 		}
 	}
 
+	/** Compatibility constructor for callers that do not explicitly provide the fallback marker. */
+	public ScannedInvoice(String sourceFile, String supplierName, String invoiceNo, LocalDate invoiceDate,
+			LocalDate dueDate, DocumentType documentType, long amountCents, FieldConfidences fieldConfidences) {
+		this(sourceFile, supplierName, invoiceNo, invoiceDate, dueDate, documentType, amountCents,
+				fieldConfidences, false);
+	}
+
 	/** Compatibility constructor for callers that only have one legacy score. */
 	public ScannedInvoice(String sourceFile, String supplierName, String invoiceNo, LocalDate invoiceDate,
 			LocalDate dueDate, DocumentType documentType, long amountCents, Double confidence) {
 		this(sourceFile, supplierName, invoiceNo, invoiceDate, dueDate, documentType, amountCents,
-				new FieldConfidences(confidence, confidence, confidence, confidence, confidence, confidence));
+				new FieldConfidences(confidence, confidence, confidence, confidence, confidence, confidence), false);
 	}
 
 	/** Lowest per-field score for legacy reconciliation rules. */

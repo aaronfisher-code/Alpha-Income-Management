@@ -74,6 +74,7 @@ public class InvoiceSupplierService {
     }
 
     private InvoiceSupplier convertToFrontendModel(BackendInvoiceSupplier backendSupplier) {
+        if (backendSupplier == null) return null;
         return new InvoiceSupplier(
                 backendSupplier.getContactID(),
                 backendSupplier.getSupplierName(),

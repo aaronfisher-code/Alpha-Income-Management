@@ -119,7 +119,8 @@ public class MainMenuController extends PageController {
                 invoiceTrackingButton,   "Invoicing - View",
                 basCheckerButton,        "BAS - View",
                 budgetExpensesButton,    "Budget - View",
-                monthlySummaryButton,    "Monthly Summary - View"
+                monthlySummaryButton,    "Monthly Summary - View",
+                settingsButton,          "Document AI - Configure"
         );
         buttonPermissions.keySet().forEach(b -> b.setDisable(true));
         main.getCurrentUser().getPermissions().stream()
@@ -129,6 +130,10 @@ public class MainMenuController extends PageController {
                         if (name.equals(perm)) btn.setDisable(false);
                     });
                 });
+        boolean canConfigureDocumentAi = main.getCurrentUser().getPermissions().stream()
+                .anyMatch(permission -> "Document AI - Configure".equals(permission.getPermissionName()));
+        settingsButton.setVisible(canConfigureDocumentAi);
+        settingsButton.setManaged(canConfigureDocumentAi);
         for(Node b:buttonPane.getChildren()){
             if(b.getAccessibleRole() == AccessibleRole.BUTTON){
                 Button a = (Button) b;

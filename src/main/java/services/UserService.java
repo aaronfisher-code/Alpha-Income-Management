@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Properties;
 
 public class UserService {
+    private static volatile String documentAiSession = "";
     private String apiBaseUrl;
     private String apiToken;
     private RestTemplate restTemplate;
@@ -91,7 +92,13 @@ public class UserService {
         String url = apiBaseUrl + "/" + URLEncoder.encode(username,StandardCharsets.UTF_8) + "/verify-password";
         HttpEntity<String> entity = new HttpEntity<>(password, createHeaders());
         ResponseEntity<User> response = restTemplate.exchange(url, HttpMethod.POST, entity, User.class);
+        String session = response.getHeaders().getFirst("X-Alpha-Session");
+        if (session != null && !session.isBlank()) documentAiSession = session;
         return response.getBody();
+    }
+
+    public static String getDocumentAiSession() {
+        return documentAiSession;
     }
 
     public void updateUserPassword(int userID, String newPassword) {

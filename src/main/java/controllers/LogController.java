@@ -149,6 +149,10 @@ public class LogController extends PageController {
             @Override
             protected Void call() {
                 userService.updateUserPassword(currentUser.getUserID(), password.getText());
+                // Password setup is also a successful login. Refresh it once so
+                // the API can issue the short-lived, store-authorized session
+                // used for Google Drive documents.
+                userService.verifyPassword(currentUser.getUsername(), password.getText());
                 return null;
             }
         };

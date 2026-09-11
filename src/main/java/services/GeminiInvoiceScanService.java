@@ -467,7 +467,8 @@ public final class GeminiInvoiceScanService {
 		Map<ScannedInvoice, Map<PdfEvidenceField, PdfEvidenceLocation>> locations = new LinkedHashMap<>();
 		for (ScannedInvoice row : result.rows()) {
 			ScannedInvoice renamed = new ScannedInvoice(sourceFile, row.supplierName(), row.invoiceNo(),
-					row.invoiceDate(), row.dueDate(), row.documentType(), row.amountCents(), row.fieldConfidences());
+					row.invoiceDate(), row.dueDate(), row.documentType(), row.amountCents(), row.fieldConfidences(),
+					row.dueDateEstimated());
 			rows.add(renamed);
 			Map<PdfEvidenceField, PdfEvidenceLocation> evidence = result.locations().get(row);
 			if (evidence != null && !evidence.isEmpty()) locations.put(renamed, evidence);

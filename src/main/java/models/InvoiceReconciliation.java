@@ -124,6 +124,20 @@ public final class InvoiceReconciliation {
 		return scanned == null ? null : scanned.fieldConfidences().dueDate();
 	}
 
+	public boolean isDueDateEstimated() {
+		if (scanned == null || scanned.documentType() != ScannedInvoice.DocumentType.INVOICE
+				|| scanned.invoiceDate() == null || scanned.dueDate() == null) return false;
+		if (scanned.dueDateEstimated()) return true;
+		// Older queue results predate the explicit marker. Preserve the same UI
+		// behavior when their fallback date was persisted without a confidence.
+		return scanned.fieldConfidences().dueDate() == null
+				&& scanned.dueDate().equals(scanned.invoiceDate().plusDays(30));
+	}
+
+	public boolean hasExpectedAmount() {
+		return imported != null && imported.isImportExists();
+	}
+
 	public Double getTypeConfidence() {
 		return scanned == null ? null : scanned.fieldConfidences().type();
 	}
