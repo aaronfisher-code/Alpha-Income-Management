@@ -61,6 +61,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 
 	@FXML
 	private void initialize() {
+		progressSpinner.managedProperty().bind(progressSpinner.visibleProperty());
 		try {
 			accountPaymentService = new AccountPaymentService();
 			accountPaymentContactService = new AccountPaymentContactService();

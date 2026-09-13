@@ -106,6 +106,7 @@ public class InvoiceEntryController extends DateSelectController{
 
     @FXML
 	private void initialize() {
+		progressSpinner.managedProperty().bind(progressSpinner.visibleProperty());
 		try{
 			invoiceService = new InvoiceService();
 			invoiceSupplierService = new InvoiceSupplierService();

@@ -64,6 +64,7 @@ public class RosterPageController extends PageController {
 
     @FXML
     private void initialize() {
+		progressSpinner.managedProperty().bind(progressSpinner.visibleProperty());
         try {
             userService = new UserService();
             rosterService = new RosterService();

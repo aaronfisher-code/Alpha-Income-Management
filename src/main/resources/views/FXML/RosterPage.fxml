@@ -79,7 +79,7 @@
                               <Cursor fx:constant="HAND" />
                            </cursor>
                         </Button>
-                        <MFXProgressSpinner fx:id="progressSpinner" radius="7.0" visible="false" />
+                        <MFXProgressSpinner fx:id="progressSpinner" managed="false" radius="7.0" visible="false" />
                      </children>
                      <BorderPane.margin>
                         <Insets bottom="10.0" left="15.0" top="10.0" />

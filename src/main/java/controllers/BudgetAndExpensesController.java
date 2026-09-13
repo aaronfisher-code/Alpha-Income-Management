@@ -55,6 +55,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 
 	@FXML
 	private void initialize() {
+		progressSpinner.managedProperty().bind(progressSpinner.visibleProperty());
 		try{
 			budgetExpensesService = new BudgetExpensesService();
 			accountPaymentService = new AccountPaymentService();

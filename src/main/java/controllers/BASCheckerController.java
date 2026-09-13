@@ -64,6 +64,7 @@ public class BASCheckerController extends DateSelectController{
 
 	@FXML
 	private void initialize() {
+		progressSpinner.managedProperty().bind(progressSpinner.visibleProperty());
         try {
             eodService = new EODService();
 			tillReportService = new TillReportService();
