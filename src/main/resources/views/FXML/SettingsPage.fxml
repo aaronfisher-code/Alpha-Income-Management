@@ -65,6 +65,17 @@
 
                   <VBox spacing="12.0" styleClass="settings-card">
                      <children>
+                        <Label styleClass="settings-section-title" text="Pharmacy data connection" />
+                        <Label styleClass="settings-help" text="Run a read-only end-to-end check through Alpha API, the Z forwarder, and the pharmacy SQL Server." wrapText="true" />
+                        <HBox alignment="CENTER_LEFT" spacing="12.0">
+                           <Button fx:id="testZConnectionButton" onAction="#testZConnection" styleClass="settings-primary-button" text="Test Z connection" />
+                           <Label fx:id="zConnectionTestLabel" styleClass="settings-status" text="Not tested" wrapText="true" />
+                        </HBox>
+                     </children>
+                  </VBox>
+
+                  <VBox spacing="12.0" styleClass="settings-card">
+                     <children>
                         <BorderPane>
                            <left>
                               <VBox spacing="3.0" BorderPane.alignment="CENTER_LEFT">

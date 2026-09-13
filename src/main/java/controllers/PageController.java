@@ -1,9 +1,7 @@
 package controllers;
 
 import com.dlsc.gemsfx.DialogPane;
-import javafx.application.Platform;
 import javafx.fxml.FXML;
-import javafx.scene.control.Label;
 import services.LiveZConfiguration;
 import services.LiveZUnavailableException;
 import services.ZDataService;
@@ -19,7 +17,6 @@ public abstract class PageController extends Controller {
 	protected ExecutorService executor;
 	private boolean liveZEnabled;
 	private ZDataService liveZDataService;
-	private Label liveZStatusLabel;
 	public abstract void fill();
 	public DialogPane.Dialog<Void> getDialog() {return dialog;}
 	public DialogPane getDialogPane() {return dialogPane;}
@@ -39,14 +36,10 @@ public abstract class PageController extends Controller {
 		executor.shutdown();
 	}
 
-	protected void initializeLiveZStatus(Label statusLabel) throws IOException {
-		liveZStatusLabel = statusLabel;
+	protected void initializeLiveZ() throws IOException {
 		liveZEnabled = LiveZConfiguration.load().enabled();
-		statusLabel.setVisible(liveZEnabled);
-		statusLabel.setManaged(liveZEnabled);
 		if (!liveZEnabled) return;
 		liveZDataService = new ZDataService();
-		setLiveZStatus("Live Z data · checking connection…", "#6e6b7b");
 	}
 
 	protected boolean isLiveZEnabled() {
@@ -55,22 +48,11 @@ public abstract class PageController extends Controller {
 
 	protected void requireLiveZConnected(int storeId) {
 		if (!liveZEnabled) return;
-		try {
-			var status = liveZDataService.getStatus(storeId);
-			if (!status.connected()) {
-				throw new LiveZUnavailableException(
-						"Live Z data is enabled, but the pharmacy forwarder is offline.");
-			}
-			setLiveZStatus("Live Z data · connected", "#16803c");
-		} catch (RuntimeException exception) {
-			markLiveZUnavailable(exception);
-			throw exception;
+		var status = liveZDataService.getStatus(storeId);
+		if (!status.connected()) {
+			throw new LiveZUnavailableException(
+					"Pharmacy data is enabled, but the Z forwarder is offline.");
 		}
-	}
-
-	protected void markLiveZUnavailable(Throwable failure) {
-		if (!liveZEnabled) return;
-		setLiveZStatus("Live Z data · unavailable", "#c62828");
 	}
 
 	protected Throwable unwrapAsyncFailure(Throwable failure) {
@@ -82,13 +64,4 @@ public abstract class PageController extends Controller {
 		return current;
 	}
 
-	private void setLiveZStatus(String text, String colour) {
-		if (liveZStatusLabel == null) return;
-		Runnable update = () -> {
-			liveZStatusLabel.setText(text);
-			liveZStatusLabel.setStyle("-fx-text-fill: " + colour + "; -fx-font-weight: bold;");
-		};
-		if (Platform.isFxApplicationThread()) update.run();
-		else Platform.runLater(update);
-	}
 }

@@ -41,7 +41,6 @@ public class TargetGraphsPageController extends PageController {
     @FXML private BorderPane ytdButton;
     @FXML private DialogPane dialogPane;
 	@FXML private MFXProgressBar progressBar;
-	@FXML private Label zLiveStatusLabel;
     private BootstrapPane outerPane;
 	private BootstrapPane graphPane;
 	private BootstrapPane gaugePane;
@@ -66,7 +65,7 @@ public class TargetGraphsPageController extends PageController {
 			tillReportService = new TillReportService();
 			eodService = new EODService();
 			targetService = new TargetService();
-			initializeLiveZStatus(zLiveStatusLabel);
+			initializeLiveZ();
 			executor = Executors.newCachedThreadPool();
 		} catch (IOException e){
 			dialogPane.showError("Error", "Error initializing services", e);
@@ -292,10 +291,9 @@ public class TargetGraphsPageController extends PageController {
 			})
 			.exceptionally(failure -> {
 				Throwable cause = unwrapAsyncFailure(failure);
-				markLiveZUnavailable(cause);
 				Platform.runLater(() -> {
 					progressBar.setVisible(false);
-					dialogPane.showError("Live Z data unavailable", cause instanceof Exception ex ? ex : new RuntimeException(cause));
+					dialogPane.showError("Pharmacy data unavailable", cause instanceof Exception ex ? ex : new RuntimeException(cause));
 				});
 				return null;
 			});

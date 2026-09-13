@@ -26,6 +26,8 @@ import models.DocumentAiModels.ScanScheduleInput;
 import models.DocumentAiModels.WatchFolder;
 import models.DocumentAiModels.WatchFolderInput;
 import services.DocumentAiService;
+import services.LiveZConfiguration;
+import services.ZDataService;
 
 import java.awt.Desktop;
 import java.io.IOException;
@@ -63,6 +65,8 @@ public final class SettingsController extends PageController {
     @FXML private Button configureFoldersButton;
     @FXML private Button saveScheduleButton;
     @FXML private Button refreshButton;
+    @FXML private Button testZConnectionButton;
+    @FXML private Label zConnectionTestLabel;
     @FXML private ProgressIndicator progressIndicator;
 
     private final Map<String, Integer> scheduleIntervals = new LinkedHashMap<>();
@@ -71,9 +75,12 @@ public final class SettingsController extends PageController {
     private ScanSchedule currentSchedule;
     private List<WatchFolder> currentWatchFolders = List.of();
     private IOException initializationError;
+    private ZDataService zDataService;
+    private boolean zIntegrationEnabled;
     private String pendingAuthorizationUrl;
     private Task<SettingsLoad> connectionMonitorTask;
     private boolean busy;
+    private boolean zTestBusy;
 
     @FXML
     private void initialize() {
@@ -97,6 +104,14 @@ public final class SettingsController extends PageController {
         } catch (IOException exception) {
             initializationError = exception;
         }
+        try {
+            zIntegrationEnabled = LiveZConfiguration.load().enabled();
+            if (zIntegrationEnabled) zDataService = new ZDataService();
+            zConnectionTestLabel.setText(zIntegrationEnabled ? "Not tested" : "Disabled in this installation");
+        } catch (IOException exception) {
+            zConnectionTestLabel.setText("Unable to load pharmacy connection settings");
+        }
+        updateDisabledState();
     }
 
     @Override
@@ -289,6 +304,41 @@ public final class SettingsController extends PageController {
         executor.submit(task);
     }
 
+    @FXML
+    private void testZConnection() {
+        if (!zIntegrationEnabled || zDataService == null || busy || zTestBusy) return;
+        zTestBusy = true;
+        zConnectionTestLabel.getStyleClass().removeAll("settings-success", "settings-test-error");
+        zConnectionTestLabel.setText("Testing Alpha API → Z forwarder → SQL Server…");
+        updateDisabledState();
+
+        Task<ZDataService.ConnectionTest> task = new Task<>() {
+            @Override protected ZDataService.ConnectionTest call() {
+                return zDataService.testConnection(storeId());
+            }
+        };
+        task.setOnSucceeded(_ -> {
+            zTestBusy = false;
+            var result = task.getValue();
+            if (result.agentConnected() && result.sqlQuerySucceeded()) {
+                zConnectionTestLabel.setText("End-to-end test passed · SQL Server responded with "
+                        + result.rowCount() + " rows in " + result.elapsedMs() + " ms.");
+                zConnectionTestLabel.getStyleClass().add("settings-success");
+            } else {
+                zConnectionTestLabel.setText("End-to-end test failed · the pharmacy query did not complete.");
+                zConnectionTestLabel.getStyleClass().add("settings-test-error");
+            }
+            updateDisabledState();
+        });
+        task.setOnFailed(_ -> {
+            zTestBusy = false;
+            zConnectionTestLabel.setText("End-to-end test failed · " + errorMessage(task.getException()));
+            zConnectionTestLabel.getStyleClass().add("settings-test-error");
+            updateDisabledState();
+        });
+        executor.submit(task);
+    }
+
     private void applySettings(SettingsLoad load) {
         driveStatus = load.driveStatus();
         if (driveStatus.connected()) clearPendingAuthorization();
@@ -473,6 +523,7 @@ public final class SettingsController extends PageController {
         saveScheduleButton.setDisable(busy);
         refreshButton.setDisable(busy);
         watchedFoldersList.setDisable(busy);
+        testZConnectionButton.setDisable(busy || zTestBusy || !zIntegrationEnabled || zDataService == null);
     }
 
     private void selectScheduleInterval(int minutes) {

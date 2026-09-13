@@ -31,7 +31,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 	@FXML private MFXTextField numDaysField,numOpenDaysField,numPartialDaysField,dailyRentField,totalAvgField,monthlyRentField,dailyOutgoingsField,buildingOutgoingsField,monthlyLoanField,monthlyWagesField;
 	@FXML private MFXTextField cpaIncomeXero, cpaIncomeSpreadsheet,cpaIncomeVariance,lanternPayIncomeXero,lanternPayIncomeSpreadsheet,lanternPayIncomeVariance,otherIncomeXero,otherIncomeSpreadsheet,otherIncomeVariance,atoGSTrefundXero;
 	@FXML private MFXButton saveButton;
-	@FXML private Label errorLabel,zLiveStatusLabel;
+	@FXML private Label errorLabel;
 	@FXML private GridPane endOfMonthTable;
 	@FXML private MFXProgressSpinner progressSpinner,saveProgressSpinner;
 	@FXML private MFXTextField noOfScriptsLast, noOfScriptsGrowth1, noOfScriptsTarget1, noOfScriptsGrowth2, noOfScriptsTarget2;
@@ -61,7 +61,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 			tillReportService = new TillReportService();
 			eodService = new EODService();
 			targetService = new TargetService();
-			initializeLiveZStatus(zLiveStatusLabel);
+			initializeLiveZ();
 			executor = Executors.newCachedThreadPool();
 		}catch (IOException e){
 			dialogPane.showError("Error", "Error initializing budget and expenses service", e);
@@ -331,10 +331,9 @@ public class BudgetAndExpensesController extends DateSelectController{
 				}, executor)
 				.exceptionally(failure -> {
 					Throwable cause = unwrapAsyncFailure(failure);
-					markLiveZUnavailable(cause);
 					Platform.runLater(() -> {
 						progressSpinner.setVisible(false);
-						dialogPane.showError("Live Z data unavailable", cause instanceof Exception ex ? ex : new RuntimeException(cause));
+						dialogPane.showError("Pharmacy data unavailable", cause instanceof Exception ex ? ex : new RuntimeException(cause));
 					});
 					return null;
 				});

@@ -106,7 +106,7 @@ public class TillReportService {
     private RuntimeException requestFailure(Exception cause) {
         if (liveZEnabled) {
             return new LiveZUnavailableException(
-                    "Live Z till and script data is unavailable. Check the pharmacy forwarder connection.", cause);
+                    "Pharmacy till and script data is unavailable. Check the Z forwarder connection.", cause);
         }
         return new RuntimeException("Error retrieving till report data", cause);
     }

@@ -54,7 +54,7 @@ public class BASCheckerController extends DateSelectController{
 	@FXML private MFXTextField medicareSpreadsheet, medicareBAS, medicareAdjustment;
 	@FXML private MFXTextField spreadsheetCheck1,spreadsheetCheck2,spreadsheetCheck3;
 	@FXML private MFXTextField cogsCheck1,cogsCheck2,cogsCheck3;
-	@FXML private Label errorLabel,zLiveStatusLabel;
+	@FXML private Label errorLabel;
 	@FXML private MFXButton saveButton;
 	@FXML private MFXProgressSpinner progressSpinner, saveProgressSpinner;
 	private EODService eodService;
@@ -69,7 +69,7 @@ public class BASCheckerController extends DateSelectController{
 			tillReportService = new TillReportService();
 			invoiceService = new InvoiceService();
 			basCheckerService = new BASCheckerService();
-			initializeLiveZStatus(zLiveStatusLabel);
+			initializeLiveZ();
 			executor = Executors.newCachedThreadPool();
         } catch (IOException e) {
 			dialogPane.showError("Error", "Error initialising services", e);
@@ -186,7 +186,6 @@ public class BASCheckerController extends DateSelectController{
 						// Update UI on JavaFX Application Thread
 						Platform.runLater(() -> updateUI(result, basData));
 					} catch (Exception e) {
-						markLiveZUnavailable(e);
 						Platform.runLater(() -> dialogPane.showError("Error", "Error updating values", e));
 					} finally {
 						Platform.runLater(() -> progressSpinner.setVisible(false));
@@ -194,10 +193,9 @@ public class BASCheckerController extends DateSelectController{
 				}, executor)
 				.exceptionally(failure -> {
 					Throwable cause = unwrapAsyncFailure(failure);
-					markLiveZUnavailable(cause);
 					Platform.runLater(() -> {
 						progressSpinner.setVisible(false);
-						dialogPane.showError("Live Z data unavailable", cause instanceof Exception ex ? ex : new RuntimeException(cause));
+						dialogPane.showError("Pharmacy data unavailable", cause instanceof Exception ex ? ex : new RuntimeException(cause));
 					});
 					return null;
 				});

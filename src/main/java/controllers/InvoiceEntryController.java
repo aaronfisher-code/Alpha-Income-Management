@@ -256,7 +256,7 @@ public class InvoiceEntryController extends DateSelectController{
 		GUIUtils.formatTabDeselect(creditsButton);
 		controlBox.getChildren().clear();
 		invoiceFilterView = new CompatibleFilterView<>();
-		invoiceFilterView.setTitle(liveZEnabled ? "Current Invoices · live Z reconciliation" : "Current Invoices");
+        invoiceFilterView.setTitle("Current Invoices");
 		invoiceFilterView.setTextFilterProvider(text -> invoice -> invoice.getInvoiceNo().toLowerCase().contains(text) || invoice.getSupplierName().toLowerCase().contains(text));
         ObservableList<Invoice> allInvoices = invoiceFilterView.getFilteredItems();
 		supplierNameCol = new TableColumn<>("     SUPPLIER NAME     ");

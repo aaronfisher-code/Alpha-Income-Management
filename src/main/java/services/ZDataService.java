@@ -60,6 +60,21 @@ public class ZDataService {
         }
     }
 
+    /**
+     * Runs a fresh, read-only probe through Alpha API, the Z agent, and the
+     * configured pharmacy SQL connection. Unlike the status call, this does
+     * not stop at checking whether a WebSocket session exists.
+     */
+    public ConnectionTest testConnection(int storeId) {
+        String url = UriComponentsBuilder.fromHttpUrl(apiBaseUrl)
+                .path("/test").queryParam("storeId", storeId).toUriString();
+        try {
+            return mapper.treeToValue(get(url), ConnectionTest.class);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
+            throw new IllegalStateException("Alpha API returned an invalid pharmacy connection test", exception);
+        }
+    }
+
     private JsonNode get(String url) {
         var headers = new HttpHeaders();
         headers.setBearerAuth(apiToken);
@@ -69,12 +84,12 @@ public class ZDataService {
                     new HttpEntity<>(headers), String.class);
         } catch (RestClientException exception) {
             throw new LiveZUnavailableException(
-                    "Live Z data is unavailable. Check the pharmacy forwarder connection.", exception);
+                    "Pharmacy data is unavailable. Check the Z forwarder connection.", exception);
         }
         try {
             return mapper.readTree(response.getBody());
         } catch (IOException exception) {
-            throw new IllegalStateException("Alpha API returned invalid live Z data", exception);
+            throw new IllegalStateException("Alpha API returned invalid pharmacy data", exception);
         }
     }
 
@@ -98,4 +113,9 @@ public class ZDataService {
     }
 
     public record ConnectionStatus(String siteId, int storeId, boolean connected, String connectedSinceUtc) {}
+
+    public record ConnectionTest(String siteId, int storeId, boolean agentConnected,
+                                 boolean sqlQuerySucceeded, String operation, int rowCount,
+                                 String checkedDate, String generatedUtc, long elapsedMs,
+                                 String message) {}
 }

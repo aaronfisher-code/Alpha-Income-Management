@@ -34,7 +34,7 @@ public class EODDataEntryPageController extends DateSelectController{
 	@FXML private TableView<EODDataPoint> eodDataTable;
 	@FXML private VBox editDayPopover;
 	@FXML private Region contentDarken;
-	@FXML private Label popoverLabel,tillBalanceLabel,runningTillBalanceLabel,subheading,zLiveStatusLabel;
+	@FXML private Label popoverLabel,tillBalanceLabel,runningTillBalanceLabel,subheading;
 	@FXML private MFXTextField cashField,eftposField,amexField,googleSquareField,chequeField;
 	@FXML private MFXTextField medschecksField,sohField,sofField,smsPatientsField;
 	@FXML private Label cashValidationLabel,eftposValidationLabel,amexValidationLabel,googleSquareValidationLabel,chequeValidationLabel;
@@ -56,7 +56,7 @@ public class EODDataEntryPageController extends DateSelectController{
 		try {
 			eodService = new EODService();
 			tillReportService = new TillReportService();
-			initializeLiveZStatus(zLiveStatusLabel);
+			initializeLiveZ();
 			executor = Executors.newCachedThreadPool();
 		} catch (IOException e) {
 			dialogPane.showError("Failed to initialize services", e);
@@ -266,7 +266,6 @@ public class EODDataEntryPageController extends DateSelectController{
 
 	public void importFiles(LocalDate targetDate) {
 		if (isLiveZEnabled()) {
-			dialogPane.showInformation("Live Z data", "Till and daily script reports are loaded directly from Z; no file import is required.");
 			return;
 		}
 		// -- 1) Load configuration to get the last used directory (if any)
@@ -566,7 +565,6 @@ public class EODDataEntryPageController extends DateSelectController{
 		fillTableTask.setOnFailed(_ -> {
 			progressSpinner.setVisible(false);
 			Throwable exception = fillTableTask.getException();
-			markLiveZUnavailable(exception);
 			dialogPane.showError("Failed to fill table", (Exception) exception);
 		});
 
@@ -611,7 +609,6 @@ public class EODDataEntryPageController extends DateSelectController{
 			progressSpinner.setVisible(false);
 		});
 		totalTakingsTask.setOnFailed(_ -> {
-			markLiveZUnavailable(totalTakingsTask.getException());
 			dialogPane.showError("Failed to get total takings", (Exception) totalTakingsTask.getException());
 			progressSpinner.setVisible(false);
 		});
