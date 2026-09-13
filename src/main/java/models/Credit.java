@@ -16,6 +16,8 @@ public class Credit {
     private String referenceInvoiceNo;
     private double creditAmount;
     private String notes;
+    private boolean readOnly;
+    private String sourceSystem = "ALPHA";
     //TODO: make sure all notes fields dont extend past 255 character SQL limit
 
     public Credit() {
@@ -99,4 +101,12 @@ public class Credit {
     public void setStoreID(int storeID) {
         this.storeID = storeID;
     }
+
+    public boolean isReadOnly() { return readOnly; }
+
+    public void setReadOnly(boolean readOnly) { this.readOnly = readOnly; }
+
+    public String getSourceSystem() { return sourceSystem; }
+
+    public void setSourceSystem(String sourceSystem) { this.sourceSystem = sourceSystem; }
 }

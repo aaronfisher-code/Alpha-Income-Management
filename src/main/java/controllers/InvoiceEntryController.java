@@ -38,6 +38,7 @@ import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import services.CreditService;
 import services.InvoiceService;
 import services.InvoiceSupplierService;
+import services.ZDataService;
 import utils.*;
 import java.io.*;
 import java.text.NumberFormat;
@@ -99,6 +100,8 @@ public class InvoiceEntryController extends DateSelectController{
 	private InvoiceService invoiceService;
 	private InvoiceSupplierService invoiceSupplierService;
 	private CreditService creditService;
+	private ZDataService zDataService;
+	private boolean liveZEnabled;
 	private AtomicInteger taskCounter = new AtomicInteger(0);
 
     @FXML
@@ -107,6 +110,12 @@ public class InvoiceEntryController extends DateSelectController{
 			invoiceService = new InvoiceService();
 			invoiceSupplierService = new InvoiceSupplierService();
 			creditService = new CreditService();
+			Properties properties = new Properties();
+			try (InputStream input = getClass().getClassLoader().getResourceAsStream("application.properties")) {
+				if (input != null) properties.load(input);
+			}
+			liveZEnabled = Boolean.parseBoolean(properties.getProperty("z.live.enabled", "false"));
+			if (liveZEnabled) zDataService = new ZDataService();
 			executor = Executors.newCachedThreadPool();
 		}catch(IOException ex){
 			dialogPane.showError("Error","An error occurred while initialising the invoice service",ex);
@@ -166,6 +175,8 @@ public class InvoiceEntryController extends DateSelectController{
 		aiScanButton.setVisible(canReviewDocuments);
 		aiScanButton.setManaged(canReviewDocuments);
 		importDataButton.setDisable(!canEditInvoices);
+		importDataButton.setVisible(!liveZEnabled);
+		importDataButton.setManaged(!liveZEnabled);
 		exportDataButton.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Invoicing - Export")));
 		//Live update expected unit amount if invoice is recognised
 		invoiceNoField.delegateFocusedProperty().addListener((_, _, _) -> {
@@ -245,7 +256,7 @@ public class InvoiceEntryController extends DateSelectController{
 		GUIUtils.formatTabDeselect(creditsButton);
 		controlBox.getChildren().clear();
 		invoiceFilterView = new CompatibleFilterView<>();
-		invoiceFilterView.setTitle("Current Invoices");
+		invoiceFilterView.setTitle(liveZEnabled ? "Current Invoices · live Z reconciliation" : "Current Invoices");
 		invoiceFilterView.setTextFilterProvider(text -> invoice -> invoice.getInvoiceNo().toLowerCase().contains(text) || invoice.getSupplierName().toLowerCase().contains(text));
         ObservableList<Invoice> allInvoices = invoiceFilterView.getFilteredItems();
 		supplierNameCol = new TableColumn<>("     SUPPLIER NAME     ");
@@ -478,7 +489,7 @@ public class InvoiceEntryController extends DateSelectController{
 			creditsTable.setRowFactory(_ -> {
 				TableRow<Credit> row = new TableRow<>();
 				row.setOnMouseClicked(event -> {
-					if (event.getClickCount() == 2 && (!row.isEmpty())) {
+					if (event.getClickCount() == 2 && (!row.isEmpty()) && !row.getItem().isReadOnly()) {
 						Credit rowData = row.getItem();
 						openCreditPopover(rowData);
 					}
@@ -1060,9 +1071,24 @@ public class InvoiceEntryController extends DateSelectController{
 	public CompletableFuture<ObservableList<Credit>> fetchCreditData() {
 		return CompletableFuture.supplyAsync(() -> {
 			YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
-			return FXCollections.observableArrayList(
-					creditService.getAllCredits(main.getCurrentStore().getStoreID(), yearMonthObject)
-			);
+			var alphaCredits = new java.util.ArrayList<>(
+					creditService.getAllCredits(main.getCurrentStore().getStoreID(), yearMonthObject));
+			if (!liveZEnabled || zDataService == null) return FXCollections.observableArrayList(alphaCredits);
+			var existingByNumber = alphaCredits.stream().collect(java.util.stream.Collectors.toMap(
+					credit -> credit.getCreditNo() == null ? "" : credit.getCreditNo().trim().toLowerCase(Locale.ROOT),
+					credit -> credit,
+					(first, ignored) -> first));
+			for (Credit zCredit : zDataService.getCredits(main.getCurrentStore().getStoreID(), yearMonthObject)) {
+				var key = zCredit.getCreditNo().trim().toLowerCase(Locale.ROOT);
+				var existing = existingByNumber.get(key);
+				if (existing == null) {
+					alphaCredits.add(zCredit);
+				} else {
+					existing.setCreditAmount(zCredit.getCreditAmount());
+					existing.setSourceSystem("ALPHA+Z");
+				}
+			}
+			return FXCollections.observableArrayList(alphaCredits);
 		}, executor);
 	}
 

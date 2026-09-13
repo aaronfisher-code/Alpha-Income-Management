@@ -354,7 +354,7 @@ public final class AiInvoiceScanController extends Controller {
 
 	private void dismissBatch(BatchSummary batch) {
 		parent.getDialogPane().showWarning("Dismiss review batch?",
-				"Dismiss “" + batch.sourceLabel() + "”? Its source PDFs will be deleted from Google Drive.")
+				"Dismiss “" + batch.sourceLabel() + "”? Its source PDFs will be moved to Google Drive trash.")
 				.onClose(button -> {
 					if (!ButtonType.OK.equals(button)) return;
 					Task<Void> task = new Task<>() {
@@ -612,13 +612,13 @@ public final class AiInvoiceScanController extends Controller {
 		action.setSortable(false);
 		action.setCellFactory(_ -> new TableCell<>() {
 			private final Button reviewButton = new Button("Review");
-			private final Button deleteButton = new Button("Delete");
-			private final HBox buttons = new HBox(5, reviewButton, deleteButton);
+			private final Button trashButton = new Button("Trash");
+			private final HBox buttons = new HBox(5, reviewButton, trashButton);
 			{
 				reviewButton.getStyleClass().add("review-add-button");
 				reviewButton.setOnAction(_ -> review(getTableView().getItems().get(getIndex())));
-				deleteButton.getStyleClass().add("delete-scan-button");
-				deleteButton.setOnAction(_ -> deleteScannedRow(getTableView().getItems().get(getIndex())));
+				trashButton.getStyleClass().add("delete-scan-button");
+				trashButton.setOnAction(_ -> trashScannedRow(getTableView().getItems().get(getIndex())));
 			}
 			@Override
 			protected void updateItem(Void item, boolean empty) {
@@ -628,7 +628,7 @@ public final class AiInvoiceScanController extends Controller {
 				boolean saved = row != null && row.getStatus() == InvoiceReconciliation.Status.SAVED;
 				reviewButton.setText(saved ? "Saved" : "Review");
 				reviewButton.setDisable(saved || commitBusy);
-				deleteButton.setDisable(saved || commitBusy);
+				trashButton.setDisable(saved || commitBusy);
 				setGraphic(row == null || row.getScanned() == null ? null : buttons);
 			}
 		});
@@ -941,18 +941,18 @@ public final class AiInvoiceScanController extends Controller {
 		Platform.runLater(() -> showEvidence(row));
 	}
 
-	private void deleteScannedRow(InvoiceReconciliation row) {
+	private void trashScannedRow(InvoiceReconciliation row) {
 		if (row == null || row.getScanned() == null
 				|| row.getStatus() == InvoiceReconciliation.Status.SAVED || commitBusy) return;
 		String reference = row.getInvoiceNo().isBlank() ? "this scanned document" : row.getInvoiceNo();
 		Long documentId = documentIdsByRow.get(row.getScanned());
 		if (documentId == null || documentId <= 0) {
-			parent.getDialogPane().showError("Unable to delete source PDF",
+			parent.getDialogPane().showError("Unable to trash source PDF",
 					"The source document ID is unavailable; refresh the review batch and try again.");
 			return;
 		}
-		parent.getDialogPane().showWarning("Delete source PDF?",
-				"Delete " + reference + " and its source PDF from Google Drive?\n"
+		parent.getDialogPane().showWarning("Move source PDF to trash?",
+				"Move " + reference + " and its source PDF to Google Drive trash?\n"
 						+ "All extracted rows from that PDF will be removed from this review batch.")
 				.onClose(buttonType -> {
 					if (!ButtonType.OK.equals(buttonType)) return;
@@ -985,7 +985,7 @@ public final class AiInvoiceScanController extends Controller {
 						});
 						task.setOnFailed(_ -> {
 							setCommitBusy(false);
-							parent.getDialogPane().showError("Unable to delete source PDF",
+							parent.getDialogPane().showError("Unable to trash source PDF",
 									errorMessage(task.getException()), task.getException());
 						});
 						executor.submit(task);

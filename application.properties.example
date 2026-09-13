@@ -5,4 +5,7 @@ api.token=alpha-local-development
 # Prevent an unavailable or stalled API from leaving a screen busy indefinitely.
 api.connect.timeout.seconds=10
 api.read.timeout.seconds=60
+# When enabled, invoice reconciliation/till metrics come live through Alpha API,
+# and Z-only credits are added to the credit list as read-only rows.
+z.live.enabled=false
 VERSION=local

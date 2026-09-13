@@ -45,7 +45,7 @@
                   <VBox spacing="12.0" styleClass="settings-card">
                      <children>
                         <Label styleClass="settings-section-title" text="Google account" />
-                        <Label styleClass="settings-help" text="Authorization is saved per store in Alpha API. It grants the background scanner permission to read, move, rename, and delete source PDFs while nobody has the desktop app open." wrapText="true" />
+                        <Label styleClass="settings-help" text="Authorization is saved per store in Alpha API. It grants the background scanner permission to read, rename, move, and trash source PDFs while nobody has the desktop app open." wrapText="true" />
                         <HBox alignment="CENTER_LEFT" spacing="10.0">
                            <Label text="Connection" />
                            <Label fx:id="driveStatusLabel" styleClass="settings-value" text="Loading…" />
