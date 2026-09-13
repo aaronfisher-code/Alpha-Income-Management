@@ -88,6 +88,7 @@
                      </effect>
                   </GridPane>
                   <MFXProgressBar fx:id="progressBar" animationSpeed="0.8" maxWidth="1.7976931348623157E308" visible="false" />
+                  <Label fx:id="zLiveStatusLabel" managed="false" text="Live Z data" visible="false" />
                </children>
             </VBox>
          </top>

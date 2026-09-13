@@ -21,6 +21,7 @@ import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
+import javafx.scene.control.Label;
 import javafx.scene.layout.*;
 import utils.GUIUtils;
 import utils.RosterUtils;
@@ -40,6 +41,7 @@ public class TargetGraphsPageController extends PageController {
     @FXML private BorderPane ytdButton;
     @FXML private DialogPane dialogPane;
 	@FXML private MFXProgressBar progressBar;
+	@FXML private Label zLiveStatusLabel;
     private BootstrapPane outerPane;
 	private BootstrapPane graphPane;
 	private BootstrapPane gaugePane;
@@ -64,6 +66,7 @@ public class TargetGraphsPageController extends PageController {
 			tillReportService = new TillReportService();
 			eodService = new EODService();
 			targetService = new TargetService();
+			initializeLiveZStatus(zLiveStatusLabel);
 			executor = Executors.newCachedThreadPool();
 		} catch (IOException e){
 			dialogPane.showError("Error", "Error initializing services", e);
@@ -79,6 +82,9 @@ public class TargetGraphsPageController extends PageController {
 
 	public void updateGraphs(LocalDate startDate,LocalDate endDate){
 		 progressBar.setVisible(true);
+		 int storeId = main.getCurrentStore().getStoreID();
+		 CompletableFuture<Void> liveZStatusFuture = CompletableFuture.runAsync(
+				 () -> requireLiveZConnected(storeId), executor);
 		 CompletableFuture<RosterUtils> rosterUtilsFuture = CompletableFuture.supplyAsync(() -> {
 			 try {
 				 return new RosterUtils(main, startDate, endDate);
@@ -96,7 +102,7 @@ public class TargetGraphsPageController extends PageController {
 						endDate
 				);
 			} catch (Exception e) {
-				return null;
+				throw new RuntimeException("Unable to load live script totals", e);
 			}
 		}, executor);
 
@@ -109,7 +115,7 @@ public class TargetGraphsPageController extends PageController {
 						endDate
 				);
 			} catch (Exception e) {
-				return null;
+				throw new RuntimeException("Unable to load live OTC metrics", e);
 			}
 		}, executor);
 
@@ -122,7 +128,7 @@ public class TargetGraphsPageController extends PageController {
 						endDate
 				);
 			} catch (Exception e) {
-				return null;
+				throw new RuntimeException("Unable to load live gross-profit metrics", e);
 			}
 		}, executor);
 
@@ -193,7 +199,7 @@ public class TargetGraphsPageController extends PageController {
 			}
 		}, executor);
 
-		CompletableFuture.allOf(rosterUtilsFuture,scriptCountTargetsFuture,otcCustomerTargetsFuture,gpDollarTargetsFuture,scriptsOnFileTargetsFuture,scriptCountFuture,otcCustomerFuture,gpDollarFuture,scriptsOnFileFuture)
+		CompletableFuture.allOf(liveZStatusFuture,rosterUtilsFuture,scriptCountTargetsFuture,otcCustomerTargetsFuture,gpDollarTargetsFuture,scriptsOnFileTargetsFuture,scriptCountFuture,otcCustomerFuture,gpDollarFuture,scriptsOnFileFuture)
 			.thenRunAsync(() -> {
 				try {
 					RosterUtils rosterUtils = rosterUtilsFuture.get();
@@ -283,6 +289,15 @@ public class TargetGraphsPageController extends PageController {
 						progressBar.setVisible(false);
 					});
 				}
+			})
+			.exceptionally(failure -> {
+				Throwable cause = unwrapAsyncFailure(failure);
+				markLiveZUnavailable(cause);
+				Platform.runLater(() -> {
+					progressBar.setVisible(false);
+					dialogPane.showError("Live Z data unavailable", cause instanceof Exception ex ? ex : new RuntimeException(cause));
+				});
+				return null;
 			});
 	}
 

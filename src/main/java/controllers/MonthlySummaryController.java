@@ -75,6 +75,7 @@ public class MonthlySummaryController extends DateSelectController{
 	@FXML private Button exportDataButton;
 	@FXML private Button exportTableDataButton;
 	@FXML private MFXProgressSpinner progressSpinner;
+	@FXML private Label zLiveStatusLabel;
     private final ObservableList<TillReportDataPoint> currentTillReportDataPoints = FXCollections.observableArrayList();
 	private final ObservableList<EODDataPoint> currentEODDataPoints = FXCollections.observableArrayList();
 	private YearMonth yearMonthObject;
@@ -99,6 +100,7 @@ public class MonthlySummaryController extends DateSelectController{
 			accountPaymentService = new AccountPaymentService();
 			invoiceService = new InvoiceService();
 			accountPaymentContactService = new AccountPaymentContactService();
+			initializeLiveZStatus(zLiveStatusLabel);
 			executor = Executors.newCachedThreadPool();
 		}catch (IOException e){
 			dialogPane.showError("Error","Error loading services",e);
@@ -213,6 +215,7 @@ public class MonthlySummaryController extends DateSelectController{
 			@Override
 			protected Void call() throws Exception {
 				if (isCancelled()) return null;
+				requireLiveZConnected(main.getCurrentStore().getStoreID());
 
 				ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints = FXCollections.observableArrayList();
 				yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
@@ -281,6 +284,7 @@ public class MonthlySummaryController extends DateSelectController{
 		fillTableTask.setOnFailed(e -> {
 			if (!fillTableTask.isCancelled()) {
 				progressSpinner.setVisible(false);
+				markLiveZUnavailable(fillTableTask.getException());
 				dialogPane.showError("Error", "Error loading data", fillTableTask.getException());
 			}
 		});

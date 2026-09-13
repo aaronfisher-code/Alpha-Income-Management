@@ -10,6 +10,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
@@ -27,11 +28,7 @@ public class ZDataService {
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     public ZDataService() throws IOException {
-        var properties = new Properties();
-        try (var input = ZDataService.class.getClassLoader().getResourceAsStream("application.properties")) {
-            if (input == null) throw new IOException("application.properties was not found");
-            properties.load(input);
-        }
+        var properties = LiveZConfiguration.loadProperties();
         apiBaseUrl = properties.getProperty("api.base.url") + "/z-data";
         apiToken = properties.getProperty("api.token");
         var requests = new SimpleClientHttpRequestFactory();
@@ -66,8 +63,14 @@ public class ZDataService {
     private JsonNode get(String url) {
         var headers = new HttpHeaders();
         headers.setBearerAuth(apiToken);
-        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET,
-                new HttpEntity<>(headers), String.class);
+        ResponseEntity<String> response;
+        try {
+            response = restTemplate.exchange(url, HttpMethod.GET,
+                    new HttpEntity<>(headers), String.class);
+        } catch (RestClientException exception) {
+            throw new LiveZUnavailableException(
+                    "Live Z data is unavailable. Check the pharmacy forwarder connection.", exception);
+        }
         try {
             return mapper.readTree(response.getBody());
         } catch (IOException exception) {

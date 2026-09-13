@@ -98,6 +98,7 @@
                            </cursor>
                         </Button>
                         <MFXProgressSpinner fx:id="progressSpinner" radius="7.0" visible="false" />
+                        <Label fx:id="zLiveStatusLabel" managed="false" text="Live Z data" visible="false" />
                      </children>
                   </FlowPane>
                </left>

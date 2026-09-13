@@ -31,7 +31,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 	@FXML private MFXTextField numDaysField,numOpenDaysField,numPartialDaysField,dailyRentField,totalAvgField,monthlyRentField,dailyOutgoingsField,buildingOutgoingsField,monthlyLoanField,monthlyWagesField;
 	@FXML private MFXTextField cpaIncomeXero, cpaIncomeSpreadsheet,cpaIncomeVariance,lanternPayIncomeXero,lanternPayIncomeSpreadsheet,lanternPayIncomeVariance,otherIncomeXero,otherIncomeSpreadsheet,otherIncomeVariance,atoGSTrefundXero;
 	@FXML private MFXButton saveButton;
-	@FXML private Label errorLabel;
+	@FXML private Label errorLabel,zLiveStatusLabel;
 	@FXML private GridPane endOfMonthTable;
 	@FXML private MFXProgressSpinner progressSpinner,saveProgressSpinner;
 	@FXML private MFXTextField noOfScriptsLast, noOfScriptsGrowth1, noOfScriptsTarget1, noOfScriptsGrowth2, noOfScriptsTarget2;
@@ -61,6 +61,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 			tillReportService = new TillReportService();
 			eodService = new EODService();
 			targetService = new TargetService();
+			initializeLiveZStatus(zLiveStatusLabel);
 			executor = Executors.newCachedThreadPool();
 		}catch (IOException e){
 			dialogPane.showError("Error", "Error initializing budget and expenses service", e);
@@ -106,6 +107,9 @@ public class BudgetAndExpensesController extends DateSelectController{
 		YearMonth lastYearMonthObject = yearMonthObject.minusYears(1);
 
 		progressSpinner.setVisible(true);
+		int storeId = main.getCurrentStore().getStoreID();
+		CompletableFuture<Void> liveZStatusFuture = CompletableFuture.runAsync(
+				() -> requireLiveZConnected(storeId), executor);
 
 		CompletableFuture<RosterUtils> rosterUtilsFuture = CompletableFuture.supplyAsync(() -> {
 			try {
@@ -161,7 +165,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 								.sum() :
 						0.0;
 			} catch (Exception e) {
-				return 0.0;
+				throw new RuntimeException("Unable to load live script totals", e);
 			}
 		}, executor);
 
@@ -179,7 +183,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 								.average().orElse(0.0) :
 						0.0;
 			} catch (Exception e) {
-				return 0.0;
+				throw new RuntimeException("Unable to load live OTC metrics", e);
 			}
 		}, executor);
 
@@ -230,7 +234,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 
 				return grossProfit + zDispenseGovtContribution - totalGovtContribution;
 			} catch (Exception e) {
-				return 0.0;
+				throw new RuntimeException("Unable to load live gross-profit metrics", e);
 			}
 		}, executor);
 
@@ -283,7 +287,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 			}
 		}, executor);
 
-		CompletableFuture.allOf(rosterUtilsFuture, budgetDataFuture, cpaPaymentFuture,
+		CompletableFuture.allOf(liveZStatusFuture, rosterUtilsFuture, budgetDataFuture, cpaPaymentFuture,
 						tacPaymentFuture, otherPaymentFuture, lastYearScriptCountFuture, lastYearOtcCustomerFuture, lastYearGrossProfitFuture, eodMetricsFuture, targetsFuture)
 				.thenRunAsync(() -> {
 					try {
@@ -324,7 +328,16 @@ public class BudgetAndExpensesController extends DateSelectController{
 							progressSpinner.setVisible(false);
 						});
 					}
-				}, executor);
+				}, executor)
+				.exceptionally(failure -> {
+					Throwable cause = unwrapAsyncFailure(failure);
+					markLiveZUnavailable(cause);
+					Platform.runLater(() -> {
+						progressSpinner.setVisible(false);
+						dialogPane.showError("Live Z data unavailable", cause instanceof Exception ex ? ex : new RuntimeException(cause));
+					});
+					return null;
+				});
 	}
 
 	private void formatIntegerTargetFields(MFXTextField lastYearField, MFXTextField growth1Field, MFXTextField target1Field, MFXTextField growth2Field, MFXTextField target2Field, String fieldName) {

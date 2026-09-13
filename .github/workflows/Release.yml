@@ -46,6 +46,7 @@ jobs:
           echo "api.base.url=${{ secrets.API_BASE_URL }}" >> src/main/resources/application.properties
           echo "api.token=${{ secrets.API_TOKEN }}" >> src/main/resources/application.properties
           echo "VERSION=${{ steps.increment_version.outputs.new_version }}" >> src/main/resources/application.properties
+          echo "z.live.enabled=true" >> src/main/resources/application.properties
         shell: bash
 
       - name: Build with Maven
@@ -131,7 +132,7 @@ jobs:
             const fs = require('fs').promises;
             const { repo } = context;
             const version = 'v${{ steps.increment_version.outputs.new_version }}';
-            
+
             // Create release
             const release = await github.rest.repos.createRelease({
               ...repo,
@@ -140,7 +141,7 @@ jobs:
               draft: false,
               prerelease: false
             });
-            
+
             // Upload assets
             const files = await fs.readdir('./jdeploy/github-release-files');
             for (const file of files) {
@@ -155,7 +156,7 @@ jobs:
                 });
               }
             }
-            
+
             // Update release body
             const oldBody = release.data.body || '';
             const jdeployNotes = await fs.readFile('./jdeploy/github-release-files/jdeploy-release-notes.md', 'utf8');

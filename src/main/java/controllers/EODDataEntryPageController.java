@@ -34,7 +34,7 @@ public class EODDataEntryPageController extends DateSelectController{
 	@FXML private TableView<EODDataPoint> eodDataTable;
 	@FXML private VBox editDayPopover;
 	@FXML private Region contentDarken;
-	@FXML private Label popoverLabel,tillBalanceLabel,runningTillBalanceLabel,subheading;
+	@FXML private Label popoverLabel,tillBalanceLabel,runningTillBalanceLabel,subheading,zLiveStatusLabel;
 	@FXML private MFXTextField cashField,eftposField,amexField,googleSquareField,chequeField;
 	@FXML private MFXTextField medschecksField,sohField,sofField,smsPatientsField;
 	@FXML private Label cashValidationLabel,eftposValidationLabel,amexValidationLabel,googleSquareValidationLabel,chequeValidationLabel;
@@ -56,6 +56,7 @@ public class EODDataEntryPageController extends DateSelectController{
 		try {
 			eodService = new EODService();
 			tillReportService = new TillReportService();
+			initializeLiveZStatus(zLiveStatusLabel);
 			executor = Executors.newCachedThreadPool();
 		} catch (IOException e) {
 			dialogPane.showError("Failed to initialize services", e);
@@ -201,7 +202,9 @@ public class EODDataEntryPageController extends DateSelectController{
 		}else{
 			subheading.setVisible(false);
 		}
-        xeroExportButton.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("EOD - Export")));
+		xeroExportButton.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("EOD - Export")));
+		importDataButton.setVisible(!isLiveZEnabled());
+		importDataButton.setManaged(!isLiveZEnabled());
 	}
 
 	private void updatePopoverTillBalance() {
@@ -262,6 +265,10 @@ public class EODDataEntryPageController extends DateSelectController{
 	}
 
 	public void importFiles(LocalDate targetDate) {
+		if (isLiveZEnabled()) {
+			dialogPane.showInformation("Live Z data", "Till and daily script reports are loaded directly from Z; no file import is required.");
+			return;
+		}
 		// -- 1) Load configuration to get the last used directory (if any)
 		Properties props = new Properties();
 		File configFile = new File("appConfig.properties");
@@ -472,6 +479,7 @@ public class EODDataEntryPageController extends DateSelectController{
 		Task<ObservableList<EODDataPoint>> fillTableTask = new Task<>() {
 			@Override
 			protected ObservableList<EODDataPoint> call() throws Exception {
+				requireLiveZConnected(main.getCurrentStore().getStoreID());
 				ObservableList<EODDataPoint> eodDataPoints = FXCollections.observableArrayList();
 				YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
 				int daysInMonth = yearMonthObject.lengthOfMonth();
@@ -558,6 +566,7 @@ public class EODDataEntryPageController extends DateSelectController{
 		fillTableTask.setOnFailed(_ -> {
 			progressSpinner.setVisible(false);
 			Throwable exception = fillTableTask.getException();
+			markLiveZUnavailable(exception);
 			dialogPane.showError("Failed to fill table", (Exception) exception);
 		});
 
@@ -585,6 +594,7 @@ public class EODDataEntryPageController extends DateSelectController{
 		Task<Double> totalTakingsTask = new Task<>() {
 			@Override
 			protected Double call() {
+				requireLiveZConnected(main.getCurrentStore().getStoreID());
 				List<TillReportDataPoint> tillReports = tillReportService.getTillReportDataPointsByKey(
 						main.getCurrentStore().getStoreID(),
 						e.getDate(),
@@ -601,6 +611,7 @@ public class EODDataEntryPageController extends DateSelectController{
 			progressSpinner.setVisible(false);
 		});
 		totalTakingsTask.setOnFailed(_ -> {
+			markLiveZUnavailable(totalTakingsTask.getException());
 			dialogPane.showError("Failed to get total takings", (Exception) totalTakingsTask.getException());
 			progressSpinner.setVisible(false);
 		});
@@ -675,6 +686,7 @@ public class EODDataEntryPageController extends DateSelectController{
 			Task<Void> exportTask = new Task<>() {
 				@Override
 				protected Void call() throws Exception {
+					requireLiveZConnected(main.getCurrentStore().getStoreID());
 					try (PrintWriter pw = new PrintWriter(file)) {
 						pw.println("*ContactName,Day Of Month,Amount,No. of scripts,Total customers served," +
 								"Total Sales (#),Total Govt Contribution ($),Total Takings,Gross Profit ($)," +
