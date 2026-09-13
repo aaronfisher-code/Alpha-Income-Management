@@ -31,6 +31,10 @@
     -fx-font-family: "Montserrat SemiBold";
 }
 
+.settings-test-warning {
+    -fx-text-fill: #9a6700;
+}
+
 .settings-test-error {
     -fx-text-fill: #a61b29;
 }

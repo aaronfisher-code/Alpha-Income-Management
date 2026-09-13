@@ -308,7 +308,7 @@ public final class SettingsController extends PageController {
     private void testZConnection() {
         if (!zIntegrationEnabled || zDataService == null || busy || zTestBusy) return;
         zTestBusy = true;
-        zConnectionTestLabel.getStyleClass().removeAll("settings-success", "settings-test-error");
+        zConnectionTestLabel.getStyleClass().removeAll("settings-success", "settings-test-warning", "settings-test-error");
         zConnectionTestLabel.setText("Testing Alpha API → Z forwarder → SQL Server…");
         updateDisabledState();
 
@@ -321,9 +321,16 @@ public final class SettingsController extends PageController {
             zTestBusy = false;
             var result = task.getValue();
             if (result.agentConnected() && result.sqlQuerySucceeded()) {
-                zConnectionTestLabel.setText("End-to-end test passed · SQL Server responded with "
-                        + result.rowCount() + " rows in " + result.elapsedMs() + " ms.");
-                zConnectionTestLabel.getStyleClass().add("settings-success");
+                String range = result.fromDate() + " to " + result.toDateExclusive() + " (exclusive)";
+                if (result.rowCount() == 0) {
+                    zConnectionTestLabel.setText("Connection passed · SQL Server responded, but no ScriptTotals rows were found for "
+                            + range + ".");
+                    zConnectionTestLabel.getStyleClass().add("settings-test-warning");
+                } else {
+                    zConnectionTestLabel.setText("End-to-end test passed · SQL Server responded with "
+                            + result.rowCount() + " rows in " + result.elapsedMs() + " ms (" + range + ").");
+                    zConnectionTestLabel.getStyleClass().add("settings-success");
+                }
             } else {
                 zConnectionTestLabel.setText("End-to-end test failed · the pharmacy query did not complete.");
                 zConnectionTestLabel.getStyleClass().add("settings-test-error");

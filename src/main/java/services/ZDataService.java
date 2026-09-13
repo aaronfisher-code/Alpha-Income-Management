@@ -116,6 +116,7 @@ public class ZDataService {
 
     public record ConnectionTest(String siteId, int storeId, boolean agentConnected,
                                  boolean sqlQuerySucceeded, String operation, int rowCount,
-                                 String checkedDate, String generatedUtc, long elapsedMs,
+                                 String fromDate, String toDateExclusive,
+                                 String generatedUtc, long elapsedMs,
                                  String message) {}
 }
