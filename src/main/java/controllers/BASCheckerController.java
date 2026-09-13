@@ -136,11 +136,6 @@ public class BASCheckerController extends DateSelectController{
 		int daysInMonth = yearMonthObject.lengthOfMonth();
 		LocalDate startOfMonth = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonthValue(), 1);
 		LocalDate endOfMonth = startOfMonth.plusMonths(1).minusDays(1);
-		int storeId = main.getCurrentStore().getStoreID();
-
-		CompletableFuture<Void> liveZStatusFuture = CompletableFuture.runAsync(
-				() -> requireLiveZConnected(storeId), executor);
-
 		CompletableFuture<ObservableList<EODDataPoint>> eodFuture = CompletableFuture.supplyAsync(() -> {
 			try {
 				return FXCollections.observableArrayList(eodService.getEODDataPoints(main.getCurrentStore().getStoreID(), startOfMonth, endOfMonth));
@@ -173,7 +168,7 @@ public class BASCheckerController extends DateSelectController{
 			}
 		}, executor);
 
-		CompletableFuture.allOf(liveZStatusFuture, eodFuture, tillReportFuture, invoiceTotalFuture, basDataFuture)
+		CompletableFuture.allOf(eodFuture, tillReportFuture, invoiceTotalFuture, basDataFuture)
 				.thenRunAsync(() -> {
 					try {
 						ObservableList<EODDataPoint> currentEODDataPoints = eodFuture.get();
@@ -212,15 +207,12 @@ public class BASCheckerController extends DateSelectController{
 		double chequesTotal = 0;
 		double medicareTotal = 0;
 		double gstTotal = 0;
-		double runningTillBalance = 0;
-
 		for (EODDataPoint eod : currentEODDataPoints) {
 			cashTotal += eod.getCashAmount();
 			eftposTotal += eod.getEftposAmount();
 			amexTotal += eod.getAmexAmount();
 			googleSquareTotal += eod.getGoogleSquareAmount();
 			chequesTotal += eod.getChequeAmount();
-			runningTillBalance += eod.getTillBalance();
 		}
 
 		double totalSales = 0;
@@ -258,21 +250,32 @@ public class BASCheckerController extends DateSelectController{
 			}
 		}
 
-		double finalRunningTillBalance = runningTillBalance;
+		double finalRunningTillBalance = 0;
+		boolean runningTillBalanceKnown = true;
 		for (EODDataPoint e : currentEODDataPoints) {
 			boolean foundTillReport = false;
 			for (TillReportDataPoint t : currentTillDataPoints) {
 				if (e.getDate().equals(t.getAssignedDate()) && t.getKey().equals("Total Takings")) {
-					e.calculateTillBalances(t.getAmount(), finalRunningTillBalance);
+					if (runningTillBalanceKnown) {
+						e.calculateTillBalances(t.getAmount(), finalRunningTillBalance);
+						finalRunningTillBalance = e.getRunningTillBalance();
+					} else {
+						e.setTillTakingsAvailable(true);
+						e.setRunningTillBalanceAvailable(false);
+					}
 					foundTillReport = true;
 					break;
 				}
 			}
 			if (!foundTillReport) {
-				e.calculateTillBalances(0, finalRunningTillBalance);
+				e.setTillTakingsAvailable(false);
+				e.setRunningTillBalanceAvailable(false);
+				runningTillBalanceKnown = false;
+			} else if (runningTillBalanceKnown) {
+				finalRunningTillBalance = e.getRunningTillBalance();
 			}
-			finalRunningTillBalance = e.getRunningTillBalance();
 		}
+		if (!runningTillBalanceKnown) finalRunningTillBalance = Double.NaN;
 
 		LocalDate startOfNextMonth = yearMonthObject.plusMonths(1).atDay(1);
 		LocalDate startOfCurrentMonth = yearMonthObject.atDay(1);
@@ -309,7 +312,9 @@ public class BASCheckerController extends DateSelectController{
 		gst1.setText(String.format("%.2f", result.gstTotal()));
 		gst3.setText(String.format("%.2f", result.gstTotal()));
 
-		if (result.runningTillBalance() < 0) {
+		if (Double.isNaN(result.runningTillBalance())) {
+			tillBalance.setText("—");
+		} else if (result.runningTillBalance() < 0) {
 			tillBalance.setText(String.format("%.2f", result.runningTillBalance()));
 		} else if (result.runningTillBalance() > 0) {
 			tillBalance.setText("0.00");

@@ -81,9 +81,6 @@ public class TargetGraphsPageController extends PageController {
 
 	public void updateGraphs(LocalDate startDate,LocalDate endDate){
 		 progressBar.setVisible(true);
-		 int storeId = main.getCurrentStore().getStoreID();
-		 CompletableFuture<Void> liveZStatusFuture = CompletableFuture.runAsync(
-				 () -> requireLiveZConnected(storeId), executor);
 		 CompletableFuture<RosterUtils> rosterUtilsFuture = CompletableFuture.supplyAsync(() -> {
 			 try {
 				 return new RosterUtils(main, startDate, endDate);
@@ -144,45 +141,15 @@ public class TargetGraphsPageController extends PageController {
 			}
 		}, executor);
 
-		CompletableFuture<List<TillReportDataPoint>> scriptCountFuture = CompletableFuture.supplyAsync(() -> {
+		CompletableFuture<List<TillReportDataPoint>> tillReportFuture = CompletableFuture.supplyAsync(() -> {
 			try {
-				List<TillReportDataPoint> currentTillReportDataPoints = tillReportService.getTillReportDataPointsByKey(
+				return tillReportService.getTillReportDataPoints(
 						main.getCurrentStore().getStoreID(),
 						startDate,
-						endDate,
-						"Script Count"
+						endDate
 				);
-				return currentTillReportDataPoints;
 			} catch (Exception e) {
-				throw new RuntimeException("Unable to load live script totals", e);
-			}
-		}, executor);
-
-		CompletableFuture<List<TillReportDataPoint>> otcCustomerFuture = CompletableFuture.supplyAsync(() -> {
-			try {
-				List<TillReportDataPoint> currentTillReportDataPoints = tillReportService.getTillReportDataPointsByKey(
-						main.getCurrentStore().getStoreID(),
-						startDate,
-						endDate,
-						"Avg. OTC Sales Per Customer"
-				);
-				return currentTillReportDataPoints;
-			} catch (Exception e) {
-				throw new RuntimeException("Unable to load live OTC sales data", e);
-			}
-		}, executor);
-
-		CompletableFuture<List<TillReportDataPoint>> gpDollarFuture = CompletableFuture.supplyAsync(() -> {
-			try {
-				List<TillReportDataPoint> currentTillReportDataPoints = tillReportService.getTillReportDataPointsByKey(
-						main.getCurrentStore().getStoreID(),
-						startDate,
-						endDate,
-						"Gross Profit ($)"
-				);
-				return currentTillReportDataPoints;
-			} catch (Exception e) {
-				throw new RuntimeException("Unable to load live gross-profit data", e);
+				throw new RuntimeException("Unable to load cached till metrics", e);
 			}
 		}, executor);
 		CompletableFuture<List<EODDataPoint>> scriptsOnFileFuture = CompletableFuture.supplyAsync(() -> {
@@ -198,7 +165,7 @@ public class TargetGraphsPageController extends PageController {
 			}
 		}, executor);
 
-		CompletableFuture.allOf(liveZStatusFuture,rosterUtilsFuture,scriptCountTargetsFuture,otcCustomerTargetsFuture,gpDollarTargetsFuture,scriptsOnFileTargetsFuture,scriptCountFuture,otcCustomerFuture,gpDollarFuture,scriptsOnFileFuture)
+		CompletableFuture.allOf(rosterUtilsFuture,scriptCountTargetsFuture,otcCustomerTargetsFuture,gpDollarTargetsFuture,scriptsOnFileTargetsFuture,tillReportFuture,scriptsOnFileFuture)
 			.thenRunAsync(() -> {
 				try {
 					RosterUtils rosterUtils = rosterUtilsFuture.get();
@@ -206,9 +173,13 @@ public class TargetGraphsPageController extends PageController {
 					List<DBTargetDatapoint> otcCustomerTargets = otcCustomerTargetsFuture.get();
 					List<DBTargetDatapoint> gpDollarTargets = gpDollarTargetsFuture.get();
 					List<DBTargetDatapoint> scriptsOnFileTargets = scriptsOnFileTargetsFuture.get();
-					List<TillReportDataPoint> scriptCountTillReportDataPoints = scriptCountFuture.get();
-					List<TillReportDataPoint> otcDollarTillReportDataPoints = otcCustomerFuture.get();
-					List<TillReportDataPoint> gpDollarTillReportDataPoints = gpDollarFuture.get();
+					List<TillReportDataPoint> tillReportDataPoints = tillReportFuture.get();
+					List<TillReportDataPoint> scriptCountTillReportDataPoints = tillReportDataPoints.stream()
+							.filter(point -> "Script Count".equals(point.getKey())).toList();
+					List<TillReportDataPoint> otcDollarTillReportDataPoints = tillReportDataPoints.stream()
+							.filter(point -> "Avg. OTC Sales Per Customer".equals(point.getKey())).toList();
+					List<TillReportDataPoint> gpDollarTillReportDataPoints = tillReportDataPoints.stream()
+							.filter(point -> "Gross Profit ($)".equals(point.getKey())).toList();
 					List<EODDataPoint> scriptsOnFileDataPoints = scriptsOnFileFuture.get();
 
 					Platform.runLater(() -> {

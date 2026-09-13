@@ -108,10 +108,6 @@ public class BudgetAndExpensesController extends DateSelectController{
 		YearMonth lastYearMonthObject = yearMonthObject.minusYears(1);
 
 		progressSpinner.setVisible(true);
-		int storeId = main.getCurrentStore().getStoreID();
-		CompletableFuture<Void> liveZStatusFuture = CompletableFuture.runAsync(
-				() -> requireLiveZConnected(storeId), executor);
-
 		CompletableFuture<RosterUtils> rosterUtilsFuture = CompletableFuture.supplyAsync(() -> {
 			try {
 				return new RosterUtils(main, yearMonthObject);
@@ -152,90 +148,15 @@ public class BudgetAndExpensesController extends DateSelectController{
 			}
 		}, executor);
 
-		CompletableFuture<Double> lastYearScriptCountFuture = CompletableFuture.supplyAsync(() -> {
+		CompletableFuture<List<TillReportDataPoint>> lastYearTillReportFuture = CompletableFuture.supplyAsync(() -> {
 			try {
-				List<TillReportDataPoint> tillReportData = tillReportService.getTillReportDataPointsByKey(
+				return tillReportService.getTillReportDataPoints(
 						main.getCurrentStore().getStoreID(),
 						lastYearMonthObject.atDay(1),
-						lastYearMonthObject.atEndOfMonth(),
-						"Script Count"
+						lastYearMonthObject.atEndOfMonth()
 				);
-				return tillReportData != null && !tillReportData.isEmpty() ?
-						tillReportData.stream()
-								.mapToDouble(TillReportDataPoint::getQuantity)
-								.sum() :
-						0.0;
 			} catch (Exception e) {
-				throw new RuntimeException("Unable to load live script totals", e);
-			}
-		}, executor);
-
-		CompletableFuture<Double> lastYearOtcCustomerFuture = CompletableFuture.supplyAsync(() -> {
-			try {
-				List<TillReportDataPoint> tillReportData = tillReportService.getTillReportDataPointsByKey(
-						main.getCurrentStore().getStoreID(),
-						lastYearMonthObject.atDay(1),
-						lastYearMonthObject.atEndOfMonth(),
-						"Avg. OTC Sales Per Customer"
-				);
-				return tillReportData != null && !tillReportData.isEmpty() ?
-						tillReportData.stream()
-								.mapToDouble(TillReportDataPoint::getAmount)
-								.average().orElse(0.0) :
-						0.0;
-			} catch (Exception e) {
-				throw new RuntimeException("Unable to load live OTC metrics", e);
-			}
-		}, executor);
-
-		CompletableFuture<Double> lastYearGrossProfitFuture = CompletableFuture.supplyAsync(() -> {
-			try {
-				double grossProfit = 0.0;
-				double zDispenseGovtContribution = 0.0;
-				double totalGovtContribution = 0.0;
-
-				List<TillReportDataPoint> tillReportData = tillReportService.getTillReportDataPointsByKey(
-						main.getCurrentStore().getStoreID(),
-						lastYearMonthObject.atDay(1),
-						lastYearMonthObject.atEndOfMonth(),
-						"Gross Profit ($)"
-				);
-
-				if (tillReportData != null && !tillReportData.isEmpty()) {
-					grossProfit = tillReportData.stream()
-							.mapToDouble(TillReportDataPoint::getAmount)
-							.sum();
-				}
-
-				tillReportData = tillReportService.getTillReportDataPointsByKey(
-						main.getCurrentStore().getStoreID(),
-						lastYearMonthObject.atDay(1),
-						lastYearMonthObject.atEndOfMonth(),
-						"Govt Recovery"
-				);
-
-				if (tillReportData != null && !tillReportData.isEmpty()) {
-					zDispenseGovtContribution = tillReportData.stream()
-							.mapToDouble(TillReportDataPoint::getAmount)
-							.sum();
-				}
-
-				tillReportData = tillReportService.getTillReportDataPointsByKey(
-						main.getCurrentStore().getStoreID(),
-						lastYearMonthObject.atDay(1),
-						lastYearMonthObject.atEndOfMonth(),
-						"Total Government Contribution"
-				);
-
-				if (tillReportData != null && !tillReportData.isEmpty()) {
-					totalGovtContribution = tillReportData.stream()
-							.mapToDouble(TillReportDataPoint::getAmount)
-							.sum();
-				}
-
-				return grossProfit + zDispenseGovtContribution - totalGovtContribution;
-			} catch (Exception e) {
-				throw new RuntimeException("Unable to load live gross-profit metrics", e);
+				throw new RuntimeException("Unable to load cached till metrics", e);
 			}
 		}, executor);
 
@@ -288,8 +209,8 @@ public class BudgetAndExpensesController extends DateSelectController{
 			}
 		}, executor);
 
-		CompletableFuture.allOf(liveZStatusFuture, rosterUtilsFuture, budgetDataFuture, cpaPaymentFuture,
-						tacPaymentFuture, otherPaymentFuture, lastYearScriptCountFuture, lastYearOtcCustomerFuture, lastYearGrossProfitFuture, eodMetricsFuture, targetsFuture)
+		CompletableFuture.allOf(rosterUtilsFuture, budgetDataFuture, cpaPaymentFuture,
+						tacPaymentFuture, otherPaymentFuture, lastYearTillReportFuture, eodMetricsFuture, targetsFuture)
 				.thenRunAsync(() -> {
 					try {
 						RosterUtils rosterUtils = rosterUtilsFuture.get();
@@ -297,9 +218,18 @@ public class BudgetAndExpensesController extends DateSelectController{
 						double totalCPAPayment = cpaPaymentFuture.get();
 						double totalTACPayment = tacPaymentFuture.get();
 						double totalOtherPayment = otherPaymentFuture.get();
-						double lastYearScriptCount = lastYearScriptCountFuture.get();
-						double lastYearOtcCustomer = lastYearOtcCustomerFuture.get();
-						double lastYearGrossProfit = lastYearGrossProfitFuture.get();
+						List<TillReportDataPoint> lastYearTillReport = lastYearTillReportFuture.get();
+						double lastYearScriptCount = lastYearTillReport.stream()
+								.filter(point -> "Script Count".equals(point.getKey()))
+								.mapToDouble(TillReportDataPoint::getQuantity)
+								.sum();
+						double lastYearOtcCustomer = lastYearTillReport.stream()
+								.filter(point -> "Avg. OTC Sales Per Customer".equals(point.getKey()))
+								.mapToDouble(TillReportDataPoint::getAmount)
+								.average().orElse(0.0);
+						double lastYearGrossProfit = sumTillMetric(lastYearTillReport, "Gross Profit ($)")
+								+ sumTillMetric(lastYearTillReport, "Govt Recovery")
+								- sumTillMetric(lastYearTillReport, "Total Government Contribution");
 						int lastYearScriptsOnFile = eodMetricsFuture.get()[0];
 						int lastYearMedsChecks = eodMetricsFuture.get()[1];
 						int lastYearSMSPatients = eodMetricsFuture.get()[2];
@@ -817,6 +747,13 @@ public class BudgetAndExpensesController extends DateSelectController{
 			dialogPane.showError("Error", "Error saving budget and expenses data", saveTask.getException());
 		});
 		executor.submit(saveTask);
+	}
+
+	private static double sumTillMetric(List<TillReportDataPoint> data, String key) {
+		return data.stream()
+				.filter(point -> key.equals(point.getKey()))
+				.mapToDouble(TillReportDataPoint::getAmount)
+				.sum();
 	}
 
 	@Override

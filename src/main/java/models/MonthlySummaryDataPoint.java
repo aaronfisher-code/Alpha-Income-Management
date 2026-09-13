@@ -33,6 +33,8 @@ public class MonthlySummaryDataPoint {
 	private double tillBalance;
 	private double runningTillBalance;
 	private double outgoings;
+	private boolean tillBalanceAvailable = true;
+	private boolean runningTillBalanceAvailable = true;
 
 	private String dateValue;
 	private String dateDurationValue;
@@ -63,6 +65,8 @@ public class MonthlySummaryDataPoint {
 		date = dayOfMonth;
 		this.dayDuration = rosterUtils.getDayDuration(date);
 		double totalTakings = 0;
+		boolean totalTakingsAvailable = false;
+		boolean eodAvailable = false;
 		for(TillReportDataPoint t:currentTillReportDataPoints){
 			if(t.getAssignedDate().equals(date)&&t.getKey().equals("Script Count"))
 				noOfScripts = t.getQuantity();
@@ -80,24 +84,34 @@ public class MonthlySummaryDataPoint {
 				grossProfitDollars = t.getAmount();
 			if(t.getAssignedDate().equals(date)&&t.getKey().equals("Total Government Contribution"))
 				totalGovtContribution = t.getAmount();
-			if(t.getAssignedDate().equals(date)&&t.getKey().equals("Total Takings"))
+			if(t.getAssignedDate().equals(date)&&t.getKey().equals("Total Takings")) {
+				totalTakingsAvailable = true;
 				totalTakings = t.getAmount();
+			}
 		}
 		for(EODDataPoint e: currentEODDataPoints){
 			if(e.getDate().equals(date)){
+				eodAvailable = true;
 				totalIncome=e.getCashAmount()
 						+e.getAmexAmount()
 						+e.getChequeAmount()
 						+e.getEftposAmount()
 						+e.getGoogleSquareAmount()
 						+govtRecovery;
-				tillBalance = e.getCashAmount()
-						+e.getAmexAmount()
-						+e.getChequeAmount()
-						+e.getEftposAmount()
-						+e.getGoogleSquareAmount()
-						-totalTakings;
+				if (totalTakingsAvailable) {
+					tillBalance = e.getCashAmount()
+							+e.getAmexAmount()
+							+e.getChequeAmount()
+							+e.getEftposAmount()
+							+e.getGoogleSquareAmount()
+							-totalTakings;
+				} else {
+					tillBalanceAvailable = false;
+				}
 			}
+		}
+		if (!eodAvailable) {
+			tillBalanceAvailable = false;
 		}
 		itemsPerCustomer = (noOfCustomers==0)?0:noOfItems/noOfCustomers;
 		otcPerCustomer = (noOfCustomers==0)?0:noOfOTCItems/noOfCustomers;
@@ -112,10 +126,18 @@ public class MonthlySummaryDataPoint {
 		runningZProfit = 0;
 		runningTillBalance = 0;
 		runningZProfit += zReportProfit;
-		runningTillBalance += tillBalance;
+		if (tillBalanceAvailable) {
+			runningTillBalance += tillBalance;
+		} else {
+			runningTillBalanceAvailable = false;
+		}
 		for(MonthlySummaryDataPoint m: monthlySummaryPoints){
 			runningZProfit += m.getZReportProfit();
-			runningTillBalance += m.getTillBalance();
+			if (runningTillBalanceAvailable && m.isRunningTillBalanceAvailable()) {
+				runningTillBalance += m.getTillBalance();
+			} else {
+				runningTillBalanceAvailable = false;
+			}
 		}
 	}
 
@@ -140,7 +162,9 @@ public class MonthlySummaryDataPoint {
 			outgoingsValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getOutgoings).sum());
 			zReportProfitValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getZReportProfit).sum());
 			runningZProfitValue = "-";
-			tillBalanceValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTillBalance).sum());
+			tillBalanceValue = monthlySummaryPoints.stream().allMatch(MonthlySummaryDataPoint::isTillBalanceAvailable)
+					? NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTillBalance).sum())
+					: "—";
 			runningTillBalanceValue = "-";
 		}else{
 			dateValue = "Average";
@@ -173,7 +197,9 @@ public class MonthlySummaryDataPoint {
 			wagesValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getWages).sum()/openDuration);
 			zReportProfitValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getZReportProfit).sum()/openDuration);
 			runningZProfitValue = "-";
-			tillBalanceValue = NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTillBalance).sum()/openDuration);
+			tillBalanceValue = monthlySummaryPoints.stream().allMatch(MonthlySummaryDataPoint::isTillBalanceAvailable)
+					? NumberFormat.getCurrencyInstance(Locale.US).format(monthlySummaryPoints.stream().mapToDouble(MonthlySummaryDataPoint::getTillBalance).sum()/openDuration)
+					: "—";
 			runningTillBalanceValue = "-";
 		}
 	}
@@ -384,7 +410,9 @@ public class MonthlySummaryDataPoint {
 	}
 
 	public String getTillBalanceString() {
-		return (tillBalance == 0)?"": NumberFormat.getCurrencyInstance(Locale.US).format(tillBalance);
+		return tillBalanceAvailable
+				? NumberFormat.getCurrencyInstance(Locale.US).format(tillBalance)
+				: "—";
 	}
 
 	public void setTillBalance(double tillBalance) {
@@ -396,7 +424,17 @@ public class MonthlySummaryDataPoint {
 	}
 
 	public String getRunningTillBalanceString() {
-		return (runningTillBalance == 0)?"": NumberFormat.getCurrencyInstance(Locale.US).format(runningTillBalance);
+		return runningTillBalanceAvailable
+				? NumberFormat.getCurrencyInstance(Locale.US).format(runningTillBalance)
+				: "—";
+	}
+
+	public boolean isTillBalanceAvailable() {
+		return tillBalanceAvailable;
+	}
+
+	public boolean isRunningTillBalanceAvailable() {
+		return runningTillBalanceAvailable;
 	}
 
 	public void setRunningTillBalance(double runningTillBalance) {

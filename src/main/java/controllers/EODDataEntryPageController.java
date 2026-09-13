@@ -501,7 +501,6 @@ public class EODDataEntryPageController extends DateSelectController{
 		Task<ObservableList<EODDataPoint>> fillTableTask = new Task<>() {
 			@Override
 			protected ObservableList<EODDataPoint> call() throws Exception {
-				requireLiveZConnected(main.getCurrentStore().getStoreID());
 				ObservableList<EODDataPoint> eodDataPoints = FXCollections.observableArrayList();
 				YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
 				int daysInMonth = yearMonthObject.lengthOfMonth();
@@ -642,9 +641,9 @@ public class EODDataEntryPageController extends DateSelectController{
 
 	/**
 	 * Re-query the single selected day through Alpha API -> Z forwarder -> SQL.
-	 * The request is deliberately not cached in Alpha, so the result reflects
-	 * the current till period state. Opening a row calls this automatically;
-	 * the button allows a retry after staff finish a late till-off.
+	 * The request deliberately bypasses the cached read, then Alpha API stores
+	 * the successful result for subsequent page/report loads. Opening a row
+	 * calls this automatically; the button allows a retry after a late till-off.
 	 */
 	private void refreshTillData(EODDataPoint e) {
 		final long requestId = ++tillRefreshRequestId;
@@ -664,7 +663,7 @@ public class EODDataEntryPageController extends DateSelectController{
 			@Override
 			protected TotalTakingsResult call() {
 				requireLiveZConnected(main.getCurrentStore().getStoreID());
-				List<TillReportDataPoint> tillReports = tillReportService.getTillReportDataPointsByKey(
+				List<TillReportDataPoint> tillReports = tillReportService.refreshTillReportDataPointsByKey(
 						main.getCurrentStore().getStoreID(),
 						e.getDate(),
 						e.getDate(),
@@ -847,7 +846,6 @@ public class EODDataEntryPageController extends DateSelectController{
 			Task<Void> exportTask = new Task<>() {
 				@Override
 				protected Void call() throws Exception {
-					requireLiveZConnected(main.getCurrentStore().getStoreID());
 					try (PrintWriter pw = new PrintWriter(file)) {
 						pw.println("*ContactName,Day Of Month,Amount,No. of scripts,Total customers served," +
 								"Total Sales (#),Total Govt Contribution ($),Total Takings,Gross Profit ($)," +
@@ -874,7 +872,7 @@ public class EODDataEntryPageController extends DateSelectController{
 						} catch (Exception ex) {
 							throw new Exception("Failed to get EOD and Z till data", ex);
 						}
-						// A live-Z export must only use completed till-off periods. Do not
+						// A Z-backed export must only use completed till-off periods. Do not
 						// silently turn a missing period into a zero takings value: that
 						// would produce a misleading till balance in the Xero export.
 						if (isLiveZEnabled()) {

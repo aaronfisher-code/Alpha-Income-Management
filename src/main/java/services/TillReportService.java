@@ -63,13 +63,22 @@ public class TillReportService {
 
             return objectMapper.readValue(response.getBody(), new TypeReference<>() {});
         } catch (IOException | RestClientException e) {
-            throw requestFailure(e);
+            throw requestFailure(e, false);
         }
     }
 
     public List<TillReportDataPoint> getTillReportDataPointsByKey(int storeId, LocalDate startDate, LocalDate endDate, String key) {
+        return requestTillReportDataPointsByKey(storeId, startDate, endDate, key, false);
+    }
+
+    public List<TillReportDataPoint> refreshTillReportDataPointsByKey(int storeId, LocalDate startDate, LocalDate endDate, String key) {
+        return requestTillReportDataPointsByKey(storeId, startDate, endDate, key, true);
+    }
+
+    private List<TillReportDataPoint> requestTillReportDataPointsByKey(
+            int storeId, LocalDate startDate, LocalDate endDate, String key, boolean refresh) {
         try {
-            String baseUrl = apiBaseUrl + "/by-key";
+            String baseUrl = apiBaseUrl + (refresh ? "/refresh/by-key" : "/by-key");
             URI uri = URI.create(baseUrl + "?storeId=" + storeId +
                     "&startDate=" + startDate +
                     "&endDate=" + endDate +
@@ -78,13 +87,13 @@ public class TillReportService {
             HttpEntity<?> entity = new HttpEntity<>(createHeaders());
             ResponseEntity<String> response = restTemplate.exchange(
                     uri,
-                    HttpMethod.GET,
+                    refresh ? HttpMethod.POST : HttpMethod.GET,
                     entity,
                     String.class);
 
             return objectMapper.readValue(response.getBody(), new TypeReference<>() {});
         } catch (IOException | RestClientException e) {
-            throw requestFailure(e);
+            throw requestFailure(e, refresh);
         }
     }
 
@@ -103,12 +112,12 @@ public class TillReportService {
         }
     }
 
-    private RuntimeException requestFailure(Exception cause) {
-        if (liveZEnabled) {
+    private RuntimeException requestFailure(Exception cause, boolean liveRefresh) {
+        if (liveZEnabled && liveRefresh) {
             return new LiveZUnavailableException(
-                    "Pharmacy till and script data is unavailable. Check the Z forwarder connection.", cause);
+                    "Fresh pharmacy till data is unavailable. Check the Z forwarder connection.", cause);
         }
-        return new RuntimeException("Error retrieving till report data", cause);
+        return new RuntimeException("Error retrieving cached till report data from Alpha API", cause);
     }
 
     private static long longProperty(Properties properties, String name, long fallback) {

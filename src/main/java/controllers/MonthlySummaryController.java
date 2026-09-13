@@ -215,7 +215,6 @@ public class MonthlySummaryController extends DateSelectController{
 			@Override
 			protected Void call() throws Exception {
 				if (isCancelled()) return null;
-				requireLiveZConnected(main.getCurrentStore().getStoreID());
 
 				ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints = FXCollections.observableArrayList();
 				yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
