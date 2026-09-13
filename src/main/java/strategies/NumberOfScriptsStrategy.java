@@ -19,7 +19,7 @@ public class NumberOfScriptsStrategy extends AbstractLineGraphStrategy {
 
     public NumberOfScriptsStrategy(LocalDate startDate, LocalDate endDate, TargetGraphsPageController parent, List<TillReportDataPoint> currentTillReportDataPoints, RosterUtils rosterUtils, List<DBTargetDatapoint> targets) {
         super(startDate, endDate, parent, rosterUtils, targets);
-        this.currentTillReportDataPoints = currentTillReportDataPoints;
+        this.currentTillReportDataPoints = currentTillReportDataPoints == null ? List.of() : currentTillReportDataPoints;
     }
 
     @Override

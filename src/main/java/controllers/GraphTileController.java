@@ -45,9 +45,17 @@ public class GraphTileController extends PageController {
 	}
 
 	public void updateVariance(){
-		double currentActual = (!strategy.getActualSeries().getData().isEmpty())?strategy.getActualSeries().getData().getLast().getYValue().doubleValue():0;
-		double currentTarget1 = (!strategy.getActualSeries().getData().isEmpty())?strategy.getTarget1Series().getData().get(strategy.getActualSeries().getData().size()-1).getYValue().doubleValue():0;
-		double currentTarget2 = (!strategy.getActualSeries().getData().isEmpty())?strategy.getTarget2Series().getData().get(strategy.getActualSeries().getData().size()-1).getYValue().doubleValue():0;
+		var actualSeries = strategy.getActualSeries();
+		var target1Series = strategy.getTarget1Series();
+		var target2Series = strategy.getTarget2Series();
+		int lastActualIndex = actualSeries.getData().size() - 1;
+		double currentActual = lastActualIndex >= 0
+				? actualSeries.getData().get(lastActualIndex).getYValue().doubleValue()
+				: 0;
+		// Targets are optional. A store without a configured target must still
+		// be able to open the dashboard when live Z data is available.
+		double currentTarget1 = valueAt(target1Series, lastActualIndex);
+		double currentTarget2 = valueAt(target2Series, lastActualIndex);
 		double target1Variance = currentTarget1 - currentActual;
 		double target2Variance = currentTarget2 - currentActual;
 		if(target1Variance>0){
@@ -77,6 +85,11 @@ public class GraphTileController extends PageController {
 				target2VarianceLabel.setText(String.format("%.0f", -target2Variance) + " over Target 2!");
 			}
 		}
+	}
+
+	private static double valueAt(XYChart.Series<Number, Number> series, int index) {
+		if (series == null || index < 0 || index >= series.getData().size()) return 0;
+		return series.getData().get(index).getYValue().doubleValue();
 	}
 
 	public void setGraphView() {

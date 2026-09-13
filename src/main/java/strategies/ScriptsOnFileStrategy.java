@@ -21,7 +21,7 @@ public class ScriptsOnFileStrategy extends AbstractLineGraphStrategy {
     public ScriptsOnFileStrategy(LocalDate startDate, LocalDate endDate,
                                  TargetGraphsPageController parent, List<EODDataPoint> currentEODDataPoints, RosterUtils rosterUtils, List<DBTargetDatapoint> targets) {
         super(startDate, endDate, parent, rosterUtils, targets);
-        this.currentEODDataPoints = currentEODDataPoints;
+        this.currentEODDataPoints = currentEODDataPoints == null ? List.of() : currentEODDataPoints;
     }
 
     @Override

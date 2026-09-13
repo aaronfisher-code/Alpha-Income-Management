@@ -88,7 +88,7 @@ public class TargetGraphsPageController extends PageController {
 			 try {
 				 return new RosterUtils(main, startDate, endDate);
 			 } catch (Exception e) {
-				 return null;
+				 throw new RuntimeException("Unable to load staff roster for graph data", e);
 			 }
 		 }, executor);
 
@@ -140,7 +140,7 @@ public class TargetGraphsPageController extends PageController {
 						endDate
 				);
 			} catch (Exception e) {
-				return null;
+				throw new RuntimeException("Unable to load scripts-on-file targets", e);
 			}
 		}, executor);
 
@@ -154,7 +154,7 @@ public class TargetGraphsPageController extends PageController {
 				);
 				return currentTillReportDataPoints;
 			} catch (Exception e) {
-				return null;
+				throw new RuntimeException("Unable to load live script totals", e);
 			}
 		}, executor);
 
@@ -168,7 +168,7 @@ public class TargetGraphsPageController extends PageController {
 				);
 				return currentTillReportDataPoints;
 			} catch (Exception e) {
-				return null;
+				throw new RuntimeException("Unable to load live OTC sales data", e);
 			}
 		}, executor);
 
@@ -182,7 +182,7 @@ public class TargetGraphsPageController extends PageController {
 				);
 				return currentTillReportDataPoints;
 			} catch (Exception e) {
-				return null;
+				throw new RuntimeException("Unable to load live gross-profit data", e);
 			}
 		}, executor);
 		CompletableFuture<List<EODDataPoint>> scriptsOnFileFuture = CompletableFuture.supplyAsync(() -> {
@@ -194,7 +194,7 @@ public class TargetGraphsPageController extends PageController {
 				);
 				return currentEODDataPoints;
 			} catch (Exception e) {
-				return null;
+				throw new RuntimeException("Unable to load scripts-on-file data", e);
 			}
 		}, executor);
 

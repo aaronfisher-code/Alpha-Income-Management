@@ -21,7 +21,9 @@ public class OTCDollarPerCustomerStrategy extends AbstractLineGraphStrategy {
 
     public OTCDollarPerCustomerStrategy(LocalDate startDate, LocalDate endDate, TargetGraphsPageController parent, List<TillReportDataPoint> currentTillReportDataPoints, RosterUtils rosterUtils, List<DBTargetDatapoint> targets) {
         super(startDate, endDate, parent, rosterUtils, targets);
-        this.currentTillReportDataPoints = currentTillReportDataPoints;
+        // A failed optional data request must not crash the whole dashboard.
+        // The controller reports the original request failure separately.
+        this.currentTillReportDataPoints = currentTillReportDataPoints == null ? List.of() : currentTillReportDataPoints;
     }
 
     @Override

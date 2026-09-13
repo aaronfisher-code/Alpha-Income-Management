@@ -30,7 +30,7 @@ public abstract class AbstractLineGraphStrategy implements LineGraphTargetStrate
         this.parent = parent;
         this.main = parent.getMain();
         this.rosterUtils = rosterUtils;
-        this.targets = targets;
+        this.targets = targets == null ? List.of() : targets;
     }
 
     @Override
@@ -53,7 +53,7 @@ public abstract class AbstractLineGraphStrategy implements LineGraphTargetStrate
         XYChart.Series<Number,Number> series = new XYChart.Series<>();
         double accumulatedQuantity = 0;
 
-        if (this.targets.isEmpty()) {
+        if (this.targets.isEmpty() || rosterUtils == null) {
             return series;
         }
 
@@ -80,7 +80,7 @@ public abstract class AbstractLineGraphStrategy implements LineGraphTargetStrate
         XYChart.Series<Number,Number> series = new XYChart.Series<>();
         double accumulatedQuantity = 0;
 
-        if (this.targets.isEmpty()) {
+        if (this.targets.isEmpty() || rosterUtils == null) {
             return series;
         }
 
