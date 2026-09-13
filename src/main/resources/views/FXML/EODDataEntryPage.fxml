@@ -136,7 +136,7 @@
                               <Font size="20.0" />
                            </font>
                         </Label>
-                        <Label fx:id="subheading" layoutX="10.0" layoutY="10.0" styleClass="tableSubHeader" text="Double click on a row to edit">
+                        <Label fx:id="subheading" layoutX="10.0" layoutY="10.0" styleClass="tableSubHeader" text="Double click on a row to edit; live Z till data loads automatically">
                            <font>
                               <Font size="13.0" />
                            </font>
@@ -203,6 +203,16 @@
                               <Insets />
                            </VBox.margin>
                         </Button>
+                        <HBox alignment="CENTER_LEFT" maxWidth="1.7976931348623157E308" spacing="10.0">
+                           <children>
+                              <Button fx:id="refreshTillDataButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false" prefHeight="40.0" style="-fx-background-color: TRANSPARENT; -fx-border-color: #0F60FF; -fx-border-radius: 5;" styleClass="controlButton" text="Refresh till data from Z" textFill="#0F60FF" HBox.hgrow="NEVER">
+                                 <cursor>
+                                    <Cursor fx:constant="HAND" />
+                                 </cursor>
+                              </Button>
+                              <Label fx:id="tillDataStatusLabel" maxWidth="1.7976931348623157E308" text="Till data is loaded when a day is opened." textFill="#6e6b7b" wrapText="true" HBox.hgrow="ALWAYS" />
+                           </children>
+                        </HBox>
                         <Label text="Till Balancing" VBox.vgrow="ALWAYS">
                            <font>
                               <Font size="16.0" />

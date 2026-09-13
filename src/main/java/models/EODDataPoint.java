@@ -1,6 +1,7 @@
 package models;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.text.NumberFormat;
@@ -27,6 +28,14 @@ public class EODDataPoint {
 	private double tillBalance;
 	private double runningTillBalance;
 	private String notes = "";
+	/**
+	 * These are calculated UI state, not persisted EOD fields.  A missing
+	 * closed Z till period must not be rendered as a zero takings value.
+	 */
+	@JsonIgnore
+	private boolean tillTakingsAvailable = true;
+	@JsonIgnore
+	private boolean runningTillBalanceAvailable = true;
 
 	public EODDataPoint() {}
 
@@ -55,6 +64,8 @@ public class EODDataPoint {
 	public void calculateTillBalances(double totalTakings, double previousRunningTillBalance){
 		this.tillBalance = cashAmount+eftposAmount+amexAmount+googleSquareAmount+chequeAmount-totalTakings;
 		this.runningTillBalance = previousRunningTillBalance+tillBalance;
+		this.tillTakingsAvailable = true;
+		this.runningTillBalanceAvailable = true;
 	}
 	public LocalDate getDate() {return date;}
 	public String getDateString() {
@@ -90,11 +101,27 @@ public class EODDataPoint {
 	public String getSmsPatientsString() {return (smsPatients==0)?"":String.valueOf(smsPatients);}
 	public void setSmsPatients(int smsPatients) {this.smsPatients = smsPatients;}
 	public double getTillBalance() {return tillBalance;}
-	public String getTillBalanceString(){return NumberFormat.getCurrencyInstance(Locale.US).format(tillBalance);}
+	public String getTillBalanceString(){
+		return tillTakingsAvailable
+				? NumberFormat.getCurrencyInstance(Locale.US).format(tillBalance)
+				: "—";
+	}
 	public void setTillBalance(double tillBalance) {this.tillBalance = tillBalance;}
 	public double getRunningTillBalance() {return runningTillBalance;}
-	public String getRunningTillBalanceString(){return NumberFormat.getCurrencyInstance(Locale.US).format(runningTillBalance);}
+	public String getRunningTillBalanceString(){
+		return runningTillBalanceAvailable
+				? NumberFormat.getCurrencyInstance(Locale.US).format(runningTillBalance)
+				: "—";
+	}
 	public void setRunningTillBalance(double runningTillBalance) {this.runningTillBalance = runningTillBalance;}
+	@JsonIgnore
+	public boolean isTillTakingsAvailable() {return tillTakingsAvailable;}
+	@JsonIgnore
+	public void setTillTakingsAvailable(boolean tillTakingsAvailable) {this.tillTakingsAvailable = tillTakingsAvailable;}
+	@JsonIgnore
+	public boolean isRunningTillBalanceAvailable() {return runningTillBalanceAvailable;}
+	@JsonIgnore
+	public void setRunningTillBalanceAvailable(boolean runningTillBalanceAvailable) {this.runningTillBalanceAvailable = runningTillBalanceAvailable;}
 	public String getNotes() {return notes;}
 	public void setNotes(String notes) {this.notes = notes;}
 	public Boolean isInDB(){return existsInDB;}

@@ -42,14 +42,20 @@ public class EODDataEntryPageController extends DateSelectController{
 	@FXML private TextArea notesField;
 	@FXML private MFXButton saveButton;
 	@FXML private MFXScrollPane popOverScroll;
-	@FXML private Button importDataButton,xeroExportButton;
+	@FXML private Button importDataButton,xeroExportButton,refreshTillDataButton;
+	@FXML private Label tillDataStatusLabel;
 	@FXML private MFXProgressSpinner progressSpinner;
     private TableColumn<EODDataPoint, String> notesCol;
 	private double currentTotalTakings;
 	private double currentRunningTillBalance;
+	private boolean currentTotalTakingsAvailable;
+	private boolean currentRunningTillBalanceAvailable;
+	private EODDataPoint currentEditingEod;
+	private long tillRefreshRequestId;
 	private EODService eodService;
 	private TillReportService tillReportService;
 	private RosterUtils rosterUtils;
+	private record TotalTakingsResult(double amount, boolean available, int periodCount) {}
 
 	@FXML
 	private void initialize() {
@@ -132,7 +138,7 @@ public class EODDataEntryPageController extends DateSelectController{
 							setStyle("");
 						} else {
 							EODDataPoint dataPoint = getTableView().getItems().get(getIndex());
-							if (dataPoint.getTillBalance() < 0) {
+							if (dataPoint.isTillTakingsAvailable() && dataPoint.getTillBalance() < 0) {
 								setStyle("-fx-text-fill: red;");
 							} else {
 								setStyle("");
@@ -166,7 +172,7 @@ public class EODDataEntryPageController extends DateSelectController{
 							setStyle("");
 						} else {
 							EODDataPoint dataPoint = getTableView().getItems().get(getIndex());
-							if (dataPoint.getRunningTillBalance() < 0) {
+							if (dataPoint.isRunningTillBalanceAvailable() && dataPoint.getRunningTillBalance() < 0) {
 								setStyle("-fx-text-fill: red;");
 							} else {
 								setStyle("");
@@ -206,9 +212,21 @@ public class EODDataEntryPageController extends DateSelectController{
 		xeroExportButton.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("EOD - Export")));
 		importDataButton.setVisible(!isLiveZEnabled());
 		importDataButton.setManaged(!isLiveZEnabled());
+		refreshTillDataButton.setVisible(isLiveZEnabled());
+		refreshTillDataButton.setManaged(isLiveZEnabled());
+		refreshTillDataButton.setOnAction(_ -> {
+			if (currentEditingEod != null) {
+				refreshTillData(currentEditingEod);
+			}
+		});
 	}
 
 	private void updatePopoverTillBalance() {
+		if (!currentTotalTakingsAvailable) {
+			tillBalanceLabel.setText("—");
+			runningTillBalanceLabel.setText("—");
+			return;
+		}
 		 double tillBalanceTotal = 0;
 		 if(cashField.isValid()) tillBalanceTotal += Double.parseDouble(cashField.getText());
 		 if(eftposField.isValid()) tillBalanceTotal += Double.parseDouble(eftposField.getText());
@@ -217,7 +235,11 @@ public class EODDataEntryPageController extends DateSelectController{
 		 if(chequeField.isValid()) tillBalanceTotal += Double.parseDouble(chequeField.getText());
 		tillBalanceTotal-=currentTotalTakings;
 		tillBalanceLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(tillBalanceTotal));
-		runningTillBalanceLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(currentRunningTillBalance+tillBalanceTotal));
+		if (currentRunningTillBalanceAvailable) {
+			runningTillBalanceLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(currentRunningTillBalance+tillBalanceTotal));
+		} else {
+			runningTillBalanceLabel.setText("—");
+		}
 	}
 
 	private void addDoubleClickFunction(){
@@ -538,16 +560,33 @@ public class EODDataEntryPageController extends DateSelectController{
 					eodDataPoints.add(existingDataPoint);
 				}
 
-				// Calculate till balances for each day
+				// Calculate till balances for each day. A stored EOD entry must have a
+				// completed Z till-off period; never turn a missing period into a fake
+				// zero, because that creates a large false variance.
 				double runningTillBalance = 0;
+				boolean runningBalanceKnown = true;
 				for (EODDataPoint e : eodDataPoints) {
 					TillReportDataPoint matchingTillReport = currentTillReportDataPoints.stream()
-							.filter(t -> t.getAssignedDate().equals(e.getDate()))
+							.filter(t -> t.getAssignedDate().equals(e.getDate())
+									&& "Total Takings".equals(t.getKey()))
 							.findFirst()
 							.orElse(null);
+					if (matchingTillReport == null && e.isInDB()) {
+						e.setTillTakingsAvailable(false);
+						e.setRunningTillBalanceAvailable(false);
+						runningBalanceKnown = false;
+						continue;
+					}
+
 					double amount = (matchingTillReport != null) ? matchingTillReport.getAmount() : 0;
 					e.calculateTillBalances(amount, runningTillBalance);
-					runningTillBalance = e.getRunningTillBalance();
+					if (runningBalanceKnown) {
+						runningTillBalance = e.getRunningTillBalance();
+					} else {
+						// A missing closed period makes all following cumulative values
+						// unknown until the table is refreshed after till-off.
+						e.setRunningTillBalanceAvailable(false);
+					}
 				}
 				return eodDataPoints;
 			}
@@ -574,6 +613,7 @@ public class EODDataEntryPageController extends DateSelectController{
 	}
 
 	public void openEODPopover(EODDataPoint e) {
+		currentEditingEod = e;
 		contentDarken.setVisible(true);
 		AnimationUtils.slideIn(editDayPopover, 0);
 		popoverLabel.setText("Modify EOD Values for " + e.getDateString());
@@ -590,9 +630,39 @@ public class EODDataEntryPageController extends DateSelectController{
 		smsPatientsField.setText(String.valueOf(e.getSmsPatients()));
 		notesField.setText((e.getNotes() == null || e.getNotes().isBlank()) ? "" : String.valueOf(e.getNotes()));
 		saveButton.setOnAction(_ -> editEODEntry(e));
-		Task<Double> totalTakingsTask = new Task<>() {
+		if (isLiveZEnabled()) {
+			// Query at the moment the staff member opens the day. This means a
+			// till-off completed just before editing is reflected immediately.
+			refreshTillData(e);
+		} else {
+			showStoredTillData(e);
+		}
+		importDataButton.setOnAction(_ -> importFiles(e.getDate()));
+	}
+
+	/**
+	 * Re-query the single selected day through Alpha API -> Z forwarder -> SQL.
+	 * The request is deliberately not cached in Alpha, so the result reflects
+	 * the current till period state. Opening a row calls this automatically;
+	 * the button allows a retry after staff finish a late till-off.
+	 */
+	private void refreshTillData(EODDataPoint e) {
+		final long requestId = ++tillRefreshRequestId;
+		currentTotalTakings = 0;
+		currentTotalTakingsAvailable = false;
+		seedPreviousRunningBalance(e);
+		updatePopoverTillBalance();
+		if (refreshTillDataButton != null) {
+			refreshTillDataButton.setDisable(true);
+		}
+		if (tillDataStatusLabel != null) {
+			tillDataStatusLabel.setText("Loading live till data from Z…");
+			tillDataStatusLabel.setStyle("-fx-text-fill: #6e6b7b;");
+		}
+
+		Task<TotalTakingsResult> totalTakingsTask = new Task<>() {
 			@Override
-			protected Double call() {
+			protected TotalTakingsResult call() {
 				requireLiveZConnected(main.getCurrentStore().getStoreID());
 				List<TillReportDataPoint> tillReports = tillReportService.getTillReportDataPointsByKey(
 						main.getCurrentStore().getStoreID(),
@@ -600,25 +670,118 @@ public class EODDataEntryPageController extends DateSelectController{
 						e.getDate(),
 						"Total Takings"
 				);
-				return tillReports.stream().mapToDouble(TillReportDataPoint::getAmount).sum();
+				return new TotalTakingsResult(
+						tillReports.stream().mapToDouble(TillReportDataPoint::getAmount).sum(),
+						!tillReports.isEmpty(),
+						tillReports.size());
 			}
 		};
 		totalTakingsTask.setOnSucceeded(_ -> {
-			currentTotalTakings = totalTakingsTask.getValue();
-			currentRunningTillBalance = e.getRunningTillBalance() - e.getTillBalance();
+			if (requestId != tillRefreshRequestId || currentEditingEod != e) return;
+			TotalTakingsResult result = totalTakingsTask.getValue();
+			currentTotalTakings = result.amount();
+			currentTotalTakingsAvailable = result.available();
+			if (result.available()) {
+				// Keep the table row in sync with the just-fetched live value. The
+				// cumulative balance remains unknown when an earlier day is missing.
+				double previousRunningBalance = currentRunningTillBalance;
+				double physicalTakings = physicalTakings(e);
+				double tillBalance = physicalTakings - result.amount();
+				e.setTillBalance(tillBalance);
+				e.setTillTakingsAvailable(true);
+				if (currentRunningTillBalanceAvailable) {
+					e.setRunningTillBalance(previousRunningBalance + tillBalance);
+					e.setRunningTillBalanceAvailable(true);
+				}
+				if (eodDataTable != null) eodDataTable.refresh();
+				if (tillDataStatusLabel != null) {
+					tillDataStatusLabel.setText("Live Z till data loaded (" + result.periodCount()
+							+ (result.periodCount() == 1 ? " period" : " periods") + ").");
+					tillDataStatusLabel.setStyle("-fx-text-fill: #16803c;");
+				}
+			} else {
+				e.setTillTakingsAvailable(false);
+				if (tillDataStatusLabel != null) {
+					tillDataStatusLabel.setText("No till-off found for this day. Till-off in Z, then refresh.");
+					tillDataStatusLabel.setStyle("-fx-text-fill: #9a6700;");
+				}
+			}
 			updatePopoverTillBalance();
+			if (refreshTillDataButton != null) refreshTillDataButton.setDisable(false);
 			progressSpinner.setVisible(false);
 		});
 		totalTakingsTask.setOnFailed(_ -> {
-			dialogPane.showError("Failed to get total takings", (Exception) totalTakingsTask.getException());
+			if (requestId != tillRefreshRequestId || currentEditingEod != e) return;
+			currentTotalTakingsAvailable = false;
+			if (tillDataStatusLabel != null) {
+				tillDataStatusLabel.setText("Could not load live Z data. Try refresh again.");
+				tillDataStatusLabel.setStyle("-fx-text-fill: #b42318;");
+			}
+			updatePopoverTillBalance();
+			if (refreshTillDataButton != null) refreshTillDataButton.setDisable(false);
+			dialogPane.showError("Failed to get total takings", asException(unwrapAsyncFailure(totalTakingsTask.getException())));
 			progressSpinner.setVisible(false);
 		});
 		progressSpinner.setVisible(true);
 		executor.submit(totalTakingsTask);
-		importDataButton.setOnAction(_ -> importFiles(e.getDate()));
+	}
+
+	private void showStoredTillData(EODDataPoint e) {
+		currentTotalTakingsAvailable = e.isTillTakingsAvailable();
+		currentRunningTillBalanceAvailable = e.isRunningTillBalanceAvailable();
+		currentRunningTillBalance = currentRunningTillBalanceAvailable
+				? e.getRunningTillBalance() - e.getTillBalance()
+				: 0;
+		if (tillDataStatusLabel != null) tillDataStatusLabel.setText("Using imported till data.");
+		updatePopoverTillBalance();
+	}
+
+	/**
+	 * A row can have been marked "unknown" during the monthly load because its
+	 * till was still open. If staff now till-off that row, use the preceding
+	 * day's known cumulative balance as the seed for the refreshed row.
+	 */
+	private void seedPreviousRunningBalance(EODDataPoint e) {
+		EODDataPoint previous = eodDataTable.getItems().stream()
+				.filter(candidate -> candidate.getDate() != null
+						&& candidate.getDate().equals(e.getDate().minusDays(1)))
+				.findFirst()
+				.orElse(null);
+		if (previous != null) {
+			currentRunningTillBalanceAvailable = previous.isRunningTillBalanceAvailable();
+			currentRunningTillBalance = currentRunningTillBalanceAvailable
+					? previous.getRunningTillBalance()
+					: 0;
+			return;
+		}
+		// The first displayed day starts a new cumulative view, matching the
+		// existing monthly table calculation.
+		YearMonth displayedMonth = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
+		if (e.getDate().equals(displayedMonth.atDay(1))) {
+			currentRunningTillBalanceAvailable = true;
+			currentRunningTillBalance = 0;
+		} else {
+			currentRunningTillBalanceAvailable = e.isRunningTillBalanceAvailable();
+			currentRunningTillBalance = currentRunningTillBalanceAvailable
+					? e.getRunningTillBalance() - e.getTillBalance()
+					: 0;
+		}
+	}
+
+	private static double physicalTakings(EODDataPoint e) {
+		return e.getCashAmount() + e.getEftposAmount() + e.getAmexAmount()
+				+ e.getGoogleSquareAmount() + e.getChequeAmount();
+	}
+
+	private static Exception asException(Throwable throwable) {
+		return throwable instanceof Exception exception
+				? exception
+				: new RuntimeException(throwable);
 	}
 
 	public void closePopover(){
+		++tillRefreshRequestId;
+		currentEditingEod = null;
 		AnimationUtils.slideIn(editDayPopover,425);
 		contentDarken.setVisible(false);
 	}
@@ -709,7 +872,27 @@ public class EODDataEntryPageController extends DateSelectController{
 									yearMonthObject.atEndOfMonth()
 							);
 						} catch (Exception ex) {
-							dialogPane.showError("Failed to get EOD data", ex);
+							throw new Exception("Failed to get EOD and Z till data", ex);
+						}
+						// A live-Z export must only use completed till-off periods. Do not
+						// silently turn a missing period into a zero takings value: that
+						// would produce a misleading till balance in the Xero export.
+						if (isLiveZEnabled()) {
+							List<TillReportDataPoint> tillDataPointsForValidation = currentTillDataPoints;
+							List<LocalDate> missingTillDates = currentEODDataPoints.stream()
+									.filter(EODDataPoint::isInDB)
+									.map(EODDataPoint::getDate)
+									.filter(date -> tillDataPointsForValidation.stream().noneMatch(point ->
+											"Total Takings".equals(point.getKey())
+													&& date.equals(point.getAssignedDate())))
+									.toList();
+							if (!missingTillDates.isEmpty()) {
+								throw new IllegalStateException(
+										"Cannot export EOD data because no completed Z till-off period was found for: "
+												+ String.join(", ", missingTillDates.stream().map(LocalDate::toString).toList())
+												+ ". Till off those dates in Z-Office, then refresh and try again."
+								);
+							}
 						}
 						double runningTillBalance = 0;
 						for (int i = 1; i < daysInMonth + 1; i++) {
@@ -761,9 +944,16 @@ public class EODDataEntryPageController extends DateSelectController{
 								String recoveryStr = searchTillData(currentTillDataPoints, d, "Total Takings", "amount");
 								if (!recoveryStr.trim().isEmpty()) {
 									totalTakings = Double.parseDouble(recoveryStr);
+								} else if (isLiveZEnabled() && e.isInDB()) {
+									// Keep this guard close to the calculation as defence in
+									// depth if the endpoint data changes between validation
+									// and row generation.
+									throw new IllegalStateException(
+											"Cannot export EOD data because Z till takings are unavailable for " + d
+									);
 								}
 							} catch (NumberFormatException ex) {
-								dialogPane.showError("Failed to get total takings for " + d, ex);
+								throw new IllegalStateException("Invalid Z total takings value for " + d, ex);
 							}
 							double tillBalance = e.getCashAmount() + e.getEftposAmount() + e.getAmexAmount() + e.getGoogleSquareAmount() + e.getChequeAmount() - totalTakings;
 							pw.print(NumberFormat.getCurrencyInstance(Locale.US).format(tillBalance) + ",");
