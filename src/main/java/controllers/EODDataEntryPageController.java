@@ -137,8 +137,13 @@ public class EODDataEntryPageController extends DateSelectController{
 						if (row.isSelected()) {
 							setStyle("");
 						} else {
-							EODDataPoint dataPoint = getTableView().getItems().get(getIndex());
-							if (dataPoint.isTillTakingsAvailable() && dataPoint.getTillBalance() < 0) {
+							int index = getIndex();
+							EODDataPoint dataPoint = getTableView() == null || index < 0
+									|| index >= getTableView().getItems().size()
+									? null
+									: getTableView().getItems().get(index);
+							if (dataPoint != null && dataPoint.isTillTakingsAvailable()
+									&& dataPoint.getTillBalance() < 0) {
 								setStyle("-fx-text-fill: red;");
 							} else {
 								setStyle("");
@@ -171,8 +176,13 @@ public class EODDataEntryPageController extends DateSelectController{
 							// Revert to default styling when the row is selected
 							setStyle("");
 						} else {
-							EODDataPoint dataPoint = getTableView().getItems().get(getIndex());
-							if (dataPoint.isRunningTillBalanceAvailable() && dataPoint.getRunningTillBalance() < 0) {
+							int index = getIndex();
+							EODDataPoint dataPoint = getTableView() == null || index < 0
+									|| index >= getTableView().getItems().size()
+									? null
+									: getTableView().getItems().get(index);
+							if (dataPoint != null && dataPoint.isRunningTillBalanceAvailable()
+									&& dataPoint.getRunningTillBalance() < 0) {
 								setStyle("-fx-text-fill: red;");
 							} else {
 								setStyle("");
@@ -272,7 +282,14 @@ public class EODDataEntryPageController extends DateSelectController{
 	}
 
 	private void updateRowStyle(TableRow<EODDataPoint> row) {
+		if (row == null) {
+			return;
+		}
 		EODDataPoint item = row.getItem();
+		if (row.isEmpty() || item == null || item.getDate() == null || rosterUtils == null) {
+			row.setStyle("");
+			return;
+		}
 		if (row.isSelected()) {
 			// When selected, let the default selection styling apply.
 			row.setStyle("");
@@ -565,19 +582,25 @@ public class EODDataEntryPageController extends DateSelectController{
 				double runningTillBalance = 0;
 				boolean runningBalanceKnown = true;
 				for (EODDataPoint e : eodDataPoints) {
-					TillReportDataPoint matchingTillReport = currentTillReportDataPoints.stream()
-							.filter(t -> t.getAssignedDate().equals(e.getDate())
+					List<TillReportDataPoint> matchingTillReports = currentTillReportDataPoints.stream()
+							.filter(t -> t.getAssignedDate() != null
+									&& t.getAssignedDate().equals(e.getDate())
 									&& "Total Takings".equals(t.getKey()))
-							.findFirst()
-							.orElse(null);
-					if (matchingTillReport == null && e.isInDB()) {
+							.toList();
+					if (matchingTillReports.isEmpty() && e.isInDB()) {
 						e.setTillTakingsAvailable(false);
 						e.setRunningTillBalanceAvailable(false);
 						runningBalanceKnown = false;
 						continue;
 					}
 
-					double amount = (matchingTillReport != null) ? matchingTillReport.getAmount() : 0;
+					// A day can contain multiple periods/segments (for example after
+					// a register restart). The API normally aggregates these, but
+					// summing here also keeps older cache rows from silently dropping
+					// all but the first segment.
+					double amount = matchingTillReports.stream()
+							.mapToDouble(TillReportDataPoint::getAmount)
+							.sum();
 					e.calculateTillBalances(amount, runningTillBalance);
 					if (runningBalanceKnown) {
 						runningTillBalance = e.getRunningTillBalance();

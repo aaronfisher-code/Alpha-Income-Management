@@ -26,6 +26,7 @@ import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 
@@ -253,18 +254,21 @@ public class BASCheckerController extends DateSelectController{
 		double finalRunningTillBalance = 0;
 		boolean runningTillBalanceKnown = true;
 		for (EODDataPoint e : currentEODDataPoints) {
-			boolean foundTillReport = false;
-			for (TillReportDataPoint t : currentTillDataPoints) {
-				if (e.getDate().equals(t.getAssignedDate()) && t.getKey().equals("Total Takings")) {
-					if (runningTillBalanceKnown) {
-						e.calculateTillBalances(t.getAmount(), finalRunningTillBalance);
-						finalRunningTillBalance = e.getRunningTillBalance();
-					} else {
-						e.setTillTakingsAvailable(true);
-						e.setRunningTillBalanceAvailable(false);
-					}
-					foundTillReport = true;
-					break;
+			List<TillReportDataPoint> matchingTillReports = currentTillDataPoints.stream()
+					.filter(t -> e.getDate().equals(t.getAssignedDate())
+							&& "Total Takings".equals(t.getKey()))
+					.toList();
+			boolean foundTillReport = !matchingTillReports.isEmpty();
+			if (foundTillReport) {
+				double totalTakings = matchingTillReports.stream()
+						.mapToDouble(TillReportDataPoint::getAmount)
+						.sum();
+				if (runningTillBalanceKnown) {
+					e.calculateTillBalances(totalTakings, finalRunningTillBalance);
+					finalRunningTillBalance = e.getRunningTillBalance();
+				} else {
+					e.setTillTakingsAvailable(true);
+					e.setRunningTillBalanceAvailable(false);
 				}
 			}
 			if (!foundTillReport) {

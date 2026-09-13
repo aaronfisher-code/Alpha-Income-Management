@@ -86,7 +86,9 @@ public class MonthlySummaryDataPoint {
 				totalGovtContribution = t.getAmount();
 			if(t.getAssignedDate().equals(date)&&t.getKey().equals("Total Takings")) {
 				totalTakingsAvailable = true;
-				totalTakings = t.getAmount();
+				// A day may be represented by multiple till periods after a
+				// register restart. Aggregate all segments for that day.
+				totalTakings += t.getAmount();
 			}
 		}
 		for(EODDataPoint e: currentEODDataPoints){
