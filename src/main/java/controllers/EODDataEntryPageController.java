@@ -53,10 +53,12 @@ public class EODDataEntryPageController extends DateSelectController{
 	private boolean currentRunningTillBalanceAvailable;
 	private EODDataPoint currentEditingEod;
 	private long tillRefreshRequestId;
+	private long fillTableRequestId;
 	private EODService eodService;
 	private TillReportService tillReportService;
 	private RosterUtils rosterUtils;
 	private record TotalTakingsResult(double amount, boolean available, int periodCount) {}
+	private record MonthlyLoadResult(ObservableList<EODDataPoint> dataPoints, RosterUtils rosterUtils) {}
 
 	@FXML
 	private void initialize() {
@@ -516,23 +518,24 @@ public class EODDataEntryPageController extends DateSelectController{
 	}
 
 	public void fillTable() {
-		Task<ObservableList<EODDataPoint>> fillTableTask = new Task<>() {
+		final long requestId = ++fillTableRequestId;
+		final YearMonth requestedMonth = YearMonth.from(main.getCurrentDate());
+		final int storeId = main.getCurrentStore().getStoreID();
+		Task<MonthlyLoadResult> fillTableTask = new Task<>() {
 			@Override
-			protected ObservableList<EODDataPoint> call() throws Exception {
+			protected MonthlyLoadResult call() throws Exception {
 				ObservableList<EODDataPoint> eodDataPoints = FXCollections.observableArrayList();
-				YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
-				int daysInMonth = yearMonthObject.lengthOfMonth();
+				int daysInMonth = requestedMonth.lengthOfMonth();
 
 				// Create concurrent tasks to fetch EOD data and TillReport data
 				Callable<List<EODDataPoint>> eodDataCallable = () -> eodService.getEODDataPoints(
-						main.getCurrentStore().getStoreID(),
-						yearMonthObject.atDay(1),
-						yearMonthObject.atEndOfMonth()
+						storeId,
+						requestedMonth.atDay(1),
+						requestedMonth.atEndOfMonth()
 				);
 				Callable<List<TillReportDataPoint>> tillReportDataCallable = () -> {
-					int storeId = main.getCurrentStore().getStoreID();
-					LocalDate monthStart = yearMonthObject.atDay(1);
-					LocalDate monthEnd = yearMonthObject.atEndOfMonth();
+					LocalDate monthStart = requestedMonth.atDay(1);
+					LocalDate monthEnd = requestedMonth.atEndOfMonth();
 					if (!isLiveZEnabled()) {
 						return tillReportService.getTillReportDataPointsByKey(
 								storeId, monthStart, monthEnd, "Total Takings");
@@ -555,14 +558,7 @@ public class EODDataEntryPageController extends DateSelectController{
 				};
 				Future<List<EODDataPoint>> eodDataFuture = executor.submit(eodDataCallable);
 				Future<List<TillReportDataPoint>> tillReportDataFuture = executor.submit(tillReportDataCallable);
-
-				CompletableFuture<Void> rosterFuture = CompletableFuture.runAsync(() -> {
-					try {
-						rosterUtils = new RosterUtils(main, yearMonthObject);
-					} catch (Exception e) {
-						throw new RuntimeException("Error loading roster data", e);
-					}
-				}, executor);
+				Future<RosterUtils> rosterFuture = executor.submit(() -> new RosterUtils(main, requestedMonth));
 
 				// Wait for the EOD and TillReport tasks to complete
 				List<EODDataPoint> currentEODDataPoints;
@@ -583,11 +579,16 @@ public class EODDataEntryPageController extends DateSelectController{
 				} catch (Exception e) {
 					throw new Exception("Failed to retrieve TillReportDataPoints: " + e.getMessage(), e);
 				}
-				rosterFuture.join();
+				RosterUtils loadedRosterUtils;
+				try {
+					loadedRosterUtils = rosterFuture.get();
+				} catch (Exception e) {
+					throw new Exception("Failed to retrieve roster data: " + e.getMessage(), e);
+				}
 
 				// Populate eodDataPoints (using existing data if available, or creating a new one)
 				for (int i = 1; i <= daysInMonth; i++) {
-					LocalDate currentDate = LocalDate.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth(), i);
+					LocalDate currentDate = requestedMonth.atDay(i);
 					EODDataPoint existingDataPoint = currentEODDataPoints.stream()
 							.filter(e -> e.getDate().equals(currentDate))
 							.findFirst()
@@ -595,19 +596,22 @@ public class EODDataEntryPageController extends DateSelectController{
 					eodDataPoints.add(existingDataPoint);
 				}
 
-				// A stored EOD entry must have a completed Z till-off period; the
+				// A stored EOD entry must have a completed Z till report; the
 				// calculator also protects this view from stale rows on missing days.
 				TillBalanceCalculator.calculate(
 						eodDataPoints,
 						currentTillReportDataPoints,
-						date -> rosterUtils.getDayDuration(date) == 0);
-				return eodDataPoints;
+						date -> loadedRosterUtils.getDayDuration(date) == 0);
+				return new MonthlyLoadResult(eodDataPoints, loadedRosterUtils);
 			}
 		};
 
 		fillTableTask.setOnSucceeded(_ -> {
+			if (requestId != fillTableRequestId) return;
 			progressSpinner.setVisible(false);
-			eodDataTable.setItems(fillTableTask.getValue());
+			MonthlyLoadResult result = fillTableTask.getValue();
+			rosterUtils = result.rosterUtils();
+			eodDataTable.setItems(result.dataPoints());
 			if (main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("EOD - Edit"))) {
 				addDoubleClickFunction();
 			} else {
@@ -616,9 +620,10 @@ public class EODDataEntryPageController extends DateSelectController{
 		});
 
 		fillTableTask.setOnFailed(_ -> {
+			if (requestId != fillTableRequestId) return;
 			progressSpinner.setVisible(false);
 			Throwable exception = fillTableTask.getException();
-			dialogPane.showError("Failed to fill table", (Exception) exception);
+			dialogPane.showError("Failed to fill table", asException(exception));
 		});
 
 		progressSpinner.setVisible(true);
@@ -645,7 +650,7 @@ public class EODDataEntryPageController extends DateSelectController{
 		saveButton.setOnAction(_ -> editEODEntry(e));
 		if (isLiveZEnabled()) {
 			// Query at the moment the staff member opens the day. This means a
-			// till-off completed just before editing is reflected immediately.
+			// till report created just before editing is reflected immediately.
 			refreshTillData(e);
 		} else {
 			showStoredTillData(e);
@@ -657,7 +662,7 @@ public class EODDataEntryPageController extends DateSelectController{
 	 * Re-query the single selected day through Alpha API -> Z forwarder -> SQL.
 	 * The request deliberately bypasses the cached read, then Alpha API stores
 	 * the successful result for subsequent page/report loads. Opening a row
-	 * calls this automatically; the button allows a retry after a late till-off.
+	 * calls this automatically; the button allows a retry after a late till report.
 	 */
 	private void refreshTillData(EODDataPoint e) {
 		final long requestId = ++tillRefreshRequestId;
@@ -669,7 +674,7 @@ public class EODDataEntryPageController extends DateSelectController{
 			refreshTillDataButton.setDisable(true);
 		}
 		if (tillDataStatusLabel != null) {
-			tillDataStatusLabel.setText("Loading live till data from Z…");
+			tillDataStatusLabel.setText("Loading till report…");
 			tillDataStatusLabel.setStyle("-fx-text-fill: #6e6b7b;");
 		}
 
@@ -708,7 +713,7 @@ public class EODDataEntryPageController extends DateSelectController{
 				}
 				if (eodDataTable != null) eodDataTable.refresh();
 				if (tillDataStatusLabel != null) {
-					tillDataStatusLabel.setText("Live Z till data loaded (" + result.periodCount()
+					tillDataStatusLabel.setText("Till report loaded (" + result.periodCount()
 							+ (result.periodCount() == 1 ? " period" : " periods") + ").");
 					tillDataStatusLabel.setStyle("-fx-text-fill: #16803c;");
 				}
@@ -716,7 +721,7 @@ public class EODDataEntryPageController extends DateSelectController{
 				e.setTillTakingsAvailable(false);
 				e.setRunningTillBalanceAvailable(false);
 				if (tillDataStatusLabel != null) {
-					tillDataStatusLabel.setText("No till-off found for this day. Till-off in Z, then refresh.");
+					tillDataStatusLabel.setText("No completed till report found for this day. Zero the till.");
 					tillDataStatusLabel.setStyle("-fx-text-fill: #9a6700;");
 				}
 			}
@@ -728,7 +733,7 @@ public class EODDataEntryPageController extends DateSelectController{
 			if (requestId != tillRefreshRequestId || currentEditingEod != e) return;
 			currentTotalTakingsAvailable = false;
 			if (tillDataStatusLabel != null) {
-				tillDataStatusLabel.setText("Could not load live Z data. Try refresh again.");
+				tillDataStatusLabel.setText("Could not load the till report. Try refresh again.");
 				tillDataStatusLabel.setStyle("-fx-text-fill: #b42318;");
 			}
 			updatePopoverTillBalance();
@@ -752,7 +757,7 @@ public class EODDataEntryPageController extends DateSelectController{
 
 	/**
 	 * A row can have been marked "unknown" during the monthly load because its
-	 * till was still open. If staff now till-off that row, use the preceding
+	 * till was still open. If staff now zero the till and create a report for that row, use the preceding
 	 * day's known cumulative balance as the seed for the refreshed row.
 	 */
 	private void seedPreviousRunningBalance(EODDataPoint e) {
@@ -885,9 +890,9 @@ public class EODDataEntryPageController extends DateSelectController{
 									yearMonthObject.atEndOfMonth()
 							);
 						} catch (Exception ex) {
-							throw new Exception("Failed to get EOD and Z till data", ex);
+							throw new Exception("Failed to get EOD and till report data", ex);
 						}
-						// A Z-backed export must only use completed till-off periods. Do not
+						// A Z-backed export must only use periods with completed Z till reports. Do not
 						// silently turn a missing period into a zero takings value: that
 						// would produce a misleading till balance in the Xero export.
 						if (isLiveZEnabled()) {
@@ -901,9 +906,9 @@ public class EODDataEntryPageController extends DateSelectController{
 									.toList();
 							if (!missingTillDates.isEmpty()) {
 								throw new IllegalStateException(
-										"Cannot export EOD data because no completed Z till-off period was found for: "
+										"Cannot export EOD data because no completed till report was found for: "
 												+ String.join(", ", missingTillDates.stream().map(LocalDate::toString).toList())
-												+ ". Till off those dates in Z-Office, then refresh and try again."
+												+ ". Zero the till for those dates."
 								);
 							}
 						}
@@ -962,11 +967,11 @@ public class EODDataEntryPageController extends DateSelectController{
 									// depth if the endpoint data changes between validation
 									// and row generation.
 									throw new IllegalStateException(
-											"Cannot export EOD data because Z till takings are unavailable for " + d
+											"Cannot export EOD data because till report takings are unavailable for " + d
 									);
 								}
 							} catch (NumberFormatException ex) {
-								throw new IllegalStateException("Invalid Z total takings value for " + d, ex);
+								throw new IllegalStateException("Invalid till report total takings value for " + d, ex);
 							}
 							double tillBalance = e.getCashAmount() + e.getEftposAmount() + e.getAmexAmount() + e.getGoogleSquareAmount() + e.getChequeAmount() - totalTakings;
 							pw.print(NumberFormat.getCurrencyInstance(Locale.US).format(tillBalance) + ",");
