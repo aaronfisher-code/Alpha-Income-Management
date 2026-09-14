@@ -10,6 +10,7 @@ import io.github.palexdev.materialfx.controls.MFXDatePicker;
 import io.github.palexdev.materialfx.controls.MFXProgressSpinner;
 import io.github.palexdev.materialfx.controls.MFXTextField;
 import io.github.palexdev.materialfx.enums.FloatMode;
+import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.DoubleBinding;
@@ -33,6 +34,7 @@ import javafx.scene.layout.*;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.FileChooser;
+import javafx.util.Duration;
 import models.*;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import services.CreditService;
@@ -103,6 +105,9 @@ public class InvoiceEntryController extends DateSelectController{
 	private ZDataService zDataService;
 	private boolean liveZEnabled;
 	private AtomicInteger taskCounter = new AtomicInteger(0);
+	private PauseTransition invoiceLookupDebounce;
+	private boolean updatingInvoiceForm;
+	private Double expectedInvoiceAmount;
 
     @FXML
 	private void initialize() {
@@ -179,78 +184,122 @@ public class InvoiceEntryController extends DateSelectController{
 		importDataButton.setVisible(!liveZEnabled);
 		importDataButton.setManaged(!liveZEnabled);
 		exportDataButton.setVisible(main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Invoicing - Export")));
-		//Live update expected unit amount if invoice is recognised
-		invoiceNoField.delegateFocusedProperty().addListener((_, _, _) -> {
-			if (invoiceNoField.isValid() && invoiceAFX.isValid()) {
-				progressSpinner.setVisible(true);
-				Task<Boolean> duplicateTask = new Task<>() {
-					@Override
-					protected Boolean call() {
-						try{
-							return invoiceService.checkDuplicateInvoice(invoiceNoField.getText(), main.getCurrentStore().getStoreID(), invoiceAFX.getValue().getContactID());
-						} catch (Exception e) {
-							throw new RuntimeException(e);
-						}
-					}
-				};
-				duplicateTask.setOnSucceeded(_ -> {
-					boolean isDuplicate = duplicateTask.getValue();
-					if (isDuplicate) {
-						invoiceNoValidationLabel.setStyle("-fx-text-fill: red;");
-						invoiceNoValidationLabel.setText("Invoice Already Exists");
-						invoiceNoValidationLabel.setVisible(true);
-						expectedUnitAmountLabel.setText("N/A");
-						varianceLabel.setText("N/A");
-					} else {
-						Task<Invoice> invoiceTask = new Task<>() {
-							@Override
-							protected Invoice call() {
-								try{
-									return invoiceService.getInvoice(invoiceNoField.getText(), main.getCurrentStore().getStoreID());
-								} catch (Exception e) {
-									throw new RuntimeException(e);
-								}
-							}
-						};
-						invoiceTask.setOnSucceeded(_ -> {
-							Invoice invoice = invoiceTask.getValue();
-							if (invoice != null) {
-								expectedUnitAmountLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(invoice.getImportedInvoiceAmount()));
-								invoiceNoValidationLabel.setStyle("-fx-text-fill: red;");
-								invoiceNoValidationLabel.setText("");
-								invoiceNoValidationLabel.setVisible(false);
-								if (amountField.isValid()) {
-									varianceLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(
-											Double.parseDouble(expectedUnitAmountLabel.getText().replace("$", "").replace(",","")) - Double.parseDouble(amountField.getText())));
-								}
-							} else {
-								expectedUnitAmountLabel.setText("N/A");
-								invoiceNoValidationLabel.setStyle("-fx-text-fill: orange;");
-								invoiceNoValidationLabel.setText("Warning: Invoice not recognised");
-								invoiceNoValidationLabel.setVisible(true);
-								varianceLabel.setText("N/A");
-							}
-							progressSpinner.setVisible(false);
-						});
-						invoiceTask.setOnFailed(_ -> {
-							invoiceTask.getException().printStackTrace();
-							dialogPane.showError("Error", "An error occurred while loading invoice information", invoiceTask.getException());
-							progressSpinner.setVisible(false);
-						});
-						executor.submit(invoiceTask);
-					}
-					progressSpinner.setVisible(false);
-				});
-				duplicateTask.setOnFailed(_ -> {
-					duplicateTask.getException().printStackTrace();
-					dialogPane.showError("Error", "An error occurred while loading invoice information", duplicateTask.getException());
-					progressSpinner.setVisible(false);
-				});
-				executor.submit(duplicateTask);
-			}
+		// Look up Z Office after the user pauses typing. The old implementation
+		// listened only for a focus change, so entering an invoice number and
+		// staying in the field never started the reconciliation request.
+		invoiceLookupDebounce = new PauseTransition(Duration.millis(450));
+		invoiceLookupDebounce.setOnFinished(_ -> lookupInvoice());
+		invoiceNoField.textProperty().addListener((_, _, _) -> scheduleInvoiceLookup());
+		invoiceAFX.valueProperty().addListener((_, _, _) -> scheduleInvoiceLookup());
+		invoiceNoField.setOnAction(_ -> {
+			if (invoiceLookupDebounce != null) invoiceLookupDebounce.stop();
+			lookupInvoice();
 		});
+		amountField.textProperty().addListener((_, _, _) -> updateInvoiceVariance());
 		invoicesView();
 	}
+
+	private void scheduleInvoiceLookup() {
+		if (updatingInvoiceForm || invoiceLookupDebounce == null) return;
+		// Invalidate a request that is still running as soon as the input changes;
+		// otherwise an older response could briefly overwrite the newer number.
+		taskCounter.incrementAndGet();
+		invoiceLookupDebounce.playFromStart();
+	}
+
+	private void lookupInvoice() {
+		if (updatingInvoiceForm) return;
+
+		int lookupId = taskCounter.incrementAndGet();
+		String invoiceNumber = invoiceNoField.getText() == null
+				? ""
+				: invoiceNoField.getText().trim();
+		InvoiceSupplier supplier = invoiceAFX.getValue();
+		int storeId = main.getCurrentStore().getStoreID();
+
+		if (invoiceNumber.isBlank()) {
+			setExpectedInvoice(null);
+			invoiceNoValidationLabel.setStyle("");
+			invoiceNoValidationLabel.setText("");
+			invoiceNoValidationLabel.setVisible(false);
+			progressSpinner.setVisible(false);
+			return;
+		}
+
+		progressSpinner.setVisible(true);
+		Task<InvoiceLookupResult> task = new Task<>() {
+			@Override
+			protected InvoiceLookupResult call() {
+				boolean duplicate = supplier != null && invoiceService.checkDuplicateInvoice(
+						invoiceNumber, storeId, supplier.getContactID());
+				Invoice invoice = duplicate ? null : getInvoiceForReconciliation(invoiceNumber, storeId);
+				return new InvoiceLookupResult(invoice, duplicate);
+			}
+		};
+		task.setOnSucceeded(_ -> {
+			if (lookupId != taskCounter.get()) return;
+			InvoiceLookupResult result = task.getValue();
+			if (result.duplicate()) {
+				setExpectedInvoice(null);
+				invoiceNoValidationLabel.setStyle("-fx-text-fill: red;");
+				invoiceNoValidationLabel.setText("Invoice Already Exists");
+				invoiceNoValidationLabel.setVisible(true);
+			} else if (result.invoice() != null) {
+				setExpectedInvoice(result.invoice());
+				invoiceNoValidationLabel.setStyle("");
+				invoiceNoValidationLabel.setText("");
+				invoiceNoValidationLabel.setVisible(false);
+			} else {
+				setExpectedInvoice(null);
+				invoiceNoValidationLabel.setStyle("-fx-text-fill: orange;");
+				invoiceNoValidationLabel.setText("Warning: Invoice not recognised");
+				invoiceNoValidationLabel.setVisible(true);
+			}
+			progressSpinner.setVisible(false);
+		});
+		task.setOnFailed(_ -> {
+			if (lookupId != taskCounter.get()) return;
+			task.getException().printStackTrace();
+			dialogPane.showError("Error", "An error occurred while loading invoice information", task.getException());
+			progressSpinner.setVisible(false);
+		});
+		executor.submit(task);
+	}
+
+	private Invoice getInvoiceForReconciliation(String invoiceNumber, int storeId) {
+		if (liveZEnabled && zDataService != null) {
+			return zDataService.getInvoice(storeId, invoiceNumber);
+		}
+		return invoiceService.getInvoice(invoiceNumber, storeId);
+	}
+
+	private void setExpectedInvoice(Invoice invoice) {
+		expectedInvoiceAmount = invoice == null ? null : invoice.getImportedInvoiceAmount();
+		expectedUnitAmountLabel.setText(invoice == null ? "N/A"
+				: NumberFormat.getCurrencyInstance(Locale.US).format(expectedInvoiceAmount));
+		updateInvoiceVariance();
+	}
+
+	private void updateInvoiceVariance() {
+		if (expectedInvoiceAmount == null) {
+			varianceLabel.setText("N/A");
+			varianceLabel.setStyle("");
+			return;
+		}
+		try {
+			double amount = Double.parseDouble(amountField.getText().replace("$", "").replace(",", ""));
+			double variance = expectedInvoiceAmount - amount;
+			varianceLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(variance));
+			varianceLabel.setStyle(Math.abs(variance) > 0.20
+					? "-fx-background-color: red; -fx-text-fill: white;"
+					: "");
+		} catch (NumberFormatException exception) {
+			varianceLabel.setText("N/A");
+			varianceLabel.setStyle("");
+		}
+	}
+
+	private record InvoiceLookupResult(Invoice invoice, boolean duplicate) {}
 
 	public void invoicesView() {
 		GUIUtils.formatTabSelect(invoicesButton);
@@ -343,32 +392,6 @@ public class InvoiceEntryController extends DateSelectController{
 		plusButton.setOnAction(_ -> openInvoicePopover());
 		plusButton.setText("Manual invoice");
 		contentDarken.setOnMouseClicked(_ -> closeInvoicePopover());
-		amountField.delegateFocusedProperty().addListener((_, _, _) -> {
-			if (amountField.isValid()) {
-				if(expectedUnitAmountLabel.getText().equals("N/A")) {
-					varianceLabel.setText("N/A");
-					varianceLabel.setStyle("");
-				} else {
-					try {
-						double expected = Double.parseDouble(expectedUnitAmountLabel.getText().replace("$", "").replace(",", ""));
-						double amount = Double.parseDouble(amountField.getText());
-						double variance = expected - amount;
-						String formattedVariance = NumberFormat.getCurrencyInstance(Locale.US).format(variance);
-						varianceLabel.setText(formattedVariance);
-
-						// If the absolute variance is greater than 20 cents, highlight the label in red
-						if (Math.abs(variance) > 0.20) {
-							varianceLabel.setStyle("-fx-background-color: red; -fx-text-fill: white;");
-						} else {
-							varianceLabel.setStyle("");
-						}
-					} catch (NumberFormatException e) {
-						varianceLabel.setText("N/A");
-						varianceLabel.setStyle("");
-					}
-				}
-			}
-		});
 		DoubleBinding totalBinding = Bindings.createDoubleBinding(
 				() -> invoiceFilterView.getFilteredItems()
 						.stream()
@@ -640,26 +663,35 @@ public class InvoiceEntryController extends DateSelectController{
 	}
 
 	public void openInvoicePopover(){
+		cancelInvoiceLookup();
 		saveButton.setOnAction(_ -> addInvoice());
 		paymentPopoverTitle.setText("Add new Invoice");
 		deleteButton.setVisible(false);
 		contentDarken.setVisible(true);
 		AnimationUtils.slideIn(addInvoicePopover,0);
-		invoiceAFX.clear();
-		invoiceAFX.clearSelection();
-		invoiceNoField.clear();
-		invoiceDateField.setValue(LocalDate.MIN);
-		invoiceDateField.clear();
-		dueDateField.setValue(LocalDate.MIN);
-		dueDateField.clear();
-		amountField.clear();
-		notesField.clear();
-		expectedUnitAmountLabel.setText("$0.00");
-		varianceLabel.setText("$0.00");
+		updatingInvoiceForm = true;
+		try {
+			invoiceAFX.clear();
+			invoiceAFX.clearSelection();
+			invoiceNoField.clear();
+			invoiceDateField.setValue(LocalDate.MIN);
+			invoiceDateField.clear();
+			dueDateField.setValue(LocalDate.MIN);
+			dueDateField.clear();
+			amountField.clear();
+			notesField.clear();
+			expectedInvoiceAmount = null;
+			expectedUnitAmountLabel.setText("$0.00");
+			varianceLabel.setText("$0.00");
+			varianceLabel.setStyle("");
+		} finally {
+			updatingInvoiceForm = false;
+		}
 		Platform.runLater(() -> invoiceAFX.requestFocus());
 	}
 
 	public void openInvoicePopover(Invoice invoice){
+		cancelInvoiceLookup();
 		Task<InvoiceSupplier> task = new Task<>() {
 			@Override
 			protected InvoiceSupplier call() {
@@ -668,7 +700,20 @@ public class InvoiceEntryController extends DateSelectController{
 		};
 		task.setOnSucceeded(_ -> {
 			InvoiceSupplier supplier = task.getValue();
-			invoiceAFX.setValue(supplier);
+			updatingInvoiceForm = true;
+			try {
+				invoiceAFX.setValue(supplier);
+				invoiceNoField.setText(invoice.getInvoiceNo());
+				invoiceDateField.setValue(invoice.getInvoiceDate());
+				dueDateField.setValue(invoice.getDueDate());
+				amountField.setText(String.valueOf(invoice.getUnitAmount()));
+				notesField.setText(invoice.getNotes());
+				expectedInvoiceAmount = invoice.getImportedInvoiceAmount();
+				expectedUnitAmountLabel.setText("$"+String.format("%.2f",invoice.getImportedInvoiceAmount()));
+				varianceLabel.setText("$"+String.format("%.2f",invoice.getVariance()));
+			} finally {
+				updatingInvoiceForm = false;
+			}
 			progressSpinner.setVisible(false);
 			saveButton.setOnAction(_ -> editInvoice(invoice));
 			paymentPopoverTitle.setText("Edit Invoice");
@@ -676,13 +721,6 @@ public class InvoiceEntryController extends DateSelectController{
 			deleteButton.setOnAction(_ -> deleteInvoice(invoice));
 			contentDarken.setVisible(true);
 			AnimationUtils.slideIn(addInvoicePopover,0);
-			invoiceNoField.setText(invoice.getInvoiceNo());
-			invoiceDateField.setValue(invoice.getInvoiceDate());
-			dueDateField.setValue(invoice.getDueDate());
-			amountField.setText(String.valueOf(invoice.getUnitAmount()));
-			notesField.setText(invoice.getNotes());
-			expectedUnitAmountLabel.setText("$"+String.format("%.2f",invoice.getImportedInvoiceAmount()));
-			varianceLabel.setText("$"+String.format("%.2f",invoice.getVariance()));
 			Platform.runLater(() -> invoiceAFX.requestFocus());
 		});
 		task.setOnFailed(_ -> {
@@ -743,6 +781,7 @@ public class InvoiceEntryController extends DateSelectController{
 	}
 
 	public void closeInvoicePopover(){
+		cancelInvoiceLookup();
 		invoicesButton.requestFocus();
 		AnimationUtils.slideIn(addInvoicePopover,425);
 		afxValidationLabel.setVisible(false);
@@ -752,6 +791,11 @@ public class InvoiceEntryController extends DateSelectController{
 		amountValidationLabel.setVisible(false);
 		contentDarken.setVisible(false);
 		saveButton.setDisable(false);
+	}
+
+	private void cancelInvoiceLookup() {
+		taskCounter.incrementAndGet();
+		if (invoiceLookupDebounce != null) invoiceLookupDebounce.stop();
 	}
 
 	public void closeCreditPopover(){

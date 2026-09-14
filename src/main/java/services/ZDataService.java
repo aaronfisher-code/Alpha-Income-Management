@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import models.Credit;
+import models.Invoice;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -48,6 +49,21 @@ public class ZDataService {
         var credits = new ArrayList<Credit>();
         rows.forEach(row -> credits.add(toCredit(row, storeId)));
         return credits;
+    }
+
+    /**
+     * Looks up one invoice directly from Z Office through the live agent.
+     * This is used by the manual invoice form before the invoice exists in
+     * Alpha's database.
+     */
+    public Invoice getInvoice(int storeId, String invoiceNumber) {
+        String url = UriComponentsBuilder.fromHttpUrl(apiBaseUrl)
+                .pathSegment("invoices", invoiceNumber)
+                .queryParam("storeId", storeId)
+                .toUriString();
+        JsonNode rows = get(url).path("rows");
+        if (!rows.isArray() || rows.isEmpty()) return null;
+        return toInvoice(rows.get(0), storeId);
     }
 
     public ConnectionStatus getStatus(int storeId) {
@@ -105,6 +121,17 @@ public class ZDataService {
         credit.setReadOnly(true);
         credit.setSourceSystem("Z");
         return credit;
+    }
+
+    private static Invoice toInvoice(JsonNode row, int storeId) {
+        var invoice = new Invoice();
+        invoice.setStoreID(storeId);
+        invoice.setInvoiceNo(row.path("invoiceNumber").asText());
+        invoice.setInvoiceDate(LocalDate.parse(row.path("receivedDate").asText()));
+        invoice.setSupplierName(row.path("supplierName").asText());
+        invoice.setImportedInvoiceAmount(row.path("amountIncludingGst").asDouble());
+        invoice.setImportExists(true);
+        return invoice;
     }
 
     private static long longProperty(Properties properties, String name, long fallback) {
