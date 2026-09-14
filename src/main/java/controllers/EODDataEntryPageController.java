@@ -13,6 +13,7 @@ import javafx.stage.FileChooser;
 import models.*;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import services.EODService;
+import services.LiveZUnavailableException;
 import services.TillReportService;
 import utils.*;
 
@@ -528,12 +529,30 @@ public class EODDataEntryPageController extends DateSelectController{
 						yearMonthObject.atDay(1),
 						yearMonthObject.atEndOfMonth()
 				);
-				Callable<List<TillReportDataPoint>> tillReportDataCallable = () -> tillReportService.getTillReportDataPointsByKey(
-						main.getCurrentStore().getStoreID(),
-						yearMonthObject.atDay(1),
-						yearMonthObject.atEndOfMonth(),
-						"Total Takings"
-				);
+				Callable<List<TillReportDataPoint>> tillReportDataCallable = () -> {
+					int storeId = main.getCurrentStore().getStoreID();
+					LocalDate monthStart = yearMonthObject.atDay(1);
+					LocalDate monthEnd = yearMonthObject.atEndOfMonth();
+					if (!isLiveZEnabled()) {
+						return tillReportService.getTillReportDataPointsByKey(
+								storeId, monthStart, monthEnd, "Total Takings");
+					}
+
+					try {
+						// Refresh the complete displayed month. Alpha API replaces the
+						// requested metric window, which also removes legacy rows whose
+						// assigned date changed after the Z-period reconciliation.
+						requireLiveZConnected(storeId);
+						return tillReportService.refreshTillReportDataPointsByKey(
+								storeId, monthStart, monthEnd, "Total Takings");
+					} catch (LiveZUnavailableException unavailable) {
+						// Keep the page usable when the forwarder is temporarily offline.
+						// The cache is safe as a display fallback, but it is never allowed
+						// to override a live refresh when one succeeds.
+						return tillReportService.getTillReportDataPointsByKey(
+								storeId, monthStart, monthEnd, "Total Takings");
+					}
+				};
 				Future<List<EODDataPoint>> eodDataFuture = executor.submit(eodDataCallable);
 				Future<List<TillReportDataPoint>> tillReportDataFuture = executor.submit(tillReportDataCallable);
 
@@ -576,40 +595,12 @@ public class EODDataEntryPageController extends DateSelectController{
 					eodDataPoints.add(existingDataPoint);
 				}
 
-				// Calculate till balances for each day. A stored EOD entry must have a
-				// completed Z till-off period; never turn a missing period into a fake
-				// zero, because that creates a large false variance.
-				double runningTillBalance = 0;
-				boolean runningBalanceKnown = true;
-				for (EODDataPoint e : eodDataPoints) {
-					List<TillReportDataPoint> matchingTillReports = currentTillReportDataPoints.stream()
-							.filter(t -> t.getAssignedDate() != null
-									&& t.getAssignedDate().equals(e.getDate())
-									&& "Total Takings".equals(t.getKey()))
-							.toList();
-					if (matchingTillReports.isEmpty() && e.isInDB()) {
-						e.setTillTakingsAvailable(false);
-						e.setRunningTillBalanceAvailable(false);
-						runningBalanceKnown = false;
-						continue;
-					}
-
-					// A day can contain multiple periods/segments (for example after
-					// a register restart). The API normally aggregates these, but
-					// summing here also keeps older cache rows from silently dropping
-					// all but the first segment.
-					double amount = matchingTillReports.stream()
-							.mapToDouble(TillReportDataPoint::getAmount)
-							.sum();
-					e.calculateTillBalances(amount, runningTillBalance);
-					if (runningBalanceKnown) {
-						runningTillBalance = e.getRunningTillBalance();
-					} else {
-						// A missing closed period makes all following cumulative values
-						// unknown until the table is refreshed after till-off.
-						e.setRunningTillBalanceAvailable(false);
-					}
-				}
+				// A stored EOD entry must have a completed Z till-off period; the
+				// calculator also protects this view from stale rows on missing days.
+				TillBalanceCalculator.calculate(
+						eodDataPoints,
+						currentTillReportDataPoints,
+						date -> rosterUtils.getDayDuration(date) == 0);
 				return eodDataPoints;
 			}
 		};
@@ -723,6 +714,7 @@ public class EODDataEntryPageController extends DateSelectController{
 				}
 			} else {
 				e.setTillTakingsAvailable(false);
+				e.setRunningTillBalanceAvailable(false);
 				if (tillDataStatusLabel != null) {
 					tillDataStatusLabel.setText("No till-off found for this day. Till-off in Z, then refresh.");
 					tillDataStatusLabel.setStyle("-fx-text-fill: #9a6700;");

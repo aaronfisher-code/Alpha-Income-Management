@@ -64,6 +64,7 @@ public class MonthlySummaryDataPoint {
 	public MonthlySummaryDataPoint(LocalDate dayOfMonth, ObservableList<TillReportDataPoint> currentTillReportDataPoints, ObservableList<EODDataPoint> currentEODDataPoints, ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints, RosterUtils rosterUtils, double monthlyRent, double dailyOutgoing, double openDuration, double monthlyWages, double monthlyBuildingOutgoings){
 		date = dayOfMonth;
 		this.dayDuration = rosterUtils.getDayDuration(date);
+		boolean workingDay = this.dayDuration > 0;
 		double totalTakings = 0;
 		boolean totalTakingsAvailable = false;
 		boolean eodAvailable = false;
@@ -100,19 +101,19 @@ public class MonthlySummaryDataPoint {
 						+e.getEftposAmount()
 						+e.getGoogleSquareAmount()
 						+govtRecovery;
-				if (totalTakingsAvailable) {
+				if (totalTakingsAvailable && workingDay) {
 					tillBalance = e.getCashAmount()
-							+e.getAmexAmount()
-							+e.getChequeAmount()
-							+e.getEftposAmount()
-							+e.getGoogleSquareAmount()
-							-totalTakings;
+						+e.getAmexAmount()
+						+e.getChequeAmount()
+						+e.getEftposAmount()
+						+e.getGoogleSquareAmount()
+						-totalTakings;
 				} else {
 					tillBalanceAvailable = false;
 				}
 			}
 		}
-		if (!eodAvailable) {
+		if (!eodAvailable || !workingDay) {
 			tillBalanceAvailable = false;
 		}
 		itemsPerCustomer = (noOfCustomers==0)?0:noOfItems/noOfCustomers;
@@ -130,7 +131,10 @@ public class MonthlySummaryDataPoint {
 		runningZProfit += zReportProfit;
 		if (tillBalanceAvailable) {
 			runningTillBalance += tillBalance;
-		} else {
+		} else if (workingDay) {
+			// A closed roster day has no EOD variance and therefore carries the
+			// previous cumulative balance. An open day without a completed till
+			// period makes following cumulative values unknown.
 			runningTillBalanceAvailable = false;
 		}
 		for(MonthlySummaryDataPoint m: monthlySummaryPoints){

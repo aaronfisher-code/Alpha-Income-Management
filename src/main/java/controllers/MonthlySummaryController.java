@@ -233,7 +233,19 @@ public class MonthlySummaryController extends DateSelectController{
 
 				CompletableFuture<List<TillReportDataPoint>> tillReportFuture = CompletableFuture.supplyAsync(() -> {
 					if (isCancelled()) return null;
-					return tillReportService.getTillReportDataPoints(main.getCurrentStore().getStoreID(), startDate, endDate);
+					int storeId = main.getCurrentStore().getStoreID();
+					if (!isLiveZEnabled()) {
+						return tillReportService.getTillReportDataPoints(storeId, startDate, endDate);
+					}
+
+					try {
+						// Monthly Summary consumes the complete till and script metric set,
+						// so refreshing only Total Takings leaves new rows partly blank.
+						requireLiveZConnected(storeId);
+						return tillReportService.refreshTillReportDataPoints(storeId, startDate, endDate);
+					} catch (LiveZUnavailableException unavailable) {
+						return tillReportService.getTillReportDataPoints(storeId, startDate, endDate);
+					}
 				}, executor);
 
 				CompletableFuture<List<EODDataPoint>> eodFuture = CompletableFuture.supplyAsync(() -> {

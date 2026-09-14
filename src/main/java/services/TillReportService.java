@@ -49,21 +49,30 @@ public class TillReportService {
     }
 
     public List<TillReportDataPoint> getTillReportDataPoints(int storeId, LocalDate startDate, LocalDate endDate) {
+        return requestTillReportDataPoints(storeId, startDate, endDate, false);
+    }
+
+    public List<TillReportDataPoint> refreshTillReportDataPoints(int storeId, LocalDate startDate, LocalDate endDate) {
+        return requestTillReportDataPoints(storeId, startDate, endDate, true);
+    }
+
+    private List<TillReportDataPoint> requestTillReportDataPoints(
+            int storeId, LocalDate startDate, LocalDate endDate, boolean refresh) {
         try {
-            URI uri = URI.create(apiBaseUrl + "?storeId=" + storeId +
+            URI uri = URI.create(apiBaseUrl + (refresh ? "/refresh" : "") + "?storeId=" + storeId +
                     "&startDate=" + startDate +
                     "&endDate=" + endDate);
 
             HttpEntity<?> entity = new HttpEntity<>(createHeaders());
             ResponseEntity<String> response = restTemplate.exchange(
                     uri,
-                    HttpMethod.GET,
+                    refresh ? HttpMethod.POST : HttpMethod.GET,
                     entity,
                     String.class);
 
             return objectMapper.readValue(response.getBody(), new TypeReference<>() {});
         } catch (IOException | RestClientException e) {
-            throw requestFailure(e, false);
+            throw requestFailure(e, refresh);
         }
     }
 
