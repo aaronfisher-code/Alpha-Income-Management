@@ -24,13 +24,23 @@ public class UserService {
     private ObjectMapper objectMapper;
 
     public UserService() throws IOException {
-        this.restTemplate = new RestTemplate();
+        this(new RestTemplate(), loadProperties());
+    }
+
+    UserService(RestTemplate restTemplate, Properties properties) {
+        this.restTemplate = restTemplate;
         this.objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-        Properties properties = new Properties();
-        properties.load(UserService.class.getClassLoader().getResourceAsStream("application.properties"));
         this.apiToken = properties.getProperty("api.token");
         this.apiBaseUrl = properties.getProperty("api.base.url") + "/users";
+    }
+
+    private static Properties loadProperties() throws IOException {
+        Properties properties = new Properties();
+        try (var stream = UserService.class.getClassLoader().getResourceAsStream("application.properties")) {
+            properties.load(stream);
+        }
+        return properties;
     }
 
     private HttpHeaders createHeaders() {
@@ -40,9 +50,9 @@ public class UserService {
     }
 
     public User getUserByUsername(String username) {
-        String url = apiBaseUrl + "/by-username/" + URLEncoder.encode(username, StandardCharsets.UTF_8);
+        String url = apiBaseUrl + "/by-username/{username}";
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
-        ResponseEntity<User> response = restTemplate.exchange(url, HttpMethod.GET, entity, User.class);
+        ResponseEntity<User> response = restTemplate.exchange(url, HttpMethod.GET, entity, User.class, username);
         return response.getBody();
     }
 
@@ -89,9 +99,9 @@ public class UserService {
     }
 
     public User verifyPassword(String username, String password) {
-        String url = apiBaseUrl + "/" + URLEncoder.encode(username,StandardCharsets.UTF_8) + "/verify-password";
+        String url = apiBaseUrl + "/{username}/verify-password";
         HttpEntity<String> entity = new HttpEntity<>(password, createHeaders());
-        ResponseEntity<User> response = restTemplate.exchange(url, HttpMethod.POST, entity, User.class);
+        ResponseEntity<User> response = restTemplate.exchange(url, HttpMethod.POST, entity, User.class, username);
         String session = response.getHeaders().getFirst("X-Alpha-Session");
         if (session != null && !session.isBlank()) documentAiSession = session;
         return response.getBody();
@@ -138,9 +148,9 @@ public class UserService {
     }
 
     public void updateUser(User user) {
-        String url = apiBaseUrl + "/" + URLEncoder.encode(user.getUsername(), StandardCharsets.UTF_8);
+        String url = apiBaseUrl + "/{username}";
         HttpEntity<User> entity = new HttpEntity<>(user, createHeaders());
-        restTemplate.exchange(url, HttpMethod.PUT, entity, Void.class);
+        restTemplate.exchange(url, HttpMethod.PUT, entity, Void.class, user.getUsername());
     }
 
     public void deleteUser(int userID) {
