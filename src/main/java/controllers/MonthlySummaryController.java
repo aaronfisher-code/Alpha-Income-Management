@@ -210,6 +210,12 @@ public class MonthlySummaryController extends DateSelectController{
 	}
 
 	public void fillTable() {
+		fillTable(null);
+	}
+
+	private void fillTable(Runnable afterLoad) {
+		final YearMonth requestedMonth = YearMonth.from(main.getCurrentDate());
+		final int storeId = main.getCurrentStore().getStoreID();
 		progressSpinner.setVisible(true);
 		Task<Void> fillTableTask = new Task<>() {
 			@Override
@@ -217,15 +223,13 @@ public class MonthlySummaryController extends DateSelectController{
 				if (isCancelled()) return null;
 
 				ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints = FXCollections.observableArrayList();
-				yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
-				daysInMonth = yearMonthObject.lengthOfMonth();
-				LocalDate startDate = yearMonthObject.atDay(1);
-				LocalDate endDate = yearMonthObject.atEndOfMonth();
+				LocalDate startDate = requestedMonth.atDay(1);
+				LocalDate endDate = requestedMonth.atEndOfMonth();
 
-				CompletableFuture<Void> rosterFuture = CompletableFuture.runAsync(() -> {
-					if (isCancelled()) return;
+				CompletableFuture<RosterUtils> rosterFuture = CompletableFuture.supplyAsync(() -> {
+					if (isCancelled()) return null;
 					try {
-						rosterUtils = new RosterUtils(main, yearMonthObject);
+						return new RosterUtils(main, requestedMonth);
 					} catch (Exception e) {
 						throw new RuntimeException("Error loading roster data", e);
 					}
@@ -233,7 +237,6 @@ public class MonthlySummaryController extends DateSelectController{
 
 				CompletableFuture<List<TillReportDataPoint>> tillReportFuture = CompletableFuture.supplyAsync(() -> {
 					if (isCancelled()) return null;
-					int storeId = main.getCurrentStore().getStoreID();
 					if (!isLiveZEnabled()) {
 						return tillReportService.getTillReportDataPoints(storeId, startDate, endDate);
 					}
@@ -244,26 +247,29 @@ public class MonthlySummaryController extends DateSelectController{
 						requireLiveZConnected(storeId);
 						return tillReportService.refreshTillReportDataPoints(storeId, startDate, endDate);
 					} catch (LiveZUnavailableException unavailable) {
+						// Till metrics may use the stored snapshot, but this shared
+						// read still requires fresh Medicare income and script counts.
 						return tillReportService.getTillReportDataPoints(storeId, startDate, endDate);
 					}
 				}, executor);
 
 				CompletableFuture<List<EODDataPoint>> eodFuture = CompletableFuture.supplyAsync(() -> {
 					if (isCancelled()) return null;
-					return eodService.getEODDataPoints(main.getCurrentStore().getStoreID(), startDate, endDate);
+					return eodService.getEODDataPoints(storeId, startDate, endDate);
 				}, executor);
 
 				CompletableFuture<BudgetAndExpensesDataPoint> budgetFuture = CompletableFuture.supplyAsync(() -> {
 					if (isCancelled()) return null;
-					return budgetExpensesService.getBudgetExpensesData(main.getCurrentStore().getStoreID(), yearMonthObject);
+					return budgetExpensesService.getBudgetExpensesData(storeId, requestedMonth);
 				}, executor);
 
 				CompletableFuture.allOf(rosterFuture, tillReportFuture, eodFuture, budgetFuture).join();
 
 				if (isCancelled()) return null;
 
-				currentTillReportDataPoints.setAll(tillReportFuture.get());
-				currentEODDataPoints.setAll(eodFuture.get());
+				var loadedTillReports = FXCollections.observableArrayList(tillReportFuture.get());
+				var loadedEods = FXCollections.observableArrayList(eodFuture.get());
+				var loadedRoster = rosterFuture.get();
 				BudgetAndExpensesDataPoint currentBudgetAndExpensesDataPoint = budgetFuture.get();
 				double monthlyRent = 0;
 				double dailyOutgoings = 0;
@@ -275,19 +281,26 @@ public class MonthlySummaryController extends DateSelectController{
 					monthlyWages = currentBudgetAndExpensesDataPoint.getMonthlyWages();
 					monthlyBuildingOutgoings = currentBudgetAndExpensesDataPoint.getBuildingOutgoings();
 				}
-				double totalOpenDuration = rosterUtils.getOpenDuration();
-				for (int i = 1; i <= daysInMonth; i++) {
-					LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(), i);
-					monthlySummaryPoints.add(new MonthlySummaryDataPoint(d, currentTillReportDataPoints, currentEODDataPoints, monthlySummaryPoints, rosterUtils, monthlyRent, dailyOutgoings, totalOpenDuration, monthlyWages, monthlyBuildingOutgoings));
+				double totalOpenDuration = loadedRoster.getOpenDuration();
+				for (int i = 1; i <= requestedMonth.lengthOfMonth(); i++) {
+					LocalDate d = requestedMonth.atDay(i);
+					monthlySummaryPoints.add(new MonthlySummaryDataPoint(d, loadedTillReports, loadedEods, monthlySummaryPoints, loadedRoster, monthlyRent, dailyOutgoings, totalOpenDuration, monthlyWages, monthlyBuildingOutgoings));
 				}
 				if (isCancelled()) return null;
 				Platform.runLater(() -> {
+					if (isCancelled()) return;
+					yearMonthObject = requestedMonth;
+					daysInMonth = requestedMonth.lengthOfMonth();
+					currentTillReportDataPoints.setAll(loadedTillReports);
+					currentEODDataPoints.setAll(loadedEods);
+					rosterUtils = loadedRoster;
 					summaryTable.setItems(monthlySummaryPoints);
 					totalsTable.getItems().clear();
 					totalsTable.getItems().add(new MonthlySummaryDataPoint(monthlySummaryPoints, true, rosterUtils.getOpenDays()));
 					totalsTable.getItems().add(new MonthlySummaryDataPoint(monthlySummaryPoints, false, rosterUtils.getOpenDays()));
 					GUIUtils.customResize(summaryTable, runningTillBalanceCol, (Label) runningTillBalanceCol.getGraphic());
 					progressSpinner.setVisible(false);
+					if (afterLoad != null) afterLoad.run();
 				});
 				return null;
 			}
@@ -318,6 +331,19 @@ public class MonthlySummaryController extends DateSelectController{
 	}
 
 	public void exportData() {
+		reloadForExport(this::exportLoadedData);
+	}
+
+	private void reloadForExport(Runnable export) {
+		if (isLiveZEnabled()) {
+			cancelCurrentTaskIfRunning();
+			fillTable(export);
+		} else {
+			export.run();
+		}
+	}
+
+	private void exportLoadedData() {
 		if(currentEODDataPoints.isEmpty() || currentTillReportDataPoints.isEmpty()){
 			dialogPane.showWarning("No data","No data to export");
 			return;
@@ -506,6 +532,10 @@ public class MonthlySummaryController extends DateSelectController{
 	}
 
 	public void exportFullSummaryTable() {
+		reloadForExport(this::exportLoadedSummaryTable);
+	}
+
+	private void exportLoadedSummaryTable() {
 		// Ensure there's something to export
 		if (summaryTable.getItems() == null || summaryTable.getItems().isEmpty()) {
 			dialogPane.showWarning("No data","No data to export");

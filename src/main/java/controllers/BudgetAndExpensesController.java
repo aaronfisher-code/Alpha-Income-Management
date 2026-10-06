@@ -156,7 +156,7 @@ public class BudgetAndExpensesController extends DateSelectController{
 						lastYearMonthObject.atEndOfMonth()
 				);
 			} catch (Exception e) {
-				throw new RuntimeException("Unable to load cached till metrics", e);
+                throw new RuntimeException("Unable to load till and script metrics", e);
 			}
 		}, executor);
 

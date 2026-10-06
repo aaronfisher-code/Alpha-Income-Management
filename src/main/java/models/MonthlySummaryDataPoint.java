@@ -62,8 +62,17 @@ public class MonthlySummaryDataPoint {
 	private double govtRecovery;
 	private double totalGovtContribution;
 	public MonthlySummaryDataPoint(LocalDate dayOfMonth, ObservableList<TillReportDataPoint> currentTillReportDataPoints, ObservableList<EODDataPoint> currentEODDataPoints, ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints, RosterUtils rosterUtils, double monthlyRent, double dailyOutgoing, double openDuration, double monthlyWages, double monthlyBuildingOutgoings){
+		this(dayOfMonth, currentTillReportDataPoints, currentEODDataPoints, monthlySummaryPoints,
+				rosterUtils.getDayDuration(dayOfMonth), rosterUtils.getTotalDays(), monthlyRent,
+				dailyOutgoing, openDuration, monthlyWages, monthlyBuildingOutgoings);
+	}
+
+	MonthlySummaryDataPoint(LocalDate dayOfMonth, ObservableList<TillReportDataPoint> currentTillReportDataPoints,
+			ObservableList<EODDataPoint> currentEODDataPoints, ObservableList<MonthlySummaryDataPoint> monthlySummaryPoints,
+			double dayDuration, int totalDays, double monthlyRent, double dailyOutgoing, double openDuration,
+			double monthlyWages, double monthlyBuildingOutgoings) {
 		date = dayOfMonth;
-		this.dayDuration = rosterUtils.getDayDuration(date);
+		this.dayDuration = dayDuration;
 		boolean workingDay = this.dayDuration > 0;
 		double totalTakings = 0;
 		boolean totalTakingsAvailable = false;
@@ -92,6 +101,9 @@ public class MonthlySummaryDataPoint {
 				totalTakings += t.getAmount();
 			}
 		}
+		// Medicare income exists independently of staff entering the day's
+		// cash/tender figures, so it must also count on days without an EOD row.
+		totalIncome = govtRecovery;
 		for(EODDataPoint e: currentEODDataPoints){
 			if(e.getDate().equals(date)){
 				eodAvailable = true;
@@ -123,7 +135,7 @@ public class MonthlySummaryDataPoint {
 		gpPercentage = gpDollars/totalIncome;
 
 		rentAndOutgoings = ((monthlyRent+monthlyBuildingOutgoings)/openDuration)*this.dayDuration;
-		outgoings = (dailyOutgoing*rosterUtils.getTotalDays())/openDuration*this.dayDuration;
+		outgoings = (dailyOutgoing*totalDays)/openDuration*this.dayDuration;
 		wages = ((monthlyWages/openDuration)*this.dayDuration);
 		zReportProfit = gpDollars-rentAndOutgoings-wages;
 		runningZProfit = 0;

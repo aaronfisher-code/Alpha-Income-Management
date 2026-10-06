@@ -1,5 +1,30 @@
 # Alpha Income Management
 
+## Live Medicare income
+
+With `z.live.enabled=true`, report loads fetch fresh **Govt Recovery** and
+**Script Count** values for their entire requested date range through Alpha API
+and the connected Z forwarder. BAS totals include the full selected month;
+the Xero CSV fills each day's script count and fresh Medicare value, using
+explicit zeros for no-script days after a successful live fetch. Monthly Summary uses those
+values in income and profit calculations, includes Medicare income even before
+staff enter that day's EOD figures, and reloads before either clipboard export.
+Prior-year budget comparisons and script-count graphs use the same
+shared report service. Failed live requests surface an error instead of
+substituting old CSV income, and a failed Xero data load leaves the selected
+output file untouched. Manual-import mode (`z.live.enabled=false`) continues
+to use imported data.
+
+The EOD Xero export refreshes all Z metrics for the selected month, writes
+properly quoted CSV rows with 31 columns, and includes saved EOD values.
+See [the export comparison and accounting limitations](docs/xero-export-review.md).
+
+Deploy the matching Alpha API with `POST /till-report/refresh/script-totals`
+before releasing this client. It uses the forwarder's existing `ScriptTotals`
+operation and updates only Govt Recovery and Script Count in Alpha's database;
+no forwarder upgrade or scheduled-export backfill is required for these live
+report requests. The live agent must be configured and connected.
+
 ## Run locally on Linux/Wayland
 
 The desktop client requires:

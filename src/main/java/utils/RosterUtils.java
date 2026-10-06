@@ -1,6 +1,7 @@
 package utils;
 import models.Shift;
 import models.LeaveRequest;
+import models.Store;
 import services.LeaveService;
 import services.RosterService;
 import application.Main;
@@ -13,7 +14,7 @@ import static java.time.temporal.ChronoUnit.DAYS;
 
 public class RosterUtils {
 
-    private Main main;
+    private final Store store;
     private RosterService rosterService;
     private LeaveService leaveService;
     private YearMonth yearMonth;
@@ -25,7 +26,11 @@ public class RosterUtils {
     private Map<LocalDate, Double> dayDurationMap = new HashMap<>();
 
     public RosterUtils(Main main, LocalDate startDate, LocalDate endDate) throws IOException {
-        this.main = main;
+        this(main.getCurrentStore(), startDate, endDate);
+    }
+
+    private RosterUtils(Store store, LocalDate startDate, LocalDate endDate) throws IOException {
+        this.store = store;
         this.rosterService = new RosterService();
         this.leaveService = new LeaveService();
 
@@ -33,20 +38,18 @@ public class RosterUtils {
     }
 
     public RosterUtils(Main main, YearMonth yearMonth) throws IOException {
-        this.main = main;
-        this.rosterService = new RosterService();
-        this.leaveService = new LeaveService();
-        this.yearMonth = yearMonth;
+        this(main.getCurrentStore(), yearMonth);
+    }
 
-        LocalDate monthStart = yearMonth.atDay(1);
-        LocalDate monthEnd = yearMonth.atEndOfMonth();
-        fillDayDurations(monthStart, monthEnd);
+    public RosterUtils(Store store, YearMonth yearMonth) throws IOException {
+        this(store, yearMonth.atDay(1), yearMonth.atEndOfMonth());
+        this.yearMonth = yearMonth;
     }
 
     private void fillDayDurations(LocalDate startDate, LocalDate endDate){
-        allShifts = rosterService.getShifts(main.getCurrentStore().getStoreID(), startDate, endDate);
-        allModifications = rosterService.getShiftModifications(main.getCurrentStore().getStoreID(), startDate, endDate);
-        allLeaveRequests = leaveService.getLeaveRequests(main.getCurrentStore().getStoreID(), startDate, endDate);
+        allShifts = rosterService.getShifts(store.getStoreID(), startDate, endDate);
+        allModifications = rosterService.getShiftModifications(store.getStoreID(), startDate, endDate);
+        allLeaveRequests = leaveService.getLeaveRequests(store.getStoreID(), startDate, endDate);
 
         for (LocalDate day = startDate; day.isBefore(endDate.plusDays(1)); day = day.plusDays(1)) {
             dayDurationMap.put(day, loadDayDuration(day));
@@ -191,7 +194,7 @@ public class RosterUtils {
             return 0.0;
         }
         long openHours = Duration.between(earliestStart, latestEnd).toHours();
-        return (double) openHours / main.getCurrentStore().getStoreHours();
+        return (double) openHours / store.getStoreHours();
     }
 
     public int getOpenDays() {

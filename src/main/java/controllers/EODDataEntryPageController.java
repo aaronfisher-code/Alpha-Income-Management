@@ -863,187 +863,33 @@ public class EODDataEntryPageController extends DateSelectController{
 		fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
 		File file = fileChooser.showSaveDialog(main.getStg());
 		if (file != null) {
+			final YearMonth exportMonth = YearMonth.from(main.getCurrentDate());
+			final Store exportStore = main.getCurrentStore();
+			final int storeId = exportStore.getStoreID();
 			Task<Void> exportTask = new Task<>() {
 				@Override
 				protected Void call() throws Exception {
-					try (PrintWriter pw = new PrintWriter(file)) {
-						pw.println("*ContactName,Day Of Month,Amount,No. of scripts,Total customers served," +
-								"Total Sales (#),Total Govt Contribution ($),Total Takings,Gross Profit ($)," +
-								"Total GST Free Sales,*InvoiceNumber,Total GST Sales,*InvoiceDate,*DueDate," +
-								"Total GST Collected,*Description,*Quantity,*UnitAmount,Total OTC Sales (#)," +
-								"Avg. OTC  Sales Per Customer ($),*AccountCode,*TaxType,Z Dispense Govt Cont," +
-								"Stock on hand,Scripts on file count,SMS patients,Clinical Interventions,Medschecks," +
-								"Till Balance,Running till Balance,Notes");
-						YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
-						int daysInMonth = yearMonthObject.lengthOfMonth();
-						List<EODDataPoint> currentEODDataPoints = FXCollections.observableArrayList();
-						List<TillReportDataPoint> currentTillDataPoints = FXCollections.observableArrayList();
-						try {
-							currentEODDataPoints = eodService.getEODDataPoints(
-									main.getCurrentStore().getStoreID(),
-									yearMonthObject.atDay(1),
-									yearMonthObject.atEndOfMonth()
-							);
-							currentTillDataPoints = tillReportService.getTillReportDataPoints(
-									main.getCurrentStore().getStoreID(),
-									yearMonthObject.atDay(1),
-									yearMonthObject.atEndOfMonth()
-							);
-						} catch (Exception ex) {
-							throw new Exception("Failed to get EOD and till report data", ex);
-						}
-						// A Z-backed export must only use periods with completed Z till reports. Do not
-						// silently turn a missing period into a zero takings value: that
-						// would produce a misleading till balance in the Xero export.
-						if (isLiveZEnabled()) {
-							List<TillReportDataPoint> tillDataPointsForValidation = currentTillDataPoints;
-							List<LocalDate> missingTillDates = currentEODDataPoints.stream()
-									.filter(EODDataPoint::isInDB)
-									.map(EODDataPoint::getDate)
-									.filter(date -> tillDataPointsForValidation.stream().noneMatch(point ->
-											"Total Takings".equals(point.getKey())
-													&& date.equals(point.getAssignedDate())))
-									.toList();
-							if (!missingTillDates.isEmpty()) {
-								throw new IllegalStateException(
-										"Cannot export EOD data because no completed till report was found for: "
-												+ String.join(", ", missingTillDates.stream().map(LocalDate::toString).toList())
-												+ ". Zero the till for those dates."
-								);
-							}
-						}
-						double runningTillBalance = 0;
-						for (int i = 1; i < daysInMonth + 1; i++) {
-							LocalDate d = LocalDate.of(yearMonthObject.getYear(), yearMonthObject.getMonth(), i);
-							EODDataPoint e = null;
-							for (EODDataPoint eod : currentEODDataPoints) {
-								if (eod.getDate().equals(d)) {
-									e = eod;
-									break;
-								}
-							}
-							if (e == null) {
-								e = new EODDataPoint(false, d, main.getCurrentStore().getStoreID(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "");
-							}
-							pw.print("Cash Income," + i + ",");
-							pw.print(e.getCashAmount() + ",");
-							pw.print(searchTillData(currentTillDataPoints, d, "Script Count", "quantity") + ",");
-							pw.print(searchTillData(currentTillDataPoints, d, "Total Customers Served", "quantity") + ",");
-							pw.print(searchTillData(currentTillDataPoints, d, "Total Sales", "quantity") + ",");
-							pw.print(searchTillData(currentTillDataPoints, d, "Total Government Contribution", "amount") + ",");
-							pw.print(searchTillData(currentTillDataPoints, d, "Total Takings", "amount") + ",");
-							pw.print(searchTillData(currentTillDataPoints, d, "Gross Profit ($)", "amount") + ",");
-							pw.print(searchTillData(currentTillDataPoints, d, "Total GST Free Sales", "quantity") + ",");
-							DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("ddMMyyyy");
-							String formattedDate = d.format(dateTimeFormatter);
-							pw.print((e.getCashAmount() > 0) ? formattedDate + "c," : ",");
-							pw.print(searchTillData(currentTillDataPoints, d, "Total GST Sales", "amount") + ",");
-							dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-							formattedDate = d.format(dateTimeFormatter);
-							pw.print((e.getCashAmount() > 0) ? formattedDate + "," : ",");
-							LocalDate lastDayOfMonth = d.withDayOfMonth(d.getMonth().length(d.isLeapYear()));
-							dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-							formattedDate = lastDayOfMonth.format(dateTimeFormatter);
-							pw.print((e.getCashAmount() > 0) ? formattedDate + "," : ",");
-							pw.print(searchTillData(currentTillDataPoints, d, "Total GST Collected", "amount") + ",");
-							pw.print("Cash Income,1,");
-							pw.print(e.getCashAmount() + ",");
-							pw.print(searchTillData(currentTillDataPoints, d, "Total Sales-OTC Sales", "quantity") + ",");
-							pw.print(searchTillData(currentTillDataPoints, d, "Avg. OTC Sales Per Customer", "amount") + ",");
-							pw.print("200,GST Free Income,");
-							pw.print(searchTillData(currentTillDataPoints, d, "Govt Recovery", "amount") + ",");
-							pw.print(e.getStockOnHandAmount() + ",");
-							pw.print(e.getScriptsOnFile() + ",");
-							pw.print(e.getSmsPatients() + ",");
-							pw.print(",");//Clinical interventions
-							pw.print(e.getMedschecks() + ",");
-							double totalTakings = 0;
-							try {
-								String recoveryStr = searchTillData(currentTillDataPoints, d, "Total Takings", "amount");
-								if (!recoveryStr.trim().isEmpty()) {
-									totalTakings = Double.parseDouble(recoveryStr);
-								} else if (isLiveZEnabled() && e.isInDB()) {
-									// Keep this guard close to the calculation as defence in
-									// depth if the endpoint data changes between validation
-									// and row generation.
-									throw new IllegalStateException(
-											"Cannot export EOD data because till report takings are unavailable for " + d
-									);
-								}
-							} catch (NumberFormatException ex) {
-								throw new IllegalStateException("Invalid till report total takings value for " + d, ex);
-							}
-							double tillBalance = e.getCashAmount() + e.getEftposAmount() + e.getAmexAmount() + e.getGoogleSquareAmount() + e.getChequeAmount() - totalTakings;
-							pw.print(NumberFormat.getCurrencyInstance(Locale.US).format(tillBalance) + ",");
-							runningTillBalance += tillBalance;
-							pw.print(NumberFormat.getCurrencyInstance(Locale.US).format(runningTillBalance) + ",");
-							pw.println(e.getNotes());
-							pw.print("Eftpos Income," + i + ",");
-							pw.print(e.getEftposAmount() + ",,,,,,,,");
-							dateTimeFormatter = DateTimeFormatter.ofPattern("ddMMyyyy");
-							formattedDate = d.format(dateTimeFormatter);
-							pw.print((e.getEftposAmount() > 0) ? formattedDate + "e,," : ",,");
-							dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-							formattedDate = d.format(dateTimeFormatter);
-							pw.print((e.getEftposAmount() > 0) ? formattedDate + "," : ",");
-							formattedDate = lastDayOfMonth.format(dateTimeFormatter);
-							pw.print((e.getEftposAmount() > 0) ? formattedDate + ",," : ",,");
-							pw.println("Eftpos Income,1," + e.getEftposAmount() + ",,,200,GST Free Income");
-							pw.print("Amex Income," + i + ",");
-							pw.print(e.getAmexAmount() + ",,,,,,,,");
-							dateTimeFormatter = DateTimeFormatter.ofPattern("ddMMyyyy");
-							formattedDate = d.format(dateTimeFormatter);
-							pw.print((e.getAmexAmount() > 0) ? formattedDate + "a,," : ",,");
-							dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-							formattedDate = d.format(dateTimeFormatter);
-							pw.print((e.getAmexAmount() > 0) ? formattedDate + "," : ",");
-							formattedDate = lastDayOfMonth.format(dateTimeFormatter);
-							pw.print((e.getAmexAmount() > 0) ? formattedDate + ",," : ",,");
-							pw.println("Amex Income,1," + e.getAmexAmount() + ",,,200,GST Free Income");
-							pw.print("Google Square Income," + i + ",");
-							pw.print(e.getGoogleSquareAmount() + ",,,,,,,,");
-							dateTimeFormatter = DateTimeFormatter.ofPattern("ddMMyyyy");
-							formattedDate = d.format(dateTimeFormatter);
-							pw.print((e.getGoogleSquareAmount() > 0) ? formattedDate + "gs,," : ",,");
-							dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-							formattedDate = d.format(dateTimeFormatter);
-							pw.print((e.getGoogleSquareAmount() > 0) ? formattedDate + "," : ",");
-							formattedDate = lastDayOfMonth.format(dateTimeFormatter);
-							pw.print((e.getGoogleSquareAmount() > 0) ? formattedDate + ",," : ",,");
-							pw.println("Google Square Income,1," + e.getGoogleSquareAmount() + ",,,200,GST Free Income");
-							pw.print("Cheques Income," + i + ",");
-							pw.print(e.getChequeAmount() + ",,,,,,,,");
-							dateTimeFormatter = DateTimeFormatter.ofPattern("ddMMyyyy");
-							formattedDate = d.format(dateTimeFormatter);
-							pw.print((e.getChequeAmount() > 0) ? formattedDate + "ch,," : ",,");
-							dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-							formattedDate = d.format(dateTimeFormatter);
-							pw.print((e.getChequeAmount() > 0) ? formattedDate + "," : ",");
-							formattedDate = lastDayOfMonth.format(dateTimeFormatter);
-							pw.print((e.getChequeAmount() > 0) ? formattedDate + ",," : ",,");
-							pw.println("Cheques Income,1," + e.getChequeAmount() + ",,,200,GST Free Income");
-							double govtRecovery = 0;
-							try {
-								String recoveryStr = searchTillData(currentTillDataPoints, d, "Govt Recovery", "amount");
-								if (!recoveryStr.trim().isEmpty()) {
-									govtRecovery = Double.parseDouble(recoveryStr);
-								}
-							} catch (NumberFormatException ex) {
-								dialogPane.showError("Failed to get govt recovery for " + d, ex);
-							}
-							pw.print("Medicare PBS (Ex GST)," + i + ",");
-							pw.print(govtRecovery + ",,,,,,,,");
-							dateTimeFormatter = DateTimeFormatter.ofPattern("ddMMyyyy");
-							formattedDate = d.format(dateTimeFormatter);
-							pw.print((govtRecovery > 0) ? formattedDate + "me,," : ",,");
-							dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-							formattedDate = d.format(dateTimeFormatter);
-							pw.print((govtRecovery > 0) ? formattedDate + "," : ",");
-							formattedDate = lastDayOfMonth.format(dateTimeFormatter);
-							pw.print((govtRecovery > 0) ? formattedDate + ",," : ",,");
-							pw.println("Medicare PBS (Ex GST),1," + govtRecovery + ",,,200,GST Free Income");
-						}
+					YearMonth yearMonthObject = exportMonth;
+					List<EODDataPoint> currentEODDataPoints = FXCollections.observableArrayList();
+					List<TillReportDataPoint> currentTillDataPoints = FXCollections.observableArrayList();
+					try {
+						currentEODDataPoints = eodService.getEODDataPoints(
+								storeId,
+								yearMonthObject.atDay(1),
+								yearMonthObject.atEndOfMonth()
+						);
+						currentTillDataPoints = tillReportService.getTillReportDataPointsForExport(
+								storeId,
+								yearMonthObject.atDay(1),
+								yearMonthObject.atEndOfMonth()
+						);
+					} catch (Exception ex) {
+						throw new Exception("Failed to get EOD and till report data", ex);
 					}
+					var exportRoster = new RosterUtils(exportStore, exportMonth);
+					XeroEodExporter.write(file, storeId, yearMonthObject,
+							currentEODDataPoints, currentTillDataPoints, isLiveZEnabled(),
+							date -> exportRoster.getDayDuration(date) == 0);
 					return null;
 				}
 			};
@@ -1060,16 +906,5 @@ public class EODDataEntryPageController extends DateSelectController{
 		}
 	}
 
-	private String searchTillData(List<TillReportDataPoint> dataPoints,LocalDate date, String key,String field){
-		 for(TillReportDataPoint t:dataPoints){
-			 if(t.getAssignedDate().equals(date)&&t.getKey().equals(key)){
-				 if(field.equals("quantity")){
-					 return String.valueOf(t.getQuantity());
-				 }else{
-					 return String.valueOf(t.getAmount());
-				 }
-			 }
-		 }
-		 return "";
-	}
+
 }

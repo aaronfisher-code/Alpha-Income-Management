@@ -149,7 +149,7 @@ public class TargetGraphsPageController extends PageController {
 						endDate
 				);
 			} catch (Exception e) {
-				throw new RuntimeException("Unable to load cached till metrics", e);
+                throw new RuntimeException("Unable to load till and script metrics", e);
 			}
 		}, executor);
 		CompletableFuture<List<EODDataPoint>> scriptsOnFileFuture = CompletableFuture.supplyAsync(() -> {

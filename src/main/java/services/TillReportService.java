@@ -18,8 +18,10 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 public class TillReportService {
+    private static final Set<String> SCRIPT_KEYS = Set.of("Script Count", "Govt Recovery");
     private final String apiBaseUrl;
     private final String apiToken;
     private final RestTemplate restTemplate;
@@ -31,15 +33,23 @@ public class TillReportService {
     }
 
     TillReportService(Properties properties) {
-        var requests = new SimpleClientHttpRequestFactory();
-        requests.setConnectTimeout(Duration.ofSeconds(longProperty(properties, "api.connect.timeout.seconds", 10)));
-        requests.setReadTimeout(Duration.ofSeconds(longProperty(properties, "api.read.timeout.seconds", 60)));
-        this.restTemplate = new RestTemplate(requests);
+        this(createRestTemplate(properties), properties);
+    }
+
+    TillReportService(RestTemplate restTemplate, Properties properties) {
+        this.restTemplate = restTemplate;
         this.objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         this.apiToken = properties.getProperty("api.token");
         this.apiBaseUrl = properties.getProperty("api.base.url") + "/till-report";
         this.liveZEnabled = LiveZConfiguration.from(properties).enabled();
+    }
+
+    private static RestTemplate createRestTemplate(Properties properties) {
+        var requests = new SimpleClientHttpRequestFactory();
+        requests.setConnectTimeout(Duration.ofSeconds(longProperty(properties, "api.connect.timeout.seconds", 10)));
+        requests.setReadTimeout(Duration.ofSeconds(longProperty(properties, "api.read.timeout.seconds", 60)));
+        return new RestTemplate(requests);
     }
 
     private HttpHeaders createHeaders() {
@@ -49,17 +59,40 @@ public class TillReportService {
     }
 
     public List<TillReportDataPoint> getTillReportDataPoints(int storeId, LocalDate startDate, LocalDate endDate) {
-        return requestTillReportDataPoints(storeId, startDate, endDate, false);
+        var rows = new ArrayList<>(requestTillReportDataPoints(storeId, startDate, endDate, false));
+        if (liveZEnabled) {
+            // Refresh the whole requested range once. In particular, historical
+            // months must not depend on the scheduled export's seven-day overlap.
+            var scripts = refreshScriptTotals(storeId, startDate, endDate);
+            rows.removeIf(row -> SCRIPT_KEYS.contains(row.getKey()));
+            rows.addAll(scripts);
+        }
+        return rows;
+    }
+
+    public List<TillReportDataPoint> refreshScriptTotals(int storeId, LocalDate startDate, LocalDate endDate) {
+        return requestTillReportDataPoints(storeId, startDate, endDate, "/refresh/script-totals", true);
     }
 
     public List<TillReportDataPoint> refreshTillReportDataPoints(int storeId, LocalDate startDate, LocalDate endDate) {
         return requestTillReportDataPoints(storeId, startDate, endDate, true);
     }
 
+    /** Exports need fresh till metrics as well as fresh dispensing totals. */
+    public List<TillReportDataPoint> getTillReportDataPointsForExport(int storeId, LocalDate startDate, LocalDate endDate) {
+        return liveZEnabled ? refreshTillReportDataPoints(storeId, startDate, endDate)
+                : getTillReportDataPoints(storeId, startDate, endDate);
+    }
+
     private List<TillReportDataPoint> requestTillReportDataPoints(
             int storeId, LocalDate startDate, LocalDate endDate, boolean refresh) {
+        return requestTillReportDataPoints(storeId, startDate, endDate, refresh ? "/refresh" : "", refresh);
+    }
+
+    private List<TillReportDataPoint> requestTillReportDataPoints(
+            int storeId, LocalDate startDate, LocalDate endDate, String path, boolean refresh) {
         try {
-            URI uri = URI.create(apiBaseUrl + (refresh ? "/refresh" : "") + "?storeId=" + storeId +
+            URI uri = URI.create(apiBaseUrl + path + "?storeId=" + storeId +
                     "&startDate=" + startDate +
                     "&endDate=" + endDate);
 
@@ -77,7 +110,8 @@ public class TillReportService {
     }
 
     public List<TillReportDataPoint> getTillReportDataPointsByKey(int storeId, LocalDate startDate, LocalDate endDate, String key) {
-        return requestTillReportDataPointsByKey(storeId, startDate, endDate, key, false);
+        return requestTillReportDataPointsByKey(
+                storeId, startDate, endDate, key, liveZEnabled && SCRIPT_KEYS.contains(key));
     }
 
     public List<TillReportDataPoint> refreshTillReportDataPointsByKey(int storeId, LocalDate startDate, LocalDate endDate, String key) {
