@@ -85,7 +85,7 @@ On the first run, the launcher creates the ignored file `src/main/resources/appl
 
 AI invoice and supplier-statement scanning runs in Alpha API so its queue continues processing when no desktop client is open.
 
-1. Create an API key in [Google AI Studio](https://aistudio.google.com/app/apikey). The Google project behind the key must have Gemini API access and billing/quota appropriate for your scan volume.
+1. Follow the [business Gemini API key setup guide](docs/gemini-business-setup.md) to create a business-owned project and key, enable paid billing, set spending controls, and hand the key to the Alpha API maintainer.
 2. In Google Cloud, enable Google Drive API and create an OAuth 2.0 Web application client. Register the Alpha API callback exactly, for example `http://127.0.0.1:8080/document-ai/google/callback` locally or the HTTPS equivalent in production.
 3. Configure the Alpha API process. Environment variables are recommended:
 

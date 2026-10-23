@@ -7,6 +7,8 @@ import models.DocumentAiModels.*;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Properties;
@@ -22,17 +24,33 @@ public final class DocumentAiService {
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     public DocumentAiService() throws IOException {
+        this(loadProperties());
+    }
+
+    private DocumentAiService(Properties properties) throws IOException {
+        this(restTemplate(properties), properties);
+    }
+
+    DocumentAiService(RestTemplate rest, Properties properties) {
+        apiToken = properties.getProperty("api.token", "");
+        baseUrl = properties.getProperty("api.base.url", "").replaceFirst("/+$", "") + "/document-ai";
+        this.rest = rest;
+    }
+
+    private static Properties loadProperties() throws IOException {
         Properties properties = new Properties();
         try (var input = DocumentAiService.class.getClassLoader().getResourceAsStream("application.properties")) {
             if (input == null) throw new IOException("application.properties was not found");
             properties.load(input);
         }
-        apiToken = properties.getProperty("api.token", "");
-        baseUrl = properties.getProperty("api.base.url", "").replaceFirst("/+$", "") + "/document-ai";
+        return properties;
+    }
+
+    private static RestTemplate restTemplate(Properties properties) throws IOException {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(timeout(properties, "api.connect.timeout.seconds", 10));
         requestFactory.setReadTimeout(timeout(properties, "api.read.timeout.seconds", 60));
-        rest = new RestTemplate(requestFactory);
+        return new RestTemplate(requestFactory);
     }
 
     public DriveStatus driveStatus(int storeId) { return get("/stores/" + storeId + "/drive/status", DriveStatus.class); }
@@ -67,6 +85,26 @@ public final class DocumentAiService {
     public byte[] pdf(long documentId, int storeId) {
         return exchange("/review-documents/" + documentId + "/pdf?storeId=" + storeId,
                 HttpMethod.GET, null, byte[].class);
+    }
+    /** Streams a PDF without retaining its body in RAM; false means it exceeds the supplied limit. */
+    public boolean downloadPdf(long documentId, int storeId, Path destination, long maxBytes) {
+        String url = baseUrl + "/review-documents/" + documentId + "/pdf?storeId=" + storeId;
+        return Boolean.TRUE.equals(rest.execute(url, HttpMethod.GET,
+                request -> request.getHeaders().putAll(headers()), response -> {
+                    if (response.getHeaders().getContentLength() > maxBytes) return false;
+                    try (var input = response.getBody(); var output = Files.newOutputStream(destination)) {
+                        byte[] buffer = new byte[8192];
+                        long written = 0;
+                        int count;
+                        while ((count = input.read(buffer)) != -1) {
+                            if (Thread.currentThread().isInterrupted()) throw new IOException("PDF download cancelled");
+                            if (count > maxBytes - written) return false;
+                            output.write(buffer, 0, count);
+                            written += count;
+                        }
+                    }
+                    return true;
+                }));
     }
     public void complete(long batchId, int storeId) {
         complete(batchId, storeId, List.of());
