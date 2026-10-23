@@ -7,6 +7,7 @@ import models.Invoice;
 import models.CellDataPoint;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
@@ -27,13 +28,22 @@ public class InvoiceService {
     private ObjectMapper objectMapper;
 
     public InvoiceService() throws IOException {
-        this.restTemplate = new RestTemplate();
-        this.objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        Properties properties = new Properties();
-        properties.load(InvoiceService.class.getClassLoader().getResourceAsStream("application.properties"));
+        this(new RestTemplate(), loadProperties());
+    }
+
+    InvoiceService(RestTemplate restTemplate, Properties properties) {
+        this.restTemplate = restTemplate;
+        this.objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
         this.apiToken = properties.getProperty("api.token");
         this.apiBaseUrl = properties.getProperty("api.base.url") + "/invoices";
+    }
+
+    private static Properties loadProperties() throws IOException {
+        Properties properties = new Properties();
+        try (var input = InvoiceService.class.getClassLoader().getResourceAsStream("application.properties")) {
+            properties.load(input);
+        }
+        return properties;
     }
 
     private HttpHeaders createHeaders() {
@@ -80,6 +90,21 @@ public class InvoiceService {
             });
         } catch (IOException e) {
             throw new RuntimeException("Error parsing JSON response", e);
+        }
+    }
+
+    /** Includes Z-Office invoices that have not yet been saved in Alpha. */
+    public List<Invoice> getReconciliationTableData(int storeId, YearMonth yearMonth) {
+        String url = apiBaseUrl + "/reconciliation/table-data?storeId=" + storeId + "&yearMonth=" + yearMonth;
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET,
+                    new HttpEntity<>(createHeaders()), String.class);
+            return objectMapper.readValue(response.getBody(), new TypeReference<List<Invoice>>() {});
+        } catch (HttpClientErrorException.NotFound olderApi) {
+            // A desktop release can be installed before the API update.
+            return getInvoiceTableData(storeId, yearMonth);
+        } catch (IOException exception) {
+            throw new IllegalStateException("Error parsing invoice reconciliation data", exception);
         }
     }
 

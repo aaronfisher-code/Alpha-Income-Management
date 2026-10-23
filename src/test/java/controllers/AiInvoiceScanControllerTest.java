@@ -78,7 +78,7 @@ class AiInvoiceScanControllerTest {
 			imported.setImportedInvoiceAmount(0);
 			List<Invoice> saved = new ArrayList<>();
 			configureReconciliation(controller, new InvoiceService() {
-				@Override public List<Invoice> getInvoiceTableData(int storeId, YearMonth month) { return List.of(imported); }
+				@Override public List<Invoice> getReconciliationTableData(int storeId, YearMonth month) { return List.of(imported); }
 				@Override public Invoice getInvoice(String reference, int storeId) { throw new AssertionError("The match is already loaded"); }
 				@Override public void saveOrUpdateInvoice(Invoice invoice, String originalReference, int originalSupplierId) { saved.add(invoice); }
 			});
@@ -125,7 +125,7 @@ class AiInvoiceScanControllerTest {
 			Invoice imported = symbionImport("000123");
 			List<Invoice> saved = new ArrayList<>();
 			InvoiceService service = new InvoiceService() {
-				@Override public List<Invoice> getInvoiceTableData(int storeId, YearMonth month) { return List.of(imported); }
+				@Override public List<Invoice> getReconciliationTableData(int storeId, YearMonth month) { return List.of(imported); }
 				@Override public Invoice getInvoice(String reference, int storeId) {
 					throw new AssertionError("The numeric reference is already loaded; no extra query is needed");
 				}
@@ -164,6 +164,88 @@ class AiInvoiceScanControllerTest {
 	}
 
 	@Test
+	void denseStatementMatchesTwoHundredAndTwoRowsUsingOneMonthlyRequest() throws Exception {
+		onFxThread(() -> {
+			AiInvoiceScanController controller = controller();
+			List<ScannedInvoice> scanned = new ArrayList<>();
+			List<Invoice> imported = new ArrayList<>();
+			for (int index = 0; index < 202; index++) {
+				String number = "000" + index;
+				Invoice invoice = symbionImport(number);
+				if (index < 45) invoice.setImportedInvoiceAmount(0);
+				imported.add(invoice);
+				scanned.add(new ScannedInvoice("statement.pdf", "Symbion", "I" + number, DATE, null,
+						ScannedInvoice.DocumentType.INVOICE, index < 45 ? 0 : 10000,
+						new ScannedInvoice.FieldConfidences(0.99, 0.99, 0.99, null, 0.99, index < 45 ? 0.0 : 0.99)));
+			}
+			AtomicInteger requests = new AtomicInteger();
+			configureReconciliation(controller, new InvoiceService() {
+				@Override public List<Invoice> getReconciliationTableData(int storeId, YearMonth month) {
+					assertEquals(1, storeId);
+					assertEquals(YearMonth.from(DATE), month);
+					requests.incrementAndGet();
+					return imported;
+				}
+				@Override public Invoice getInvoice(String reference, int storeId) {
+					throw new AssertionError("A monthly match must not cause a per-row network request");
+				}
+			});
+			try {
+				BatchSummary summary = new BatchSummary(1, BatchKind.STATEMENT, BatchStatus.REVIEW_REQUIRED,
+						"Statement", 1, scanned.size(), null, null);
+				BatchDetail detail = new BatchDetail(summary, List.of(new ExtractedDocument(101, "statement.pdf", scanned,
+						List.of(), DATE.withDayOfMonth(1), DATE.withDayOfMonth(30), null, null, null)));
+				Method load = AiInvoiceScanController.class.getDeclaredMethod("loadBatch", BatchDetail.class, List.class);
+				load.setAccessible(true);
+				Object loaded = load.invoke(controller, detail, List.of(new InvoiceSupplier(9, "Symbion Pty Ltd", 1)));
+				invoke(controller, "showLoadedBatches", List.class, List.of(loaded));
+				ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
+				assertEquals(202, rows.size());
+				assertTrue(rows.stream().allMatch(row -> row.getStatus() == InvoiceReconciliation.Status.MATCHED));
+				assertEquals(1, requests.get());
+			} finally { controller.dispose(); }
+		});
+	}
+
+	@Test
+	void combinedReviewSharesMonthDataAndMissingReferencesButReopeningFetchesFreshData() throws Exception {
+		onFxThread(() -> {
+			AiInvoiceScanController controller = controller();
+			AtomicInteger requests = new AtomicInteger();
+			List<String> missing = new ArrayList<>();
+			configureReconciliation(controller, new InvoiceService() {
+				@Override public List<Invoice> getReconciliationTableData(int storeId, YearMonth month) {
+					requests.incrementAndGet();
+					return List.of(symbionImport("000123"));
+				}
+				@Override public Invoice getInvoice(String reference, int storeId) { missing.add(reference); return null; }
+			});
+			try {
+				Class<?> contextType = Class.forName("controllers.AiInvoiceScanController$ReviewLoadContext");
+				Constructor<?> constructor = contextType.getDeclaredConstructor(int.class, YearMonth.class);
+				constructor.setAccessible(true);
+				Method load = AiInvoiceScanController.class.getDeclaredMethod("loadBatch", BatchDetail.class, List.class, contextType);
+				load.setAccessible(true);
+				Object context = constructor.newInstance(1, YearMonth.from(DATE));
+				List<ScannedInvoice> scanned = List.of(
+						new ScannedInvoice("invoice.pdf", "Symbion", "I000123", DATE, null, ScannedInvoice.DocumentType.INVOICE, 10000, 0.99),
+						new ScannedInvoice("invoice.pdf", "Symbion", "I999", DATE, null, ScannedInvoice.DocumentType.INVOICE, 10000, 0.99));
+				BatchSummary summary = new BatchSummary(1, BatchKind.INVOICE_BATCH, BatchStatus.REVIEW_REQUIRED, "Test", 1, 2, null, null);
+				BatchDetail detail = new BatchDetail(summary, List.of(new ExtractedDocument(101, "invoice.pdf", scanned,
+						List.of(), null, null, null, null, null)));
+				List<InvoiceSupplier> suppliers = List.of(new InvoiceSupplier(9, "Symbion Pty Ltd", 1));
+				load.invoke(controller, detail, suppliers, context);
+				load.invoke(controller, detail, suppliers, context);
+				assertEquals(1, requests.get());
+				assertEquals(List.of("I999", "999"), missing);
+				load.invoke(controller, detail, suppliers, constructor.newInstance(1, YearMonth.from(DATE)));
+				assertEquals(2, requests.get());
+				assertEquals(List.of("I999", "999", "I999", "999"), missing);
+			} finally { controller.dispose(); }
+		});
+	}
+
+	@Test
 	void symbionFallbackQueriesBothFormsAndCachesHitsAndMissesWithinTheLoad() throws Exception {
 		onFxThread(() -> {
 			for (boolean found : List.of(true, false)) {
@@ -171,7 +253,7 @@ class AiInvoiceScanControllerTest {
 				List<String> requested = new ArrayList<>();
 				Invoice imported = symbionImport("000123");
 				configureReconciliation(controller, new InvoiceService() {
-					@Override public List<Invoice> getInvoiceTableData(int storeId, YearMonth month) { return List.of(); }
+					@Override public List<Invoice> getReconciliationTableData(int storeId, YearMonth month) { return List.of(); }
 					@Override public Invoice getInvoice(String reference, int storeId) {
 						assertEquals(1, storeId);
 						requested.add(reference);
@@ -326,7 +408,7 @@ class AiInvoiceScanControllerTest {
 				imported.setImportExists(true);
 				imported.setImportedInvoiceAmount(100);
 				setField(controller, "invoiceService", new InvoiceService() {
-					@Override public List<Invoice> getInvoiceTableData(int storeId, YearMonth month) {
+					@Override public List<Invoice> getReconciliationTableData(int storeId, YearMonth month) {
 						assertEquals(1, storeId);
 						assertEquals(YearMonth.from(DATE), month);
 						return List.of(imported);

@@ -400,16 +400,18 @@ public final class AiInvoiceScanController extends Controller {
 		if (pdfCache != null) pdfCache.stopPrefetch();
 		setQueueBusy(true, "Loading invoice and reconciliation data…");
 		int requestedStoreId = storeId();
+		YearMonth requestedMonth = YearMonth.from(main.getCurrentDate());
 		Task<List<LoadedBatch>> task = new Task<>() {
 			@Override protected List<LoadedBatch> call() throws Exception {
 				List<InvoiceSupplier> suppliers = supplierLoad.get();
 				List<LoadedBatch> loaded = new ArrayList<>();
+				ReviewLoadContext context = new ReviewLoadContext(requestedStoreId, requestedMonth);
 				for (BatchSummary batch : batches) {
 					BatchDetail detail = documentAiService.batch(batch.id(), requestedStoreId);
 					if (detail.batch().status() != BatchStatus.REVIEW_REQUIRED) {
 						throw new IllegalStateException("“" + batch.sourceLabel() + "” is no longer ready. Refresh the queue and try again.");
 					}
-					loaded.add(loadBatch(detail, suppliers));
+					loaded.add(loadBatch(detail, suppliers, context));
 				}
 				return loaded;
 			}
@@ -426,6 +428,23 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	private LoadedBatch loadBatch(BatchDetail detail, List<InvoiceSupplier> suppliers) {
+		return loadBatch(detail, suppliers, new ReviewLoadContext(storeId(), YearMonth.from(main.getCurrentDate())));
+	}
+
+	/** Short-lived data shared only by batches opened together; reopening fetches fresh amounts. */
+	private static final class ReviewLoadContext {
+		final int storeId;
+		final YearMonth defaultMonth;
+		final Map<YearMonth, List<Invoice>> months = new HashMap<>();
+		final Map<String, Invoice> references = new HashMap<>();
+
+		ReviewLoadContext(int storeId, YearMonth defaultMonth) {
+			this.storeId = storeId;
+			this.defaultMonth = defaultMonth;
+		}
+	}
+
+	private LoadedBatch loadBatch(BatchDetail detail, List<InvoiceSupplier> suppliers, ReviewLoadContext context) {
 		BatchSummary batch = detail.batch();
 		List<ScannedInvoice> scanned = new ArrayList<>();
 		Map<ScannedInvoice, Map<PdfEvidenceField, PdfEvidenceLocation>> locations = new IdentityHashMap<>();
@@ -450,7 +469,7 @@ public final class AiInvoiceScanController extends Controller {
 		}
 		GeminiInvoiceScanService.ScanKind kind = batch.kind() == DocumentAiModels.BatchKind.STATEMENT
 				? GeminiInvoiceScanService.ScanKind.STATEMENT : GeminiInvoiceScanService.ScanKind.INDIVIDUAL_INVOICE;
-		List<Invoice> imported = loadImportedRows(scanned, kind, periodStart, periodEnd);
+		List<Invoice> imported = loadImportedRows(scanned, kind, periodStart, periodEnd, context);
 		ScanRun run = new ScanRun(scanned, InvoiceReconciler.reconcile(scanned, imported), locations,
 			documentIds, periodStart, periodEnd, statementAmount, statementConfidence, suppliers);
 		return new LoadedBatch(batch, run,
@@ -565,7 +584,7 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	private List<Invoice> loadImportedRows(List<ScannedInvoice> scanned, GeminiInvoiceScanService.ScanKind kind,
-			LocalDate periodStart, LocalDate periodEnd) {
+			LocalDate periodStart, LocalDate periodEnd, ReviewLoadContext context) {
 		List<YearMonth> months = new ArrayList<>();
 		if (kind == GeminiInvoiceScanService.ScanKind.STATEMENT && periodStart != null && periodEnd != null) {
 			YearMonth month = YearMonth.from(periodStart);
@@ -577,20 +596,22 @@ public final class AiInvoiceScanController extends Controller {
 		} else {
 			months.addAll(scanned.stream().map(ScannedInvoice::invoiceDate)
 					.filter(java.util.Objects::nonNull).map(YearMonth::from).distinct().sorted().toList());
-			if (months.isEmpty()) months.add(YearMonth.from(main.getCurrentDate()));
+			if (months.isEmpty()) months.add(context.defaultMonth);
 		}
 		List<Invoice> imported = new ArrayList<>();
 		for (YearMonth month : months) {
-			List<Invoice> tableRows = invoiceService.getInvoiceTableData(main.getCurrentStore().getStoreID(), month);
-			List<Invoice> snapshot = loadImportSnapshot(month, tableRows);
-			imported.addAll(snapshot.isEmpty() ? tableRows : snapshot);
+			imported.addAll(context.months.computeIfAbsent(month, requested -> {
+				List<Invoice> tableRows = invoiceService.getReconciliationTableData(context.storeId, requested);
+				List<Invoice> snapshot = loadImportSnapshot(context.storeId, requested, tableRows);
+				return snapshot.isEmpty() ? tableRows : snapshot;
+			}));
 		}
 		Map<String, List<Invoice>> byReference = InvoiceReconciler.indexImportedRows(imported);
-		Map<String, Invoice> fetched = new HashMap<>();
+		Map<String, Invoice> fetched = context.references;
 		for (ScannedInvoice row : scanned) {
 			if (!InvoiceReconciler.matchingImportedRows(row, byReference).isEmpty()) continue;
 			for (String reference : InvoiceReconciler.lookupReferences(row)) {
-				if (!fetched.containsKey(reference)) fetched.put(reference, invoiceService.getInvoice(reference, storeId()));
+				if (!fetched.containsKey(reference)) fetched.put(reference, invoiceService.getInvoice(reference, context.storeId));
 				Invoice resolved = fetched.get(reference);
 				if (resolved != null && resolved.isImportExists() && !imported.contains(resolved)) {
 					imported.add(resolved);
@@ -602,13 +623,13 @@ public final class AiInvoiceScanController extends Controller {
 		return imported;
 	}
 
-	private List<Invoice> loadImportSnapshot(YearMonth month, List<Invoice> tableRows) {
+	private List<Invoice> loadImportSnapshot(int requestedStoreId, YearMonth month, List<Invoice> tableRows) {
 		Properties properties = new Properties();
 		File configuration = new File("appConfig.properties");
 		if (!configuration.isFile()) return new ArrayList<>();
 		try (FileInputStream input = new FileInputStream(configuration)) {
 			properties.load(input);
-			String key = InvoiceEntryController.importSnapshotKey(main.getCurrentStore().getStoreID(), month);
+			String key = InvoiceEntryController.importSnapshotKey(requestedStoreId, month);
 			String path = properties.getProperty(key);
 			if (path == null || path.isBlank()) return new ArrayList<>();
 			File export = new File(path);
