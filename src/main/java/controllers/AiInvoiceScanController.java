@@ -54,6 +54,9 @@ import services.InvoiceService;
 import services.InvoiceSupplierService;
 import services.CreditService;
 import services.DocumentAiService;
+import services.DocumentReviewCommitService;
+import services.DocumentReviewCommitService.Completion;
+import services.DocumentReviewCommitService.SaveOperation;
 import services.GeminiInvoiceScanService;
 import services.PdfPreviewService;
 import utils.InvoiceReconciler;
@@ -74,6 +77,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Locale;
@@ -141,16 +146,21 @@ public final class AiInvoiceScanController extends Controller {
 	@FXML private VBox queueView;
 	@FXML private TableView<BatchSummary> queueTable;
 	@FXML private Button refreshQueueButton;
+	@FXML private Button reviewAllButton;
+	@FXML private Label combinedReviewHint;
+	@FXML private Button resultsBackButton;
 	@FXML private HBox reviewBatchControls;
 
 	private final ObservableList<InvoiceReconciliation> allResults = FXCollections.observableArrayList();
 	private final ObservableList<BatchSummary> queuedBatches = FXCollections.observableArrayList();
-	private final Map<ScannedInvoice, AcceptedDocument> acceptedDocuments = new HashMap<>();
-	private final Map<ScannedInvoice, Map<PdfEvidenceField, PdfEvidenceLocation>> evidenceLocations = new HashMap<>();
-	private final Map<ScannedInvoice, File> evidenceFiles = new HashMap<>();
-	private final Map<ScannedInvoice, Long> documentIdsByRow = new HashMap<>();
+	private final Map<ScannedInvoice, AcceptedDocument> acceptedDocuments = new IdentityHashMap<>();
+	private final Map<ScannedInvoice, Map<PdfEvidenceField, PdfEvidenceLocation>> evidenceLocations = new IdentityHashMap<>();
+	private final Map<ScannedInvoice, File> evidenceFiles = new IdentityHashMap<>();
+	private final Map<ScannedInvoice, Long> documentIdsByRow = new IdentityHashMap<>();
+	private final Map<Long, Long> batchIdsByDocument = new HashMap<>();
+	private final List<LoadedBatch> currentBatches = new ArrayList<>();
+	private final Set<Long> completedBatchIds = new HashSet<>();
 	private DocumentAiService documentAiService;
-	private BatchSummary currentBatch;
 	private final List<File> temporaryEvidenceFiles = new ArrayList<>();
 	private InvoiceEntryController parent;
 	private InvoiceService invoiceService;
@@ -367,81 +377,136 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	private void openBatch(BatchSummary batch) {
+		openBatches(List.of(batch));
+	}
+
+	@FXML
+	private void reviewAll() {
+		if (queueBusy || commitBusy) return;
+		List<BatchSummary> ready = readyInvoiceBatches();
+		if (!ready.isEmpty()) openBatches(ready);
+	}
+
+	private List<BatchSummary> readyInvoiceBatches() {
+		return queuedBatches.stream()
+				.filter(batch -> batch.kind() == DocumentAiModels.BatchKind.INVOICE_BATCH)
+				.filter(batch -> batch.status() == BatchStatus.REVIEW_REQUIRED).toList();
+	}
+
+	private void openBatches(List<BatchSummary> batches) {
 		setQueueBusy(true, "Loading source PDFs and reconciliation data…");
-		Task<LoadedBatch> task = new Task<>() {
-			@Override protected LoadedBatch call() throws Exception {
+		int requestedStoreId = storeId();
+		Task<List<LoadedBatch>> task = new Task<>() {
+			@Override protected List<LoadedBatch> call() throws Exception {
 				List<InvoiceSupplier> suppliers = supplierLoad.get();
-				BatchDetail detail = documentAiService.batch(batch.id(), storeId());
-				List<ScannedInvoice> scanned = new ArrayList<>();
-				Map<ScannedInvoice, Map<PdfEvidenceField, PdfEvidenceLocation>> locations = new HashMap<>();
-				Map<ScannedInvoice, File> filesByRow = new HashMap<>();
-				Map<ScannedInvoice, Long> documentIds = new HashMap<>();
+				List<LoadedBatch> loaded = new ArrayList<>();
 				List<File> temporary = new ArrayList<>();
-				LocalDate periodStart = null;
-				LocalDate periodEnd = null;
-				Long statementAmount = null;
-				Double statementConfidence = null;
-				for (DocumentAiModels.ExtractedDocument document : detail.documents()) {
-					PathWithFile source = temporaryPdf(document.id());
-					temporary.add(source.file());
-					for (int index = 0; index < document.rows().size(); index++) {
-						ScannedInvoice row = SupplierMatcher.correlate(document.rows().get(index), suppliers);
-						scanned.add(row);
-						filesByRow.put(row, source.file());
-						documentIds.put(row, document.id());
-						if (index < document.evidenceByRow().size()) locations.put(row, document.evidenceByRow().get(index));
+				try {
+					for (BatchSummary batch : batches) {
+						BatchDetail detail = documentAiService.batch(batch.id(), requestedStoreId);
+						if (detail.batch().status() != BatchStatus.REVIEW_REQUIRED) {
+							throw new IllegalStateException("“" + batch.sourceLabel() + "” is no longer ready. Refresh the queue and try again.");
+						}
+						loaded.add(loadBatch(detail, suppliers, temporary));
 					}
-					if (document.periodStart() != null) periodStart = document.periodStart();
-					if (document.periodEnd() != null) periodEnd = document.periodEnd();
-					if (document.statementAmountCents() != null) {
-						statementAmount = document.statementAmountCents();
-						statementConfidence = document.statementAmountConfidence();
-					}
+					return loaded;
+				} catch (Exception exception) {
+					for (File file : temporary) Files.deleteIfExists(file.toPath());
+					throw exception;
 				}
-				GeminiInvoiceScanService.ScanKind kind = batch.kind() == DocumentAiModels.BatchKind.STATEMENT
-						? GeminiInvoiceScanService.ScanKind.STATEMENT : GeminiInvoiceScanService.ScanKind.INDIVIDUAL_INVOICE;
-				List<Invoice> imported = loadImportedRows(scanned, kind, periodStart, periodEnd);
-				ScanRun run = new ScanRun(scanned, InvoiceReconciler.reconcile(scanned, imported), locations,
-					filesByRow, documentIds, periodStart, periodEnd, statementAmount, statementConfidence, suppliers);
-				return new LoadedBatch(run, temporary);
 			}
 		};
-		task.setOnSucceeded(_ -> showLoadedBatch(batch, task.getValue()));
-		task.setOnFailed(_ -> queueFailure("Unable to open the review batch", task.getException()));
+		task.setOnSucceeded(_ -> showLoadedBatches(task.getValue()));
+		task.setOnFailed(_ -> queueFailure("Unable to open the review batches", task.getException()));
 		executor.submit(task);
+	}
+
+	private LoadedBatch loadBatch(BatchDetail detail, List<InvoiceSupplier> suppliers, List<File> temporary) throws IOException {
+		BatchSummary batch = detail.batch();
+		List<ScannedInvoice> scanned = new ArrayList<>();
+		Map<ScannedInvoice, Map<PdfEvidenceField, PdfEvidenceLocation>> locations = new IdentityHashMap<>();
+		Map<ScannedInvoice, File> filesByRow = new IdentityHashMap<>();
+		Map<ScannedInvoice, Long> documentIds = new IdentityHashMap<>();
+		List<File> batchFiles = new ArrayList<>();
+		LocalDate periodStart = null;
+		LocalDate periodEnd = null;
+		Long statementAmount = null;
+		Double statementConfidence = null;
+		for (DocumentAiModels.ExtractedDocument document : detail.documents()) {
+			PathWithFile source = temporaryPdf(document.id());
+			temporary.add(source.file());
+			batchFiles.add(source.file());
+			for (int index = 0; index < document.rows().size(); index++) {
+				ScannedInvoice row = SupplierMatcher.correlate(document.rows().get(index), suppliers);
+				scanned.add(row);
+				filesByRow.put(row, source.file());
+				documentIds.put(row, document.id());
+				if (index < document.evidenceByRow().size()) locations.put(row, document.evidenceByRow().get(index));
+			}
+			if (document.periodStart() != null) periodStart = document.periodStart();
+			if (document.periodEnd() != null) periodEnd = document.periodEnd();
+			if (document.statementAmountCents() != null) {
+				statementAmount = document.statementAmountCents();
+				statementConfidence = document.statementAmountConfidence();
+			}
+		}
+		GeminiInvoiceScanService.ScanKind kind = batch.kind() == DocumentAiModels.BatchKind.STATEMENT
+				? GeminiInvoiceScanService.ScanKind.STATEMENT : GeminiInvoiceScanService.ScanKind.INDIVIDUAL_INVOICE;
+		List<Invoice> imported = loadImportedRows(scanned, kind, periodStart, periodEnd);
+		ScanRun run = new ScanRun(scanned, InvoiceReconciler.reconcile(scanned, imported), locations,
+			filesByRow, documentIds, periodStart, periodEnd, statementAmount, statementConfidence, suppliers);
+		return new LoadedBatch(batch, run, batchFiles,
+				detail.documents().stream().map(DocumentAiModels.ExtractedDocument::id).toList());
 	}
 
 	private PathWithFile temporaryPdf(long documentId) throws IOException {
 		File file = Files.createTempFile("alpha-review-", ".pdf").toFile();
-		Files.write(file.toPath(), documentAiService.pdf(documentId, storeId()));
-		return new PathWithFile(file);
+		try {
+			Files.write(file.toPath(), documentAiService.pdf(documentId, storeId()));
+			return new PathWithFile(file);
+		} catch (Exception exception) {
+			Files.deleteIfExists(file.toPath());
+			throw exception;
+		}
 	}
 
-	private void showLoadedBatch(BatchSummary batch, LoadedBatch loaded) {
+	private void showLoadedBatches(List<LoadedBatch> loaded) {
 		clearTemporaryEvidenceFiles();
-		temporaryEvidenceFiles.addAll(loaded.temporaryFiles());
-		ScanRun run = loaded.run();
-		currentBatch = batch;
-		evidenceLocations.clear(); evidenceLocations.putAll(run.locations());
-		evidenceFiles.clear(); evidenceFiles.putAll(run.filesByRow());
-		documentIdsByRow.clear(); documentIdsByRow.putAll(run.documentIds());
-		currentStatementPeriodStart = run.periodStart();
-		currentStatementPeriodEnd = run.periodEnd();
-		currentResultIsStatement = batch.kind() == DocumentAiModels.BatchKind.STATEMENT;
-		currentStatementAmountCents = run.statementAmountCents();
-		currentStatementAmountConfidence = run.statementAmountConfidence();
+		currentBatches.clear(); currentBatches.addAll(loaded);
+		completedBatchIds.clear();
+		evidenceLocations.clear(); evidenceFiles.clear(); documentIdsByRow.clear(); batchIdsByDocument.clear();
+		for (LoadedBatch batch : loaded) {
+			temporaryEvidenceFiles.addAll(batch.temporaryFiles());
+			evidenceLocations.putAll(batch.run().locations());
+			evidenceFiles.putAll(batch.run().filesByRow());
+			documentIdsByRow.putAll(batch.run().documentIds());
+			batch.documentIds().forEach(id -> batchIdsByDocument.put(id, batch.batch().id()));
+		}
+		LoadedBatch first = loaded.getFirst();
+		currentResultIsStatement = loaded.size() == 1 && first.batch().kind() == DocumentAiModels.BatchKind.STATEMENT;
+		currentStatementPeriodStart = first.run().periodStart();
+		currentStatementPeriodEnd = first.run().periodEnd();
+		currentStatementAmountCents = first.run().statementAmountCents();
+		currentStatementAmountConfidence = first.run().statementAmountConfidence();
 		resolvedCustomSupplierIds.clear();
 		deactivateCustomSupplier();
-		availableSuppliers = run.suppliers();
+		availableSuppliers = loaded.getFirst().run().suppliers();
 		reviewSupplierChoice.getItems().setAll(availableSuppliers);
 		acceptedDocuments.clear();
-		allResults.setAll(run.reconciliations());
+		showMatchedCheck.setSelected(false);
+		allResults.setAll(loaded.stream().flatMap(batch -> batch.run().reconciliations().stream()).toList());
 		applyResultFilter();
 		queueView.setVisible(false); queueView.setManaged(false);
 		resultsView.setVisible(true); resultsView.setManaged(true);
 		reviewBatchControls.setVisible(true); reviewBatchControls.setManaged(true);
-		setQueueBusy(false, "Reviewing " + batch.sourceLabel());
-		updateSummary(run.scanned().size());
+		long skipped = queuedBatches.stream().filter(batch -> batch.kind() == DocumentAiModels.BatchKind.INVOICE_BATCH
+				&& batch.status() != BatchStatus.REVIEW_REQUIRED).count();
+		combinedReviewHint.setText(loaded.size() > 1 ? "Reviewing " + loaded.size()
+				+ " invoice batches together. Saving will complete each original batch. Statements are reviewed separately."
+				+ (skipped > 0 ? " " + skipped + " failed or unfinished invoice batch(es) remain in the queue." : "") : "");
+		combinedReviewHint.setVisible(loaded.size() > 1); combinedReviewHint.setManaged(loaded.size() > 1);
+		setQueueBusy(false, null);
+		updateSummary(allResults.size());
 		if (!resultsTable.getItems().isEmpty()) resultsTable.getSelectionModel().selectFirst();
 	}
 
@@ -450,7 +515,7 @@ public final class AiInvoiceScanController extends Controller {
 		previewRequest++;
 		currentReview = null;
 		documentIdsByRow.clear();
-		currentBatch = null;
+		batchIdsByDocument.clear(); currentBatches.clear(); completedBatchIds.clear();
 		currentResultIsStatement = false;
 		currentStatementPeriodStart = null;
 		currentStatementPeriodEnd = null;
@@ -477,6 +542,10 @@ public final class AiInvoiceScanController extends Controller {
 		scanButton.setDisable(queueBusy || commitBusy);
 		refreshQueueButton.setDisable(queueBusy);
 		queueTable.setDisable(queueBusy);
+		long ready = readyInvoiceBatches().size();
+		reviewAllButton.setDisable(queueBusy || commitBusy || ready == 0);
+		reviewAllButton.setText(ready == 0 ? "Review all invoices" : "Review all invoices (" + ready + ")");
+		reviewAllButton.setVisible(queueView.isVisible()); reviewAllButton.setManaged(queueView.isVisible());
 	}
 
 	private String queueSummary() {
@@ -593,6 +662,9 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	private void configureTable() {
+		TableColumn<InvoiceReconciliation, String> source = new TableColumn<>("SOURCE PDF");
+		source.setPrefWidth(180);
+		source.setCellValueFactory(cell -> new javafx.beans.property.ReadOnlyStringWrapper(cell.getValue().getSourceFile()));
 		TableColumn<InvoiceReconciliation, String> status = column("STATUS", "statusLabel", 135);
 		TableColumn<InvoiceReconciliation, String> supplier = confidenceColumn(
 				"SUPPLIER", "supplierName", 180, InvoiceReconciliation::getSupplierConfidence,
@@ -632,7 +704,7 @@ public final class AiInvoiceScanController extends Controller {
 				setGraphic(row == null || row.getScanned() == null ? null : buttons);
 			}
 		});
-		resultsTable.getColumns().setAll(status, supplier, reference, type, scannedDate, scanned, imported, variance, action);
+		resultsTable.getColumns().setAll(status, supplier, reference, type, scannedDate, scanned, imported, variance, source, action);
 		// Let rows with a low-confidence annotation expand while keeping ordinary
 		// one-line rows compact. A fixed cell size would waste vertical space.
 		resultsTable.setFixedCellSize(-1);
@@ -687,7 +759,7 @@ public final class AiInvoiceScanController extends Controller {
 		previewRotationQuarterTurns = 0;
 		rotatePreviewButton.setDisable(true);
 		currentEvidence = evidenceLocations.getOrDefault(scanned, Map.of());
-		previewDocumentLabel.setText(file.getName() + " · " + scanned.invoiceNo());
+		previewDocumentLabel.setText(scanned.sourceFile() + " · " + scanned.invoiceNo());
 		PdfEvidenceLocation primaryEvidence = primaryEvidence(currentEvidence);
 		int page = primaryEvidence == null ? 0 : primaryEvidence.pageIndex();
 		renderPreviewPage(page, true);
@@ -975,6 +1047,7 @@ public final class AiInvoiceScanController extends Controller {
 								evidenceFiles.remove(scanned);
 								documentIdsByRow.remove(scanned);
 							}
+							batchIdsByDocument.remove(documentId);
 							setCommitBusy(false);
 							if (allResults.isEmpty()) backToQueue();
 							else {
@@ -1148,37 +1221,27 @@ public final class AiInvoiceScanController extends Controller {
 			parent.getDialogPane().showWarning("Unable to save accepted documents", exception.getMessage());
 			return;
 		}
-		if (pending.isEmpty()) return;
-		List<EnteredDocument> enteredDocuments = buildEnteredDocuments(pending);
+		// Include rows saved by an earlier attempt: their PDFs may still need filing.
+		List<EnteredDocument> enteredDocuments = buildEnteredDocuments();
+		List<Completion> completions = DocumentReviewCommitService.completions(
+				currentBatches.stream().map(LoadedBatch::batch).toList(), batchIdsByDocument,
+				enteredDocuments, completedBatchIds);
+		if (pending.isEmpty() && completions.isEmpty()) return;
+		List<SaveOperation> saves = pending.stream().map(save -> new SaveOperation(save.row(),
+				() -> saveDocument(save.row(), save.document()))).toList();
+		int requestedStoreId = storeId();
 
 		setCommitBusy(true);
-		Task<CommitResult> task = new Task<>() {
+		Task<DocumentReviewCommitService.Result> task = new Task<>() {
 			@Override
-			protected CommitResult call() {
-				List<InvoiceReconciliation> saved = new ArrayList<>();
-				for (PendingSave pendingSave : pending) {
-					try {
-						saveDocument(pendingSave.row(), pendingSave.document());
-						saved.add(pendingSave.row());
-					} catch (Exception exception) {
-						String message = "Could not save " + pendingSave.row().getInvoiceNo() + ": "
-								+ errorMessage(exception);
-						return new CommitResult(saved, message);
-					}
-				}
-				if (currentBatch != null) {
-					try {
-						documentAiService.complete(currentBatch.id(), storeId(), enteredDocuments);
-					} catch (Exception exception) {
-						return new CommitResult(saved, "Documents were saved, but the review batch could not be closed: "
-								+ errorMessage(exception));
-					}
-				}
-				return new CommitResult(saved, null);
+			protected DocumentReviewCommitService.Result call() {
+				return DocumentReviewCommitService.commit(saves, completions,
+						completion -> documentAiService.complete(completion.batch().id(), requestedStoreId, completion.documents()));
 			}
 		};
 		task.setOnSucceeded(_ -> {
-			CommitResult result = task.getValue();
+			DocumentReviewCommitService.Result result = task.getValue();
+			completedBatchIds.addAll(result.completedBatchIds());
 			for (InvoiceReconciliation saved : result.savedRows()) {
 				int index = allResults.indexOf(saved);
 				if (index >= 0) allResults.set(index, saved.withStatus(InvoiceReconciliation.Status.SAVED));
@@ -1217,12 +1280,15 @@ public final class AiInvoiceScanController extends Controller {
 		return pending;
 	}
 
-	private List<EnteredDocument> buildEnteredDocuments(List<PendingSave> pending) {
-		Map<Long, LocalDate> datesByDocument = new HashMap<>();
-		for (PendingSave pendingSave : pending) {
-			Long documentId = documentIdsByRow.get(pendingSave.row().getScanned());
-			if (documentId == null || documentId <= 0 || pendingSave.document().documentDate() == null) continue;
-			datesByDocument.merge(documentId, pendingSave.document().documentDate(),
+	private List<EnteredDocument> buildEnteredDocuments() {
+		Map<Long, LocalDate> datesByDocument = new LinkedHashMap<>();
+		for (InvoiceReconciliation row : allResults) {
+			ScannedInvoice scanned = row.getScanned();
+			Long documentId = documentIdsByRow.get(scanned);
+			AcceptedDocument accepted = acceptedDocuments.get(scanned);
+			LocalDate date = accepted == null ? scanned.invoiceDate() : accepted.documentDate();
+			if (documentId == null || documentId <= 0 || date == null) continue;
+			datesByDocument.merge(documentId, date,
 					(left, right) -> left.isBefore(right) ? left : right);
 		}
 		return datesByDocument.entrySet().stream()
@@ -1470,7 +1536,8 @@ public final class AiInvoiceScanController extends Controller {
 	private void updateSummary(int extractedCount) {
 		long accepted = allResults.stream().filter(InvoiceReconciliation::isAccepted).count();
 		long notable = allResults.size() - accepted;
-		String period = !currentResultIsStatement || currentStatementPeriodStart == null || currentStatementPeriodEnd == null ? ""
+		String period = currentBatches.size() > 1 ? currentBatches.size() + " batches · "
+				: !currentResultIsStatement || currentStatementPeriodStart == null || currentStatementPeriodEnd == null ? ""
 				: "Statement period " + periodLabel(currentStatementPeriodStart, currentStatementPeriodEnd) + " · ";
 		summaryLabel.setText(period + extractedCount + " extracted · " + accepted + " accepted · "
 				+ notable + " need attention. Variance is scanned minus Z-Office.");
@@ -1485,7 +1552,10 @@ public final class AiInvoiceScanController extends Controller {
 				.count();
 		boolean allAccepted = !allResults.isEmpty() && accepted == allResults.size();
 		if (allAccepted && !showMatchedCheck.isSelected()) showMatchedCheck.setSelected(true);
-		boolean showSave = allAccepted && pendingSave > 0;
+		boolean completionPending = currentBatches.stream().anyMatch(batch ->
+				batchIdsByDocument.containsValue(batch.batch().id()) && !completedBatchIds.contains(batch.batch().id()));
+		boolean showSave = allAccepted && (pendingSave > 0 || completionPending);
+		saveAcceptedButton.setText(pendingSave == 0 && completionPending ? "Retry completion" : "Save accepted documents");
 		acceptanceSummaryLabel.setText(allResults.isEmpty()
 				? "" : pendingSave == 0
 						? "Saved " + accepted + "/" + allResults.size()
@@ -1562,6 +1632,8 @@ public final class AiInvoiceScanController extends Controller {
 		resultsTable.setDisable(busy);
 		scanButton.setDisable(busy);
 		refreshQueueButton.setDisable(busy);
+		reviewAllButton.setDisable(busy || queueBusy);
+		resultsBackButton.setDisable(busy);
 		updateAcceptanceControls();
 	}
 
@@ -1592,8 +1664,7 @@ public final class AiInvoiceScanController extends Controller {
 
 	private record PendingSave(InvoiceReconciliation row, AcceptedDocument document) {}
 
-	private record CommitResult(List<InvoiceReconciliation> savedRows, String failureMessage) {}
-	private record LoadedBatch(ScanRun run, List<File> temporaryFiles) {}
+	private record LoadedBatch(BatchSummary batch, ScanRun run, List<File> temporaryFiles, List<Long> documentIds) {}
 	private record PathWithFile(File file) {}
 	private record PreviewRectangle(double x, double y, double width, double height) {}
 

@@ -39,7 +39,7 @@
       </BorderPane>
 
       <HBox fx:id="scanSourceBar" alignment="CENTER_LEFT" spacing="12.0" styleClass="scan-source-bar">
-         <Label styleClass="scan-source-description" text="Source folders and automatic scanning are managed from Settings." wrapText="true" HBox.hgrow="ALWAYS" />
+         <Label styleClass="scan-source-description" text="Source folders and automatic scanning are managed from Settings." wrapText="true" />
          <Button fx:id="scanButton" onAction="#scanDocuments" styleClass="primary-scan-button" text="Scan now" />
          <Button fx:id="refreshQueueButton" accessibleText="Refresh document review queue" contentDisplay="GRAPHIC_ONLY" onAction="#refreshQueue" styleClass="refresh-icon-button">
             <graphic>
@@ -50,6 +50,10 @@
             </tooltip>
          </Button>
          <ProgressIndicator fx:id="scanProgress" managed="true" maxHeight="28.0" maxWidth="28.0" prefHeight="28.0" prefWidth="28.0" progress="-1.0" visible="false" />
+         <Region HBox.hgrow="ALWAYS" />
+         <Button fx:id="reviewAllButton" disable="true" onAction="#reviewAll" styleClass="primary-scan-button" text="Review all invoices">
+            <tooltip><Tooltip text="Review all ready invoice batches together, then save them in one go. Review statements individually to compare their printed and extracted totals." /></tooltip>
+         </Button>
       </HBox>
 
       <BorderPane fx:id="scanSummaryBar">
@@ -94,9 +98,10 @@
 
             <VBox fx:id="resultsView" managed="false" spacing="8.0" visible="false">
                <HBox alignment="CENTER_LEFT" spacing="10.0">
-                  <Button onAction="#backToQueue" styleClass="secondary-scan-button" text="‹ Back to queue" />
+                  <Button fx:id="resultsBackButton" onAction="#backToQueue" styleClass="secondary-scan-button" text="‹ Back to queue" />
                   <Label styleClass="preview-section-title" text="Reconciliation results" />
                </HBox>
+               <Label fx:id="combinedReviewHint" managed="false" styleClass="preview-hint" visible="false" wrapText="true" />
                <TableView fx:id="resultsTable" VBox.vgrow="ALWAYS" />
                <HBox alignment="CENTER_LEFT" spacing="10.0" styleClass="scan-legend">
                   <Region styleClass="legend-good" />

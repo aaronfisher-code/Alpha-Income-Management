@@ -10,6 +10,7 @@
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.ProgressIndicator?>
 <?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
@@ -97,9 +98,13 @@
                         <Label styleClass="settings-help" text="The schedule runs in Alpha API and does not depend on a user having the review queue open." wrapText="true" />
                         <HBox alignment="CENTER_LEFT" spacing="12.0">
                            <CheckBox fx:id="scheduleEnabledCheck" selected="true" text="Enable automatic scans" />
-                           <ChoiceBox fx:id="scheduleIntervalChoice" prefWidth="180.0" />
+                           <Label text="Every" />
+                           <TextField fx:id="scheduleIntervalField" accessibleText="Scan interval" onAction="#saveSchedule" prefWidth="85.0" promptText="Number" />
+                           <ChoiceBox fx:id="scheduleIntervalUnitChoice" accessibleText="Scan interval unit" prefWidth="115.0" />
                            <Button fx:id="saveScheduleButton" onAction="#saveSchedule" styleClass="settings-primary-button" text="Save schedule" />
                         </HBox>
+                        <Label styleClass="settings-help" text="Choose a whole number of minutes, hours, or days, from 5 minutes to 365 days." wrapText="true" />
+                        <Label fx:id="scheduleIntervalErrorLabel" managed="false" styleClass="settings-error" visible="false" wrapText="true" />
                         <Label fx:id="scheduleStatusLabel" styleClass="settings-status" text="Loading schedule…" wrapText="true" />
                         <Label fx:id="lastErrorLabel" managed="false" styleClass="settings-error" visible="false" wrapText="true" />
                      </children>

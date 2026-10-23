@@ -14,6 +14,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressIndicator;
+import javafx.scene.control.TextField;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.HBox;
@@ -25,6 +26,7 @@ import models.DocumentAiModels.ScanSchedule;
 import models.DocumentAiModels.ScanScheduleInput;
 import models.DocumentAiModels.WatchFolder;
 import models.DocumentAiModels.WatchFolderInput;
+import models.ScanInterval;
 import services.DocumentAiService;
 import services.LiveZConfiguration;
 import services.ZDataService;
@@ -36,9 +38,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Executors;
@@ -58,7 +58,9 @@ public final class SettingsController extends PageController {
     @FXML private Label lastErrorLabel;
     @FXML private ListView<WatchFolder> watchedFoldersList;
     @FXML private CheckBox scheduleEnabledCheck;
-    @FXML private ChoiceBox<String> scheduleIntervalChoice;
+    @FXML private TextField scheduleIntervalField;
+    @FXML private ChoiceBox<ScanInterval.Unit> scheduleIntervalUnitChoice;
+    @FXML private Label scheduleIntervalErrorLabel;
     @FXML private Button connectDriveButton;
     @FXML private Button copyAuthorizationLinkButton;
     @FXML private Button disconnectDriveButton;
@@ -69,7 +71,6 @@ public final class SettingsController extends PageController {
     @FXML private Label zConnectionTestLabel;
     @FXML private ProgressIndicator progressIndicator;
 
-    private final Map<String, Integer> scheduleIntervals = new LinkedHashMap<>();
     private DocumentAiService documentAiService;
     private DriveStatus driveStatus = new DriveStatus(false, false, "", false);
     private ScanSchedule currentSchedule;
@@ -84,15 +85,10 @@ public final class SettingsController extends PageController {
 
     @FXML
     private void initialize() {
-        scheduleIntervals.put("Every 15 minutes", 15);
-        scheduleIntervals.put("Every 30 minutes", 30);
-        scheduleIntervals.put("Every hour", 60);
-        scheduleIntervals.put("Every 3 hours", 180);
-        scheduleIntervals.put("Every 6 hours", 360);
-        scheduleIntervals.put("Every 12 hours", 720);
-        scheduleIntervals.put("Daily", 1440);
-        scheduleIntervalChoice.getItems().setAll(scheduleIntervals.keySet());
-        scheduleIntervalChoice.getSelectionModel().selectFirst();
+        scheduleIntervalUnitChoice.getItems().setAll(ScanInterval.Unit.values());
+        selectScheduleInterval(60);
+        scheduleIntervalField.textProperty().addListener((_, _, _) -> showScheduleIntervalError(null));
+        scheduleIntervalUnitChoice.valueProperty().addListener((_, _, _) -> showScheduleIntervalError(null));
         watchedFoldersList.setPlaceholder(new Label("No watched folders configured for this store."));
         executor = Executors.newCachedThreadPool(runnable -> {
             Thread thread = new Thread(runnable, "document-ai-settings");
@@ -285,8 +281,16 @@ public final class SettingsController extends PageController {
 
     @FXML
     private void saveSchedule() {
-        Integer minutes = scheduleIntervals.get(scheduleIntervalChoice.getValue());
-        if (documentAiService == null || minutes == null || busy) return;
+        if (documentAiService == null || busy) return;
+        int minutes;
+        try {
+            minutes = ScanInterval.parse(scheduleIntervalField.getText(), scheduleIntervalUnitChoice.getValue()).minutes();
+        } catch (IllegalArgumentException exception) {
+            showScheduleIntervalError(exception.getMessage());
+            scheduleIntervalField.requestFocus();
+            return;
+        }
+        showScheduleIntervalError(null);
         boolean enabled = scheduleEnabledCheck.isSelected();
         setBusy(true, "Saving the automatic scan schedule…");
         Task<ScanSchedule> task = new Task<>() {
@@ -526,7 +530,8 @@ public final class SettingsController extends PageController {
         disconnectDriveButton.setDisable(busy || !connected);
         configureFoldersButton.setDisable(busy || !connected);
         scheduleEnabledCheck.setDisable(busy);
-        scheduleIntervalChoice.setDisable(busy);
+        scheduleIntervalField.setDisable(busy);
+        scheduleIntervalUnitChoice.setDisable(busy);
         saveScheduleButton.setDisable(busy);
         refreshButton.setDisable(busy);
         watchedFoldersList.setDisable(busy);
@@ -534,8 +539,17 @@ public final class SettingsController extends PageController {
     }
 
     private void selectScheduleInterval(int minutes) {
-        scheduleIntervals.entrySet().stream().filter(entry -> entry.getValue() == minutes)
-                .map(Map.Entry::getKey).findFirst().ifPresent(scheduleIntervalChoice::setValue);
+        ScanInterval interval = ScanInterval.fromMinutes(minutes);
+        scheduleIntervalField.setText(Integer.toString(interval.value()));
+        scheduleIntervalUnitChoice.setValue(interval.unit());
+        showScheduleIntervalError(null);
+    }
+
+    private void showScheduleIntervalError(String message) {
+        boolean visible = message != null && !message.isBlank();
+        scheduleIntervalErrorLabel.setText(visible ? message : "");
+        scheduleIntervalErrorLabel.setVisible(visible);
+        scheduleIntervalErrorLabel.setManaged(visible);
     }
 
     private boolean hasPermission(String permissionName) {
