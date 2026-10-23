@@ -289,13 +289,17 @@ public final class GeminiInvoiceScanService {
 	private ScanResult scanUploadedPdf(File pdf, ScanKind kind, StatementPeriod expectedPeriod,
 			int originalPageOffset, int pageCount, boolean requirePageChecks)
 			throws IOException, InterruptedException {
+		int attempts = requirePageChecks
+				? configuredInteger("gemini.statement.completeness-attempts", "GEMINI_STATEMENT_COMPLETENESS_ATTEMPTS",
+						DEFAULT_STATEMENT_COMPLETENESS_ATTEMPTS, 1, 4) : 1;
+		return scanUploadedPdf(pdf, kind, expectedPeriod, originalPageOffset, pageCount, requirePageChecks, attempts);
+	}
+
+	private ScanResult scanUploadedPdf(File pdf, ScanKind kind, StatementPeriod expectedPeriod,
+			int originalPageOffset, int pageCount, boolean requirePageChecks, int completenessAttempts)
+			throws IOException, InterruptedException {
 		UploadedFile uploaded = upload(pdf);
 		try {
-			int completenessAttempts = requirePageChecks
-					? configuredInteger("gemini.statement.completeness-attempts",
-							"GEMINI_STATEMENT_COMPLETENESS_ATTEMPTS",
-							DEFAULT_STATEMENT_COMPLETENESS_ATTEMPTS, 1, 4)
-					: 1;
 			String completenessFailure = "";
 			for (int attempt = 1; attempt <= completenessAttempts; attempt++) {
 				String response = generate(uploaded.uri(), kind, expectedPeriod, pageCount,
@@ -304,16 +308,20 @@ public final class GeminiInvoiceScanService {
 				if (expectedPeriod != null) {
 					parsed = new ScanResult(parsed.rows(), parsed.locations(), expectedPeriod.start(),
 							expectedPeriod.end(), parsed.statementAmountCents(),
-							parsed.statementAmountConfidence(), parsed.pageTransactionCounts());
+							parsed.statementAmountConfidence(), parsed.pageTransactionCounts(), parsed.pageCoverageFailure(), parsed.statementTotals());
 				}
 				if (!requirePageChecks || (completenessFailure = pageCompletenessFailure(parsed, pageCount)).isBlank()) {
 					ScanResult filtered = kind == ScanKind.STATEMENT ? forPeriod(parsed) : parsed;
 					return shiftToOriginalPages(filtered, originalPageOffset);
 				}
 				if (attempt < completenessAttempts) {
-					System.err.println("Document AI statement chunk did not pass page coverage validation ("
+					boolean splitRetry = pageCount > 1 && attempt == completenessAttempts - 1;
+					System.err.println("Document AI statement pages " + (originalPageOffset + 1) + "–"
+							+ (originalPageOffset + pageCount) + " did not pass page coverage validation ("
 							+ completenessFailure + "); retrying extraction attempt " + (attempt + 1)
-							+ " of " + completenessAttempts + ".");
+							+ " of " + completenessAttempts
+							+ (splitRetry ? " using smaller " + Math.max(1, pageCount / 2) + "-page chunks." : "."));
+					if (splitRetry) return retrySmallerStatementChunks(pdf, expectedPeriod, originalPageOffset, pageCount);
 				}
 			}
 			throw new IOException("Document AI could not verify every page in statement pages "
@@ -324,6 +332,30 @@ public final class GeminiInvoiceScanService {
 			// as extraction completes instead of retaining invoice data for the
 			// service's automatic 48-hour expiry window.
 			if (!uploaded.name().isBlank()) deleteFile(uploaded.name());
+		}
+	}
+
+	/** Retries only the failed range, without creating nested pools or further retry trees. */
+	private ScanResult retrySmallerStatementChunks(File pdf, StatementPeriod expectedPeriod,
+			int originalPageOffset, int pageCount) throws IOException, InterruptedException {
+		List<PdfChunk> chunks = createPdfChunks(pdf, pageCount, Math.max(1, pageCount / 2));
+		try {
+			List<ScanResult> results = new ArrayList<>();
+			StatementPeriod period = expectedPeriod;
+			for (PdfChunk chunk : chunks) {
+				ScanResult result = scanUploadedPdf(chunk.file(), ScanKind.STATEMENT, period,
+						originalPageOffset + chunk.startPageIndex(), chunk.pageCount(), true, 1);
+				if (period == null) {
+					if (result.periodStart() == null || result.periodEnd() == null) {
+						throw new IOException("Document AI could not determine the statement period from the retry chunk");
+					}
+					period = new StatementPeriod(result.periodStart(), result.periodEnd());
+				}
+				results.add(result);
+			}
+			return withSourceFile(mergeChunkResults(results, period), pdf.getName());
+		} finally {
+			deletePdfChunks(chunks);
 		}
 	}
 
@@ -346,19 +378,23 @@ public final class GeminiInvoiceScanService {
 			if (chunks.size() > 1) scanRemainingChunks(chunks, period, ordered, progress);
 			return withSourceFile(mergeChunkResults(ordered, period), sourcePdf.getName());
 		} finally {
-			for (PdfChunk chunk : chunks) {
-				try {
-					Files.deleteIfExists(chunk.file().toPath());
-				} catch (IOException ignored) {
-					// Temporary chunk cleanup is best effort.
-				}
+			deletePdfChunks(chunks);
+		}
+	}
+
+	private static void deletePdfChunks(List<PdfChunk> chunks) {
+		for (PdfChunk chunk : chunks) {
+			try {
+				Files.deleteIfExists(chunk.file().toPath());
+			} catch (IOException ignored) {
+				// Temporary chunk cleanup is best effort.
 			}
-			if (!chunks.isEmpty()) {
-				try {
-					Files.deleteIfExists(chunks.get(0).file().toPath().getParent());
-				} catch (IOException ignored) {
-					// Temporary directory cleanup is best effort.
-				}
+		}
+		if (!chunks.isEmpty()) {
+			try {
+				Files.deleteIfExists(chunks.get(0).file().toPath().getParent());
+			} catch (IOException ignored) {
+				// Temporary directory cleanup is best effort.
 			}
 		}
 	}
@@ -400,6 +436,7 @@ public final class GeminiInvoiceScanService {
 	}
 
 	private static String pageCompletenessFailure(ScanResult result, int expectedPageCount) {
+		if (!result.pageCoverageFailure().isBlank()) return result.pageCoverageFailure();
 		Map<Integer, Integer> counts = result.pageTransactionCounts();
 		if (counts.size() != expectedPageCount) {
 			return "Document AI accounted for " + counts.size() + " of " + expectedPageCount + " pages";
@@ -431,8 +468,11 @@ public final class GeminiInvoiceScanService {
 		Map<Integer, Integer> pageCounts = new LinkedHashMap<>();
 		result.pageTransactionCounts().forEach((page, count) ->
 				pageCounts.put(page + originalPageOffset, count));
+		List<StatementTotal> totals = result.statementTotals().stream().map(total -> new StatementTotal(
+				total.amountCents(), total.confidence(), total.kind(), total.label(), total.pageType(),
+				total.pageNumber() > 0 ? total.pageNumber() + originalPageOffset : 0)).toList();
 		return new ScanResult(result.rows(), locations, result.periodStart(), result.periodEnd(),
-				result.statementAmountCents(), result.statementAmountConfidence(), pageCounts);
+				result.statementAmountCents(), result.statementAmountConfidence(), pageCounts, result.pageCoverageFailure(), totals);
 	}
 
 	private static ScanResult mergeChunkResults(List<ScanResult> chunks, StatementPeriod period)
@@ -440,8 +480,7 @@ public final class GeminiInvoiceScanService {
 		List<ScannedInvoice> rows = new ArrayList<>();
 		Map<ScannedInvoice, Map<PdfEvidenceField, PdfEvidenceLocation>> locations = new LinkedHashMap<>();
 		Map<Integer, Integer> pageCounts = new LinkedHashMap<>();
-		Long statementAmountCents = null;
-		Double statementAmountConfidence = null;
+		List<StatementTotal> totals = new ArrayList<>();
 		for (ScanResult chunk : chunks) {
 			if (chunk == null) throw new IOException("A statement page chunk completed without a result");
 			rows.addAll(chunk.rows());
@@ -451,15 +490,12 @@ public final class GeminiInvoiceScanService {
 					throw new IOException("Statement page " + entry.getKey() + " was extracted more than once");
 				}
 			}
-			// Overall totals most commonly appear on the final statement page, so
-			// a later explicit value takes precedence over a repeated page header.
-			if (chunk.statementAmountCents() != null) {
-				statementAmountCents = chunk.statementAmountCents();
-				statementAmountConfidence = chunk.statementAmountConfidence();
-			}
+			totals.addAll(chunk.statementTotals());
 		}
-		return new ScanResult(rows, locations, period.start(), period.end(), statementAmountCents,
-				statementAmountConfidence, pageCounts);
+		StatementTotal selected = selectStatementTotal(totals);
+		return new ScanResult(rows, locations, period.start(), period.end(),
+				selected == null ? null : selected.amountCents(), selected == null ? null : selected.confidence(),
+				pageCounts, "", totals);
 	}
 
 	private static ScanResult withSourceFile(ScanResult result, String sourceFile) {
@@ -475,7 +511,7 @@ public final class GeminiInvoiceScanService {
 		}
 		return new ScanResult(rows, locations, result.periodStart(), result.periodEnd(),
 				result.statementAmountCents(), result.statementAmountConfidence(),
-				result.pageTransactionCounts());
+				result.pageTransactionCounts(), result.pageCoverageFailure(), result.statementTotals());
 	}
 
 	private void scanRemainingChunks(List<PdfChunk> chunks, StatementPeriod period, List<ScanResult> ordered,
@@ -555,6 +591,7 @@ public final class GeminiInvoiceScanService {
 			if (annotation == null || !annotation.isObject()) {
 				throw new IOException("Document AI response did not contain a structured invoice document");
 			}
+			annotation = normalizeStatementPages(annotation);
 			String supplier = text(annotation, "supplier_name");
 			LocalDate documentDate = date(text(annotation, "document_date"));
 			List<ScannedInvoice> rows = new ArrayList<>();
@@ -582,10 +619,12 @@ public final class GeminiInvoiceScanService {
 				}
 			}
 			StatementPeriod period = inferredStatementPeriod(annotation, documentDate, rows);
+			PageCoverage coverage = pageCoverage(annotation);
+			List<StatementTotal> totals = statementTotals(annotation);
+			StatementTotal selected = selectStatementTotal(totals);
 			return new ScanResult(rows, locations, period.start(), period.end(),
-					moneyCentsOrNull(text(annotation, "statement_amount")),
-					confidence(annotation.get("statement_amount_confidence")),
-					pageTransactionCounts(annotation));
+					selected == null ? null : selected.amountCents(), selected == null ? null : selected.confidence(),
+					coverage.counts(), coverage.failure(), totals);
 		} catch (IOException exception) {
 			throw exception;
 		} catch (RuntimeException exception) {
@@ -713,7 +752,49 @@ public final class GeminiInvoiceScanService {
 		ObjectNode textFormat = responseFormat.putObject("text");
 		textFormat.put("mimeType", "APPLICATION_JSON");
 		try {
-			textFormat.set("schema", mapper.readTree(SCHEMA));
+			ObjectNode schema = (ObjectNode) mapper.readTree(SCHEMA);
+			if (kind == ScanKind.STATEMENT) {
+				ObjectNode properties = (ObjectNode) schema.path("properties");
+				ObjectNode transactions = (ObjectNode) properties.path("transactions");
+				ObjectNode transaction = (ObjectNode) transactions.path("items");
+				removeSchemaProperty(transaction, "page_number");
+				for (JsonNode box : transaction.path("properties").path("evidence").path("properties")) {
+					removeSchemaProperty((ObjectNode) box, "page_number");
+				}
+				removeSchemaProperty(schema, "transactions");
+				removeSchemaProperty(schema, "page_checks");
+				removeSchemaProperty(schema, "statement_amount");
+				removeSchemaProperty(schema, "statement_amount_confidence");
+				((ArrayNode) schema.path("required")).add("pages");
+				ObjectNode pages = properties.putObject("pages");
+				pages.put("type", "array").put("minItems", pageCount).put("maxItems", pageCount);
+				ObjectNode page = pages.putObject("items");
+				page.put("type", "object").put("additionalProperties", false);
+				page.putArray("required").add("page_number").add("page_type").add("statement_totals").add("transactions");
+				ObjectNode pageProperties = page.putObject("properties");
+				pageProperties.putObject("page_number").put("type", "integer").put("minimum", 1).put("maximum", pageCount);
+				ObjectNode pageType = pageProperties.putObject("page_type");
+				pageType.put("type", "string");
+				pageType.putArray("enum").add("statement_cover").add("transaction_table").add("statement_summary")
+						.add("tax_summary").add("remittance").add("blank").add("other");
+				ObjectNode totalSchema = pageProperties.putObject("statement_totals");
+				totalSchema.put("type", "array");
+				ObjectNode total = totalSchema.putObject("items");
+				total.put("type", "object").put("additionalProperties", false);
+				total.putArray("required").add("amount").add("label").add("kind").add("confidence");
+				ObjectNode totalProperties = total.putObject("properties");
+				totalProperties.putObject("amount").put("type", "string");
+				totalProperties.putObject("label").put("type", "string").put("description", "Exact printed label for this amount");
+				ObjectNode kindSchema = totalProperties.putObject("kind");
+				kindSchema.put("type", "string");
+				kindSchema.putArray("enum").add("amount_payable").add("statement_total").add("closing_balance")
+						.add("discounted_payable").add("tax_balance").add("opening_balance").add("page_subtotal").add("other");
+				ObjectNode totalConfidence = totalProperties.putObject("confidence");
+				totalConfidence.putArray("type").add("number").add("null");
+				totalConfidence.put("minimum", 0).put("maximum", 1);
+				pageProperties.set("transactions", transactions);
+			}
+			textFormat.set("schema", schema);
 		} catch (IOException exception) {
 			throw new IOException("The document AI invoice schema is invalid", exception);
 		}
@@ -749,6 +830,35 @@ public final class GeminiInvoiceScanService {
 		}
 		if (output.isEmpty()) throw new IOException("Document AI returned an empty structured invoice response");
 		return stripCodeFence(output.toString());
+	}
+
+	private static void removeSchemaProperty(ObjectNode schema, String name) {
+		((ObjectNode) schema.path("properties")).remove(name);
+		ArrayNode required = (ArrayNode) schema.path("required");
+		for (int index = required.size() - 1; index >= 0; index--) {
+			if (required.get(index).asText().equals(name)) required.remove(index);
+		}
+	}
+
+	/** Derive counts and row/evidence page numbers from page containers, rather than model arithmetic. */
+	private static JsonNode normalizeStatementPages(JsonNode annotation) {
+		if (!annotation.has("pages")) return annotation;
+		ObjectNode normalized = ((ObjectNode) annotation).deepCopy();
+		ArrayNode checks = normalized.putArray("page_checks");
+		ArrayNode transactions = normalized.putArray("transactions");
+		for (JsonNode page : annotation.path("pages")) {
+			JsonNode rows = page.path("transactions");
+			ObjectNode check = checks.addObject();
+			check.set("page_number", page.get("page_number"));
+			check.put("relevant_transaction_count", rows.isArray() ? rows.size() : -1);
+			if (!rows.isArray()) continue;
+			for (JsonNode row : rows) {
+				ObjectNode copy = row.isObject() ? ((ObjectNode) row).deepCopy() : normalized.objectNode();
+				copy.set("page_number", page.get("page_number"));
+				transactions.add(copy);
+			}
+		}
+		return normalized;
 	}
 
 	private HttpResponse<String> send(HttpRequest request, String operation)
@@ -896,6 +1006,7 @@ public final class GeminiInvoiceScanService {
 		JsonNode root = mapper.readTree(stripCodeFence(rawResponse == null ? "" : rawResponse));
 		JsonNode annotation = root.has("document_annotation") ? root.get("document_annotation") : root;
 		if (annotation.isTextual()) annotation = mapper.readTree(annotation.asText());
+		annotation = normalizeStatementPages(annotation);
 		String supplier = text(annotation, "supplier_name");
 		LocalDate documentDate = date(text(annotation, "document_date"));
 		List<ScannedInvoice> rows = new ArrayList<>();
@@ -912,10 +1023,12 @@ public final class GeminiInvoiceScanService {
 					date(text(transaction, "due_date")), type, cents, fieldConfidences(transaction)));
 		}
 		StatementPeriod period = inferredStatementPeriod(annotation, documentDate, rows);
+		PageCoverage coverage = pageCoverage(annotation);
+		List<StatementTotal> totals = statementTotals(annotation);
+		StatementTotal selected = selectStatementTotal(totals);
 		return new ScanResult(rows, Map.of(), period.start(), period.end(),
-				moneyCentsOrNull(text(annotation, "statement_amount")),
-				confidence(annotation.get("statement_amount_confidence")),
-				pageTransactionCounts(annotation));
+				selected == null ? null : selected.amountCents(), selected == null ? null : selected.confidence(),
+				coverage.counts(), coverage.failure(), totals);
 	}
 
 	private static String prompt(ScanKind kind, StatementPeriod fixedPeriod,
@@ -940,21 +1053,28 @@ public final class GeminiInvoiceScanService {
 					+ "Rows can continue across page boundaries and column headings may repeat. Read the invoice/document reference from "
 					+ "each row, not the statement number or customer number. Read amount from Original Amount, Invoice Amount, Gross Amount, "
 					+ "or the equivalent transaction-value column; do not use Payment, Adjustment, Remaining Amount, account balance, or a page total. "
+					+ "Keep every qualifying invoice or credit row even when its amount is zero or blank. For a blank or unreadable amount, "
+					+ "return amount as an empty string, field_confidence.amount as 0, and evidence.amount as null so it can be reviewed; never drop that row. "
 					+ "Classify rows labelled credit/credit note/CR as credit. Also classify any negative original transaction amount as credit, "
 					+ "and return credit amounts as negative. Return positive invoice amounts as positive. Exclude payment-only rows, opening or "
 					+ "closing balances, subtotals, remittance advice, account summaries, headers, and footer totals. Preserve references exactly. "
 					+ "For each row provide a separate confidence from 0 to 1 for supplier, reference, date, due date, transaction type, and amount; "
 					+ "do not return one overall confidence. "
 					+ "For every transaction, provide best-estimate evidence boxes for supplier, reference, date, and amount. "
-					+ "Each box must use [ymin, xmin, ymax, xmax] normalized to 0..1000 and the one-based PDF page number. "
-					+ "Page and evidence page numbers must be local to this supplied PDF; the application will map them back to original pages. "
-					+ "Return page_checks with exactly one entry for every local page 1 through " + pageCount
-					+ ", including pages with zero qualifying rows. relevant_transaction_count is the number of transactions returned from that page, "
-					+ "and the sum of all relevant_transaction_count values must exactly equal transactions.length. "
-					+ "If this chunk visibly prints the overall amount due, closing balance, statement total, or total for the complete statement, "
-					+ "return that signed value as statement_amount and its confidence as statement_amount_confidence. Do not use a page subtotal, "
-					+ "transaction-row Remaining Amount, opening balance, payments total, adjustments total, or an inferred sum. Return null for both "
-					+ "statement amount fields when an explicit complete-statement amount is not visible in this chunk. "
+					+ "Each box must use [ymin, xmin, ymax, xmax] normalized to 0..1000. "
+					+ "Return a pages array with exactly one object for every local page 1 through " + pageCount
+					+ ", including summary, tax-summary and blank pages. Each object contains page_number, page_type, statement_totals and that page's transactions array. "
+					+ "Use an empty transactions array for pages with no qualifying rows. Put each row under its own page; "
+					+ "the application derives row counts and evidence page numbers from those containers. "
+					+ "For each page, list its visibly printed whole-statement totals in statement_totals, copying each exact label, signed amount, "
+					+ "kind and confidence. Return an empty array when none are visible. Classify the unconditional Total Amount Payable as amount_payable, "
+					+ "a whole-statement total as statement_total, and a whole-statement closing balance as closing_balance. "
+					+ "Classify Net Amount Payable or amounts after optional early-payment discounts as discounted_payable even when they appear last. "
+					+ "Never classify those discounted amounts as amount_payable or closing_balance. Identify GST, tax and BAS summary pages as "
+					+ "page_type tax_summary; their Statement Balance and Net Balance amounts are tax_balance, not closing_balance or amount_payable. "
+					+ "Opening balances, page subtotals and other partial amounts are opening_balance, page_subtotal or other. "
+					+ "Do not calculate a statement total from transactions or subtract discounts yourself; copy only values visibly printed on their source page. "
+					+ "Return compact JSON without indentation. "
 					+ "If a value is not visible, use null for its box. Do not invent transactions or values.";
 		}
 		return "Read this complete PDF and extract each independent invoice or credit document. Return the supplier, invoice/reference number, "
@@ -985,7 +1105,7 @@ public final class GeminiInvoiceScanService {
 		}
 		return new ScanResult(rows, locations, result.periodStart(), result.periodEnd(),
 				result.statementAmountCents(), result.statementAmountConfidence(),
-				result.pageTransactionCounts());
+				result.pageTransactionCounts(), result.pageCoverageFailure(), result.statementTotals());
 	}
 
 	private static StatementPeriod inferredStatementPeriod(JsonNode annotation, LocalDate documentDate,
@@ -1105,30 +1225,102 @@ public final class GeminiInvoiceScanService {
 		return value != null && value.isIntegralNumber() ? value.asInt() : fallback;
 	}
 
-	private static Map<Integer, Integer> pageTransactionCounts(JsonNode annotation) {
+	private static PageCoverage pageCoverage(JsonNode annotation) {
 		JsonNode checks = annotation == null ? null : annotation.get("page_checks");
-		if (checks == null || !checks.isArray()) return Map.of();
+		if (checks == null || !checks.isArray()) return invalidCoverage("page_checks is missing or is not an array");
 		Map<Integer, Integer> declared = new LinkedHashMap<>();
 		for (JsonNode check : checks) {
 			int page = integer(check, "page_number", 0);
 			int count = integer(check, "relevant_transaction_count", -1);
-			if (page <= 0 || count < 0 || declared.putIfAbsent(page, count) != null) return Map.of();
+			if (page <= 0) return invalidCoverage("page_checks contains a missing or invalid page number");
+			if (count < 0) return invalidCoverage("page " + page + " has a missing or invalid transaction count");
+			if (declared.putIfAbsent(page, count) != null) return invalidCoverage("page " + page + " appears twice in page_checks");
 		}
 
 		// Do not accept a plausible-looking manifest unless every returned row's
-		// own page_number agrees with it. Returning an empty map makes the chunk
-		// fail completeness validation and triggers the corrective retry.
+		// own page_number agrees with it. Preserve the reason for a failed check.
 		Map<Integer, Integer> observed = new LinkedHashMap<>();
+		int row = 0;
 		for (JsonNode transaction : annotation.path("transactions")) {
+			row++;
 			int page = integer(transaction, "page_number", 0);
-			if (page <= 0) return Map.of();
+			if (page <= 0) return invalidCoverage("transaction " + row + " has a missing or invalid page_number");
 			observed.merge(page, 1, Integer::sum);
 		}
 		for (Map.Entry<Integer, Integer> entry : declared.entrySet()) {
-			if (observed.getOrDefault(entry.getKey(), 0).intValue() != entry.getValue()) return Map.of();
+			int actual = observed.getOrDefault(entry.getKey(), 0);
+			if (actual != entry.getValue()) return invalidCoverage("page " + entry.getKey() + " declares "
+					+ entry.getValue() + " transactions but " + actual + " were returned");
 		}
-		if (observed.keySet().stream().anyMatch(page -> !declared.containsKey(page))) return Map.of();
-		return declared;
+		for (int page : observed.keySet()) {
+			if (!declared.containsKey(page)) return invalidCoverage("transaction page " + page + " is missing from page_checks");
+		}
+		return new PageCoverage(declared, "");
+	}
+
+	private static PageCoverage invalidCoverage(String reason) { return new PageCoverage(Map.of(), reason); }
+
+	private static List<StatementTotal> statementTotals(JsonNode annotation) {
+		List<StatementTotal> totals = new ArrayList<>();
+		boolean classifiedPages = false;
+		for (JsonNode page : annotation.path("pages")) {
+			classifiedPages |= page.has("statement_totals") || page.has("page_type");
+			for (JsonNode amount : page.path("statement_totals")) {
+				Long cents = moneyCentsOrNull(text(amount, "amount"));
+				if (cents != null) totals.add(new StatementTotal(cents, confidence(amount.get("confidence")),
+						text(amount, "kind"), text(amount, "label"), text(page, "page_type"), integer(page, "page_number", 0)));
+			}
+		}
+		// Older response formats lack page provenance. Keep them usable in isolation,
+		// without allowing an unclassified legacy value to override classified totals.
+		if (!classifiedPages) {
+			Long legacy = moneyCentsOrNull(text(annotation, "statement_amount"));
+			if (legacy != null) totals.add(legacyTotal(legacy, confidence(annotation.get("statement_amount_confidence"))));
+		}
+		return totals;
+	}
+
+	private static StatementTotal legacyTotal(long cents, Double confidence) {
+		return new StatementTotal(cents, confidence, "legacy", "", "unknown", 0);
+	}
+
+	/** Never choose a printed total by proximity to the extracted transaction sum. */
+	private static StatementTotal selectStatementTotal(List<StatementTotal> totals) {
+		int priority = -1;
+		StatementTotal selected = null;
+		boolean conflicting = false;
+		boolean classified = totals.stream().anyMatch(total -> !"legacy".equals(total.kind()));
+		for (StatementTotal total : totals) {
+			int candidatePriority = statementTotalPriority(total);
+			if (classified && "legacy".equals(total.kind())) continue;
+			if (candidatePriority < 0 || candidatePriority < priority) continue;
+			if (candidatePriority > priority) {
+				priority = candidatePriority;
+				selected = total;
+				conflicting = false;
+			} else if (selected.amountCents() != total.amountCents()) {
+				conflicting = true;
+			} else if (total.confidence() != null
+					&& (selected.confidence() == null || total.confidence() > selected.confidence())) {
+				selected = total;
+			}
+		}
+		return conflicting ? null : selected;
+	}
+
+	private static int statementTotalPriority(StatementTotal total) {
+		if ("legacy".equals(total.kind())) return 0;
+		if (total.pageNumber() < 1 || "tax_summary".equals(total.pageType()) || "blank".equals(total.pageType())) return -1;
+		String label = total.label().toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", " ").trim();
+		if (label.isBlank() || label.contains("net amount payable") || label.startsWith("net payable")
+				|| label.contains("after discount") || (label.contains("discount") && !label.contains("before"))
+				|| label.contains("tax summary") || label.contains("gst summary") || label.contains("bas summary")) return -1;
+		return switch (total.kind()) {
+			case "amount_payable" -> 3;
+			case "statement_total" -> 2;
+			case "closing_balance" -> 1;
+			default -> -1;
+		};
 	}
 
 	private static double clamp(double value, double minimum, double maximum) {
@@ -1232,7 +1424,22 @@ public final class GeminiInvoiceScanService {
 			Map<ScannedInvoice, Map<PdfEvidenceField, PdfEvidenceLocation>> locations,
 			LocalDate periodStart, LocalDate periodEnd,
 			Long statementAmountCents, Double statementAmountConfidence,
-			Map<Integer, Integer> pageTransactionCounts) {
+			Map<Integer, Integer> pageTransactionCounts, String pageCoverageFailure, List<StatementTotal> statementTotals) {
+		public ScanResult(List<ScannedInvoice> rows,
+				Map<ScannedInvoice, Map<PdfEvidenceField, PdfEvidenceLocation>> locations,
+				LocalDate periodStart, LocalDate periodEnd, Long statementAmountCents,
+				Double statementAmountConfidence, Map<Integer, Integer> pageTransactionCounts, String pageCoverageFailure) {
+			this(rows, locations, periodStart, periodEnd, statementAmountCents, statementAmountConfidence,
+					pageTransactionCounts, pageCoverageFailure,
+					statementAmountCents == null ? List.of() : List.of(legacyTotal(statementAmountCents, statementAmountConfidence)));
+		}
+		public ScanResult(List<ScannedInvoice> rows,
+				Map<ScannedInvoice, Map<PdfEvidenceField, PdfEvidenceLocation>> locations,
+				LocalDate periodStart, LocalDate periodEnd, Long statementAmountCents,
+				Double statementAmountConfidence, Map<Integer, Integer> pageTransactionCounts) {
+			this(rows, locations, periodStart, periodEnd, statementAmountCents, statementAmountConfidence,
+					pageTransactionCounts, "");
+		}
 		public ScanResult(List<ScannedInvoice> rows,
 				Map<ScannedInvoice, Map<PdfEvidenceField, PdfEvidenceLocation>> locations) {
 			this(rows, locations, null, null, null, null, Map.of());
@@ -1245,6 +1452,8 @@ public final class GeminiInvoiceScanService {
 		}
 
 		public ScanResult {
+			statementTotals = statementTotals == null ? List.of() : List.copyOf(statementTotals);
+			pageCoverageFailure = pageCoverageFailure == null ? "" : pageCoverageFailure;
 			rows = rows == null ? List.of() : List.copyOf(rows);
 			if (locations == null || locations.isEmpty()) {
 				locations = Map.of();
@@ -1264,7 +1473,17 @@ public final class GeminiInvoiceScanService {
 		}
 	}
 
+	public record StatementTotal(long amountCents, Double confidence, String kind, String label, String pageType, int pageNumber) {
+		public StatementTotal {
+			confidence = ScanResult.confidenceValue(confidence);
+			kind = kind == null ? "other" : kind;
+			label = label == null ? "" : label;
+			pageType = pageType == null ? "other" : pageType;
+		}
+	}
+
 	private record PdfChunk(File file, int startPageIndex, int pageCount) {}
+	private record PageCoverage(Map<Integer, Integer> counts, String failure) {}
 	private record ChunkScan(int index, ScanResult result) {}
 	private record StatementPeriod(LocalDate start, LocalDate end) {}
 	private record UploadedFile(String uri, String name) {}

@@ -585,16 +585,18 @@ public final class AiInvoiceScanController extends Controller {
 			List<Invoice> snapshot = loadImportSnapshot(month, tableRows);
 			imported.addAll(snapshot.isEmpty() ? tableRows : snapshot);
 		}
-		Set<String> knownReferences = new HashSet<>();
-		imported.stream().filter(Invoice::isImportExists)
-				.forEach(invoice -> knownReferences.add(InvoiceReconciler.reference(invoice.getInvoiceNo())));
+		Map<String, List<Invoice>> byReference = InvoiceReconciler.indexImportedRows(imported);
+		Map<String, Invoice> fetched = new HashMap<>();
 		for (ScannedInvoice row : scanned) {
-			String reference = InvoiceReconciler.reference(row.invoiceNo());
-			if (reference.isBlank() || knownReferences.contains(reference)) continue;
-			Invoice resolved = invoiceService.getInvoice(row.invoiceNo(), main.getCurrentStore().getStoreID());
-			if (resolved != null && resolved.isImportExists()) {
-				imported.add(resolved);
-				knownReferences.add(reference);
+			if (!InvoiceReconciler.matchingImportedRows(row, byReference).isEmpty()) continue;
+			for (String reference : InvoiceReconciler.lookupReferences(row)) {
+				if (!fetched.containsKey(reference)) fetched.put(reference, invoiceService.getInvoice(reference, storeId()));
+				Invoice resolved = fetched.get(reference);
+				if (resolved != null && resolved.isImportExists() && !imported.contains(resolved)) {
+					imported.add(resolved);
+					byReference.computeIfAbsent(InvoiceReconciler.reference(resolved.getInvoiceNo()), _ -> new ArrayList<>()).add(resolved);
+				}
+				if (!InvoiceReconciler.matchingImportedRows(row, byReference).isEmpty()) break;
 			}
 		}
 		return imported;
@@ -995,7 +997,7 @@ public final class AiInvoiceScanController extends Controller {
 				? "credit" : "invoice"));
 		reviewTypeChoice.getSelectionModel().select(
 				type == ScannedInvoice.DocumentType.CREDIT ? "Credit" : "Invoice");
-		reviewReferenceField.setText(accepted == null ? scanned.invoiceNo() : accepted.reference());
+		reviewReferenceField.setText(accepted == null ? InvoiceReconciler.entryReference(row) : accepted.reference());
 		reviewDateField.setValue(accepted == null ? scanned.invoiceDate() : accepted.documentDate());
 		LocalDate dueDate = accepted == null ? scanned.dueDate() : accepted.dueDate();
 		reviewDueDateField.setValue(type == ScannedInvoice.DocumentType.CREDIT
@@ -1184,9 +1186,9 @@ public final class AiInvoiceScanController extends Controller {
 			String rawAmount = reviewAmountField.getText() == null ? "" : reviewAmountField.getText()
 					.replace("$", "").replace(",", "").trim();
 			amount = new BigDecimal(rawAmount).setScale(2, RoundingMode.HALF_UP);
-			if (amount.signum() <= 0) throw new NumberFormatException();
+			if (amount.signum() < 0) throw new NumberFormatException();
 		} catch (NumberFormatException exception) {
-			showReviewError("Enter an amount greater than zero, for example 206.03.");
+			showReviewError("Enter an amount of zero or more, for example 0.00 or 206.03.");
 			reviewAmountField.requestFocus();
 			return;
 		}
@@ -1325,7 +1327,7 @@ public final class AiInvoiceScanController extends Controller {
 				supplier.getContactID(),
 				supplier.getSupplierName(),
 				scanned.documentType(),
-				scanned.invoiceNo(),
+				InvoiceReconciler.entryReference(row),
 				scanned.invoiceDate(),
 				dueDate,
 				Math.abs(scanned.amount()),
