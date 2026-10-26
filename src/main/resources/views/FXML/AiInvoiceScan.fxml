@@ -102,6 +102,13 @@
                   <Label styleClass="preview-section-title" text="Reconciliation results" />
                </HBox>
                <Label fx:id="combinedReviewHint" managed="false" styleClass="preview-hint" visible="false" wrapText="true" />
+               <HBox alignment="CENTER_LEFT" spacing="8.0">
+                  <Button fx:id="selectAllResultsButton" onAction="#selectAllResults" styleClass="secondary-scan-button" text="Select all" />
+                  <Button fx:id="clearResultSelectionButton" onAction="#clearResultSelection" styleClass="secondary-scan-button" text="Clear selection" />
+                  <Button fx:id="acceptSelectedButton" disable="true" onAction="#acceptSelected" styleClass="primary-scan-button" text="Accept selected" />
+                  <Label styleClass="preview-hint" text="Accepts the selected scanned values. Save accepted documents when review is complete." wrapText="true" />
+               </HBox>
+               <Label fx:id="bulkReviewMessageLabel" managed="false" styleClass="preview-hint" visible="false" wrapText="true" />
                <TableView fx:id="resultsTable" VBox.vgrow="ALWAYS" />
                <HBox alignment="CENTER_LEFT" spacing="10.0" styleClass="scan-legend">
                   <Region styleClass="legend-good" />
@@ -111,7 +118,7 @@
                   <Region styleClass="legend-attention" />
                   <Label text="Needs attention" />
                   <Region HBox.hgrow="ALWAYS" />
-                  <Label text="Double-click a scanned row to review." />
+                  <Label text="Ctrl/Cmd-click or Shift-click to select rows. Double-click to review." />
                </HBox>
             </VBox>
 
@@ -180,6 +187,7 @@
                                  <Label fx:id="reviewTitleLabel" styleClass="review-editor-title" text="Review invoice" />
                                  <Label styleClass="review-editor-help" text="Correct the scanned values, then accept this document for the final save." wrapText="true" />
                                  <Label fx:id="reviewErrorLabel" managed="false" styleClass="review-editor-error" visible="false" wrapText="true" />
+                                 <Label fx:id="reviewClassificationWarningLabel" managed="false" styleClass="scan-warning" visible="false" wrapText="true" />
                                  <Label styleClass="review-field-label" text="Supplier" />
                                  <HBox alignment="CENTER_LEFT" spacing="8.0">
                                     <ComboBox fx:id="reviewSupplierChoice" maxWidth="1.7976931348623157E308" promptText="Select an existing supplier" HBox.hgrow="ALWAYS" />
@@ -215,6 +223,10 @@
                                        <Label fx:id="reviewVarianceLabel" styleClass="review-reconciliation-value" text="N/A" />
                                     </VBox>
                                  </HBox>
+                                 <Button fx:id="refreshInvoiceAmountButton" managed="false" onAction="#refreshInvoiceAmount" styleClass="secondary-scan-button" text="Refresh Z-Office amount" visible="false">
+                                    <tooltip><Tooltip text="Retrieve a fresh amount for the invoice reference shown above and update its cached value." /></tooltip>
+                                 </Button>
+                                 <Label fx:id="invoiceAmountRefreshMessageLabel" managed="false" styleClass="review-editor-help" visible="false" wrapText="true" />
                                  <Label styleClass="review-field-label" text="Notes" />
                                  <TextArea fx:id="reviewNotesField" prefRowCount="3" wrapText="true" />
                               </VBox>

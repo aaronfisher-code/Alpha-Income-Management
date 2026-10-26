@@ -53,7 +53,7 @@ public final class DocumentAiModels {
             return switch (status) {
                 case QUEUED -> "Waiting for an available scanner";
                 case SCANNING -> "Gemini extraction is in progress";
-                case REVIEW_REQUIRED -> "Ready to open and review";
+                case REVIEW_REQUIRED -> error == null || error.isBlank() ? "Ready to open and review" : error;
                 case FAILED -> error == null || error.isBlank() ? "Scan failed; retry is available" : error;
                 case COMPLETED -> "Accepted and saved";
                 case DISMISSED -> "Dismissed";

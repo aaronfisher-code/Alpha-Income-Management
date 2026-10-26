@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import models.Invoice;
 import models.CellDataPoint;
+import models.ScannedInvoice;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.HttpClientErrorException;
@@ -105,6 +106,25 @@ public class InvoiceService {
             return getInvoiceTableData(storeId, yearMonth);
         } catch (IOException exception) {
             throw new IllegalStateException("Error parsing invoice reconciliation data", exception);
+        }
+    }
+
+    /** A database-only lookup for the scanned references, including invoices not yet saved in Alpha. */
+    public List<Invoice> getCachedInvoiceAmounts(int storeId, List<ScannedInvoice> rows) {
+        return invoiceAmountRequest("/reconciliation/cached?storeId=" + storeId, rows);
+    }
+
+    public List<Invoice> refreshInvoiceAmount(int storeId, ScannedInvoice row) {
+        return invoiceAmountRequest("/reconciliation/refresh?storeId=" + storeId, row);
+    }
+
+    private List<Invoice> invoiceAmountRequest(String path, Object body) {
+        ResponseEntity<String> response = restTemplate.exchange(apiBaseUrl + path, HttpMethod.POST,
+                new HttpEntity<>(body, createHeaders()), String.class);
+        try {
+            return objectMapper.readValue(response.getBody(), new TypeReference<List<Invoice>>() {});
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to read cached invoice amounts", exception);
         }
     }
 

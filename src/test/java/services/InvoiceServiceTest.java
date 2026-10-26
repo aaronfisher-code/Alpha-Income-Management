@@ -18,6 +18,33 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class InvoiceServiceTest {
     @Test
+    void cachedAndRefreshRequestsAreExplicitPostsWithoutMonthlyOrIndividualLookupFallbacks() {
+        List<String> paths = new ArrayList<>();
+        RestTemplate rest = new RestTemplate();
+        rest.getInterceptors().add((request, body, execution) -> {
+            assertEquals(HttpMethod.POST, request.getMethod());
+            assertEquals("storeId=7", request.getURI().getQuery());
+            assertEquals("Bearer test-token", request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION));
+            paths.add(request.getURI().getPath());
+            assertTrue(new String(body, StandardCharsets.UTF_8).contains("I000123"));
+            return new ClientHttpResponse() {
+                public HttpStatus getStatusCode() { return HttpStatus.OK; }
+                public String getStatusText() { return "OK"; }
+                public HttpHeaders getHeaders() { var h = new HttpHeaders(); h.setContentType(MediaType.APPLICATION_JSON); return h; }
+                public InputStream getBody() { return new ByteArrayInputStream("[{\"invoiceNo\":\"000123\",\"importedInvoiceAmount\":0,\"importExists\":true}]".getBytes(StandardCharsets.UTF_8)); }
+                public void close() {}
+            };
+        });
+        var properties = new Properties(); properties.setProperty("api.base.url", "https://example.invalid"); properties.setProperty("api.token", "test-token");
+        var service = new InvoiceService(rest, properties);
+        var row = new models.ScannedInvoice("invoice.pdf", "Symbion", "I000123", java.time.LocalDate.of(2026, 9, 10),
+                null, models.ScannedInvoice.DocumentType.INVOICE, 10000, 0.99);
+        assertEquals(0, service.getCachedInvoiceAmounts(7, List.of(row)).getFirst().getImportedInvoiceAmount());
+        assertTrue(service.refreshInvoiceAmount(7, row).getFirst().isImportExists());
+        assertEquals(List.of("/invoices/reconciliation/cached", "/invoices/reconciliation/refresh"), paths);
+    }
+
+    @Test
     void requestsAllReconciliationRowsWithStoreMonthAndAuthentication() {
         List<String> paths = new ArrayList<>();
         var invoices = service(HttpStatus.OK, paths).getReconciliationTableData(7, YearMonth.of(2026, 9));

@@ -15,6 +15,7 @@ public final class SupplierMatcher {
 	public static final double CONFIDENT_MATCH = InvoiceReconciler.REVIEW_CONFIDENCE;
 	private static final double MINIMUM_LEAD = 0.05;
 	private static final double MINIMUM_PROPOSAL = 0.55;
+	private static final String DCO_NAME = "DIRECT CHEMIST OUTLET";
 
 	private SupplierMatcher() {}
 
@@ -24,13 +25,13 @@ public final class SupplierMatcher {
 	 * best guess without allowing the row to be accepted automatically.
 	 */
 	public static Match findBest(String extractedName, List<InvoiceSupplier> suppliers) {
-		String extracted = InvoiceReconciler.supplier(extractedName);
+		String extracted = normalizedName(extractedName);
 		if (extracted.isBlank() || suppliers == null || suppliers.isEmpty()) return Match.none();
 
 		List<Candidate> candidates = new ArrayList<>();
 		for (InvoiceSupplier supplier : suppliers) {
 			if (supplier == null || supplier.getContactID() <= 0) continue;
-			String name = InvoiceReconciler.supplier(supplier.getSupplierName());
+			String name = normalizedName(supplier.getSupplierName());
 			if (name.isBlank()) continue;
 			candidates.add(new Candidate(supplier, name, similarity(extracted, name)));
 		}
@@ -48,12 +49,12 @@ public final class SupplierMatcher {
 		return new Match(best.supplier(), confidence, confident);
 	}
 
-	/** Uses the saved contact's canonical name and folds match quality into supplier confidence. */
+	/** Uses a confident contact's canonical name; preserves extracted evidence for uncertain matches. */
 	public static ScannedInvoice correlate(ScannedInvoice scanned, List<InvoiceSupplier> suppliers) {
 		if (scanned == null) return null;
 		Match match = findBest(scanned.supplierName(), suppliers);
-		String supplierName = match.supplier() == null
-				? scanned.supplierName() : match.supplier().getSupplierName();
+		String supplierName = match.sufficientlyConfident()
+				? match.supplier().getSupplierName() : scanned.supplierName();
 		ScannedInvoice.FieldConfidences fields = scanned.fieldConfidences();
 		Double supplierConfidence = fields.supplier() == null
 				? match.confidence() : Math.min(fields.supplier(), match.confidence());
@@ -65,6 +66,15 @@ public final class SupplierMatcher {
 
 	private static double similarity(String left, String right) {
 		if (left.equals(right)) return 1.0;
+		boolean leftDco = isDco(left);
+		boolean rightDco = isDco(right);
+		if (leftDco || rightDco) {
+			// The shared chain name must never outweigh a missing or different branch.
+			if (!leftDco || !rightDco) return 0.0;
+			String leftBranch = dcoBranch(left);
+			String rightBranch = dcoBranch(right);
+			return !leftBranch.isBlank() && leftBranch.equals(rightBranch) ? 1.0 : 0.0;
+		}
 		String leftCompact = compact(left);
 		String rightCompact = compact(right);
 		if (isShorthandOf(leftCompact, right) || isShorthandOf(rightCompact, left)) return 0.97;
@@ -85,6 +95,19 @@ public final class SupplierMatcher {
 			}
 		}
 		return Math.max(0, Math.min(1, score));
+	}
+
+	private static String normalizedName(String value) {
+		return InvoiceReconciler.supplier(value).replaceAll("\\bD\\s*C\\s*O\\b", DCO_NAME);
+	}
+
+	private static boolean isDco(String name) {
+		return (" " + name + " ").contains(" " + DCO_NAME + " ");
+	}
+
+	private static String dcoBranch(String name) {
+		return name.replace(DCO_NAME, " ").replaceAll("\\bPHARMACY\\b", " ")
+				.replaceAll("\\s+", " ").trim();
 	}
 
 	private static boolean isShorthandOf(String possibleShorthand, String fullName) {

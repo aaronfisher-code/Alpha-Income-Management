@@ -50,6 +50,102 @@ class GeminiInvoiceScanServiceTest {
 	}
 
 	@ParameterizedTest
+	@ValueSource(strings = { "INVOICE", "CREDIT_NOTE", "STATEMENT", "MIXED", "UNKNOWN" })
+	void classificationUsesItsOwnSchemaAndDoesNotAssumeTheFilenameIsTheDocumentType(String kind) throws Exception {
+		try (FakeGemini http = new FakeGemini(0, false)) {
+			http.classificationResponse.put("kind", kind).put("confidence", 0.99);
+			var classification = service(http).classify(pdf(1).toFile()); // Deliberately named statement.pdf.
+			assertEquals(GeminiInvoiceScanService.DocumentKind.valueOf(kind), classification.kind());
+			boolean confident = !kind.equals("MIXED") && !kind.equals("UNKNOWN");
+			assertEquals(confident, classification.isConfident());
+			if (confident) assertEquals(kind.equals("STATEMENT") ? GeminiInvoiceScanService.ScanKind.STATEMENT
+					: GeminiInvoiceScanService.ScanKind.INDIVIDUAL_INVOICE, classification.scanKind());
+			else assertThrows(IllegalStateException.class, classification::scanKind);
+			assertEquals(1, http.requests.size());
+			assertFalse(http.requests.getFirst().toString().contains("statement.pdf"));
+			assertEquals(http.uploads.get(), http.deleted.get());
+		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(doubles = { -0.1, 0, 0.89, 1.1 })
+	void uncertainOrInvalidClassificationCannotChooseAnExtractionMode(double confidence) throws Exception {
+		try (FakeGemini http = new FakeGemini(0, false)) {
+			http.classificationResponse.put("confidence", confidence);
+			var classification = service(http).classify(pdf(1).toFile());
+			assertFalse(classification.isConfident());
+			assertThrows(IllegalStateException.class, classification::scanKind);
+			assertEquals(http.uploads.get(), http.deleted.get());
+		}
+	}
+
+	@Test
+	void missingClassificationConfidenceDoesNotBecomeAConfidentGuess() throws Exception {
+		try (FakeGemini http = new FakeGemini(0, false)) {
+			http.classificationResponse.remove("confidence");
+			assertFalse(service(http).classify(pdf(1).toFile()).isConfident());
+			assertEquals(http.uploads.get(), http.deleted.get());
+		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(ints = { 1, 10 })
+	void statementIssueMonthDoesNotExcludeOlderInvoicesOrCreditsAcrossChunksAndRetries(int pages) throws Exception {
+		settings();
+		try (FakeGemini http = new FakeGemini(5, false, false, result -> {
+			result.put("document_date", "2026-10-01");
+			// Deliberately retain the old model's October period: row dates must win.
+			for (JsonNode page : result.path("pages")) {
+				for (JsonNode transaction : page.path("transactions")) {
+					ObjectNode row = (ObjectNode) transaction;
+					int originalPage = Integer.parseInt(row.path("reference").asText().substring(4));
+					row.put("transaction_date", originalPage == 1 ? "2026-07-23"
+							: originalPage <= 5 ? "2026-08-03" : "2026-09-30");
+					if (originalPage == 2) row.put("amount", "-25.50");
+				}
+			}
+		})) {
+			var result = service(http).scan(pdf(pages).toFile(), GeminiInvoiceScanService.ScanKind.STATEMENT);
+			assertEquals(pages, result.rows().size());
+			assertEquals(java.time.LocalDate.of(2026, 7, 1), result.periodStart());
+			assertEquals(pages == 1 ? java.time.LocalDate.of(2026, 7, 31)
+					: java.time.LocalDate.of(2026, 9, 30), result.periodEnd());
+			assertEquals(pages * 10000L - (pages > 1 ? 12550L : 0),
+					result.rows().stream().mapToLong(row -> row.amountCents()).sum());
+			if (pages > 1) assertEquals(models.ScannedInvoice.DocumentType.CREDIT,
+					result.rows().get(1).documentType());
+			assertEquals(pages, result.locations().size());
+			assertEquals(pages, result.pageTransactionCounts().size());
+		}
+	}
+
+	@Test
+	void nonzeroStatementWithNoExtractedDocumentsFailsInsteadOfOpeningAnEmptyReview() throws Exception {
+		try (FakeGemini http = new FakeGemini(0, false, false, result -> {
+			ObjectNode page = (ObjectNode) result.path("pages").get(0);
+			page.putArray("transactions");
+			addTotal(page, "245042.04", "Statement Total", "statement_total");
+		})) {
+			IOException failure = assertThrows(IOException.class,
+					() -> service(http).scan(pdf(1).toFile(), GeminiInvoiceScanService.ScanKind.STATEMENT));
+			assertTrue(failure.getMessage().contains("no invoices or credits"));
+			assertEquals(http.uploads.get(), http.deleted.get());
+		}
+	}
+
+	@Test
+	void originalAmountColumnTotalReconcilesListedDocumentsBeforePayments() throws Exception {
+		try (FakeGemini http = new FakeGemini(0, false)) {
+			ObjectNode response = grouped(annotation(1, 1), 1);
+			ObjectNode page = (ObjectNode) response.path("pages").get(0);
+			addTotal(page, "245042.04", "Original Amount TOTALS AUD", "original_amount_total");
+			addTotal(page, "148108.13", "Remaining Amount TOTALS AUD", "closing_balance");
+			addTotal(page, "148108.13", "Total Amount Payable", "amount_payable");
+			assertEquals(24504204L, service(http).parseResponse(response.toString(), "unavailable.pdf").statementAmountCents());
+		}
+	}
+
+	@ParameterizedTest
 	@ValueSource(ints = { 1, 5 })
 	void retriesOnlyTheFailedRangeInSmallerChunksAndPreservesOriginalPages(int failedStart) throws Exception {
 		settings();
@@ -325,18 +421,26 @@ class GeminiInvoiceScanServiceTest {
 	}
 
 	private static final class FakeGemini extends HttpClient {
+		final ObjectNode classificationResponse = JSON.createObjectNode().put("kind", "INVOICE")
+				.put("confidence", 0.99).put("reason", "Independent tax invoice");
 		final List<JsonNode> requests = new CopyOnWriteArrayList<>();
 		final AtomicInteger uploads = new AtomicInteger();
 		final AtomicInteger deleted = new AtomicInteger();
 		private final int failedStart;
 		private final boolean alwaysInvalid;
 		private final boolean totalsCase;
+		private final java.util.function.Consumer<ObjectNode> customize;
 		private final AtomicBoolean failed = new AtomicBoolean();
 		private final HttpClient defaults = HttpClient.newHttpClient();
 
 		FakeGemini(int failedStart, boolean alwaysInvalid) { this(failedStart, alwaysInvalid, false); }
 		FakeGemini(int failedStart, boolean alwaysInvalid, boolean totalsCase) {
+			this(failedStart, alwaysInvalid, totalsCase, ignored -> {});
+		}
+		FakeGemini(int failedStart, boolean alwaysInvalid, boolean totalsCase,
+				java.util.function.Consumer<ObjectNode> customize) {
 			this.failedStart = failedStart; this.alwaysInvalid = alwaysInvalid; this.totalsCase = totalsCase;
+			this.customize = customize;
 		}
 
 		@Override @SuppressWarnings("unchecked")
@@ -359,6 +463,13 @@ class GeminiInvoiceScanServiceTest {
 				});
 				JsonNode json = JSON.readTree(subscriber.getBody().toCompletableFuture().join());
 				requests.add(json);
+				if (json.path("generationConfig").path("responseFormat").path("text").path("schema")
+						.path("properties").has("kind")) {
+					ObjectNode response = JSON.createObjectNode();
+					var candidate = response.putArray("candidates").addObject().put("finishReason", "STOP");
+					candidate.putObject("content").putArray("parts").addObject().put("text", classificationResponse.toString());
+					return (HttpResponse<T>) new Response(response.toString(), request, HttpHeaders.of(headers, (name, value) -> true));
+				}
 				int pages = pageCount(json);
 				assertTrue(pages > 0);
 				JsonNode schema = json.path("generationConfig").path("responseFormat").path("text").path("schema").path("properties");
@@ -369,6 +480,7 @@ class GeminiInvoiceScanServiceTest {
 				assertFalse(schema.has("statement_amount"));
 				assertTrue(schema.path("pages").path("items").path("properties").has("statement_totals"));
 				ObjectNode result = grouped(annotation(pages, startPage(json)), pages);
+				customize.accept(result);
 				if (totalsCase) {
 					for (int index = 0; index < pages; index++) {
 						int originalPage = startPage(json) + index;

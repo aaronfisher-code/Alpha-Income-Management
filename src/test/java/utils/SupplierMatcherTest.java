@@ -5,6 +5,8 @@ import models.Invoice;
 import models.InvoiceReconciliation;
 import models.ScannedInvoice;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -20,6 +22,82 @@ class SupplierMatcherTest {
 	private static final InvoiceSupplier SYMBION = supplier(2, "Symbion Pty Ltd");
 	private static final InvoiceSupplier API = supplier(3, "Australian Pharmaceutical Industries");
 	private static final InvoiceSupplier CH2 = supplier(4, "CH2");
+	private static final InvoiceSupplier DCO_GLADSTONE = supplier(20, "Direct Chemist Outlet Gladstone");
+	private static final InvoiceSupplier DCO_HILLSIDE = supplier(21, "Direct Chemist Outlet Hillside");
+	private static final InvoiceSupplier DCO_TAYLORS_LAKES = supplier(22, "Direct Chemist Outlet Taylors Lakes");
+
+	@ParameterizedTest
+	@ValueSource(strings = { "DCO HILLSIDE", "dco hillside", "D.C.O. Hillside", "Direct Chemist Outlet Hillside",
+			"Hillside Direct Chemist Outlet Pharmacy Pty Ltd" })
+	void matchesDcoHillsideWithoutConfusingOtherBranches(String extracted) {
+		for (List<InvoiceSupplier> contacts : List.of(
+				List.of(DCO_GLADSTONE, DCO_HILLSIDE, DCO_TAYLORS_LAKES),
+				List.of(DCO_TAYLORS_LAKES, DCO_HILLSIDE, DCO_GLADSTONE))) {
+			SupplierMatcher.Match match = SupplierMatcher.findBest(extracted, contacts);
+
+			assertSame(DCO_HILLSIDE, match.supplier());
+			assertTrue(match.sufficientlyConfident());
+		}
+	}
+
+	@Test
+	void matchesDcoAcronymContactsAndMultiwordBranchesInEitherDirection() {
+		InvoiceSupplier acronym = supplier(23, "DCO Hillside");
+		assertSame(acronym, SupplierMatcher.findBest("Direct Chemist Outlet Hillside",
+				List.of(DCO_GLADSTONE, acronym)).supplier());
+		assertSame(DCO_TAYLORS_LAKES, SupplierMatcher.findBest("DCO Taylors Lakes",
+				List.of(DCO_GLADSTONE, DCO_HILLSIDE, DCO_TAYLORS_LAKES)).supplier());
+		assertSame(DCO_GLADSTONE, SupplierMatcher.findBest("DCO Gladstone",
+				List.of(DCO_GLADSTONE, DCO_HILLSIDE, DCO_TAYLORS_LAKES)).supplier());
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "DCO", "Direct Chemist Outlet", "DCO Unknown Branch", "DCO Hillside",
+			"Direct Chemist Outlet Hillside", "Direct Chemist Outlet Gladstone Park" })
+	void neverSubstitutesTheOnlyAvailableDcoBranch(String extracted) {
+		SupplierMatcher.Match match = SupplierMatcher.findBest(extracted, List.of(DCO_GLADSTONE, SIGMA));
+
+		assertNull(match.supplier());
+		assertFalse(match.sufficientlyConfident());
+	}
+
+	@Test
+	void genericDcoNameDoesNotPickOneOfSeveralBranches() {
+		SupplierMatcher.Match match = SupplierMatcher.findBest("DCO",
+				List.of(DCO_GLADSTONE, DCO_HILLSIDE, DCO_TAYLORS_LAKES));
+		assertNull(match.supplier());
+		assertFalse(match.sufficientlyConfident());
+	}
+
+	@Test
+	void uncertainCorrelationKeepsExtractedNameAcrossRepeatedMatching() {
+		List<InvoiceSupplier> contacts = List.of(supplier(7, "Acme Health Group"), supplier(8, "Acme Health Services"));
+		ScannedInvoice scanned = new ScannedInvoice("invoice.pdf", "Acme Health", "INV-2",
+				LocalDate.of(2026, 9, 10), null, ScannedInvoice.DocumentType.INVOICE, 12345,
+				new ScannedInvoice.FieldConfidences(0.99, 0.99, 0.99, null, 0.99, 0.99));
+
+		ScannedInvoice correlated = SupplierMatcher.correlate(scanned, contacts);
+
+		assertEquals("Acme Health", correlated.supplierName());
+		assertFalse(SupplierMatcher.findBest(correlated.supplierName(), contacts).sufficientlyConfident());
+		assertTrue(correlated.fieldConfidences().supplier() < InvoiceReconciler.REVIEW_CONFIDENCE);
+	}
+
+	@Test
+	void missingDcoBranchKeepsHillsideEvidenceAndRequiresReview() {
+		ScannedInvoice scanned = new ScannedInvoice("transfer.pdf", "DCO HILLSIDE", "1419",
+				LocalDate.of(2026, 9, 17), null, ScannedInvoice.DocumentType.INVOICE, 51954,
+				new ScannedInvoice.FieldConfidences(0.99, 0.99, 0.99, null, 0.99, 0.99));
+		ScannedInvoice correlated = SupplierMatcher.correlate(scanned, List.of(DCO_GLADSTONE));
+		Invoice imported = new Invoice();
+		imported.setInvoiceNo("1419");
+		imported.setImportedInvoiceAmount(519.54);
+		imported.setImportExists(true);
+
+		assertEquals("DCO HILLSIDE", correlated.supplierName());
+		assertEquals(InvoiceReconciliation.Status.NEEDS_REVIEW,
+				InvoiceReconciler.reconcile(List.of(correlated), List.of(imported)).getFirst().getStatus());
+	}
 
 	@Test
 	void exactNormalizedMatchUsesDatabaseContact() {

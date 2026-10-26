@@ -8,10 +8,14 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.SelectionMode;
+import javafx.scene.control.TableColumn;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
@@ -27,6 +31,10 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import services.DocumentPdfCache;
 import services.InvoiceService;
 
@@ -70,6 +78,432 @@ class AiInvoiceScanControllerTest {
 	@AfterAll
 	static void stopJavaFx() { if (toolkitStarted) Platform.exit(); }
 
+	@ParameterizedTest
+	@ValueSource(booleans = { true, false })
+	void previewRefreshUpdatesTheExpectedAmountOrRetainsTheCacheOnFailureWithoutLosingDraftEdits(boolean succeeds) throws Exception {
+		CountDownLatch started = new CountDownLatch(1);
+		CountDownLatch release = new CountDownLatch(1);
+		CountDownLatch finished = new CountDownLatch(1);
+		AiInvoiceScanController[] holder = new AiInvoiceScanController[1];
+		try (var workers = Executors.newSingleThreadExecutor()) {
+			try {
+				onFxThread(() -> {
+					var controller = controller(); holder[0] = controller;
+					configureReconciliation(controller, new InvoiceService() {
+						@Override public List<Invoice> getCachedInvoiceAmounts(int store, List<ScannedInvoice> rows) { return List.of(symbionImport("000123")); }
+						@Override public List<Invoice> refreshInvoiceAmount(int store, ScannedInvoice row) {
+							assertEquals(1, store); assertEquals("000123", row.invoiceNo());
+							started.countDown();
+							try { if (!release.await(10, TimeUnit.SECONDS)) throw new AssertionError("Refresh was not released"); }
+							catch (InterruptedException exception) { throw new RuntimeException(exception); }
+							if (!succeeds) throw new IllegalStateException("agent offline");
+							var updated = symbionImport("000123"); updated.setImportedInvoiceAmount(150.25); return List.of(updated);
+						}
+					});
+					setField(controller, "executor", workers);
+					var scanned = new ScannedInvoice("invoice.pdf", "Symbion", "I000123", DATE, null, ScannedInvoice.DocumentType.INVOICE, 10000, 0.99);
+					invoke(controller, "showLoadedBatches", List.class, List.of(loadTestBatch(controller, List.of(scanned))));
+					ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
+					invoke(controller, "review", InvoiceReconciliation.class, rows.getFirst());
+					TextField amount = field(controller, "reviewAmountField"); amount.setText("105.00");
+					TextArea notes = field(controller, "reviewNotesField"); notes.setText("Keep my draft");
+					Label message = field(controller, "invoiceAmountRefreshMessageLabel");
+					message.textProperty().addListener((_, _, value) -> { if (value.contains("refreshed") || value.contains("failed")) finished.countDown(); });
+					Button refresh = field(controller, "refreshInvoiceAmountButton"); refresh.fire();
+					assertTrue(refresh.isDisabled());
+					Button accept = field(controller, "reviewAcceptButton"); assertTrue(accept.isDisabled());
+				});
+				assertTrue(started.await(5, TimeUnit.SECONDS)); release.countDown();
+				assertTrue(finished.await(5, TimeUnit.SECONDS));
+				onFxThread(() -> {
+					var controller = holder[0];
+					Label expected = field(controller, "reviewExpectedAmountLabel");
+					assertEquals(succeeds ? "$150.25" : "$100.00", expected.getText());
+					TextField amount = field(controller, "reviewAmountField"); assertEquals("105.00", amount.getText());
+					TextArea notes = field(controller, "reviewNotesField"); assertEquals("Keep my draft", notes.getText());
+					ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
+					assertEquals(succeeds ? InvoiceReconciliation.Status.AMOUNT_MISMATCH : InvoiceReconciliation.Status.MATCHED, rows.getFirst().getStatus());
+					Button refresh = field(controller, "refreshInvoiceAmountButton"); assertFalse(refresh.isDisabled());
+					Button accept = field(controller, "reviewAcceptButton"); assertFalse(accept.isDisabled());
+				});
+			} finally {
+				release.countDown();
+				if (holder[0] != null) onFxThread(holder[0]::dispose);
+			}
+		}
+	}
+
+	@Test
+	void aLateRefreshDoesNotReplaceTheExpectedAmountForTheNextPreviewedInvoice() throws Exception {
+		CountDownLatch started = new CountDownLatch(1), release = new CountDownLatch(1), finished = new CountDownLatch(1);
+		AiInvoiceScanController[] holder = new AiInvoiceScanController[1];
+		try (var workers = Executors.newSingleThreadExecutor()) {
+			try {
+				onFxThread(() -> {
+					var controller = controller(); holder[0] = controller;
+					var other = symbionImport("000456"); other.setImportedInvoiceAmount(200);
+					configureReconciliation(controller, new InvoiceService() {
+						@Override public List<Invoice> getCachedInvoiceAmounts(int store, List<ScannedInvoice> rows) { return List.of(symbionImport("000123"), other); }
+						@Override public List<Invoice> refreshInvoiceAmount(int store, ScannedInvoice row) {
+							started.countDown();
+							try { if (!release.await(10, TimeUnit.SECONDS)) throw new AssertionError("Refresh was not released"); }
+							catch (InterruptedException exception) { throw new RuntimeException(exception); }
+							var updated = symbionImport("000123"); updated.setImportedInvoiceAmount(150); return List.of(updated);
+						}
+					});
+					setField(controller, "executor", workers);
+					var first = new ScannedInvoice("first.pdf", "Symbion", "I000123", DATE, null, ScannedInvoice.DocumentType.INVOICE, 10000, 0.99);
+					var second = new ScannedInvoice("second.pdf", "Symbion", "I000456", DATE, null, ScannedInvoice.DocumentType.INVOICE, 20000, 0.99);
+					invoke(controller, "showLoadedBatches", List.class, List.of(loadTestBatch(controller, List.of(first, second))));
+					ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
+					invoke(controller, "review", InvoiceReconciliation.class, rows.getFirst());
+					Button refresh = field(controller, "refreshInvoiceAmountButton"); refresh.fire();
+					invoke(controller, "review", InvoiceReconciliation.class, rows.get(1));
+					refresh.disabledProperty().addListener((_, _, disabled) -> { if (!disabled) finished.countDown(); });
+				});
+				assertTrue(started.await(5, TimeUnit.SECONDS)); release.countDown(); assertTrue(finished.await(5, TimeUnit.SECONDS));
+				onFxThread(() -> {
+					Label expected = field(holder[0], "reviewExpectedAmountLabel"); assertEquals("$200.00", expected.getText());
+					InvoiceReconciliation current = field(holder[0], "currentReview"); assertEquals("I000456", current.getInvoiceNo());
+				});
+			} finally { release.countDown(); if (holder[0] != null) onFxThread(holder[0]::dispose); }
+		}
+	}
+
+	@Test
+	void correctingAnOcrReferenceCanRefreshItsAmountBeforeAcceptingTheDraft() throws Exception {
+		CountDownLatch finished = new CountDownLatch(1);
+		AiInvoiceScanController[] holder = new AiInvoiceScanController[1];
+		try (var workers = Executors.newSingleThreadExecutor()) {
+			try {
+				onFxThread(() -> {
+					var controller = controller(); holder[0] = controller;
+					configureReconciliation(controller, new InvoiceService() {
+						@Override public List<Invoice> getCachedInvoiceAmounts(int store, List<ScannedInvoice> rows) { return List.of(); }
+						@Override public List<Invoice> refreshInvoiceAmount(int store, ScannedInvoice row) {
+							assertEquals("000123", row.invoiceNo()); return List.of(symbionImport("000123"));
+						}
+					});
+					setField(controller, "executor", workers);
+					var scanned = new ScannedInvoice("invoice.pdf", "Symbion", "OCR-WRONG", DATE, null, ScannedInvoice.DocumentType.INVOICE, 10000, 0.99);
+					invoke(controller, "showLoadedBatches", List.class, List.of(loadTestBatch(controller, List.of(scanned))));
+					ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
+					invoke(controller, "review", InvoiceReconciliation.class, rows.getFirst());
+					TextField reference = field(controller, "reviewReferenceField"); reference.setText("000123");
+					Label message = field(controller, "invoiceAmountRefreshMessageLabel");
+					message.textProperty().addListener((_, _, value) -> { if (value.contains("refreshed")) finished.countDown(); });
+					Button refresh = field(controller, "refreshInvoiceAmountButton"); refresh.fire();
+				});
+				assertTrue(finished.await(5, TimeUnit.SECONDS));
+				onFxThread(() -> {
+					var controller = holder[0];
+					Label expected = field(controller, "reviewExpectedAmountLabel"); assertEquals("$100.00", expected.getText());
+					ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
+					assertEquals(InvoiceReconciliation.Status.NOT_IN_Z_OFFICE, rows.getFirst().getStatus());
+					Button accept = field(controller, "reviewAcceptButton"); accept.fire();
+					assertEquals(InvoiceReconciliation.Status.ACCEPTED, rows.getFirst().getStatus());
+					assertNull(field(controller, "currentReview"));
+					Map<ScannedInvoice, ?> approvals = field(controller, "acceptedDocuments");
+					assertEquals("000123", invoke(approvals.values().iterator().next(), "reference"));
+				});
+			} finally { if (holder[0] != null) onFxThread(holder[0]::dispose); }
+		}
+	}
+
+	@Test
+	void acceptingPreviewAdvancesInVisibleOrderSkipsAcceptedRowsAndReturnsAfterTheLastPendingItem() throws Exception {
+		onFxThread(() -> {
+			AiInvoiceScanController controller = controller();
+			InvoiceReconciliation first = pending("INV-1", 10000);
+			InvoiceReconciliation second = pending("INV-2", 20000);
+			InvoiceReconciliation third = pending("INV-3", 30000);
+			try {
+				showAcceptanceRows(controller, List.of(third, first, second,
+						pending("INV-8", 80000).withStatus(InvoiceReconciliation.Status.SAVED),
+						pending("INV-9", 90000).withStatus(InvoiceReconciliation.Status.MATCHED)), BatchKind.INVOICE_BATCH);
+				CheckBox showAccepted = field(controller, "showMatchedCheck");
+				showAccepted.setSelected(true);
+				TableView<InvoiceReconciliation> table = field(controller, "resultsTable");
+				TableColumn<InvoiceReconciliation, ?> reference = table.getColumns().get(2);
+				reference.setSortType(TableColumn.SortType.ASCENDING);
+				table.getSortOrder().setAll(List.of(reference));
+				table.sort();
+				assertEquals(List.of("INV-1", "INV-2", "INV-3", "INV-8", "INV-9"),
+						table.getItems().stream().map(InvoiceReconciliation::getInvoiceNo).toList());
+				invoke(controller, "review", InvoiceReconciliation.class, second);
+				TextField amount = field(controller, "reviewAmountField");
+				TextArea notes = field(controller, "reviewNotesField");
+				amount.setText("123.45");
+				notes.setText("Checked in preview");
+				Button accept = field(controller, "reviewAcceptButton");
+				accept.fire();
+				assertSame(third, field(controller, "currentReview"));
+				assertEquals("300.00", amount.getText());
+				assertEquals("", notes.getText());
+				Map<ScannedInvoice, ?> accepted = field(controller, "acceptedDocuments");
+				assertEquals(123.45, invoke(accepted.get(second.getScanned()), "amount"));
+				assertEquals("Checked in preview", invoke(accepted.get(second.getScanned()), "notes"));
+				accept.fire();
+				assertSame(first, field(controller, "currentReview"));
+				assertEquals("Accept", accept.getText());
+				accept.fire();
+				assertNull(field(controller, "currentReview"));
+				javafx.scene.layout.BorderPane preview = field(controller, "reviewView");
+				javafx.scene.layout.VBox results = field(controller, "resultsView");
+				assertFalse(preview.isVisible());
+				assertTrue(results.isVisible());
+				assertEquals(3, accepted.size());
+			} finally { controller.dispose(); }
+		});
+	}
+
+	@Test
+	void invalidPreviewValuesKeepTheSameItemOpenUntilCorrected() throws Exception {
+		onFxThread(() -> {
+			AiInvoiceScanController controller = controller();
+			InvoiceReconciliation first = pending("INV-1", 10000);
+			InvoiceReconciliation second = pending("INV-2", 20000);
+			try {
+				showAcceptanceRows(controller, List.of(first, second), BatchKind.STATEMENT);
+				invoke(controller, "review", InvoiceReconciliation.class, first);
+				TextField reference = field(controller, "reviewReferenceField");
+				reference.clear();
+				Button accept = field(controller, "reviewAcceptButton");
+				accept.fire();
+				assertSame(first, field(controller, "currentReview"));
+				Map<ScannedInvoice, ?> approvals = field(controller, "acceptedDocuments");
+				assertTrue(approvals.isEmpty());
+				reference.setText("CORRECTED-1");
+				accept.fire();
+				assertSame(second, field(controller, "currentReview"));
+				assertEquals("CORRECTED-1", invoke(approvals.get(first.getScanned()), "reference"));
+			} finally { controller.dispose(); }
+		});
+	}
+
+	@ParameterizedTest
+	@EnumSource(BatchKind.class)
+	void multiSelectionAcceptsOnlyChosenRowsThenSelectAllAcceptsTheRemainingCredit(BatchKind kind) throws Exception {
+		onFxThread(() -> {
+			AiInvoiceScanController controller = controller();
+			InvoiceReconciliation first = pending("INV-1", 10000);
+			InvoiceReconciliation credit = pending("CR-1", -2550);
+			InvoiceReconciliation last = pending("INV-3", 30000);
+			try {
+				showAcceptanceRows(controller, List.of(first, credit, last), kind);
+				TableView<InvoiceReconciliation> table = field(controller, "resultsTable");
+				assertEquals(SelectionMode.MULTIPLE, table.getSelectionModel().getSelectionMode());
+				table.getSelectionModel().clearSelection();
+				table.getSelectionModel().selectIndices(0, 2);
+				Button accept = field(controller, "acceptSelectedButton");
+				assertEquals("Accept selected (2)", accept.getText());
+				accept.fire();
+				Map<ScannedInvoice, ?> approvals = field(controller, "acceptedDocuments");
+				assertEquals(2, approvals.size());
+				assertFalse(approvals.containsKey(credit.getScanned()));
+				assertEquals(List.of(credit), List.copyOf(table.getItems()));
+				assertTrue(accept.isDisabled());
+				Button selectAll = field(controller, "selectAllResultsButton");
+				selectAll.fire();
+				assertEquals("Accept selected (1)", accept.getText());
+				Button clear = field(controller, "clearResultSelectionButton");
+				clear.fire();
+				assertTrue(accept.isDisabled());
+				selectAll.fire();
+				accept.fire();
+				assertEquals(3, approvals.size());
+				assertEquals(ScannedInvoice.DocumentType.CREDIT, invoke(approvals.get(credit.getScanned()), "documentType"));
+				assertEquals(25.50, invoke(approvals.get(credit.getScanned()), "amount"));
+				ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
+				assertTrue(rows.stream().allMatch(row -> row.getStatus() == InvoiceReconciliation.Status.ACCEPTED));
+				Button save = field(controller, "saveAcceptedButton");
+				assertFalse(save.isDisabled());
+			} finally { controller.dispose(); }
+		});
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "supplier", "date", "reference" })
+	void bulkAcceptanceValidatesEverySelectedRowBeforeChangingAnyOfThem(String missing) throws Exception {
+		onFxThread(() -> {
+			AiInvoiceScanController controller = controller();
+			ScannedInvoice invalid = new ScannedInvoice("needs-correction.pdf", missing.equals("supplier") ? "Unknown" : "Supplier",
+					missing.equals("reference") ? "" : "INV-2", missing.equals("date") ? null : DATE, null,
+					ScannedInvoice.DocumentType.INVOICE, 20000, 0.99);
+			try {
+				showAcceptanceRows(controller, List.of(pending("INV-1", 10000), new InvoiceReconciliation(
+						InvoiceReconciliation.Status.NEEDS_REVIEW, invalid, null, null)), BatchKind.STATEMENT);
+				Button select = field(controller, "selectAllResultsButton");
+				select.fire();
+				Button accept = field(controller, "acceptSelectedButton");
+				accept.fire();
+				Map<ScannedInvoice, ?> approvals = field(controller, "acceptedDocuments");
+				assertTrue(approvals.isEmpty());
+				ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
+				assertTrue(rows.stream().noneMatch(InvoiceReconciliation::isAccepted));
+				Label message = field(controller, "bulkReviewMessageLabel");
+				assertTrue(message.isVisible());
+				assertTrue(message.getText().contains("Nothing accepted"));
+				TableView<InvoiceReconciliation> table = field(controller, "resultsTable");
+				assertEquals(2, table.getSelectionModel().getSelectedItems().size());
+			} finally { controller.dispose(); }
+		});
+	}
+
+	@Test
+	void bulkAcceptanceSkipsAcceptedEditsAndSavedRowsAndIsDisabledDuringSaving() throws Exception {
+		onFxThread(() -> {
+			AiInvoiceScanController controller = controller();
+			InvoiceReconciliation edited = pending("EDITED", 10000).withStatus(InvoiceReconciliation.Status.ACCEPTED);
+			InvoiceReconciliation saved = pending("SAVED", 10000).withStatus(InvoiceReconciliation.Status.SAVED);
+			try {
+				showAcceptanceRows(controller, List.of(edited, saved, pending("INV-3", 30000)), BatchKind.INVOICE_BATCH);
+				Object existing = record("AcceptedDocument", 1, "Supplier", ScannedInvoice.DocumentType.INVOICE,
+						"EDITED", DATE, DATE.plusDays(30), 42.00, "Keep my notes");
+				Map<ScannedInvoice, Object> approvals = field(controller, "acceptedDocuments");
+				approvals.put(edited.getScanned(), existing);
+				CheckBox show = field(controller, "showMatchedCheck");
+				show.setSelected(true);
+				Button select = field(controller, "selectAllResultsButton");
+				select.fire();
+				TableView<InvoiceReconciliation> table = field(controller, "resultsTable");
+				assertEquals(1, table.getSelectionModel().getSelectedItems().size());
+				invoke(controller, "setCommitBusy", boolean.class, true);
+				Button accept = field(controller, "acceptSelectedButton");
+				assertTrue(accept.isDisabled());
+				invoke(controller, "acceptSelected");
+				assertEquals(1, approvals.size());
+				invoke(controller, "setCommitBusy", boolean.class, false);
+				accept.fire();
+				assertSame(existing, approvals.get(edited.getScanned()));
+				assertEquals(2, approvals.size());
+				assertFalse(approvals.containsKey(saved.getScanned()));
+			} finally { controller.dispose(); }
+		});
+	}
+
+	@ParameterizedTest
+	@CsvSource({ "STATEMENT,true", "INVOICE_BATCH,true", "INVOICE_BATCH,false" })
+	void folderWarningsRemainVisibleAndPreventAutomaticAcceptance(BatchKind kind, boolean flagged) throws Exception {
+		onFxThread(() -> {
+			AiInvoiceScanController controller = controller();
+			Invoice imported = new Invoice();
+			imported.setInvoiceNo("INV-1");
+			imported.setImportExists(true);
+			imported.setImportedInvoiceAmount(100);
+			configureReconciliation(controller, new InvoiceService() {
+				@Override public List<Invoice> getCachedInvoiceAmounts(int storeId, List<ScannedInvoice> requestedRows) { return List.of(imported); }
+				@Override public Invoice getInvoice(String reference, int storeId) { throw new AssertionError("Already loaded"); }
+			});
+			String warning = flagged ? "Wrong folder: check the detected document type before saving." : null;
+			BatchSummary batch = new BatchSummary(17, kind, BatchStatus.REVIEW_REQUIRED, "Source", 1, 1, null, warning);
+			assertEquals(flagged ? warning : "Ready to open and review", batch.getStatusDetail());
+			BatchDetail detail = new BatchDetail(batch, List.of(new ExtractedDocument(101, "source.pdf",
+					List.of(scanned("INV-1", 10000)), List.of(), null, null, null, null, warning)));
+			try (DocumentPdfCache cache = new DocumentPdfCache((document, store, path, limit) -> false)) {
+				setField(controller, "pdfCache", cache);
+				Method load = AiInvoiceScanController.class.getDeclaredMethod("loadBatch", BatchDetail.class, List.class);
+				load.setAccessible(true);
+				Object loaded = load.invoke(controller, detail, List.of(new InvoiceSupplier(1, "Supplier", 1)));
+				invoke(controller, "showLoadedBatches", List.class, List.of(loaded));
+				ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
+				InvoiceReconciliation row = rows.getFirst();
+				assertEquals(flagged ? InvoiceReconciliation.Status.NEEDS_REVIEW : InvoiceReconciliation.Status.MATCHED, row.getStatus());
+				Button save = field(controller, "saveAcceptedButton");
+				assertEquals(flagged, save.isDisabled());
+				invoke(controller, "review", InvoiceReconciliation.class, row);
+				Label label = field(controller, "reviewClassificationWarningLabel");
+				assertEquals(flagged, label.isVisible());
+				if (flagged) {
+					assertEquals(warning, label.getText());
+					invoke(controller, "acceptReview");
+					assertEquals(InvoiceReconciliation.Status.ACCEPTED, rows.getFirst().getStatus());
+					assertFalse(save.isDisabled());
+				}
+			} finally {
+				controller.dispose();
+			}
+		});
+	}
+
+	@Test
+	void emptyStatementPrimaryActionRequeuesAndStartsScanningInsteadOfOpeningBlankResults() throws Exception {
+		List<String> calls = new CopyOnWriteArrayList<>();
+		CountDownLatch scanned = new CountDownLatch(1);
+		AiInvoiceScanController[] holder = new AiInvoiceScanController[1];
+		try {
+			onFxThread(() -> {
+				AiInvoiceScanController controller = controller();
+				holder[0] = controller;
+				configureReconciliation(controller, new InvoiceService());
+				setField(controller, "executor", Executors.newSingleThreadExecutor());
+				var rest = new org.springframework.web.client.RestTemplate() {
+					@Override @SuppressWarnings("unchecked")
+					public <T> org.springframework.http.ResponseEntity<T> exchange(String url,
+							org.springframework.http.HttpMethod method, org.springframework.http.HttpEntity<?> entity,
+							Class<T> type, Object... variables) {
+						if (url.endsWith("/review-batches/17/retry?storeId=1")) calls.add("retry:17:1");
+						else if (url.endsWith("/stores/1/scan-now")) { calls.add("scan:1"); scanned.countDown(); }
+						else if (!url.endsWith("/stores/1/review-queue")) throw new AssertionError("Unexpected request: " + url);
+						return org.springframework.http.ResponseEntity.ok(type == String.class ? (T) "[]" : null);
+					}
+				};
+				var constructor = services.DocumentAiService.class.getDeclaredConstructor(
+						org.springframework.web.client.RestTemplate.class, java.util.Properties.class);
+				constructor.setAccessible(true);
+				setField(controller, "documentAiService", constructor.newInstance(rest, new java.util.Properties()));
+				BatchSummary empty = new BatchSummary(17, BatchKind.STATEMENT, BatchStatus.REVIEW_REQUIRED,
+						"CH2 statement", 1, 0, null, null);
+				invoke(controller, "handleBatchPrimary", BatchSummary.class, empty);
+			});
+			assertTrue(scanned.await(5, TimeUnit.SECONDS));
+			assertEquals(List.of("retry:17:1", "scan:1"), calls);
+		} finally {
+			if (holder[0] != null) onFxThread(holder[0]::dispose);
+		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = { true, false })
+	void hillsideTransferSelectsOnlyTheHillsideContactOrRequiresSupplierReview(boolean hillsideAvailable) throws Exception {
+		onFxThread(() -> {
+			AiInvoiceScanController controller = controller();
+			Invoice imported = new Invoice();
+			imported.setInvoiceNo("1419");
+			imported.setImportExists(true);
+			imported.setImportedInvoiceAmount(519.49);
+			configureReconciliation(controller, new InvoiceService() {
+				@Override public List<Invoice> getCachedInvoiceAmounts(int storeId, List<ScannedInvoice> requestedRows) { return List.of(imported); }
+				@Override public Invoice getInvoice(String reference, int storeId) { throw new AssertionError("The match is already loaded"); }
+			});
+			InvoiceSupplier gladstone = new InvoiceSupplier(20, "Direct Chemist Outlet Gladstone", 1);
+			InvoiceSupplier hillside = new InvoiceSupplier(21, "Direct Chemist Outlet Hillside", 1);
+			List<InvoiceSupplier> suppliers = hillsideAvailable ? List.of(gladstone, hillside) : List.of(gladstone);
+			try (DocumentPdfCache cache = new DocumentPdfCache((document, store, path, limit) -> false)) {
+				setField(controller, "pdfCache", cache);
+				ScannedInvoice scanned = new ScannedInvoice("transfer.pdf", "DCO HILLSIDE", "1419", DATE, null,
+						ScannedInvoice.DocumentType.INVOICE, 51954, 0.99);
+				BatchSummary batch = new BatchSummary(1, BatchKind.INVOICE_BATCH, BatchStatus.REVIEW_REQUIRED,
+						"Transfers", 1, 1, null, null);
+				BatchDetail detail = new BatchDetail(batch, List.of(new ExtractedDocument(101, "transfer.pdf", List.of(scanned),
+						List.of(), null, null, null, null, null)));
+				Method load = AiInvoiceScanController.class.getDeclaredMethod("loadBatch", BatchDetail.class, List.class);
+				load.setAccessible(true);
+				invoke(controller, "showLoadedBatches", List.class, List.of(load.invoke(controller, detail, suppliers)));
+				ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
+				InvoiceReconciliation row = rows.getFirst();
+				assertEquals(hillsideAvailable ? hillside.getSupplierName() : "DCO HILLSIDE", row.getScanned().supplierName());
+				assertEquals(hillsideAvailable ? InvoiceReconciliation.Status.WITHIN_TOLERANCE : InvoiceReconciliation.Status.NEEDS_REVIEW,
+						row.getStatus());
+				invoke(controller, "review", InvoiceReconciliation.class, row);
+				ComboBox<InvoiceSupplier> choice = field(controller, "reviewSupplierChoice");
+				assertSame(hillsideAvailable ? hillside : null, choice.getValue());
+			} finally {
+				controller.dispose();
+			}
+		});
+	}
+
 	@Test
 	void zeroAmountsConfirmedByZOfficeAreReadyToSaveAndCanBeAcceptedInTheReviewForm() throws Exception {
 		onFxThread(() -> {
@@ -78,7 +512,7 @@ class AiInvoiceScanControllerTest {
 			imported.setImportedInvoiceAmount(0);
 			List<Invoice> saved = new ArrayList<>();
 			configureReconciliation(controller, new InvoiceService() {
-				@Override public List<Invoice> getReconciliationTableData(int storeId, YearMonth month) { return List.of(imported); }
+				@Override public List<Invoice> getCachedInvoiceAmounts(int storeId, List<ScannedInvoice> requestedRows) { return List.of(imported); }
 				@Override public Invoice getInvoice(String reference, int storeId) { throw new AssertionError("The match is already loaded"); }
 				@Override public void saveOrUpdateInvoice(Invoice invoice, String originalReference, int originalSupplierId) { saved.add(invoice); }
 			});
@@ -125,7 +559,7 @@ class AiInvoiceScanControllerTest {
 			Invoice imported = symbionImport("000123");
 			List<Invoice> saved = new ArrayList<>();
 			InvoiceService service = new InvoiceService() {
-				@Override public List<Invoice> getReconciliationTableData(int storeId, YearMonth month) { return List.of(imported); }
+				@Override public List<Invoice> getCachedInvoiceAmounts(int storeId, List<ScannedInvoice> requestedRows) { return List.of(imported); }
 				@Override public Invoice getInvoice(String reference, int storeId) {
 					throw new AssertionError("The numeric reference is already loaded; no extra query is needed");
 				}
@@ -180,9 +614,9 @@ class AiInvoiceScanControllerTest {
 			}
 			AtomicInteger requests = new AtomicInteger();
 			configureReconciliation(controller, new InvoiceService() {
-				@Override public List<Invoice> getReconciliationTableData(int storeId, YearMonth month) {
+				@Override public List<Invoice> getCachedInvoiceAmounts(int storeId, List<ScannedInvoice> requestedRows) {
 					assertEquals(1, storeId);
-					assertEquals(YearMonth.from(DATE), month);
+					assertFalse(requestedRows.isEmpty());
 					requests.incrementAndGet();
 					return imported;
 				}
@@ -208,13 +642,13 @@ class AiInvoiceScanControllerTest {
 	}
 
 	@Test
-	void combinedReviewSharesMonthDataAndMissingReferencesButReopeningFetchesFreshData() throws Exception {
+	void combinedReviewSharesCachedReferencesAndMissesWithoutIndividualLookups() throws Exception {
 		onFxThread(() -> {
 			AiInvoiceScanController controller = controller();
 			AtomicInteger requests = new AtomicInteger();
 			List<String> missing = new ArrayList<>();
 			configureReconciliation(controller, new InvoiceService() {
-				@Override public List<Invoice> getReconciliationTableData(int storeId, YearMonth month) {
+				@Override public List<Invoice> getCachedInvoiceAmounts(int storeId, List<ScannedInvoice> requestedRows) {
 					requests.incrementAndGet();
 					return List.of(symbionImport("000123"));
 				}
@@ -237,23 +671,26 @@ class AiInvoiceScanControllerTest {
 				load.invoke(controller, detail, suppliers, context);
 				load.invoke(controller, detail, suppliers, context);
 				assertEquals(1, requests.get());
-				assertEquals(List.of("I999", "999"), missing);
+				assertTrue(missing.isEmpty());
 				load.invoke(controller, detail, suppliers, constructor.newInstance(1, YearMonth.from(DATE)));
 				assertEquals(2, requests.get());
-				assertEquals(List.of("I999", "999", "I999", "999"), missing);
+				assertTrue(missing.isEmpty());
 			} finally { controller.dispose(); }
 		});
 	}
 
 	@Test
-	void symbionFallbackQueriesBothFormsAndCachesHitsAndMissesWithinTheLoad() throws Exception {
+	void cachedSymbionCanonicalReferencesAndMissesDoNotNeedIndividualLookups() throws Exception {
 		onFxThread(() -> {
 			for (boolean found : List.of(true, false)) {
 				AiInvoiceScanController controller = controller();
 				List<String> requested = new ArrayList<>();
 				Invoice imported = symbionImport("000123");
 				configureReconciliation(controller, new InvoiceService() {
-					@Override public List<Invoice> getReconciliationTableData(int storeId, YearMonth month) { return List.of(); }
+					@Override public List<Invoice> getCachedInvoiceAmounts(int storeId, List<ScannedInvoice> requestedRows) {
+                        requestedRows.forEach(row -> requested.add(row.invoiceNo()));
+                        return found ? List.of(imported) : List.of();
+                    }
 					@Override public Invoice getInvoice(String reference, int storeId) {
 						assertEquals(1, storeId);
 						requested.add(reference);
@@ -268,7 +705,7 @@ class AiInvoiceScanControllerTest {
 					assertEquals(2, rows.size());
 					assertTrue(rows.stream().allMatch(row -> row.getStatus() == (found
 							? InvoiceReconciliation.Status.MATCHED : InvoiceReconciliation.Status.NOT_IN_Z_OFFICE)));
-					assertEquals(List.of("I000123", "000123"), requested);
+					assertEquals(List.of("I000123"), requested);
 				} finally { controller.dispose(); }
 			}
 		});
@@ -408,9 +845,9 @@ class AiInvoiceScanControllerTest {
 				imported.setImportExists(true);
 				imported.setImportedInvoiceAmount(100);
 				setField(controller, "invoiceService", new InvoiceService() {
-					@Override public List<Invoice> getReconciliationTableData(int storeId, YearMonth month) {
+					@Override public List<Invoice> getCachedInvoiceAmounts(int storeId, List<ScannedInvoice> requestedRows) {
 						assertEquals(1, storeId);
-						assertEquals(YearMonth.from(DATE), month);
+						assertFalse(requestedRows.isEmpty());
 						return List.of(imported);
 					}
 					@Override public Invoice getInvoice(String reference, int storeId) {
@@ -598,6 +1035,21 @@ class AiInvoiceScanControllerTest {
 			assertTrue(save.isVisible());
 			assertEquals("Save accepted documents", save.getText());
 		});
+	}
+
+	private static InvoiceReconciliation pending(String reference, long cents) {
+		return new InvoiceReconciliation(InvoiceReconciliation.Status.NEEDS_REVIEW, scanned(reference, cents), null, null);
+	}
+
+	private static void showAcceptanceRows(AiInvoiceScanController controller, List<InvoiceReconciliation> rows,
+			BatchKind kind) throws Exception {
+		Map<ScannedInvoice, Long> ids = new IdentityHashMap<>();
+		rows.forEach(row -> ids.put(row.getScanned(), 101L));
+		Object run = record("ScanRun", rows.stream().map(InvoiceReconciliation::getScanned).toList(), rows,
+				Map.of(), ids, DATE.withDayOfMonth(1), DATE.withDayOfMonth(30), null, null,
+				List.of(new InvoiceSupplier(1, "Supplier", 1)));
+		BatchSummary batch = new BatchSummary(1, kind, BatchStatus.REVIEW_REQUIRED, "Review test", 1, rows.size(), null, null);
+		invoke(controller, "showLoadedBatches", List.class, List.of(record("LoadedBatch", batch, run, List.of(101L))));
 	}
 
 	private static AiInvoiceScanController controller() throws Exception {
