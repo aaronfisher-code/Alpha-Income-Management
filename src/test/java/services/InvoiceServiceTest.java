@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class InvoiceServiceTest {
     @Test
-    void cachedAndRefreshRequestsAreExplicitPostsWithoutMonthlyOrIndividualLookupFallbacks() {
+    void cachedResolveAndRefreshRequestsUseTheirExplicitBulkEndpoints() {
         List<String> paths = new ArrayList<>();
         RestTemplate rest = new RestTemplate();
         rest.getInterceptors().add((request, body, execution) -> {
@@ -40,8 +40,9 @@ class InvoiceServiceTest {
         var row = new models.ScannedInvoice("invoice.pdf", "Symbion", "I000123", java.time.LocalDate.of(2026, 9, 10),
                 null, models.ScannedInvoice.DocumentType.INVOICE, 10000, 0.99);
         assertEquals(0, service.getCachedInvoiceAmounts(7, List.of(row)).getFirst().getImportedInvoiceAmount());
+        assertTrue(service.getInvoiceAmountsForReview(7, List.of(row)).getFirst().isImportExists());
         assertTrue(service.refreshInvoiceAmount(7, row).getFirst().isImportExists());
-        assertEquals(List.of("/invoices/reconciliation/cached", "/invoices/reconciliation/refresh"), paths);
+        assertEquals(List.of("/invoices/reconciliation/cached", "/invoices/reconciliation/resolve", "/invoices/reconciliation/refresh"), paths);
     }
 
     @Test

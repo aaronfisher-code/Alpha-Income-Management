@@ -116,6 +116,12 @@ public final class DocumentAiService {
     public void retry(long batchId, int storeId) {
         exchange("/review-batches/" + batchId + "/retry?storeId=" + storeId, HttpMethod.POST, null, Void.class);
     }
+    public void rescanBatch(long batchId, int storeId) {
+        exchange("/review-batches/" + batchId + "/rescan?storeId=" + storeId, HttpMethod.POST, null, Void.class);
+    }
+    public void rescanDocument(long documentId, int storeId) {
+        exchange("/review-documents/" + documentId + "/rescan?storeId=" + storeId, HttpMethod.POST, null, Void.class);
+    }
     public void dismiss(long batchId, int storeId) {
         exchange("/review-batches/" + batchId + "?storeId=" + storeId, HttpMethod.DELETE, null, Void.class);
     }

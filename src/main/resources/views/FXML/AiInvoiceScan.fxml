@@ -105,9 +105,21 @@
                <HBox alignment="CENTER_LEFT" spacing="8.0">
                   <Button fx:id="selectAllResultsButton" onAction="#selectAllResults" styleClass="secondary-scan-button" text="Select all" />
                   <Button fx:id="clearResultSelectionButton" onAction="#clearResultSelection" styleClass="secondary-scan-button" text="Clear selection" />
+                  <Button fx:id="editSelectedButton" disable="true" onAction="#openBulkEdit" styleClass="secondary-scan-button" text="Edit selected" />
                   <Button fx:id="acceptSelectedButton" disable="true" onAction="#acceptSelected" styleClass="primary-scan-button" text="Accept selected" />
                   <Label styleClass="preview-hint" text="Accepts the selected scanned values. Save accepted documents when review is complete." wrapText="true" />
                </HBox>
+               <VBox fx:id="bulkEditPanel" managed="false" spacing="6.0" styleClass="scan-source-bar" visible="false">
+                  <HBox alignment="CENTER_LEFT" spacing="8.0">
+                     <ChoiceBox fx:id="bulkEditFieldChoice" prefWidth="150.0" />
+                     <ComboBox fx:id="bulkSupplierChoice" maxWidth="1.7976931348623157E308" prefWidth="280.0" promptText="Choose supplier" HBox.hgrow="ALWAYS" />
+                     <DatePicker fx:id="bulkDatePicker" managed="false" visible="false" />
+                     <TextField fx:id="bulkNotesField" managed="false" maxWidth="1.7976931348623157E308" promptText="Notes (leave blank to clear existing notes)" visible="false" HBox.hgrow="ALWAYS" />
+                     <Button fx:id="applyBulkEditButton" onAction="#applyBulkEdit" styleClass="primary-scan-button" text="Apply to selected" />
+                     <Button fx:id="closeBulkEditButton" onAction="#closeBulkEdit" styleClass="secondary-scan-button" text="Close" />
+                  </HBox>
+                  <Label styleClass="preview-hint" text="Changes affect selected unsaved rows. Accept the edited rows, then save when review is complete. Due dates apply to invoices only." wrapText="true" />
+               </VBox>
                <Label fx:id="bulkReviewMessageLabel" managed="false" styleClass="preview-hint" visible="false" wrapText="true" />
                <TableView fx:id="resultsTable" VBox.vgrow="ALWAYS" />
                <HBox alignment="CENTER_LEFT" spacing="10.0" styleClass="scan-legend">

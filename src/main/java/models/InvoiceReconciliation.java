@@ -34,12 +34,19 @@ public final class InvoiceReconciliation {
 	private final ScannedInvoice scanned;
 	private final Invoice imported;
 	private final Long varianceCents;
+	private final ScannedInvoice reviewed;
 
 	public InvoiceReconciliation(Status status, ScannedInvoice scanned, Invoice imported, Long varianceCents) {
+		this(status, scanned, imported, varianceCents, null);
+	}
+
+	private InvoiceReconciliation(Status status, ScannedInvoice scanned, Invoice imported, Long varianceCents,
+			ScannedInvoice reviewed) {
 		this.status = status;
 		this.scanned = scanned;
 		this.imported = imported;
 		this.varianceCents = varianceCents;
+		this.reviewed = reviewed;
 	}
 
 	public Status getStatus() {
@@ -54,26 +61,34 @@ public final class InvoiceReconciliation {
 		return scanned;
 	}
 
+	/** Editable values for display; getScanned() retains the immutable source/evidence identity. */
+	public ScannedInvoice getReviewValues() { return reviewed == null ? scanned : reviewed; }
+
+	public InvoiceReconciliation withReviewValues(ScannedInvoice values) {
+		Long variance = hasExpectedAmount() ? values.amountCents() - Math.round(imported.getImportedInvoiceAmount() * 100) : null;
+		return new InvoiceReconciliation(status, scanned, imported, variance, values);
+	}
+
 	public Invoice getImported() {
 		return imported;
 	}
 
 	public String getSupplierName() {
-		if (scanned != null && !scanned.supplierName().isBlank()) return scanned.supplierName();
+		if (getReviewValues() != null && !getReviewValues().supplierName().isBlank()) return getReviewValues().supplierName();
 		return imported == null ? "" : imported.getSupplierName();
 	}
 
 	public String getInvoiceNo() {
-		if (scanned != null && !scanned.invoiceNo().isBlank()) return scanned.invoiceNo();
+		if (getReviewValues() != null && !getReviewValues().invoiceNo().isBlank()) return getReviewValues().invoiceNo();
 		return imported == null ? "" : imported.getInvoiceNo();
 	}
 
 	public String getDocumentType() {
-		return scanned == null ? "Invoice" : title(scanned.documentType().name());
+		return getReviewValues() == null ? "Invoice" : title(getReviewValues().documentType().name());
 	}
 
 	public String getScannedDateString() {
-		return scanned == null || scanned.invoiceDate() == null ? "—" : DATE.format(scanned.invoiceDate());
+		return getReviewValues() == null || getReviewValues().invoiceDate() == null ? "—" : DATE.format(getReviewValues().invoiceDate());
 	}
 
 	public String getSourceFile() {
@@ -81,7 +96,7 @@ public final class InvoiceReconciliation {
 	}
 
 	public String getScannedAmountString() {
-		return scanned == null ? "—" : CURRENCY.format(scanned.amount());
+		return getReviewValues() == null ? "—" : CURRENCY.format(getReviewValues().amount());
 	}
 
 	public String getImportedAmountString() {
@@ -93,7 +108,7 @@ public final class InvoiceReconciliation {
 	}
 
 	public InvoiceReconciliation withStatus(Status newStatus) {
-		return new InvoiceReconciliation(newStatus, scanned, imported, varianceCents);
+		return new InvoiceReconciliation(newStatus, scanned, imported, varianceCents, reviewed);
 	}
 
 	public boolean isAccepted() {
@@ -109,29 +124,27 @@ public final class InvoiceReconciliation {
 	}
 
 	public Double getSupplierConfidence() {
-		return scanned == null ? null : scanned.fieldConfidences().supplier();
+		return getReviewValues() == null ? null : getReviewValues().fieldConfidences().supplier();
 	}
 
 	public Double getReferenceConfidence() {
-		return scanned == null ? null : scanned.fieldConfidences().reference();
+		return getReviewValues() == null ? null : getReviewValues().fieldConfidences().reference();
 	}
 
 	public Double getDateConfidence() {
-		return scanned == null ? null : scanned.fieldConfidences().date();
+		return getReviewValues() == null ? null : getReviewValues().fieldConfidences().date();
 	}
 
 	public Double getDueDateConfidence() {
-		return scanned == null ? null : scanned.fieldConfidences().dueDate();
+		return getReviewValues() == null ? null : getReviewValues().fieldConfidences().dueDate();
 	}
 
 	public boolean isDueDateEstimated() {
-		if (scanned == null || scanned.documentType() != ScannedInvoice.DocumentType.INVOICE
-				|| scanned.invoiceDate() == null || scanned.dueDate() == null) return false;
-		if (scanned.dueDateEstimated()) return true;
-		// Older queue results predate the explicit marker. Preserve the same UI
-		// behavior when their fallback date was persisted without a confidence.
-		return scanned.fieldConfidences().dueDate() == null
-				&& scanned.dueDate().equals(scanned.invoiceDate().plusDays(30));
+		ScannedInvoice values = getReviewValues();
+		if (values == null || values.documentType() != ScannedInvoice.DocumentType.INVOICE
+				|| values.invoiceDate() == null || values.dueDate() == null) return false;
+		return values.dueDateEstimated() || values.fieldConfidences().dueDate() == null
+				&& values.dueDate().equals(values.invoiceDate().plusDays(30));
 	}
 
 	public boolean hasExpectedAmount() {

@@ -31,6 +31,7 @@ public final class DocumentPdfCache implements AutoCloseable {
 		int users;
 		File file;
 		long bytes;
+		boolean invalidated;
 		Entry(Key key, boolean speculative) { this.key = key; this.speculative = speculative; }
 	}
 
@@ -82,6 +83,22 @@ public final class DocumentPdfCache implements AutoCloseable {
 	}
 
 	public synchronized void stopPrefetch() { pendingPrefetch = null; }
+
+	/** A rescan must not reuse a preview of an older version of the source PDF. */
+	public synchronized void invalidate(long documentId, int storeId) {
+		Key key = new Key(documentId, storeId);
+		if (key.equals(pendingPrefetch)) pendingPrefetch = null;
+		Entry entry = downloads.remove(key);
+		if (entry != null) {
+			entry.invalidated = true;
+			discardInvalidated(entry);
+		}
+	}
+
+	public synchronized void invalidateAll() {
+		pendingPrefetch = null;
+		for (Key key : java.util.List.copyOf(downloads.keySet())) invalidate(key.documentId(), key.storeId());
+	}
 
 	private void runPrefetch() {
 		while (true) {
@@ -144,6 +161,7 @@ public final class DocumentPdfCache implements AutoCloseable {
 			}
 			synchronized (this) {
 				if (closed) throw new IOException("The document review dialog has closed");
+				if (entry.invalidated) throw new IOException("The source PDF was invalidated for rescan");
 				entry.file = temporary;
 				entry.bytes = Files.size(temporary.toPath());
 				retainedBytes += entry.bytes;
@@ -160,7 +178,16 @@ public final class DocumentPdfCache implements AutoCloseable {
 
 	private synchronized void release(Entry entry) {
 		entry.users--;
+		discardInvalidated(entry);
 		trim();
+	}
+
+	private void discardInvalidated(Entry entry) {
+		if (entry.invalidated && entry.users == 0 && entry.file != null) {
+			retainedBytes -= entry.bytes;
+			delete(entry.file);
+			entry.file = null;
+		}
 	}
 
 	private void trim() {

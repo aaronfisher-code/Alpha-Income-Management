@@ -114,6 +114,11 @@ public class InvoiceService {
         return invoiceAmountRequest("/reconciliation/cached?storeId=" + storeId, rows);
     }
 
+    /** Reuse matching cached values; retry missing or excessive-variance rows directly with Z-Office. */
+    public List<Invoice> getInvoiceAmountsForReview(int storeId, List<ScannedInvoice> rows) {
+        return invoiceAmountRequest("/reconciliation/resolve?storeId=" + storeId, rows);
+    }
+
     public List<Invoice> refreshInvoiceAmount(int storeId, ScannedInvoice row) {
         return invoiceAmountRequest("/reconciliation/refresh?storeId=" + storeId, row);
     }

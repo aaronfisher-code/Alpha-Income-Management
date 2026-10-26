@@ -22,6 +22,27 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class DocumentPdfCacheTest {
 	@Test
+	void rescanInvalidatesTheOldPreviewWhileAllowingAnActiveRendererToFinish() throws Exception {
+		AtomicInteger downloads = new AtomicInteger();
+		try (var cache = new DocumentPdfCache((document, store, path, limit) ->
+				write(path, ("version-" + downloads.incrementAndGet()).getBytes(StandardCharsets.UTF_8)))) {
+			File old;
+			try (var first = cache.acquire(101, 1)) {
+				old = first.file();
+				cache.invalidate(101, 1);
+				assertTrue(old.exists());
+				try (var refreshed = cache.acquire(101, 1)) {
+					assertNotEquals(old, refreshed.file());
+					assertEquals("version-2", Files.readString(refreshed.file().toPath()));
+				}
+			}
+			assertFalse(old.exists());
+			cache.invalidateAll();
+			try (var again = cache.acquire(101, 1)) { assertEquals("version-3", Files.readString(again.file().toPath())); }
+		}
+	}
+
+	@Test
 	void downloadsOnlyRequestedSourcesAndCachesByStoreAndDocument() throws Exception {
 		AtomicInteger downloads = new AtomicInteger();
 		File first;
