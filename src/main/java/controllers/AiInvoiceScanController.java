@@ -505,7 +505,7 @@ public final class AiInvoiceScanController extends Controller {
 					context.progress = (done, total) -> {
 						int completed = completedBefore + batchRecords - total + done;
 						updateProgress(completed, Math.max(1, totalRecords));
-						updateMessage("Loading invoice records… " + completed + " of " + totalRecords);
+						updateMessage("Loading document records… " + completed + " of " + totalRecords);
 					};
 					loaded.add(loadBatch(detail, suppliers, context));
 					completedRecords += batchRecords;
@@ -711,8 +711,8 @@ public final class AiInvoiceScanController extends Controller {
 			LocalDate periodStart, LocalDate periodEnd, ReviewLoadContext context) {
 		List<ScannedInvoice> missing = new ArrayList<>();
 		for (ScannedInvoice row : scanned) {
-			String key = InvoiceReconciler.supplier(row.supplierName()) + ":" + InvoiceReconciler.reference(row.invoiceNo()) + ":" + row.amountCents();
-			if (row.documentType() == ScannedInvoice.DocumentType.INVOICE && context.requested.add(key)) missing.add(row);
+			String key = InvoiceReconciler.supplier(row.supplierName()) + ":" + InvoiceReconciler.lookupKey(row, row.invoiceNo()) + ":" + row.amountCents();
+			if (!row.invoiceNo().isBlank() && context.requested.add(key)) missing.add(row);
 		}
 		context.progress.accept(0, missing.size());
 		for (int start = 0; start < missing.size(); start += 50) {
@@ -720,9 +720,9 @@ public final class AiInvoiceScanController extends Controller {
 			List<ScannedInvoice> chunk = missing.subList(start, end);
 			List<Invoice> cached = invoiceService.getInvoiceAmountsForReview(context.storeId, chunk);
 			Map<String, List<Invoice>> groups = cached.stream().filter(Invoice::isImportExists)
-					.collect(java.util.stream.Collectors.groupingBy(row -> InvoiceReconciler.reference(row.getInvoiceNo())));
-			chunk.stream().flatMap(row -> InvoiceReconciler.lookupReferences(row).stream())
-					.map(InvoiceReconciler::reference).forEach(context.cachedByReference::remove);
+					.collect(java.util.stream.Collectors.groupingBy(InvoiceReconciler::importKey));
+			chunk.forEach(row -> InvoiceReconciler.lookupReferences(row).forEach(reference ->
+					context.cachedByReference.remove(InvoiceReconciler.lookupKey(row, reference))));
 			context.cachedByReference.putAll(groups);
 			context.progress.accept(end, missing.size());
 		}
@@ -1125,6 +1125,8 @@ public final class AiInvoiceScanController extends Controller {
 		reviewClassificationWarningLabel.setManaged(!classificationWarning.isBlank());
 		reviewAcceptButton.setText(nextPendingReview(row) == null ? "Accept" : "Accept and next");
 		updateAmountRefreshControls();
+        if (row.getImported() != null && Boolean.TRUE.equals(row.getImported().getReconciliationStale()))
+            showAmountRefreshMessage("Showing a cached credit amount. Refresh to verify the current Z-Office value.");
 		resultsView.setVisible(false);
 		resultsView.setManaged(false);
 		setReviewChromeVisible(false);
@@ -1527,7 +1529,7 @@ public final class AiInvoiceScanController extends Controller {
 			if (!edited.equals(old) || customChosen) edits.add(new PendingSave(row, edited));
 		}
 		if (edits.isEmpty()) { showBulkReviewMessage("No values changed. Due dates apply to invoice rows only.", false); return; }
-		if (!"Supplier".equals(field) || edits.stream().noneMatch(edit -> edit.document().documentType() == ScannedInvoice.DocumentType.INVOICE)) {
+		if (!"Supplier".equals(field)) {
 			finishBulkEdit(edits, field, null); return;
 		}
 		// Supplier changes can alter the Z-Office match; the API retries missing or excessive-variance cached values.
@@ -1808,7 +1810,9 @@ public final class AiInvoiceScanController extends Controller {
 			Credit credit = new Credit();
 			credit.setSupplierID(supplierId);
 			credit.setCreditNo(accepted.reference());
-			credit.setReferenceInvoiceNo("");
+			credit.setReferenceInvoiceNo(row.getImported() != null && row.getImported().getReconciliationType() == ScannedInvoice.DocumentType.CREDIT
+                    && row.getImported().getInvoiceNo() != null && accepted.reference().equalsIgnoreCase(row.getImported().getInvoiceNo().trim())
+                    && row.getImported().getReferenceInvoiceNo() != null ? row.getImported().getReferenceInvoiceNo() : "");
 			credit.setCreditDate(accepted.documentDate());
 			credit.setCreditAmount(accepted.amount());
 			credit.setNotes(accepted.notes());
@@ -1882,23 +1886,26 @@ public final class AiInvoiceScanController extends Controller {
 		reviewAcceptButton.setText(nextPendingReview(currentReview) == null ? "Accept" : "Accept and next");
 		if (currentReview != null) reviewTitleLabel.setText(invoice ? "Review invoice" : "Review credit");
 		updateAmountRefreshControls();
+        updateReviewReconciliationValues();
 	}
 
 	@FXML
 	private void refreshInvoiceAmount() {
-		if (currentReview == null || commitBusy || amountRefreshBusy || "Credit".equals(reviewTypeChoice.getValue())) return;
+		if (currentReview == null || commitBusy || amountRefreshBusy) return;
 		ScannedInvoice scanned = currentReview.getScanned();
 		String reference = reviewReferenceField.getText() == null ? "" : reviewReferenceField.getText().trim();
-		if (reference.isBlank()) { showAmountRefreshMessage("Enter the invoice reference before refreshing its amount."); return; }
+		if (reference.isBlank()) { showAmountRefreshMessage("Enter the document reference before refreshing its amount."); return; }
 		String supplier = customSupplierSelected ? customSupplierNameField.getText()
 				: reviewSupplierChoice.getValue() == null ? scanned.supplierName() : reviewSupplierChoice.getValue().getSupplierName();
 		ScannedInvoice lookup = new ScannedInvoice(scanned.sourceFile(), supplier, reference, reviewDateField.getValue(),
-				scanned.dueDate(), ScannedInvoice.DocumentType.INVOICE, scanned.amountCents(), scanned.fieldConfidences());
-		String lookupReference = InvoiceReconciler.reference(reference);
+				scanned.dueDate(), "Credit".equals(reviewTypeChoice.getValue()) ? ScannedInvoice.DocumentType.CREDIT : ScannedInvoice.DocumentType.INVOICE,
+                scanned.amountCents(), scanned.fieldConfidences());
+		String lookupReference = InvoiceReconciler.lookupKey(lookup, reference);
 		AcceptedDocument approved = acceptedDocuments.get(scanned);
-		boolean updateUnderlyingRow = InvoiceReconciler.lookupReferences(scanned).stream()
-				.anyMatch(candidate -> InvoiceReconciler.reference(candidate).equals(lookupReference))
-				|| approved != null && InvoiceReconciler.reference(approved.reference()).equals(lookupReference);
+		boolean updateUnderlyingRow = scanned.documentType() == lookup.documentType() && InvoiceReconciler.lookupReferences(scanned).stream()
+				.anyMatch(candidate -> InvoiceReconciler.lookupKey(lookup, candidate).equals(lookupReference))
+				|| approved != null && approved.documentType() == lookup.documentType()
+                && InvoiceReconciler.lookupKey(lookup, approved.reference()).equals(lookupReference);
 		int requestedStore = storeId();
 		long request = ++amountRefreshRequest;
 		amountRefreshBusy = true;
@@ -1934,16 +1941,17 @@ public final class AiInvoiceScanController extends Controller {
 				else if (previous.getReviewValues() != previous.getScanned()) updated = updated.withReviewValues(previous.getReviewValues());
 				if (updateUnderlyingRow) allResults.set(index, updated);
 				if (currentReview != null && currentReview.getScanned() == scanned) {
-					if (!InvoiceReconciler.reference(reviewReferenceField.getText()).equals(lookupReference)) {
-						showAmountRefreshMessage("The reference changed while refreshing. Refresh again to look up the current reference.");
+					if (!InvoiceReconciler.lookupKey(lookup, reviewReferenceField.getText()).equals(lookupReference)
+                            || ("Credit".equals(reviewTypeChoice.getValue()) ? ScannedInvoice.DocumentType.CREDIT : ScannedInvoice.DocumentType.INVOICE) != lookup.documentType()) {
+						showAmountRefreshMessage("The reference or document type changed while refreshing. Refresh again to look up the current document.");
 						continue;
 					}
 					currentReview = updated;
 					updateReviewReconciliationValues();
 					showAmountRefreshMessage(updated.hasExpectedAmount() ? "Z-Office amount refreshed for " + lookup.invoiceNo() + "."
 							: updated.getStatus() == InvoiceReconciliation.Status.AMBIGUOUS
-									? "Multiple Z-Office matches found. Verify this invoice before accepting."
-									: "No matching invoice was found in Z-Office.");
+									? "Multiple Z-Office matches found. Verify this document before accepting."
+									: "No matching " + (lookup.documentType() == ScannedInvoice.DocumentType.CREDIT ? "credit" : "invoice") + " was found in Z-Office.");
 				}
 			}
 			applyResultFilter();
@@ -1970,15 +1978,14 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	private void updateAmountRefreshControls() {
-		boolean invoice = currentReview != null && currentReview.getScanned() != null
-				&& !"Credit".equals(reviewTypeChoice.getValue());
-		refreshInvoiceAmountButton.setVisible(invoice);
-		refreshInvoiceAmountButton.setManaged(invoice);
-		refreshInvoiceAmountButton.setDisable(!invoice || amountRefreshBusy || commitBusy);
+		boolean document = currentReview != null && currentReview.getScanned() != null;
+		refreshInvoiceAmountButton.setVisible(document);
+		refreshInvoiceAmountButton.setManaged(document);
+		refreshInvoiceAmountButton.setDisable(!document || amountRefreshBusy || commitBusy);
 		refreshInvoiceAmountButton.setText(amountRefreshBusy ? "Refreshing Z-Office…" : "Refresh Z-Office amount");
 		amountRefreshIcon.setVisible(!amountRefreshBusy);
-		amountRefreshProgress.setVisible(invoice && amountRefreshBusy);
-		amountRefreshProgress.setManaged(invoice && amountRefreshBusy);
+		amountRefreshProgress.setVisible(document && amountRefreshBusy);
+		amountRefreshProgress.setManaged(document && amountRefreshBusy);
 		reviewAcceptButton.setDisable(amountRefreshBusy || commitBusy);
 	}
 
@@ -1986,24 +1993,31 @@ public final class AiInvoiceScanController extends Controller {
 		reviewExpectedAmountLabel.getStyleClass().remove("review-reconciliation-attention");
 		reviewExpectedAmountLabel.setTooltip(null);
 		if (currentReview == null || currentReview.getImported() == null
-				|| !currentReview.getImported().isImportExists()) {
+				|| !currentReview.getImported().isImportExists()
+                || (currentReview.getImported().getReconciliationType() == ScannedInvoice.DocumentType.CREDIT)
+                    != "Credit".equals(reviewTypeChoice.getValue())) {
 			reviewExpectedAmountLabel.setText("N/A");
 			if (currentReview != null && !currentReview.isAccepted()) {
 				reviewExpectedAmountLabel.getStyleClass().add("review-reconciliation-attention");
 				reviewExpectedAmountLabel.setTooltip(new Tooltip(
-						"No imported Z-Office unit amount is available; verify the scanned amount manually."));
+						"No matching Z-Office amount is available; verify the scanned amount manually."));
 			}
 			reviewVarianceLabel.setText("N/A");
 			reviewVarianceLabel.getStyleClass().remove("review-variance-attention");
 			return;
 		}
 
+        if (Boolean.TRUE.equals(currentReview.getImported().getReconciliationStale())) {
+            reviewExpectedAmountLabel.getStyleClass().add("review-reconciliation-attention");
+            reviewExpectedAmountLabel.setTooltip(new Tooltip("This cached credit amount has expired. Refresh Z-Office to verify it."));
+        }
 		double expected = currentReview.getImported().getImportedInvoiceAmount();
-		reviewExpectedAmountLabel.setText(CURRENCY.format(expected));
+		reviewExpectedAmountLabel.setText(CURRENCY.format("Credit".equals(reviewTypeChoice.getValue()) ? Math.abs(expected) : expected));
 		String rawAmount = reviewAmountField.getText() == null
 				? "" : reviewAmountField.getText().replace("$", "").replace(",", "").trim();
 		try {
 			double entered = Double.parseDouble(rawAmount);
+            if ("Credit".equals(reviewTypeChoice.getValue())) entered = -Math.abs(entered);
 			double variance = entered - expected;
 			reviewVarianceLabel.setText(CURRENCY.format(variance));
 			reviewVarianceLabel.getStyleClass().remove("review-variance-attention");

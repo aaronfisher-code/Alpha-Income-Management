@@ -17,6 +17,53 @@ import static org.junit.jupiter.api.Assertions.*;
 class InvoiceReconcilerTest {
 	private static final LocalDate DATE = LocalDate.of(2026, 9, 10);
 
+	@Test
+	void invoiceAndCreditWithTheSameNumberMatchOnlyTheirOwnDocumentType() {
+		var invoice = scanned("Supplier", "000123", ScannedInvoice.DocumentType.INVOICE);
+		var credit = scanned("Supplier", "000123", ScannedInvoice.DocumentType.CREDIT);
+		var expectedInvoice = imported("Supplier", "000123", 100);
+		var expectedCredit = imported("Supplier", "000123", -100);
+		expectedCredit.setReconciliationType(ScannedInvoice.DocumentType.CREDIT);
+		var results = InvoiceReconciler.reconcile(List.of(invoice, credit), List.of(expectedInvoice, expectedCredit));
+		assertTrue(results.stream().allMatch(row -> row.getStatus() == InvoiceReconciliation.Status.MATCHED));
+		assertSame(expectedInvoice, results.getFirst().getImported());
+		assertSame(expectedCredit, results.getLast().getImported());
+		assertEquals(InvoiceReconciliation.Status.NOT_IN_Z_OFFICE, reconcile(credit, List.of(expectedInvoice)).getStatus());
+	}
+
+	@Test
+	void creditReferencesPreservePunctuationAndRequireTheCorrectSupplier() {
+		var scanned = scanned("Supplier", "CR-0001", ScannedInvoice.DocumentType.CREDIT);
+		var expected = imported("Supplier", "CR0001", -100); expected.setReconciliationType(ScannedInvoice.DocumentType.CREDIT);
+		assertEquals(InvoiceReconciliation.Status.NOT_IN_Z_OFFICE, reconcile(scanned, List.of(expected)).getStatus());
+		expected.setInvoiceNo("CR-0001"); expected.setSupplierName("Another Supplier");
+		assertEquals(InvoiceReconciliation.Status.NOT_IN_Z_OFFICE, reconcile(scanned, List.of(expected)).getStatus());
+		expected.setSupplierName("Supplier Pty Ltd");
+		assertEquals(InvoiceReconciliation.Status.MATCHED, reconcile(scanned, List.of(expected)).getStatus());
+		assertEquals(InvoiceReconciliation.Status.AMBIGUOUS, reconcile(scanned, List.of(expected, expected)).getStatus());
+	}
+
+	@Test
+	void aRealZeroCreditMatchesAndCreditVarianceKeepsItsSign() {
+		var credit = new ScannedInvoice("credit.pdf", "Supplier", "ZERO", DATE, null, ScannedInvoice.DocumentType.CREDIT, 0, 0.99);
+		var zero = imported("Supplier", "ZERO", 0); zero.setReconciliationType(ScannedInvoice.DocumentType.CREDIT);
+		assertEquals(InvoiceReconciliation.Status.MATCHED, reconcile(credit, List.of(zero)).getStatus());
+		zero.setImportedInvoiceAmount(-25);
+		assertEquals("$25.00", reconcile(credit, List.of(zero)).getVarianceString());
+	}
+
+	@Test
+	void staleCreditAmountsCannotAutomaticallyAcceptRows() {
+		var credit = scanned("Supplier", "CR-1", ScannedInvoice.DocumentType.CREDIT);
+		var expected = imported("Supplier", "CR-1", -100);
+		expected.setReconciliationType(ScannedInvoice.DocumentType.CREDIT); expected.setReconciliationStale(true);
+		var row = reconcile(credit, List.of(expected));
+		assertEquals(InvoiceReconciliation.Status.NEEDS_REVIEW, row.getStatus());
+		assertFalse(row.isAccepted()); assertTrue(row.hasExpectedAmount());
+		expected.setReconciliationStale(false);
+		assertEquals(InvoiceReconciliation.Status.MATCHED, reconcile(credit, List.of(expected)).getStatus());
+	}
+
 	@ParameterizedTest
 	@CsvSource({"I222534680,222534680", "222534680,I222534680", "i000123,000123", "000123,I000123"})
 	void matchesSymbionInvoicesInEitherFormatAndKeepsTheInternalEntryReference(String scannedReference, String storedReference) {

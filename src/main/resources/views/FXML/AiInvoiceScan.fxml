@@ -255,7 +255,7 @@
                                  <TextField fx:id="reviewAmountField" promptText="0.00" />
                                  <HBox alignment="CENTER" spacing="28.0" styleClass="review-reconciliation-summary">
                                     <VBox alignment="CENTER" spacing="3.0">
-                                       <Label styleClass="review-reconciliation-label" text="Expected unit amount" />
+                                       <Label styleClass="review-reconciliation-label" text="Z-Office amount" />
                                        <Label fx:id="reviewExpectedAmountLabel" styleClass="review-reconciliation-value" text="N/A" />
                                     </VBox>
                                     <VBox alignment="CENTER" spacing="3.0">

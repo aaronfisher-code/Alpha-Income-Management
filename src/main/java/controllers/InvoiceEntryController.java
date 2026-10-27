@@ -447,6 +447,25 @@ public class InvoiceEntryController extends DateSelectController{
 		creditDateCol.setCellValueFactory(new PropertyValueFactory<>("creditDateString"));
 		creditAmountCol.setCellValueFactory(new PropertyValueFactory<>("creditAmountString"));
 		creditNotesCol.setCellValueFactory(new PropertyValueFactory<>("notes"));
+        TableColumn<Credit, String> zAmount = new TableColumn<>("Z-OFFICE AMOUNT");
+        zAmount.setCellValueFactory(cell -> new javafx.beans.property.ReadOnlyStringWrapper(cell.getValue().getZOfficeAmount() == null
+                ? "—" : NumberFormat.getCurrencyInstance(Locale.US).format(cell.getValue().getZOfficeAmount())));
+        TableColumn<Credit, String> source = new TableColumn<>("SOURCE");
+        source.setCellValueFactory(cell -> new javafx.beans.property.ReadOnlyStringWrapper(switch (cell.getValue().getSourceSystem()) {
+            case "Z" -> "Z-Office";
+            case "ALPHA+Z" -> "Alpha + Z";
+            default -> "Alpha";
+        }));
+        source.setCellFactory(column -> new TableCell<>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty); setText(empty ? null : item); setTooltip(null);
+                if (!empty && getTableRow() != null && getTableRow().getItem() != null) {
+                    Credit credit = getTableRow().getItem();
+                    if (credit.getZOfficeStatus() != null) setTooltip(new Tooltip("Z-Office status: " + credit.getZOfficeStatus()
+                            + (credit.isReadOnly() ? " · Managed in Z-Office" : "")));
+                }
+            }
+        });
 		creditsTable.getColumns().clear();
 		creditsTable.getColumns().addAll(
 				creditSupplierNameCol,
@@ -454,6 +473,8 @@ public class InvoiceEntryController extends DateSelectController{
 				referenceInvCol,
 				creditDateCol,
 				creditAmountCol,
+                zAmount,
+                source,
 				creditNotesCol
 		);
 		creditFilterView.setPadding(new Insets(20,20,10,20));//top,right,bottom,left
@@ -1116,24 +1137,7 @@ public class InvoiceEntryController extends DateSelectController{
 	public CompletableFuture<ObservableList<Credit>> fetchCreditData() {
 		return CompletableFuture.supplyAsync(() -> {
 			YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
-			var alphaCredits = new java.util.ArrayList<>(
-					creditService.getAllCredits(main.getCurrentStore().getStoreID(), yearMonthObject));
-			if (!liveZEnabled || zDataService == null) return FXCollections.observableArrayList(alphaCredits);
-			var existingByNumber = alphaCredits.stream().collect(java.util.stream.Collectors.toMap(
-					credit -> credit.getCreditNo() == null ? "" : credit.getCreditNo().trim().toLowerCase(Locale.ROOT),
-					credit -> credit,
-					(first, ignored) -> first));
-			for (Credit zCredit : zDataService.getCredits(main.getCurrentStore().getStoreID(), yearMonthObject)) {
-				var key = zCredit.getCreditNo().trim().toLowerCase(Locale.ROOT);
-				var existing = existingByNumber.get(key);
-				if (existing == null) {
-					alphaCredits.add(zCredit);
-				} else {
-					existing.setCreditAmount(zCredit.getCreditAmount());
-					existing.setSourceSystem("ALPHA+Z");
-				}
-			}
-			return FXCollections.observableArrayList(alphaCredits);
+			return FXCollections.observableArrayList(creditService.getCreditTableData(main.getCurrentStore().getStoreID(), yearMonthObject));
 		}, executor);
 	}
 
@@ -1203,7 +1207,7 @@ public class InvoiceEntryController extends DateSelectController{
 		Task<ObservableList<Credit>> task = new Task<>() {
 			@Override
 			protected ObservableList<Credit> call() {
-				return FXCollections.observableArrayList(creditService.getAllCredits(main.getCurrentStore().getStoreID(), yearMonthObject));
+				return FXCollections.observableArrayList(creditService.getCreditTableData(main.getCurrentStore().getStoreID(), yearMonthObject));
 			}
 		};
 		task.setOnSucceeded(_ -> {

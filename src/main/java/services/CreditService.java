@@ -22,13 +22,31 @@ public class CreditService {
     private ObjectMapper objectMapper;
 
     public CreditService() throws IOException {
-        this.restTemplate = new RestTemplate();
-        this.objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        Properties properties = new Properties();
-        properties.load(CreditService.class.getClassLoader().getResourceAsStream("application.properties"));
+        this(new RestTemplate(), loadProperties());
+    }
+
+    CreditService(RestTemplate restTemplate, Properties properties) {
+        this.restTemplate = restTemplate;
+        this.objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
         this.apiToken = properties.getProperty("api.token");
         this.apiBaseUrl = properties.getProperty("api.base.url") + "/credits";
+    }
+
+    private static Properties loadProperties() throws IOException {
+        Properties properties = new Properties();
+        try (var input = CreditService.class.getClassLoader().getResourceAsStream("application.properties")) { properties.load(input); }
+        return properties;
+    }
+
+    /** Display-only source credits; CRUD and duplicate detection continue to read accepted Alpha records. */
+    public List<Credit> getCreditTableData(int storeId, YearMonth month) {
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(apiBaseUrl + "/reconciliation/table-data?storeId=" + storeId + "&yearMonth=" + month,
+                    HttpMethod.GET, new HttpEntity<>(createHeaders()), String.class);
+            return objectMapper.readValue(response.getBody(), new TypeReference<List<Credit>>() {});
+        } catch (org.springframework.web.client.HttpClientErrorException.NotFound olderApi) {
+            return getAllCredits(storeId, month);
+        } catch (IOException exception) { throw new IllegalStateException("Unable to read cached Z-Office credit data", exception); }
     }
 
     private HttpHeaders createHeaders() {

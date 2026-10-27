@@ -121,6 +121,37 @@ class InvoiceServiceTest {
                 () -> service.getInvoiceAmountsForReview(7, rows));
     }
 
+    @Test
+    void creditsUseTypedEndpointsAndCannotOverwriteAnInvoiceInALaterChunk() {
+        var rest = new RestTemplate(); var paths = new ArrayList<String>();
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        rest.getInterceptors().add((request, body, execution) -> {
+            paths.add(request.getURI().getPath());
+            var incoming = mapper.readTree(body); var response = mapper.createArrayNode();
+            if (incoming.isArray()) for (var row : incoming) {
+                var expected = response.addObject().put("invoiceNo", row.path("invoiceNo").asText())
+                        .put("importedInvoiceAmount", row.path("documentType").asText().equals("CREDIT") ? -100 : 100).put("importExists", true);
+                if (row.path("documentType").asText().equals("CREDIT")) expected.put("reconciliationType", "CREDIT");
+            } else response.addObject().put("invoiceNo", "SAME").put("reconciliationType", "CREDIT").put("importExists", true).put("importedInvoiceAmount", -100);
+            return jsonResponse(response.toString());
+        });
+        var props = new Properties(); props.setProperty("api.base.url", "https://example.invalid");
+        var service = new InvoiceService(rest, props);
+        var rows = new ArrayList<models.ScannedInvoice>();
+        for (int i = 0; i < 50; i++) rows.add(new models.ScannedInvoice("invoice.pdf", "Supplier", i == 0 ? "SAME" : "INV" + i,
+                java.time.LocalDate.of(2026, 9, 10), null, models.ScannedInvoice.DocumentType.INVOICE, 10000, 0.99));
+        var credit = new models.ScannedInvoice("credit.pdf", "Supplier", "SAME", java.time.LocalDate.of(2026, 9, 10), null,
+                models.ScannedInvoice.DocumentType.CREDIT, -10000, 0.99);
+        rows.add(credit);
+        var expected = service.getInvoiceAmountsForReview(7, rows);
+        assertEquals(51, expected.size());
+        assertEquals(2, expected.stream().filter(row -> row.getInvoiceNo().equals("SAME")).count());
+        assertEquals(models.ScannedInvoice.DocumentType.CREDIT, service.refreshInvoiceAmount(7, credit).getFirst().getReconciliationType());
+        assertEquals(1, service.getCachedInvoiceAmounts(7, List.of(credit)).size());
+        assertEquals(List.of("/invoices/reconciliation/resolve", "/invoices/reconciliation/documents/resolve",
+                "/credits/reconciliation/refresh", "/invoices/reconciliation/documents/cached"), paths);
+    }
+
     private static ClientHttpResponse jsonResponse(String json) {
         return new ClientHttpResponse() {
             public HttpStatus getStatusCode() { return HttpStatus.OK; }

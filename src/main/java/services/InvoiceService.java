@@ -27,6 +27,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class InvoiceService {
     private static final int REVIEW_BATCH_SIZE = 50;
     private String apiBaseUrl;
+    private String apiRootUrl;
     private String apiToken;
     private RestTemplate restTemplate;
     private ObjectMapper objectMapper;
@@ -39,7 +40,8 @@ public class InvoiceService {
         this.restTemplate = restTemplate;
         this.objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
         this.apiToken = properties.getProperty("api.token");
-        this.apiBaseUrl = properties.getProperty("api.base.url") + "/invoices";
+        this.apiRootUrl = properties.getProperty("api.base.url");
+        this.apiBaseUrl = apiRootUrl + "/invoices";
     }
 
     private static Properties loadProperties() throws IOException {
@@ -114,42 +116,53 @@ public class InvoiceService {
 
     /** A database-only lookup for the scanned references, including invoices not yet saved in Alpha. */
     public List<Invoice> getCachedInvoiceAmounts(int storeId, List<ScannedInvoice> rows) {
-        return invoiceAmountRequest("/reconciliation/cached?storeId=" + storeId, rows);
+        return invoiceAmountRequest((hasCredits(rows) ? "/reconciliation/documents/cached" : "/reconciliation/cached") + "?storeId=" + storeId, rows);
     }
 
     /** Bound request size so large statements cannot become one gateway-length operation. */
     public List<Invoice> getInvoiceAmountsForReview(int storeId, List<ScannedInvoice> rows) {
         List<ScannedInvoice> requested = rows.stream()
-                .filter(row -> row.documentType() == ScannedInvoice.DocumentType.INVOICE && !row.invoiceNo().isBlank())
+                .filter(row -> !row.invoiceNo().isBlank())
                 .distinct().toList();
         // The same lookup may recur across chunks. Keep ambiguity within each response, without
         // turning repeated copies of a lookup into ambiguous duplicate invoices in the review.
         Map<String, List<Invoice>> byReference = new LinkedHashMap<>();
         for (int start = 0; start < requested.size(); start += REVIEW_BATCH_SIZE) {
             int end = Math.min(start + REVIEW_BATCH_SIZE, requested.size());
-            List<Invoice> response = invoiceAmountRequest("/reconciliation/resolve?storeId=" + storeId,
-                    requested.subList(start, end));
+            List<ScannedInvoice> chunk = requested.subList(start, end);
+            List<Invoice> response = invoiceAmountRequest((hasCredits(chunk) ? "/reconciliation/documents/resolve" : "/reconciliation/resolve")
+                    + "?storeId=" + storeId, chunk);
             Map<String, List<Invoice>> batch = new LinkedHashMap<>();
-            response.forEach(invoice -> batch.computeIfAbsent(utils.InvoiceReconciler.reference(invoice.getInvoiceNo()),
+            response.forEach(invoice -> batch.computeIfAbsent(utils.InvoiceReconciler.importKey(invoice),
                     _ -> new ArrayList<>()).add(invoice));
-            requested.subList(start, end).stream().flatMap(row -> utils.InvoiceReconciler.lookupReferences(row).stream())
-                    .map(utils.InvoiceReconciler::reference).forEach(byReference::remove);
+            chunk.forEach(row -> utils.InvoiceReconciler.lookupReferences(row).forEach(reference ->
+                    byReference.remove(utils.InvoiceReconciler.lookupKey(row, reference))));
             byReference.putAll(batch);
         }
         return byReference.values().stream().flatMap(List::stream).toList();
     }
 
     public List<Invoice> refreshInvoiceAmount(int storeId, ScannedInvoice row) {
-        return invoiceAmountRequest("/reconciliation/refresh?storeId=" + storeId, row);
+        return row.documentType() == ScannedInvoice.DocumentType.CREDIT
+                ? amountRequestAt(apiRootUrl + "/credits/reconciliation/refresh?storeId=" + storeId, row)
+                : invoiceAmountRequest("/reconciliation/refresh?storeId=" + storeId, row);
     }
 
     private List<Invoice> invoiceAmountRequest(String path, Object body) {
-        ResponseEntity<String> response = restTemplate.exchange(apiBaseUrl + path, HttpMethod.POST,
+        return amountRequestAt(apiBaseUrl + path, body);
+    }
+
+    private static boolean hasCredits(List<ScannedInvoice> rows) {
+        return rows.stream().anyMatch(row -> row.documentType() == ScannedInvoice.DocumentType.CREDIT);
+    }
+
+    private List<Invoice> amountRequestAt(String url, Object body) {
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST,
                 new HttpEntity<>(body, createHeaders()), String.class);
         try {
             return objectMapper.readValue(response.getBody(), new TypeReference<List<Invoice>>() {});
         } catch (IOException exception) {
-            throw new IllegalStateException("Unable to read cached invoice amounts", exception);
+            throw new IllegalStateException("Unable to read cached document amounts", exception);
         }
     }
 

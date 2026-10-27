@@ -16,6 +16,21 @@ public class Credit {
     private String referenceInvoiceNo;
     private double creditAmount;
     private String notes;
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    private Double zOfficeAmount;
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    private String zOfficeStatus;
+    @com.fasterxml.jackson.annotation.JsonProperty("zOfficeAmount")
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    public Double getZOfficeAmount() { return zOfficeAmount; }
+    @com.fasterxml.jackson.annotation.JsonProperty("zOfficeAmount")
+    public void setZOfficeAmount(Double value) { zOfficeAmount = value; }
+    @com.fasterxml.jackson.annotation.JsonProperty("zOfficeStatus")
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    public String getZOfficeStatus() { return zOfficeStatus; }
+    @com.fasterxml.jackson.annotation.JsonProperty("zOfficeStatus")
+    public void setZOfficeStatus(String value) { zOfficeStatus = value; }
+
     private boolean readOnly;
     private String sourceSystem = "ALPHA";
     //TODO: make sure all notes fields dont extend past 255 character SQL limit

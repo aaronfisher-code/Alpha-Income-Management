@@ -55,7 +55,9 @@ public final class InvoiceReconciler {
 				long importedCents = Math.round(imported.getImportedInvoiceAmount() * 100);
 				long variance = scanned.amountCents() - importedCents;
 				InvoiceReconciliation.Status status;
-				if (scanned.amountCents() == 0 && !confident(scanned.fieldConfidences().amount())) {
+				if (Boolean.TRUE.equals(imported.getReconciliationStale())) {
+                    status = NEEDS_REVIEW;
+                } else if (scanned.amountCents() == 0 && !confident(scanned.fieldConfidences().amount())) {
 					// Missing/uncertain amounts may stand for zero, but require a reliable
 					// identity and an actual Z-Office zero before automatic acceptance.
 					status = !confidentIdentity(scanned) ? NEEDS_REVIEW : importedCents == 0 ? MATCHED : AMOUNT_MISMATCH;
@@ -84,7 +86,17 @@ public final class InvoiceReconciler {
 	public static Map<String, List<Invoice>> indexImportedRows(List<Invoice> importedRows) {
 		return importedRows.stream().filter(Invoice::isImportExists)
 				.filter(invoice -> invoice.getInvoiceNo() != null && !invoice.getInvoiceNo().isBlank())
-				.collect(Collectors.groupingBy(invoice -> reference(invoice.getInvoiceNo()), LinkedHashMap::new, Collectors.toList()));
+				.collect(Collectors.groupingBy(InvoiceReconciler::importKey, LinkedHashMap::new, Collectors.toList()));
+	}
+
+	public static String importKey(Invoice invoice) {
+		boolean credit = invoice.getReconciliationType() == ScannedInvoice.DocumentType.CREDIT;
+		return (credit ? "CREDIT:" : "INVOICE:") + (credit ? text(invoice.getInvoiceNo()).toUpperCase(Locale.ROOT) : reference(invoice.getInvoiceNo()));
+	}
+
+	public static String lookupKey(ScannedInvoice row, String reference) {
+		return row.documentType() + ":" + (row.documentType() == ScannedInvoice.DocumentType.CREDIT
+				? text(reference).toUpperCase(Locale.ROOT) : reference(reference));
 	}
 
 	/** Exact references come first; only Symbion invoices allow an optional I before a numeric reference. */
@@ -100,7 +112,10 @@ public final class InvoiceReconciler {
 
 	public static List<Invoice> matchingImportedRows(ScannedInvoice scanned, Map<String, List<Invoice>> byReference) {
 		for (String candidateReference : lookupReferences(scanned)) {
-			List<Invoice> candidates = byReference.getOrDefault(reference(candidateReference), List.of());
+			List<Invoice> candidates = byReference.getOrDefault(lookupKey(scanned, candidateReference), List.of());
+			if (scanned.documentType() == ScannedInvoice.DocumentType.CREDIT && !scanned.supplierName().isBlank()) {
+				candidates = candidates.stream().filter(invoice -> supplier(invoice.getSupplierName()).equals(supplier(scanned.supplierName()))).toList();
+			}
 			if (isSymbionInvoice(scanned)) {
 				List<Invoice> named = candidates.stream().filter(invoice -> isSymbionSupplier(invoice.getSupplierName())).toList();
 				candidates = named.isEmpty()

@@ -7,6 +7,20 @@ import java.util.Locale;
 
 public class Invoice {
 
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    private ScannedInvoice.DocumentType reconciliationType;
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    private Boolean reconciliationStale;
+    public Boolean getReconciliationStale() { return reconciliationStale; }
+    public void setReconciliationStale(Boolean value) { reconciliationStale = value; }
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    private String referenceInvoiceNo;
+
+    public ScannedInvoice.DocumentType getReconciliationType() { return reconciliationType; }
+    public void setReconciliationType(ScannedInvoice.DocumentType value) { reconciliationType = value; }
+    public String getReferenceInvoiceNo() { return referenceInvoiceNo; }
+    public void setReferenceInvoiceNo(String value) { referenceInvoiceNo = value; }
+
 	private String supplierName;
 	private int storeID;
 	private int supplierID;

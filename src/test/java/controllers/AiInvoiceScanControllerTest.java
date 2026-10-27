@@ -173,7 +173,7 @@ class AiInvoiceScanControllerTest {
 					assertTrue(progress.isVisible());
 					assertEquals(combined ? 0.5 : 0.1, progress.getProgress(), 0.001);
 					Label summary = field(holder[0], "summaryLabel");
-					assertEquals("Loading invoice records… " + (combined ? 250 : 50) + " of 500", summary.getText());
+					assertEquals("Loading document records… " + (combined ? 250 : 50) + " of 500", summary.getText());
 				});
 				releaseLater.countDown();
 				assertTrue(opened.await(5, TimeUnit.SECONDS));
@@ -247,8 +247,9 @@ class AiInvoiceScanControllerTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(booleans = { true, false })
-	void previewRefreshUpdatesTheExpectedAmountOrRetainsTheCacheOnFailureWithoutLosingDraftEdits(boolean succeeds) throws Exception {
+	@CsvSource({ "INVOICE,true", "INVOICE,false", "CREDIT,true", "CREDIT,false" })
+	void previewRefreshUpdatesTheExpectedAmountOrRetainsTheCacheOnFailureWithoutLosingDraftEdits(ScannedInvoice.DocumentType type, boolean succeeds) throws Exception {
+        boolean credit = type == ScannedInvoice.DocumentType.CREDIT;
 		CountDownLatch started = new CountDownLatch(1);
 		CountDownLatch release = new CountDownLatch(1);
 		CountDownLatch finished = new CountDownLatch(1);
@@ -258,22 +259,34 @@ class AiInvoiceScanControllerTest {
 				onFxThread(() -> {
 					var controller = controller(); holder[0] = controller;
 					configureReconciliation(controller, new InvoiceService() {
-						@Override public List<Invoice> getInvoiceAmountsForReview(int store, List<ScannedInvoice> rows) { return List.of(symbionImport("000123")); }
+						@Override public List<Invoice> getInvoiceAmountsForReview(int store, List<ScannedInvoice> rows) {
+                            var expected = symbionImport("000123");
+                            if (credit) { expected.setReconciliationType(type); expected.setImportedInvoiceAmount(-100); }
+                            return List.of(expected);
+                        }
 						@Override public List<Invoice> refreshInvoiceAmount(int store, ScannedInvoice row) {
-							assertEquals(1, store); assertEquals("000123", row.invoiceNo());
+							assertEquals(1, store); assertEquals("000123", row.invoiceNo()); assertEquals(type, row.documentType());
 							started.countDown();
 							try { if (!release.await(10, TimeUnit.SECONDS)) throw new AssertionError("Refresh was not released"); }
 							catch (InterruptedException exception) { throw new RuntimeException(exception); }
 							if (!succeeds) throw new IllegalStateException("agent offline");
-							var updated = symbionImport("000123"); updated.setImportedInvoiceAmount(150.25); return List.of(updated);
+							var updated = symbionImport("000123"); updated.setImportedInvoiceAmount(credit ? -150.25 : 150.25);
+                            if (credit) updated.setReconciliationType(type);
+                            return List.of(updated);
 						}
 					});
 					setField(controller, "executor", workers);
-					var scanned = new ScannedInvoice("invoice.pdf", "Symbion", "I000123", DATE, null, ScannedInvoice.DocumentType.INVOICE, 10000, 0.99);
+					var scanned = new ScannedInvoice("invoice.pdf", "Symbion", credit ? "000123" : "I000123", DATE, null, type, 10000, 0.99);
 					invoke(controller, "showLoadedBatches", List.class, List.of(loadTestBatch(controller, List.of(scanned))));
 					ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
 					invoke(controller, "review", InvoiceReconciliation.class, rows.getFirst());
+                    javafx.scene.control.ChoiceBox<String> typeChoice = field(controller, "reviewTypeChoice");
+                    typeChoice.setValue(credit ? "Invoice" : "Credit");
+                    Label expected = field(controller, "reviewExpectedAmountLabel"); assertEquals("N/A", expected.getText());
+                    typeChoice.setValue(credit ? "Credit" : "Invoice"); assertEquals("$100.00", expected.getText());
 					TextField amount = field(controller, "reviewAmountField"); amount.setText("105.00");
+                    Label variance = field(controller, "reviewVarianceLabel");
+                    assertEquals(credit ? "-$5.00" : "$5.00", variance.getText());
 					TextArea notes = field(controller, "reviewNotesField"); notes.setText("Keep my draft");
 					Label message = field(controller, "invoiceAmountRefreshMessageLabel");
 					message.textProperty().addListener((_, _, value) -> { if (value.contains("refreshed") || value.contains("failed")) finished.countDown(); });
@@ -1035,6 +1048,39 @@ class AiInvoiceScanControllerTest {
 				Map<ScannedInvoice, ?> acceptedByRow = field(controller, "acceptedDocuments");
 				save.invoke(controller, rows.getFirst(), acceptedByRow.get(row.getScanned()));
 				assertEquals("USER-EDITED", saved.getLast().getInvoiceNo());
+			} finally { controller.dispose(); }
+		});
+	}
+
+	@Test
+	void mixedStatementKeepsInvoiceAndCreditMatchesWithTheSameNumber() throws Exception {
+		onFxThread(() -> {
+			var controller = controller();
+			try {
+				var invoice = symbionImport("000123");
+				var credit = symbionImport("000123"); credit.setReconciliationType(ScannedInvoice.DocumentType.CREDIT);
+				credit.setImportedInvoiceAmount(-25); credit.setReferenceInvoiceNo("INV-42");
+				configureReconciliation(controller, new InvoiceService() {
+					@Override public List<Invoice> getInvoiceAmountsForReview(int store, List<ScannedInvoice> rows) {
+						assertEquals(2, rows.size()); return List.of(invoice, credit);
+					}
+				});
+				var scans = List.of(
+						new ScannedInvoice("statement.pdf", "Symbion", "I000123", DATE, null, ScannedInvoice.DocumentType.INVOICE, 10000, 0.99),
+						new ScannedInvoice("statement.pdf", "Symbion", "000123", DATE, null, ScannedInvoice.DocumentType.CREDIT, -2500, 0.99));
+				invoke(controller, "showLoadedBatches", List.class, List.of(loadTestBatch(controller, scans)));
+				ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
+				assertTrue(rows.stream().allMatch(row -> row.getStatus() == InvoiceReconciliation.Status.MATCHED));
+				assertSame(invoice, rows.getFirst().getImported()); assertSame(credit, rows.getLast().getImported());
+				var saved = new ArrayList<models.Credit>();
+				setField(controller, "creditService", new services.CreditService() {
+					@Override public void saveOrUpdateCredit(models.Credit value) { saved.add(value); }
+				});
+				Object approved = record("AcceptedDocument", 9, "Symbion Pty Ltd", ScannedInvoice.DocumentType.CREDIT,
+						"000123", DATE, null, 25.0, "Credit note");
+				var save = AiInvoiceScanController.class.getDeclaredMethod("saveDocument", InvoiceReconciliation.class, approved.getClass());
+				save.setAccessible(true); save.invoke(controller, rows.getLast(), approved);
+				assertEquals("INV-42", saved.getFirst().getReferenceInvoiceNo()); assertEquals(25, saved.getFirst().getCreditAmount());
 			} finally { controller.dispose(); }
 		});
 	}
