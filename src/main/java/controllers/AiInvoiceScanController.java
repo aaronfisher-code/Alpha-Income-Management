@@ -17,8 +17,10 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Control;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SelectionMode;
@@ -40,6 +42,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.SVGPath;
 import models.Credit;
 import models.Invoice;
 import models.InvoiceSupplier;
@@ -99,6 +102,7 @@ public final class AiInvoiceScanController extends Controller {
 	@FXML private Button scanButton;
 	@FXML private CheckBox showMatchedCheck;
 	@FXML private ProgressIndicator scanProgress;
+	@FXML private ProgressBar reviewLoadProgress;
 	@FXML private Label summaryLabel;
 	@FXML private Label acceptanceSummaryLabel;
 	@FXML private Button saveAcceptedButton;
@@ -116,11 +120,17 @@ public final class AiInvoiceScanController extends Controller {
 	@FXML private Button acceptSelectedButton;
 	@FXML private Button selectAllResultsButton;
 	@FXML private Button clearResultSelectionButton;
+	@FXML private Label selectedRowsLabel;
 	@FXML private Label bulkReviewMessageLabel;
 	@FXML private Button editSelectedButton;
 	@FXML private VBox bulkEditPanel;
 	@FXML private ChoiceBox<String> bulkEditFieldChoice;
 	@FXML private ComboBox<InvoiceSupplier> bulkSupplierChoice;
+	@FXML private CheckBox bulkCustomSupplierCheck;
+	@FXML private TextField bulkCustomSupplierNameField;
+	@FXML private Label bulkEditSelectionLabel;
+	@FXML private Label bulkEditValueLabel;
+	@FXML private Label bulkEditHelpLabel;
 	@FXML private DatePicker bulkDatePicker;
 	@FXML private TextField bulkNotesField;
 	@FXML private Button applyBulkEditButton;
@@ -152,6 +162,8 @@ public final class AiInvoiceScanController extends Controller {
 	@FXML private Label reviewExpectedAmountLabel;
 	@FXML private Label reviewVarianceLabel;
 	@FXML private Button refreshInvoiceAmountButton;
+	@FXML private SVGPath amountRefreshIcon;
+	@FXML private ProgressIndicator amountRefreshProgress;
 	@FXML private Label invoiceAmountRefreshMessageLabel;
 	@FXML private TextArea reviewNotesField;
 	@FXML private Button reviewBackButton;
@@ -170,6 +182,7 @@ public final class AiInvoiceScanController extends Controller {
 	private final ObservableList<BatchSummary> queuedBatches = FXCollections.observableArrayList();
 	private final Map<ScannedInvoice, AcceptedDocument> acceptedDocuments = new IdentityHashMap<>();
 	private final Map<ScannedInvoice, AcceptedDocument> pendingEdits = new IdentityHashMap<>();
+	private final Map<ScannedInvoice, String> customSupplierDrafts = new IdentityHashMap<>();
 	private final Map<Long, List<RetainedApproval>> retainedApprovals = new HashMap<>();
 	private final Map<ScannedInvoice, Map<PdfEvidenceField, PdfEvidenceLocation>> evidenceLocations = new IdentityHashMap<>();
 	private final Map<ScannedInvoice, Long> documentIdsByRow = new IdentityHashMap<>();
@@ -216,6 +229,7 @@ public final class AiInvoiceScanController extends Controller {
 		bulkEditFieldChoice.getItems().setAll("Supplier", "Document date", "Due date", "Notes");
 		bulkEditFieldChoice.getSelectionModel().selectFirst();
 		bulkEditFieldChoice.getSelectionModel().selectedItemProperty().addListener((_, _, _) -> updateBulkEditField());
+		bulkCustomSupplierCheck.selectedProperty().addListener((_, _, _) -> updateBulkEditField());
 		reviewTypeChoice.getItems().setAll("Invoice", "Credit");
 		reviewTypeChoice.getSelectionModel().selectedItemProperty().addListener((_, _, value) -> updateReviewType(value));
 		reviewDueDateField.valueProperty().addListener((_, _, _) -> updateDueDateReviewPresentation());
@@ -335,13 +349,11 @@ public final class AiInvoiceScanController extends Controller {
 		action.setSortable(false);
 		action.setCellFactory(_ -> new TableCell<>() {
 			private final Button primary = new Button();
-			private final Button rescan = new Button("↻");
+			private final Button rescan = rescanButton();
 			private final Button dismiss = new Button("Dismiss");
 			private final HBox buttons = new HBox(6, primary, rescan, dismiss);
 			{
 				primary.getStyleClass().add("review-add-button");
-				rescan.getStyleClass().add("secondary-scan-button");
-				rescan.setMinWidth(30); rescan.setPrefWidth(30); rescan.setMaxWidth(30);
 				rescan.setAccessibleText("Rescan batch");
 				rescan.setTooltip(new Tooltip("Rescan every source PDF in this batch using Gemini."));
 				rescan.setOnAction(_ -> rescanBatch(getTableView().getItems().get(getIndex())));
@@ -378,6 +390,18 @@ public final class AiInvoiceScanController extends Controller {
 		column.setCellValueFactory(new PropertyValueFactory<>(property));
 		column.setPrefWidth(width);
 		return column;
+	}
+
+	private static Button rescanButton() {
+		SVGPath icon = new SVGPath();
+		icon.setContent("M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z "
+				+ "M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z");
+		icon.getStyleClass().add("rescan-icon");
+		Button button = new Button();
+		button.setGraphic(icon);
+		button.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+		button.getStyleClass().addAll("secondary-scan-button", "table-rescan-button");
+		return button;
 	}
 
 	private void handleBatchPrimary(BatchSummary batch) {
@@ -453,23 +477,48 @@ public final class AiInvoiceScanController extends Controller {
 	private void openBatches(List<BatchSummary> batches) {
 		if (pdfCache != null) pdfCache.stopPrefetch();
 		setQueueBusy(true, "Loading invoice and reconciliation data…");
+		reviewLoadProgress.setVisible(true);
+		reviewLoadProgress.setManaged(true);
 		int requestedStoreId = storeId();
 		YearMonth requestedMonth = YearMonth.from(main.getCurrentDate());
 		Task<List<LoadedBatch>> task = new Task<>() {
 			@Override protected List<LoadedBatch> call() throws Exception {
+				updateMessage("Loading suppliers…");
 				List<InvoiceSupplier> suppliers = supplierLoad.get();
 				List<LoadedBatch> loaded = new ArrayList<>();
+				List<BatchDetail> details = new ArrayList<>();
 				ReviewLoadContext context = new ReviewLoadContext(requestedStoreId, requestedMonth);
 				for (BatchSummary batch : batches) {
+					updateMessage("Loading review documents… " + (details.size() + 1) + " of " + batches.size());
 					BatchDetail detail = documentAiService.batch(batch.id(), requestedStoreId);
 					if (detail.batch().status() != BatchStatus.REVIEW_REQUIRED) {
 						throw new IllegalStateException("“" + batch.sourceLabel() + "” is no longer ready. Refresh the queue and try again.");
 					}
-					loaded.add(loadBatch(detail, suppliers, context));
+					details.add(detail);
 				}
+				int totalRecords = details.stream().flatMap(detail -> detail.documents().stream())
+						.mapToInt(document -> document.rows().size()).sum();
+				int completedRecords = 0;
+				for (BatchDetail detail : details) {
+					int completedBefore = completedRecords;
+					int batchRecords = detail.documents().stream().mapToInt(document -> document.rows().size()).sum();
+					context.progress = (done, total) -> {
+						int completed = completedBefore + batchRecords - total + done;
+						updateProgress(completed, Math.max(1, totalRecords));
+						updateMessage("Loading invoice records… " + completed + " of " + totalRecords);
+					};
+					loaded.add(loadBatch(detail, suppliers, context));
+					completedRecords += batchRecords;
+				}
+				updateProgress(1, 1);
+				updateMessage("Preparing review…");
 				return loaded;
 			}
 		};
+		reviewLoadProgress.progressProperty().bind(task.progressProperty());
+		task.messageProperty().addListener((_, _, message) -> {
+			if (!disposed && queueBusy) summaryLabel.setText(message);
+		});
 		task.setOnSucceeded(_ -> {
 			if (disposed) return;
 			reviewStoreId = requestedStoreId;
@@ -489,6 +538,7 @@ public final class AiInvoiceScanController extends Controller {
 	private static final class ReviewLoadContext {
 		final int storeId;
 		final YearMonth defaultMonth;
+		java.util.function.BiConsumer<Integer, Integer> progress = (_, _) -> {};
 		final Set<String> requested = new HashSet<>();
 		final Map<String, List<Invoice>> cachedByReference = new LinkedHashMap<>();
 
@@ -563,6 +613,7 @@ public final class AiInvoiceScanController extends Controller {
 		bulkSupplierChoice.getItems().setAll(availableSuppliers);
 		acceptedDocuments.clear();
 		pendingEdits.clear();
+		customSupplierDrafts.clear();
 		showMatchedCheck.setSelected(false);
 		allResults.setAll(loaded.stream().flatMap(batch -> batch.run().reconciliations().stream()).toList());
 		restoreRetainedApprovals();
@@ -607,6 +658,12 @@ public final class AiInvoiceScanController extends Controller {
 
 	private void setQueueBusy(boolean busy, String message) {
 		queueBusy = busy;
+		if (!busy) {
+			reviewLoadProgress.progressProperty().unbind();
+			reviewLoadProgress.setProgress(ProgressIndicator.INDETERMINATE_PROGRESS);
+			reviewLoadProgress.setVisible(false);
+			reviewLoadProgress.setManaged(false);
+		}
 		updateQueueVisualState();
 		if (message != null) summaryLabel.setText(message);
 	}
@@ -657,14 +714,17 @@ public final class AiInvoiceScanController extends Controller {
 			String key = InvoiceReconciler.supplier(row.supplierName()) + ":" + InvoiceReconciler.reference(row.invoiceNo()) + ":" + row.amountCents();
 			if (row.documentType() == ScannedInvoice.DocumentType.INVOICE && context.requested.add(key)) missing.add(row);
 		}
-		if (!missing.isEmpty()) {
-			List<Invoice> cached = invoiceService.getInvoiceAmountsForReview(context.storeId, missing);
+		context.progress.accept(0, missing.size());
+		for (int start = 0; start < missing.size(); start += 50) {
+			int end = Math.min(start + 50, missing.size());
+			List<ScannedInvoice> chunk = missing.subList(start, end);
+			List<Invoice> cached = invoiceService.getInvoiceAmountsForReview(context.storeId, chunk);
 			Map<String, List<Invoice>> groups = cached.stream().filter(Invoice::isImportExists)
 					.collect(java.util.stream.Collectors.groupingBy(row -> InvoiceReconciler.reference(row.getInvoiceNo())));
-			// These results are authoritative, including fresh not-found responses.
-			missing.stream().flatMap(row -> InvoiceReconciler.lookupReferences(row).stream())
+			chunk.stream().flatMap(row -> InvoiceReconciler.lookupReferences(row).stream())
 					.map(InvoiceReconciler::reference).forEach(context.cachedByReference::remove);
 			context.cachedByReference.putAll(groups);
+			context.progress.accept(end, missing.size());
 		}
 		return context.cachedByReference.values().stream().flatMap(List::stream).toList();
 	}
@@ -695,7 +755,7 @@ public final class AiInvoiceScanController extends Controller {
 		action.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(cell.getValue()));
 		action.setCellFactory(_ -> new TableCell<>() {
 			private final Button reviewButton = new Button("Review");
-			private final Button rescanButton = new Button("↻");
+			private final Button rescanButton = rescanButton();
 			private final Button trashButton = new Button("Trash");
 			private final HBox buttons = new HBox(5, reviewButton, rescanButton, trashButton);
 			{
@@ -703,8 +763,6 @@ public final class AiInvoiceScanController extends Controller {
 				reviewButton.setOnAction(_ -> {
 					if (!isEmpty() && !commitBusy) review(getItem());
 				});
-				rescanButton.getStyleClass().add("secondary-scan-button");
-				rescanButton.setMinWidth(30); rescanButton.setPrefWidth(30); rescanButton.setMaxWidth(30);
 				rescanButton.setAccessibleText("Rescan source PDF");
 				rescanButton.setTooltip(new Tooltip("Rescan this source PDF using Gemini. All invoice and credit rows extracted from it will be replaced."));
 				rescanButton.setOnAction(_ -> { if (!isEmpty()) rescanScannedRow(getItem()); });
@@ -1120,7 +1178,7 @@ public final class AiInvoiceScanController extends Controller {
 			Long expected = row.hasExpectedAmount() ? Math.round(row.getImported().getImportedInvoiceAmount() * 100) : null;
 			retainedApprovals.computeIfAbsent(documentId, _ -> new ArrayList<>()).add(new RetainedApproval(
 					batchId, row.getScanned(), approved, expected,
-					classificationWarning(row), row.getStatus(), draft));
+					classificationWarning(row), row.getStatus(), draft, customSupplierDrafts.get(row.getScanned())));
 		}
 	}
 
@@ -1138,6 +1196,7 @@ public final class AiInvoiceScanController extends Controller {
 				allResults.set(index, row.withStatus(unchanged ? retained.status() : InvoiceReconciliation.Status.NEEDS_REVIEW));
 				if (retained.approved() != null) acceptedDocuments.put(row.getScanned(), retained.approved());
 				if (retained.draft() != null) pendingEdits.put(row.getScanned(), retained.draft());
+				if (retained.customSupplierName() != null) customSupplierDrafts.put(row.getScanned(), retained.customSupplierName());
 				break;
 			}
 		}
@@ -1145,7 +1204,8 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	private record RetainedApproval(long batchId, ScannedInvoice scanned, AcceptedDocument approved,
-			Long expectedCents, String warning, InvoiceReconciliation.Status status, AcceptedDocument draft) {}
+			Long expectedCents, String warning, InvoiceReconciliation.Status status, AcceptedDocument draft,
+			String customSupplierName) {}
 
 	private void trashScannedRow(InvoiceReconciliation row) {
 		if (row == null || row.getScanned() == null
@@ -1178,6 +1238,7 @@ public final class AiInvoiceScanController extends Controller {
 								allResults.remove(removedRow);
 								acceptedDocuments.remove(scanned);
 								pendingEdits.remove(scanned);
+								customSupplierDrafts.remove(scanned);
 								evidenceLocations.remove(scanned);
 								documentIdsByRow.remove(scanned);
 							}
@@ -1329,6 +1390,7 @@ public final class AiInvoiceScanController extends Controller {
 				amount.doubleValue(),
 				notes));
 		pendingEdits.remove(scanned);
+		customSupplierDrafts.remove(scanned);
 		currentReview = currentReview.withReviewValues(reviewValues(currentReview, acceptedDocuments.get(scanned), null));
 
 		InvoiceReconciliation next = nextPendingReview(currentReview);
@@ -1390,6 +1452,7 @@ public final class AiInvoiceScanController extends Controller {
 		if (commitBusy || amountRefreshBusy) return;
 		bulkEditPanel.setVisible(true); bulkEditPanel.setManaged(true);
 		updateBulkEditField();
+		bulkEditFieldChoice.requestFocus();
 	}
 
 	@FXML
@@ -1400,19 +1463,47 @@ public final class AiInvoiceScanController extends Controller {
 	private void updateBulkEditField() {
 		String field = bulkEditFieldChoice.getValue();
 		boolean supplier = "Supplier".equals(field), notes = "Notes".equals(field);
-		bulkSupplierChoice.setVisible(supplier); bulkSupplierChoice.setManaged(supplier);
+		boolean custom = supplier && bulkCustomSupplierCheck.isSelected();
+		bulkSupplierChoice.setVisible(supplier && !custom); bulkSupplierChoice.setManaged(supplier && !custom);
+		bulkCustomSupplierCheck.setVisible(supplier); bulkCustomSupplierCheck.setManaged(supplier);
+		bulkCustomSupplierNameField.setVisible(custom); bulkCustomSupplierNameField.setManaged(custom);
 		bulkNotesField.setVisible(notes); bulkNotesField.setManaged(notes);
 		bulkDatePicker.setVisible(!supplier && !notes); bulkDatePicker.setManaged(!supplier && !notes);
+		bulkEditValueLabel.setText(custom ? "New supplier name" : notes ? "New notes" : supplier ? "Supplier" : field);
+		bulkEditValueLabel.setLabelFor(custom ? bulkCustomSupplierNameField : supplier ? bulkSupplierChoice
+				: notes ? bulkNotesField : bulkDatePicker);
+		bulkEditHelpLabel.setText(supplier ? custom
+				? "New names are added to this store's supplier list when you save accepted documents."
+				: "Choose an existing supplier, or enter a new name."
+				: notes ? "Replaces notes on the selected rows. Leave blank to clear them."
+				: "Due date".equals(field) ? "Applies to invoices only. Credit notes have no due date."
+				: "Estimated invoice due dates update automatically. Explicit due dates stay as entered.");
+	}
+
+	private InvoiceSupplier bulkEditSupplier() {
+		if (bulkCustomSupplierCheck.isSelected()) {
+			String name = bulkCustomSupplierNameField.getText().trim();
+			if (name.isBlank()) return null;
+			InvoiceSupplier existing = findAvailableSupplier(name);
+			return existing == null ? new InvoiceSupplier(0, name, storeId()) : existing;
+		}
+		InvoiceSupplier selected = bulkSupplierChoice.getValue();
+		return selected == null ? null : availableSuppliers.stream()
+				.filter(value -> value.getContactID() > 0 && value.getContactID() == selected.getContactID())
+				.findFirst().orElse(null);
 	}
 
 	@FXML
 	private void applyBulkEdit() {
 		if (commitBusy || amountRefreshBusy) return;
 		String field = bulkEditFieldChoice.getValue();
-		InvoiceSupplier supplier = bulkSupplierChoice.getValue();
-		if ("Supplier".equals(field) && (supplier == null || supplier.getContactID() <= 0
-				|| availableSuppliers.stream().noneMatch(value -> value.getContactID() == supplier.getContactID()))) {
-			showBulkReviewMessage("Choose an existing supplier before applying the edit.", true); return;
+		InvoiceSupplier supplier = "Supplier".equals(field) ? bulkEditSupplier() : null;
+		if ("Supplier".equals(field) && supplier == null) {
+			showBulkReviewMessage(bulkCustomSupplierCheck.isSelected()
+					? "Enter a supplier name before applying the edit."
+					: "Choose an existing supplier or enter a new supplier name before applying the edit.", true);
+			(bulkCustomSupplierCheck.isSelected() ? bulkCustomSupplierNameField : bulkSupplierChoice).requestFocus();
+			return;
 		}
 		LocalDate date = bulkDatePicker.getValue();
 		if (("Document date".equals(field) || "Due date".equals(field)) && date == null) {
@@ -1431,7 +1522,9 @@ public final class AiInvoiceScanController extends Controller {
 			AcceptedDocument edited = new AcceptedDocument("Supplier".equals(field) ? supplier.getContactID() : old.supplierId(),
 					"Supplier".equals(field) ? supplier.getSupplierName() : old.supplierName(), old.documentType(), old.reference(),
 					documentDate, due, old.amount(), "Notes".equals(field) ? bulkNotesField.getText().trim() : old.notes());
-			if (!edited.equals(old)) edits.add(new PendingSave(row, edited));
+			boolean customChosen = "Supplier".equals(field) && supplier.getContactID() == 0
+					&& !supplier.getSupplierName().equals(customSupplierDrafts.get(row.getScanned()));
+			if (!edited.equals(old) || customChosen) edits.add(new PendingSave(row, edited));
 		}
 		if (edits.isEmpty()) { showBulkReviewMessage("No values changed. Due dates apply to invoice rows only.", false); return; }
 		if (!"Supplier".equals(field) || edits.stream().noneMatch(edit -> edit.document().documentType() == ScannedInvoice.DocumentType.INVOICE)) {
@@ -1475,6 +1568,10 @@ public final class AiInvoiceScanController extends Controller {
 			InvoiceReconciliation edited = new InvoiceReconciliation(InvoiceReconciliation.Status.NEEDS_REVIEW,
 					row.getScanned(), imported, null).withReviewValues(values);
 			pendingEdits.put(row.getScanned(), edit.document());
+			if ("Supplier".equals(field)) {
+				if (edit.document().supplierId() == 0) customSupplierDrafts.put(row.getScanned(), edit.document().supplierName());
+				else customSupplierDrafts.remove(row.getScanned());
+			}
 			allResults.set(resultIndex(allResults, row), edited);
 		}
 		applyResultFilter(); updateSummary(allResults.size());
@@ -1512,8 +1609,10 @@ public final class AiInvoiceScanController extends Controller {
 
 	private void validateApproval(InvoiceReconciliation row, AcceptedDocument document) {
 		AcceptedDocument previous = acceptedDocuments.get(row.getScanned());
-		boolean custom = previous != null && previous.supplierId() == 0
-				&& java.util.Objects.equals(previous.supplierName(), document.supplierName());
+		boolean custom = (previous != null && previous.supplierId() == 0
+				&& java.util.Objects.equals(previous.supplierName(), document.supplierName()))
+				|| (document.supplierId() == 0 && document.supplierName() != null
+				&& document.supplierName().equals(customSupplierDrafts.get(row.getScanned())));
 		if (document.supplierName() == null || document.supplierName().isBlank() || document.supplierId() <= 0 && !custom) {
 			throw new IllegalStateException("Select an existing supplier or explicitly accept a custom supplier for " + row.getInvoiceNo() + ".");
 		}
@@ -1544,6 +1643,7 @@ public final class AiInvoiceScanController extends Controller {
 			InvoiceReconciliation row = approval.row();
 			acceptedDocuments.put(row.getScanned(), approval.document());
 			pendingEdits.remove(row.getScanned());
+			customSupplierDrafts.remove(row.getScanned());
 			allResults.set(allResults.indexOf(row), row.withStatus(InvoiceReconciliation.Status.ACCEPTED));
 		}
 		resultsTable.getSelectionModel().clearSelection();
@@ -1562,17 +1662,24 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	private void updateBulkAcceptanceControls() {
+		int selectedCount = resultsTable.getSelectionModel().getSelectedItems().size();
+		selectedRowsLabel.setText(selectedCount == 0 ? "No rows selected"
+				: selectedCount + (selectedCount == 1 ? " row selected" : " rows selected"));
 		long selected = resultsTable.getSelectionModel().getSelectedItems().stream()
 				.filter(AiInvoiceScanController::needsAcceptance).count();
 		acceptSelectedButton.setText(selected == 0 ? "Accept selected" : "Accept selected (" + selected + ")");
 		acceptSelectedButton.setDisable(commitBusy || amountRefreshBusy || selected == 0);
 		long selectedEditable = resultsTable.getSelectionModel().getSelectedItems().stream().filter(AiInvoiceScanController::editable).count();
+		bulkEditSelectionLabel.setText(selectedEditable == 0 ? "Select rows in the table to edit them together."
+				: "Changes will apply to " + selectedEditable + (selectedEditable == 1 ? " selected row." : " selected rows."));
 		editSelectedButton.setText(selectedEditable == 0 ? "Edit selected" : "Edit selected (" + selectedEditable + ")");
 		editSelectedButton.setDisable(commitBusy || amountRefreshBusy || selectedEditable == 0);
 		applyBulkEditButton.setText("Apply to selected (" + selectedEditable + ")");
 		applyBulkEditButton.setDisable(commitBusy || amountRefreshBusy || selectedEditable == 0);
 		bulkEditFieldChoice.setDisable(commitBusy || amountRefreshBusy);
 		bulkSupplierChoice.setDisable(commitBusy || amountRefreshBusy);
+		bulkCustomSupplierCheck.setDisable(commitBusy || amountRefreshBusy);
+		bulkCustomSupplierNameField.setDisable(commitBusy || amountRefreshBusy);
 		bulkDatePicker.setDisable(commitBusy || amountRefreshBusy);
 		bulkNotesField.setDisable(commitBusy || amountRefreshBusy);
 		closeBulkEditButton.setDisable(commitBusy);
@@ -1868,6 +1975,10 @@ public final class AiInvoiceScanController extends Controller {
 		refreshInvoiceAmountButton.setVisible(invoice);
 		refreshInvoiceAmountButton.setManaged(invoice);
 		refreshInvoiceAmountButton.setDisable(!invoice || amountRefreshBusy || commitBusy);
+		refreshInvoiceAmountButton.setText(amountRefreshBusy ? "Refreshing Z-Office…" : "Refresh Z-Office amount");
+		amountRefreshIcon.setVisible(!amountRefreshBusy);
+		amountRefreshProgress.setVisible(invoice && amountRefreshBusy);
+		amountRefreshProgress.setManaged(invoice && amountRefreshBusy);
 		reviewAcceptButton.setDisable(amountRefreshBusy || commitBusy);
 	}
 

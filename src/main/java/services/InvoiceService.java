@@ -19,10 +19,13 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class InvoiceService {
+    private static final int REVIEW_BATCH_SIZE = 50;
     private String apiBaseUrl;
     private String apiToken;
     private RestTemplate restTemplate;
@@ -114,9 +117,26 @@ public class InvoiceService {
         return invoiceAmountRequest("/reconciliation/cached?storeId=" + storeId, rows);
     }
 
-    /** Reuse matching cached values; retry missing or excessive-variance rows directly with Z-Office. */
+    /** Bound request size so large statements cannot become one gateway-length operation. */
     public List<Invoice> getInvoiceAmountsForReview(int storeId, List<ScannedInvoice> rows) {
-        return invoiceAmountRequest("/reconciliation/resolve?storeId=" + storeId, rows);
+        List<ScannedInvoice> requested = rows.stream()
+                .filter(row -> row.documentType() == ScannedInvoice.DocumentType.INVOICE && !row.invoiceNo().isBlank())
+                .distinct().toList();
+        // The same lookup may recur across chunks. Keep ambiguity within each response, without
+        // turning repeated copies of a lookup into ambiguous duplicate invoices in the review.
+        Map<String, List<Invoice>> byReference = new LinkedHashMap<>();
+        for (int start = 0; start < requested.size(); start += REVIEW_BATCH_SIZE) {
+            int end = Math.min(start + REVIEW_BATCH_SIZE, requested.size());
+            List<Invoice> response = invoiceAmountRequest("/reconciliation/resolve?storeId=" + storeId,
+                    requested.subList(start, end));
+            Map<String, List<Invoice>> batch = new LinkedHashMap<>();
+            response.forEach(invoice -> batch.computeIfAbsent(utils.InvoiceReconciler.reference(invoice.getInvoiceNo()),
+                    _ -> new ArrayList<>()).add(invoice));
+            requested.subList(start, end).stream().flatMap(row -> utils.InvoiceReconciler.lookupReferences(row).stream())
+                    .map(utils.InvoiceReconciler::reference).forEach(byReference::remove);
+            byReference.putAll(batch);
+        }
+        return byReference.values().stream().flatMap(List::stream).toList();
     }
 
     public List<Invoice> refreshInvoiceAmount(int storeId, ScannedInvoice row) {

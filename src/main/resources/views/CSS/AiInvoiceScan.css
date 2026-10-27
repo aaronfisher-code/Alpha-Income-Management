@@ -65,6 +65,20 @@
     -fx-max-height: 22px;
 }
 
+.ai-scan-view .table-view .table-rescan-button {
+    -fx-padding: 0;
+    -fx-min-width: 30px;
+    -fx-pref-width: 30px;
+    -fx-max-width: 30px;
+    -fx-min-height: 22px;
+    -fx-pref-height: 22px;
+    -fx-max-height: 22px;
+}
+
+.rescan-icon {
+    -fx-fill: #4b4860;
+}
+
 .primary-scan-button {
     -fx-background-color: #0f60ff;
     -fx-background-radius: 5;
@@ -109,6 +123,181 @@
 
 .scan-summary {
     -fx-font-family: "Montserrat SemiBold";
+}
+
+.results-section-title {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 17px;
+    -fx-text-fill: #283046;
+}
+
+.selection-toolbar {
+    -fx-background-color: #f5f7fb;
+    -fx-background-radius: 10;
+    -fx-border-color: #e1e7f0;
+    -fx-border-radius: 10;
+    -fx-padding: 12 14;
+}
+
+.selection-count {
+    -fx-background-color: #e5edff;
+    -fx-background-radius: 6;
+    -fx-padding: 8 10;
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 13px;
+    -fx-text-fill: #2852a0;
+}
+
+.ai-scan-view .review-toolbar-button,
+.ai-scan-view .selection-link-button {
+    -fx-font-size: 13px;
+    -fx-min-height: 36px;
+    -fx-padding: 8 14;
+    -fx-graphic-text-gap: 8;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+}
+
+.review-toolbar-button.secondary-scan-button {
+    -fx-background-color: white;
+    -fx-border-color: #ccd6e5;
+    -fx-text-fill: #354767;
+}
+
+.review-toolbar-button.secondary-scan-button:hover {
+    -fx-background-color: #edf2fc;
+}
+
+.selection-link-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #486080;
+    -fx-cursor: hand;
+}
+
+.selection-link-button:hover {
+    -fx-background-color: #e6edf7;
+}
+
+.selection-link-button:focused,
+.review-toolbar-button:focused {
+    -fx-border-color: #6b94ef;
+}
+
+.bulk-editor {
+    -fx-background-color: #f8faff;
+    -fx-background-radius: 10;
+    -fx-border-color: #d7e2f3;
+    -fx-border-radius: 10;
+    -fx-padding: 18;
+}
+
+.bulk-editor-title {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 18px;
+    -fx-text-fill: #283b59;
+}
+
+.bulk-editor-help {
+    -fx-font-size: 13px;
+    -fx-text-fill: #566780;
+}
+
+.bulk-field-label {
+    -fx-font-family: "Montserrat SemiBold";
+    -fx-font-size: 13px;
+    -fx-text-fill: #354767;
+}
+
+.bulk-editor .choice-box,
+.bulk-editor .combo-box,
+.bulk-editor .date-picker,
+.bulk-editor .text-field {
+    -fx-font-size: 14px;
+    -fx-min-height: 38px;
+    -fx-background-color: white;
+    -fx-background-insets: 0;
+    -fx-background-radius: 6;
+    -fx-border-color: #c5d1e2;
+    -fx-border-radius: 6;
+    -fx-prompt-text-fill: #73829a;
+}
+
+.bulk-editor .choice-box > .label,
+.bulk-editor .combo-box .list-cell {
+    -fx-font-size: 14px;
+    -fx-text-fill: #283b59;
+    -fx-padding: 8 10;
+}
+
+.bulk-editor .text-field {
+    -fx-padding: 8 10;
+}
+
+.bulk-editor .date-picker .text-field {
+    -fx-border-width: 0;
+    -fx-min-height: 36px;
+}
+
+.bulk-editor .check-box {
+    -fx-font-size: 13px;
+    -fx-text-fill: #405575;
+    -fx-padding: 2 0;
+}
+
+.bulk-editor .check-box > .box {
+    -fx-background-color: white;
+    -fx-background-insets: 0;
+    -fx-border-color: #b8c7dd;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+    -fx-padding: 3;
+}
+
+.bulk-editor .check-box:selected > .box {
+    -fx-background-color: #0f60ff;
+    -fx-border-color: #0f60ff;
+}
+
+.bulk-editor .check-box:selected .mark {
+    -fx-background-color: white;
+}
+
+.bulk-editor .text-field:focused,
+.bulk-editor .choice-box:focused,
+.bulk-editor .combo-box:focused,
+.bulk-editor .date-picker:focused {
+    -fx-border-color: #5b88e8;
+    -fx-effect: dropshadow(gaussian, rgba(15, 96, 255, 0.12), 5, 0, 0, 0);
+}
+
+.bulk-review-feedback {
+    -fx-font-size: 13px;
+    -fx-text-fill: #355881;
+    -fx-padding: 11 14;
+    -fx-background-color: #eff5fc;
+    -fx-background-radius: 6;
+}
+
+.bulk-review-feedback.scan-warning {
+    -fx-background-color: #fff4dc;
+    -fx-text-fill: #80580f;
+}
+
+.review-load-progress {
+    -fx-accent: #0f60ff;
+    -fx-pref-height: 12;
+}
+
+.review-load-progress > .track {
+    -fx-background-color: #eef2fa;
+    -fx-background-radius: 6;
+    -fx-background-insets: 0;
+}
+
+.review-load-progress > .bar {
+    -fx-background-radius: 6;
+    -fx-background-insets: 0;
+    -fx-padding: 6;
 }
 
 .statement-totals-bar {
@@ -253,6 +442,43 @@
 .review-editor .secondary-scan-button {
     -fx-padding: 7 10 7 10;
     -fx-font-size: 10px;
+}
+
+.review-editor .amount-refresh-button {
+    -fx-font-size: 13px;
+    -fx-min-height: 38px;
+    -fx-padding: 9 12;
+    -fx-graphic-text-gap: 8;
+    -fx-background-color: #f1f6ff;
+    -fx-border-color: #c7d9f4;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-text-fill: #2859a0;
+}
+
+.review-editor .amount-refresh-button:hover {
+    -fx-background-color: #e5efff;
+}
+
+.review-editor .amount-refresh-button:focused {
+    -fx-border-color: #5b88e8;
+}
+
+.review-editor .amount-refresh-button:disabled {
+    -fx-opacity: 0.7;
+}
+
+.amount-refresh-icon {
+    -fx-fill: #2859a0;
+}
+
+.amount-refresh-button .progress-indicator {
+    -fx-progress-color: #2859a0;
+}
+
+.amount-refresh-message {
+    -fx-font-size: 12px;
+    -fx-text-fill: #516178;
 }
 
 .review-editor .custom-supplier-button {

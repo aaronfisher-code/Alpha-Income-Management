@@ -9,6 +9,7 @@
 <?import javafx.scene.control.DatePicker?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.ProgressIndicator?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TableView?>
@@ -70,6 +71,8 @@
          </right>
       </BorderPane>
 
+      <ProgressBar fx:id="reviewLoadProgress" accessibleText="Review loading progress" managed="false" maxWidth="1.7976931348623157E308" progress="-1.0" styleClass="review-load-progress" visible="false" />
+
       <HBox fx:id="statementTotalsBar" managed="false" spacing="10.0" styleClass="statement-totals-bar" visible="false">
          <VBox maxWidth="1.7976931348623157E308" spacing="3.0" styleClass="statement-total-card" HBox.hgrow="ALWAYS">
             <Label styleClass="statement-total-title" text="PRINTED STATEMENT AMOUNT" />
@@ -96,31 +99,56 @@
                <Label styleClass="preview-hint" text="Queued means waiting for the worker; Scanning means Gemini is processing; Failed rows show a reason and can be retried. This table refreshes every 5 seconds." />
             </VBox>
 
-            <VBox fx:id="resultsView" managed="false" spacing="8.0" visible="false">
-               <HBox alignment="CENTER_LEFT" spacing="10.0">
-                  <Button fx:id="resultsBackButton" onAction="#backToQueue" styleClass="secondary-scan-button" text="‹ Back to queue" />
-                  <Label styleClass="preview-section-title" text="Reconciliation results" />
+            <VBox fx:id="resultsView" managed="false" spacing="12.0" visible="false">
+               <HBox alignment="CENTER_LEFT" spacing="14.0">
+                  <Button fx:id="resultsBackButton" onAction="#backToQueue" styleClass="secondary-scan-button, review-toolbar-button" text="‹ Back to queue" />
+                  <Label styleClass="results-section-title" text="Reconciliation results" />
                </HBox>
-               <Label fx:id="combinedReviewHint" managed="false" styleClass="preview-hint" visible="false" wrapText="true" />
-               <HBox alignment="CENTER_LEFT" spacing="8.0">
-                  <Button fx:id="selectAllResultsButton" onAction="#selectAllResults" styleClass="secondary-scan-button" text="Select all" />
-                  <Button fx:id="clearResultSelectionButton" onAction="#clearResultSelection" styleClass="secondary-scan-button" text="Clear selection" />
-                  <Button fx:id="editSelectedButton" disable="true" onAction="#openBulkEdit" styleClass="secondary-scan-button" text="Edit selected" />
-                  <Button fx:id="acceptSelectedButton" disable="true" onAction="#acceptSelected" styleClass="primary-scan-button" text="Accept selected" />
-                  <Label styleClass="preview-hint" text="Accepts the selected scanned values. Save accepted documents when review is complete." wrapText="true" />
+               <Label fx:id="combinedReviewHint" managed="false" styleClass="bulk-editor-help" visible="false" wrapText="true" />
+               <HBox alignment="CENTER_LEFT" spacing="10.0" styleClass="selection-toolbar">
+                  <Label fx:id="selectedRowsLabel" minWidth="125.0" styleClass="selection-count" text="No rows selected" />
+                  <Button fx:id="selectAllResultsButton" onAction="#selectAllResults" styleClass="selection-link-button" text="Select all" />
+                  <Button fx:id="clearResultSelectionButton" onAction="#clearResultSelection" styleClass="selection-link-button" text="Clear selection" />
+                  <Region HBox.hgrow="ALWAYS" />
+                  <Button fx:id="editSelectedButton" disable="true" onAction="#openBulkEdit" styleClass="secondary-scan-button, review-toolbar-button" text="Edit selected">
+                     <graphic><SVGPath content="M12 2L14 4L6 12L2 14L4 10Z M10 4L12 6" fill="TRANSPARENT" stroke="#40516e" strokeWidth="1.5" /></graphic>
+                  </Button>
+                  <Button fx:id="acceptSelectedButton" disable="true" onAction="#acceptSelected" styleClass="primary-scan-button, review-toolbar-button" text="Accept selected">
+                     <graphic><SVGPath content="M2 8L6 12L14 3" fill="TRANSPARENT" stroke="WHITE" strokeLineCap="ROUND" strokeLineJoin="ROUND" strokeWidth="2.0" /></graphic>
+                     <tooltip><Tooltip text="Accept the selected values for review. Use Save accepted documents when all rows are ready." /></tooltip>
+                  </Button>
                </HBox>
-               <VBox fx:id="bulkEditPanel" managed="false" spacing="6.0" styleClass="scan-source-bar" visible="false">
-                  <HBox alignment="CENTER_LEFT" spacing="8.0">
-                     <ChoiceBox fx:id="bulkEditFieldChoice" prefWidth="150.0" />
-                     <ComboBox fx:id="bulkSupplierChoice" maxWidth="1.7976931348623157E308" prefWidth="280.0" promptText="Choose supplier" HBox.hgrow="ALWAYS" />
-                     <DatePicker fx:id="bulkDatePicker" managed="false" visible="false" />
-                     <TextField fx:id="bulkNotesField" managed="false" maxWidth="1.7976931348623157E308" promptText="Notes (leave blank to clear existing notes)" visible="false" HBox.hgrow="ALWAYS" />
-                     <Button fx:id="applyBulkEditButton" onAction="#applyBulkEdit" styleClass="primary-scan-button" text="Apply to selected" />
-                     <Button fx:id="closeBulkEditButton" onAction="#closeBulkEdit" styleClass="secondary-scan-button" text="Close" />
+               <VBox fx:id="bulkEditPanel" managed="false" spacing="12.0" styleClass="bulk-editor" visible="false">
+                  <HBox alignment="CENTER_LEFT" spacing="16.0">
+                     <Label styleClass="bulk-editor-title" text="Edit selected rows" />
+                     <Label fx:id="bulkEditSelectionLabel" maxWidth="1.7976931348623157E308" styleClass="bulk-editor-help" text="Select rows in the table to edit them together." wrapText="true" HBox.hgrow="ALWAYS" />
+                     <Button fx:id="closeBulkEditButton" onAction="#closeBulkEdit" styleClass="selection-link-button" text="Close editor" />
                   </HBox>
-                  <Label styleClass="preview-hint" text="Changes affect selected unsaved rows. Accept the edited rows, then save when review is complete. Due dates apply to invoices only." wrapText="true" />
+                  <HBox alignment="TOP_LEFT" spacing="20.0">
+                     <VBox minWidth="190.0" prefWidth="210.0" spacing="8.0">
+                        <Label labelFor="$bulkEditFieldChoice" minHeight="24.0" styleClass="bulk-field-label" text="Field to change" />
+                        <ChoiceBox fx:id="bulkEditFieldChoice" maxWidth="1.7976931348623157E308" />
+                     </VBox>
+                     <VBox maxWidth="580.0" minWidth="330.0" prefWidth="480.0" spacing="8.0" HBox.hgrow="ALWAYS">
+                        <HBox alignment="CENTER_LEFT" minHeight="24.0" spacing="12.0">
+                           <Label fx:id="bulkEditValueLabel" maxWidth="1.7976931348623157E308" styleClass="bulk-field-label" text="Supplier" HBox.hgrow="ALWAYS" />
+                           <CheckBox fx:id="bulkCustomSupplierCheck" text="New supplier" />
+                        </HBox>
+                        <ComboBox fx:id="bulkSupplierChoice" maxWidth="1.7976931348623157E308" promptText="Choose an existing supplier" />
+                        <TextField fx:id="bulkCustomSupplierNameField" managed="false" promptText="Enter supplier name" visible="false" />
+                        <DatePicker fx:id="bulkDatePicker" managed="false" maxWidth="1.7976931348623157E308" promptText="Choose a date" visible="false" />
+                        <TextField fx:id="bulkNotesField" managed="false" maxWidth="1.7976931348623157E308" promptText="Enter notes, or leave blank to clear" visible="false" />
+                        <Label fx:id="bulkEditHelpLabel" maxWidth="580.0" styleClass="bulk-editor-help" text="Choose an existing supplier, or enter a new name." wrapText="true" />
+                     </VBox>
+                     <VBox spacing="8.0">
+                        <Region minHeight="24.0" prefHeight="24.0" maxHeight="24.0" />
+                        <Button fx:id="applyBulkEditButton" minWidth="175.0" onAction="#applyBulkEdit" styleClass="primary-scan-button, review-toolbar-button" text="Apply to selected">
+                           <tooltip><Tooltip text="Update the selected rows. Accept your edits, then save accepted documents when ready." /></tooltip>
+                        </Button>
+                     </VBox>
+                  </HBox>
                </VBox>
-               <Label fx:id="bulkReviewMessageLabel" managed="false" styleClass="preview-hint" visible="false" wrapText="true" />
+               <Label fx:id="bulkReviewMessageLabel" managed="false" maxWidth="1.7976931348623157E308" styleClass="bulk-review-feedback" visible="false" wrapText="true" />
                <TableView fx:id="resultsTable" VBox.vgrow="ALWAYS" />
                <HBox alignment="CENTER_LEFT" spacing="10.0" styleClass="scan-legend">
                   <Region styleClass="legend-good" />
@@ -235,10 +263,16 @@
                                        <Label fx:id="reviewVarianceLabel" styleClass="review-reconciliation-value" text="N/A" />
                                     </VBox>
                                  </HBox>
-                                 <Button fx:id="refreshInvoiceAmountButton" managed="false" onAction="#refreshInvoiceAmount" styleClass="secondary-scan-button" text="Refresh Z-Office amount" visible="false">
-                                    <tooltip><Tooltip text="Retrieve a fresh amount for the invoice reference shown above and update its cached value." /></tooltip>
+                                 <Button fx:id="refreshInvoiceAmountButton" managed="false" maxWidth="1.7976931348623157E308" onAction="#refreshInvoiceAmount" styleClass="secondary-scan-button, amount-refresh-button" text="Refresh Z-Office amount" visible="false">
+                                    <graphic>
+                                       <StackPane minHeight="18.0" minWidth="18.0" maxHeight="18.0" maxWidth="18.0" prefHeight="18.0" prefWidth="18.0">
+                                          <SVGPath fx:id="amountRefreshIcon" content="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z" styleClass="amount-refresh-icon" />
+                                          <ProgressIndicator fx:id="amountRefreshProgress" managed="false" maxHeight="18.0" maxWidth="18.0" prefHeight="18.0" prefWidth="18.0" progress="-1.0" visible="false" />
+                                       </StackPane>
+                                    </graphic>
+                                    <tooltip><Tooltip text="Look up the current invoice reference in Z-Office and update the expected amount. Your form edits are kept." /></tooltip>
                                  </Button>
-                                 <Label fx:id="invoiceAmountRefreshMessageLabel" managed="false" styleClass="review-editor-help" visible="false" wrapText="true" />
+                                 <Label fx:id="invoiceAmountRefreshMessageLabel" managed="false" styleClass="amount-refresh-message" visible="false" wrapText="true" />
                                  <Label styleClass="review-field-label" text="Notes" />
                                  <TextArea fx:id="reviewNotesField" prefRowCount="3" wrapText="true" />
                               </VBox>
