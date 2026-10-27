@@ -597,7 +597,8 @@ class AiInvoiceScanControllerTest {
 					ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
 					Map<ScannedInvoice, ?> drafts = field(controller, "pendingEdits");
 					Map<ScannedInvoice, ?> approvals = field(controller, "acceptedDocuments");
-					assertEquals(succeeds ? 500 : 0, drafts.size()); assertTrue(approvals.isEmpty());
+					assertEquals(succeeds ? 2 : 0, drafts.size());
+					assertEquals(succeeds ? 498 : 0, approvals.size());
 					TableView<InvoiceReconciliation> table = field(controller, "resultsTable");
 					assertEquals(500, table.getSelectionModel().getSelectedItems().size());
 					for (int i = 0; i < 500; i++) {
@@ -606,7 +607,7 @@ class AiInvoiceScanControllerTest {
 						assertEquals(succeeds ? "Direct Chemist Outlet Hillside" : "Direct Chemist Outlet Gladstone", row.getSupplierName());
 						assertEquals("ROW-" + i, row.getInvoiceNo());
 						assertEquals(row.getScanned().amountCents(), row.getReviewValues().amountCents());
-						assertEquals(succeeds ? InvoiceReconciliation.Status.NEEDS_REVIEW : InvoiceReconciliation.Status.MATCHED, row.getStatus());
+						assertEquals(succeeds && i >= 498 ? InvoiceReconciliation.Status.NOT_IN_Z_OFFICE : InvoiceReconciliation.Status.MATCHED, row.getStatus());
 						if (succeeds && i == 498) assertFalse(row.hasExpectedAmount(), "A single cached invoice from another branch must not match");
 						if (succeeds && i < 498) { assertEquals(row.getScanned().amount(), row.getImported().getImportedInvoiceAmount()); assertEquals("$0.00", row.getVarianceString()); }
 					}
@@ -619,6 +620,114 @@ class AiInvoiceScanControllerTest {
 					}
 				});
 				assertEquals(1, requests.size()); assertEquals(500, requests.getFirst().size());
+			} finally { if (holder[0] != null) onFxThread(holder[0]::dispose); }
+		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void bulkSupplierEditAutomaticallyAcceptsMatchesAndLeavesOtherIssuesForReview(boolean classificationWarning) throws Exception {
+		var completed = new CountDownLatch(1);
+		AiInvoiceScanController[] holder = new AiInvoiceScanController[1];
+		var references = List.of("MATCHED", "TOLERANCE", "CREDIT", "MISMATCH", "MISSING", "AMBIGUOUS", "STALE",
+				"REFERENCE", "DATE", "TYPE", "AMOUNT", "NO-DATE", "", "UNSELECTED", "SAVED");
+		try (var workers = Executors.newSingleThreadExecutor()) {
+			try {
+				onFxThread(() -> {
+					var controller = controller(); holder[0] = controller;
+					configureReconciliation(controller, new InvoiceService() {
+						@Override public List<Invoice> getInvoiceAmountsForReview(int store, List<ScannedInvoice> rows) {
+							assertEquals(13, rows.size(), "Only changed, selected, unsaved rows are looked up");
+							var imported = new ArrayList<Invoice>();
+							for (var row : rows) {
+								if (row.invoiceNo().isBlank() || row.invoiceNo().equals("MISSING")) continue;
+								var invoice = new Invoice();
+								invoice.setInvoiceNo(row.invoiceNo()); invoice.setSupplierName(row.supplierName());
+								invoice.setImportExists(true); invoice.setReconciliationType(row.documentType());
+								invoice.setImportedInvoiceAmount(row.amount() + switch (row.invoiceNo()) {
+									case "TOLERANCE" -> 0.20;
+									case "MISMATCH" -> 0.21;
+									default -> 0;
+								});
+								invoice.setReconciliationStale(row.invoiceNo().equals("STALE"));
+								imported.add(invoice);
+								if (row.invoiceNo().equals("AMBIGUOUS")) imported.add(invoice);
+							}
+							return imported;
+						}
+					});
+					setField(controller, "executor", workers);
+					var rows = new ArrayList<InvoiceReconciliation>();
+					for (String reference : references) {
+						var scanned = new ScannedInvoice("statement.pdf", "Incorrect supplier", reference,
+								reference.equals("NO-DATE") ? null : DATE, null,
+								reference.equals("CREDIT") ? ScannedInvoice.DocumentType.CREDIT : ScannedInvoice.DocumentType.INVOICE,
+								10000, new ScannedInvoice.FieldConfidences(0.68, reference.equals("REFERENCE") ? 0.68 : 0.99,
+									reference.equals("DATE") ? 0.68 : 0.99, null, reference.equals("TYPE") ? 0.68 : 0.99,
+									reference.equals("AMOUNT") ? 0.68 : 0.99));
+						rows.add(new InvoiceReconciliation(reference.equals("SAVED") ? InvoiceReconciliation.Status.SAVED
+								: InvoiceReconciliation.Status.NEEDS_REVIEW, scanned, null, null));
+					}
+					showAcceptanceRows(controller, rows, BatchKind.STATEMENT);
+					if (classificationWarning) {
+						List<Object> batches = field(controller, "currentBatches");
+						Object run = invoke(batches.getFirst(), "run");
+						batches.set(0, record("LoadedBatch", new BatchSummary(1, BatchKind.STATEMENT, BatchStatus.REVIEW_REQUIRED,
+								"Review test", 1, rows.size(), null, "Wrong folder"), run, List.of(101L)));
+					}
+					Map<ScannedInvoice, Object> drafts = field(controller, "pendingEdits");
+					drafts.put(rows.getFirst().getScanned(), record("AcceptedDocument", 1, "Incorrect supplier",
+							ScannedInvoice.DocumentType.INVOICE, "MATCHED", DATE.plusDays(2), DATE.plusDays(45), 100.0, "Keep my note"));
+					Map<ScannedInvoice, Object> approvals = field(controller, "acceptedDocuments");
+					approvals.put(rows.get(3).getScanned(), record("AcceptedDocument", 1, "Incorrect supplier",
+							ScannedInvoice.DocumentType.INVOICE, "MISMATCH", DATE, DATE.plusDays(30), 100.0, ""));
+					var supplier = new InvoiceSupplier(21, "Correct supplier", 1);
+					setField(controller, "availableSuppliers", List.of(supplier));
+					ComboBox<InvoiceSupplier> choice = field(controller, "bulkSupplierChoice"); choice.getItems().setAll(supplier); choice.setValue(supplier);
+					TableView<InvoiceReconciliation> table = field(controller, "resultsTable");
+					table.getSelectionModel().selectRange(0, 13);
+					Label message = field(controller, "bulkReviewMessageLabel");
+					message.textProperty().addListener((_, _, value) -> { if (value.startsWith("Updated")) completed.countDown(); });
+					invoke(controller, "applyBulkEdit");
+				});
+				assertTrue(completed.await(10, TimeUnit.SECONDS));
+				onFxThread(() -> {
+					var controller = holder[0];
+					ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
+					Map<ScannedInvoice, ?> approvals = field(controller, "acceptedDocuments");
+					Map<ScannedInvoice, ?> drafts = field(controller, "pendingEdits");
+					assertEquals(classificationWarning ? 0 : 3, approvals.size());
+					assertEquals(classificationWarning ? 13 : 10, drafts.size());
+					var expected = List.of(InvoiceReconciliation.Status.MATCHED, InvoiceReconciliation.Status.WITHIN_TOLERANCE,
+							InvoiceReconciliation.Status.MATCHED, InvoiceReconciliation.Status.AMOUNT_MISMATCH,
+							InvoiceReconciliation.Status.NOT_IN_Z_OFFICE, InvoiceReconciliation.Status.AMBIGUOUS);
+					for (int index = 0; index < 13; index++) {
+						var row = rows.get(index);
+						var status = index < expected.size() ? expected.get(index) : InvoiceReconciliation.Status.NEEDS_REVIEW;
+						if (classificationWarning && index < 3) status = InvoiceReconciliation.Status.NEEDS_REVIEW;
+						assertEquals(status, row.getStatus(), references.get(index));
+						assertEquals("Correct supplier", row.getSupplierName());
+						assertEquals(1.0, row.getSupplierConfidence());
+						assertEquals("Incorrect supplier", row.getScanned().supplierName());
+						Object document = row.isAccepted() ? approvals.get(row.getScanned()) : drafts.get(row.getScanned());
+						assertEquals(21, invoke(document, "supplierId"));
+					}
+					assertEquals("Incorrect supplier", rows.get(13).getSupplierName());
+					assertEquals(InvoiceReconciliation.Status.SAVED, rows.getLast().getStatus());
+					Object document = classificationWarning ? drafts.get(rows.getFirst().getScanned()) : approvals.get(rows.getFirst().getScanned());
+					assertEquals("Keep my note", invoke(document, "notes"));
+					assertEquals(DATE.plusDays(2), invoke(document, "documentDate"));
+					assertEquals(DATE.plusDays(45), invoke(document, "dueDate"));
+					TableView<InvoiceReconciliation> table = field(controller, "resultsTable");
+					assertEquals(classificationWarning ? 14 : 11, table.getItems().size(), "Only outstanding rows remain visible");
+					assertEquals(classificationWarning ? 13 : 10, table.getSelectionModel().getSelectedItems().size());
+					Label summary = field(controller, "summaryLabel");
+					assertTrue(summary.getText().contains(classificationWarning ? "1 accepted" : "4 accepted"));
+					Label message = field(controller, "bulkReviewMessageLabel");
+					assertTrue(message.getText().contains(classificationWarning ? "0 automatically accepted; 13 still need review"
+							: "3 automatically accepted; 10 still need review"));
+					Button save = field(controller, "saveAcceptedButton"); assertTrue(save.isDisabled());
+				});
 			} finally { if (holder[0] != null) onFxThread(holder[0]::dispose); }
 		}
 	}

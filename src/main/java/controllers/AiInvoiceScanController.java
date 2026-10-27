@@ -1556,17 +1556,35 @@ public final class AiInvoiceScanController extends Controller {
 		}
 		Set<ScannedInvoice> selected = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
 		resultsTable.getSelectionModel().getSelectedItems().forEach(row -> selected.add(row.getScanned()));
-		for (PendingSave edit : edits) {
+		List<ScannedInvoice> values = edits.stream().map(edit -> reviewValues(edit.row(), edit.document(), field)).toList();
+		List<InvoiceReconciliation> comparisons = cached == null ? List.of() : InvoiceReconciler.reconcile(values, cached);
+		int automaticallyAccepted = 0;
+		for (int index = 0; index < edits.size(); index++) {
+			PendingSave edit = edits.get(index);
 			InvoiceReconciliation row = edit.row();
-			ScannedInvoice values = reviewValues(row, edit.document(), field);
-			Invoice imported = row.getImported();
-			if (cached != null) imported = InvoiceReconciler.reconcile(List.of(values), cached).getFirst().getImported();
-			InvoiceReconciliation edited = new InvoiceReconciliation(InvoiceReconciliation.Status.NEEDS_REVIEW,
-					row.getScanned(), imported, null).withReviewValues(values);
-			pendingEdits.put(row.getScanned(), edit.document());
+			InvoiceReconciliation comparison = cached == null ? row.withStatus(InvoiceReconciliation.Status.NEEDS_REVIEW)
+					: comparisons.get(index);
+			InvoiceReconciliation edited = new InvoiceReconciliation(comparison.getStatus(),
+					row.getScanned(), comparison.getImported(), null).withReviewValues(values.get(index));
 			if ("Supplier".equals(field)) {
 				if (edit.document().supplierId() == 0) customSupplierDrafts.put(row.getScanned(), edit.document().supplierName());
 				else customSupplierDrafts.remove(row.getScanned());
+			}
+			if (edited.isAccepted()) {
+				if (!classificationWarning(row).isBlank()) edited = edited.withStatus(InvoiceReconciliation.Status.NEEDS_REVIEW);
+				else {
+					try { validateApproval(edited, edit.document()); }
+					catch (IllegalStateException exception) { edited = edited.withStatus(InvoiceReconciliation.Status.NEEDS_REVIEW); }
+				}
+			}
+			if (edited.isAccepted()) {
+				automaticallyAccepted++;
+				acceptedDocuments.put(row.getScanned(), edit.document());
+				pendingEdits.remove(row.getScanned());
+				customSupplierDrafts.remove(row.getScanned());
+			} else {
+				acceptedDocuments.remove(row.getScanned());
+				pendingEdits.put(row.getScanned(), edit.document());
 			}
 			allResults.set(resultIndex(allResults, row), edited);
 		}
@@ -1576,7 +1594,8 @@ public final class AiInvoiceScanController extends Controller {
 			if (selected.contains(resultsTable.getItems().get(index).getScanned())) resultsTable.getSelectionModel().select(index);
 		}
 		showBulkReviewMessage("Updated " + field.toLowerCase(java.util.Locale.ROOT) + " on " + edits.size()
-				+ " selected rows. Accept the edited rows when ready.", false);
+				+ " selected rows. " + (cached == null ? "Accept the edited rows when ready."
+						: automaticallyAccepted + " automatically accepted; " + (edits.size() - automaticallyAccepted) + " still need review."), false);
 	}
 
 	private AcceptedDocument draftDocument(InvoiceReconciliation row) {
