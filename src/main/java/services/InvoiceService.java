@@ -21,6 +21,13 @@ import java.util.List;
 import java.util.Properties;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Collections;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -119,28 +126,73 @@ public class InvoiceService {
         return invoiceAmountRequest((hasCredits(rows) ? "/reconciliation/documents/cached" : "/reconciliation/cached") + "?storeId=" + storeId, rows);
     }
 
-    /** Bound request size so large statements cannot become one gateway-length operation. */
+    /** Warm the shared window once, then use at most two simultaneous requests for the remaining rows. */
     public List<Invoice> getInvoiceAmountsForReview(int storeId, List<ScannedInvoice> rows) {
-        List<ScannedInvoice> requested = rows.stream()
-                .filter(row -> !row.invoiceNo().isBlank())
-                .distinct().toList();
-        // The same lookup may recur across chunks. Keep ambiguity within each response, without
-        // turning repeated copies of a lookup into ambiguous duplicate invoices in the review.
-        Map<String, List<Invoice>> byReference = new LinkedHashMap<>();
+        return loadReviewChunks(rows, chunk -> invoiceAmountRequest(
+                (hasCredits(chunk) ? "/reconciliation/documents/resolve" : "/reconciliation/resolve")
+                        + "?storeId=" + storeId, chunk), (completed, total) -> {});
+    }
+
+    public List<Invoice> getInvoiceAmountsForReview(int storeId, List<ScannedInvoice> rows,
+            BiConsumer<Integer, Integer> progress) {
+        // Delegate each bounded request through the existing method so alternate service implementations work too.
+        return loadReviewChunks(rows, chunk -> getInvoiceAmountsForReview(storeId, chunk), progress);
+    }
+
+    private List<Invoice> loadReviewChunks(List<ScannedInvoice> rows,
+            Function<List<ScannedInvoice>, List<Invoice>> fetch, BiConsumer<Integer, Integer> progress) {
+        List<ScannedInvoice> requested = rows.stream().filter(row -> !row.invoiceNo().isBlank()).distinct().toList();
+        List<List<ScannedInvoice>> chunks = new ArrayList<>();
         for (int start = 0; start < requested.size(); start += REVIEW_BATCH_SIZE) {
-            int end = Math.min(start + REVIEW_BATCH_SIZE, requested.size());
-            List<ScannedInvoice> chunk = requested.subList(start, end);
-            List<Invoice> response = invoiceAmountRequest((hasCredits(chunk) ? "/reconciliation/documents/resolve" : "/reconciliation/resolve")
-                    + "?storeId=" + storeId, chunk);
+            chunks.add(requested.subList(start, Math.min(start + REVIEW_BATCH_SIZE, requested.size())));
+        }
+        progress.accept(0, requested.size());
+        if (chunks.isEmpty()) return List.of();
+        List<List<Invoice>> responses = new ArrayList<>(Collections.nCopies(chunks.size(), null));
+        // Let the first request populate the shared MySQL window before starting concurrent readers.
+        responses.set(0, fetch.apply(chunks.getFirst()));
+        int completed = chunks.getFirst().size();
+        progress.accept(completed, requested.size());
+        if (chunks.size() > 1) {
+            var executor = Executors.newFixedThreadPool(2, Thread.ofVirtual().name("invoice-review-", 0).factory());
+            var completion = new ExecutorCompletionService<ReviewChunk>(executor);
+            List<Future<ReviewChunk>> pending = new ArrayList<>();
+            try {
+                for (int index = 1; index < chunks.size(); index++) {
+                    int position = index;
+                    pending.add(completion.submit(() -> new ReviewChunk(position, fetch.apply(chunks.get(position)))));
+                }
+                for (int remaining = chunks.size() - 1; remaining > 0; remaining--) {
+                    ReviewChunk result = completion.take().get();
+                    responses.set(result.index(), result.rows());
+                    completed += chunks.get(result.index()).size();
+                    progress.accept(completed, requested.size());
+                }
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("Document review loading was interrupted", exception);
+            } catch (ExecutionException exception) {
+                if (exception.getCause() instanceof RuntimeException failure) throw failure;
+                throw new IllegalStateException("Unable to load document review records", exception.getCause());
+            } finally {
+                pending.forEach(future -> future.cancel(true));
+                executor.shutdownNow();
+            }
+        }
+        // Merge in request order even when responses complete out of order. Preserve ambiguity within each response.
+        Map<String, List<Invoice>> byReference = new LinkedHashMap<>();
+        for (int index = 0; index < chunks.size(); index++) {
             Map<String, List<Invoice>> batch = new LinkedHashMap<>();
-            response.forEach(invoice -> batch.computeIfAbsent(utils.InvoiceReconciler.importKey(invoice),
-                    _ -> new ArrayList<>()).add(invoice));
-            chunk.forEach(row -> utils.InvoiceReconciler.lookupReferences(row).forEach(reference ->
+            responses.get(index).forEach(invoice -> batch.computeIfAbsent(utils.InvoiceReconciler.importKey(invoice),
+                    ignored -> new ArrayList<>()).add(invoice));
+            chunks.get(index).forEach(row -> utils.InvoiceReconciler.lookupReferences(row).forEach(reference ->
                     byReference.remove(utils.InvoiceReconciler.lookupKey(row, reference))));
             byReference.putAll(batch);
         }
         return byReference.values().stream().flatMap(List::stream).toList();
     }
+
+    private record ReviewChunk(int index, List<Invoice> rows) {}
 
     public List<Invoice> refreshInvoiceAmount(int storeId, ScannedInvoice row) {
         return row.documentType() == ScannedInvoice.DocumentType.CREDIT

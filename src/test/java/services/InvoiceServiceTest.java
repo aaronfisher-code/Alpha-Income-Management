@@ -74,7 +74,7 @@ class InvoiceServiceTest {
     void fiveHundredRowsAreBatchedAndDuplicateResponsesRemainUnambiguous() throws Exception {
         var mapper = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
         RestTemplate rest = new RestTemplate();
-        var sizes = new ArrayList<Integer>();
+        List<Integer> sizes = java.util.Collections.synchronizedList(new ArrayList<>());
         rest.getInterceptors().add((request, body, execution) -> {
             assertEquals("/invoices/reconciliation/resolve", request.getURI().getPath());
             var requested = mapper.readTree(body);
@@ -150,6 +150,55 @@ class InvoiceServiceTest {
         assertEquals(1, service.getCachedInvoiceAmounts(7, List.of(credit)).size());
         assertEquals(List.of("/invoices/reconciliation/resolve", "/invoices/reconciliation/documents/resolve",
                 "/credits/reconciliation/refresh", "/invoices/reconciliation/documents/cached"), paths);
+    }
+
+    @Test
+    void warmsOnceThenLoadsAtMostTwoChunksTogetherAndReportsCompletedRows() throws Exception {
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        var twoStarted = new java.util.concurrent.CountDownLatch(2);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var active = new java.util.concurrent.atomic.AtomicInteger();
+        var maximum = new java.util.concurrent.atomic.AtomicInteger();
+        var warmed = new java.util.concurrent.atomic.AtomicBoolean();
+        var rest = new RestTemplate();
+        rest.getInterceptors().add((request, body, execution) -> {
+            var incoming = mapper.readTree(body);
+            boolean first = incoming.get(0).path("invoiceNo").asText().equals("INV0");
+            if (first) warmed.set(true);
+            else {
+                assertTrue(warmed.get());
+                maximum.accumulateAndGet(active.incrementAndGet(), Math::max);
+                twoStarted.countDown();
+                try {
+                    if (!release.await(5, java.util.concurrent.TimeUnit.SECONDS)) throw new AssertionError("Concurrent requests did not start");
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw new java.io.IOException(interrupted);
+                } finally { active.decrementAndGet(); }
+            }
+            var response = mapper.createArrayNode();
+            for (var row : incoming) response.addObject().put("invoiceNo", row.path("invoiceNo").asText())
+                    .put("importedInvoiceAmount", 100).put("importExists", true);
+            return jsonResponse(response.toString());
+        });
+        var properties = new Properties(); properties.setProperty("api.base.url", "https://example.invalid");
+        var service = new InvoiceService(rest, properties);
+        var rows = java.util.stream.IntStream.range(0, 200).mapToObj(i -> new models.ScannedInvoice("file" + i,
+                "Supplier", "INV" + i, java.time.LocalDate.of(2026, 9, 10), null,
+                models.ScannedInvoice.DocumentType.INVOICE, 10000, 0.99)).toList();
+        List<Integer> progress = java.util.Collections.synchronizedList(new ArrayList<>());
+        try (var worker = java.util.concurrent.Executors.newSingleThreadExecutor()) {
+            var result = worker.submit(() -> service.getInvoiceAmountsForReview(7, rows, (done, total) -> {
+                assertEquals(200, total); progress.add(done);
+            }));
+            try {
+                assertTrue(twoStarted.await(5, java.util.concurrent.TimeUnit.SECONDS));
+                assertEquals(2, maximum.get());
+            } finally { release.countDown(); }
+            assertEquals(200, result.get(5, java.util.concurrent.TimeUnit.SECONDS).size());
+            assertEquals(List.of(0, 50, 100, 150, 200), progress);
+            assertEquals(2, maximum.get());
+        }
     }
 
     private static ClientHttpResponse jsonResponse(String json) {

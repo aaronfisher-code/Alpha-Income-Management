@@ -142,7 +142,7 @@ class AiInvoiceScanControllerTest {
 							int request = requests.incrementAndGet();
 							CountDownLatch release = null;
 							if (request == 1) { firstStarted.countDown(); release = releaseFirst; }
-							if (request == (combined ? 6 : 2)) { laterStarted.countDown(); release = releaseLater; }
+							if (request >= (combined ? 6 : 2)) { laterStarted.countDown(); release = releaseLater; }
 							try {
 								if (release != null && !release.await(10, TimeUnit.SECONDS)) throw new AssertionError("Load was not released");
 							} catch (InterruptedException exception) { throw new RuntimeException(exception); }

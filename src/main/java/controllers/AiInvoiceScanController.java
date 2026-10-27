@@ -714,18 +714,12 @@ public final class AiInvoiceScanController extends Controller {
 			String key = InvoiceReconciler.supplier(row.supplierName()) + ":" + InvoiceReconciler.lookupKey(row, row.invoiceNo()) + ":" + row.amountCents();
 			if (!row.invoiceNo().isBlank() && context.requested.add(key)) missing.add(row);
 		}
-		context.progress.accept(0, missing.size());
-		for (int start = 0; start < missing.size(); start += 50) {
-			int end = Math.min(start + 50, missing.size());
-			List<ScannedInvoice> chunk = missing.subList(start, end);
-			List<Invoice> cached = invoiceService.getInvoiceAmountsForReview(context.storeId, chunk);
-			Map<String, List<Invoice>> groups = cached.stream().filter(Invoice::isImportExists)
-					.collect(java.util.stream.Collectors.groupingBy(InvoiceReconciler::importKey));
-			chunk.forEach(row -> InvoiceReconciler.lookupReferences(row).forEach(reference ->
-					context.cachedByReference.remove(InvoiceReconciler.lookupKey(row, reference))));
-			context.cachedByReference.putAll(groups);
-			context.progress.accept(end, missing.size());
-		}
+		List<Invoice> cached = invoiceService.getInvoiceAmountsForReview(context.storeId, missing, context.progress);
+		Map<String, List<Invoice>> groups = cached.stream().filter(Invoice::isImportExists)
+		        .collect(java.util.stream.Collectors.groupingBy(InvoiceReconciler::importKey));
+		missing.forEach(row -> InvoiceReconciler.lookupReferences(row).forEach(reference ->
+		        context.cachedByReference.remove(InvoiceReconciler.lookupKey(row, reference))));
+		context.cachedByReference.putAll(groups);
 		return context.cachedByReference.values().stream().flatMap(List::stream).toList();
 	}
 
