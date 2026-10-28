@@ -298,6 +298,52 @@ class AiInvoiceScanControllerTest {
 		catch (InterruptedException exception) { Thread.currentThread().interrupt(); throw new RuntimeException(exception); }
 	}
 
+	@ParameterizedTest
+	@ValueSource(strings = { "Clifford Hallam Healthcare Eastern Creek NSW", "ParagonCare" })
+	void ch2StatementIssuerSelectsAndSavesTheExistingCh2Contact(String extractedSupplier) throws Exception {
+		onFxThread(() -> {
+			var controller = controller();
+			try {
+				var ch2 = new InvoiceSupplier(4, "CH2", 1);
+				var saved = new ArrayList<Invoice>();
+				configureReconciliation(controller, new InvoiceService() {
+					@Override public List<Invoice> getInvoiceAmountsForReview(int store, List<ScannedInvoice> requested) {
+						assertEquals("CH2", requested.getFirst().supplierName());
+						var invoice = new Invoice();
+						invoice.setInvoiceNo("73646116"); invoice.setSupplierName("CH2"); invoice.setSupplierID(4);
+						invoice.setImportedInvoiceAmount(570.19); invoice.setImportExists(true);
+						return List.of(invoice);
+					}
+					@Override public void saveOrUpdateInvoice(Invoice invoice, String original, int supplier) {
+						saved.add(invoice);
+					}
+				});
+				var scanned = new ScannedInvoice("statement.pdf", extractedSupplier, "73646116", DATE, null,
+						ScannedInvoice.DocumentType.INVOICE, 57019, 0.99);
+				var summary = new BatchSummary(1, BatchKind.STATEMENT, BatchStatus.REVIEW_REQUIRED, "CH2 statement", 1, 1, null, null);
+				var detail = new BatchDetail(summary, List.of(new ExtractedDocument(101, "statement.pdf", List.of(scanned),
+						List.of(), null, null, null, null, null)));
+				Method load = AiInvoiceScanController.class.getDeclaredMethod("loadBatch", BatchDetail.class, List.class);
+				load.setAccessible(true);
+				Object loaded = load.invoke(controller, detail, List.of(ch2, new InvoiceSupplier(2, "Sigma Healthcare", 1)));
+				invoke(controller, "showLoadedBatches", List.class, List.of(loaded));
+				ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
+				assertEquals("CH2", rows.getFirst().getSupplierName());
+				assertEquals(InvoiceReconciliation.Status.MATCHED, rows.getFirst().getStatus());
+				invoke(controller, "review", InvoiceReconciliation.class, rows.getFirst());
+				ComboBox<InvoiceSupplier> supplier = field(controller, "reviewSupplierChoice");
+				assertSame(ch2, supplier.getValue());
+				List<?> pending = (List<?>) invoke(controller, "buildPendingSaves");
+				Object document = invoke(pending.getFirst(), "document");
+				assertEquals(4, invoke(document, "supplierId"));
+				assertEquals("CH2", invoke(document, "supplierName"));
+				Method save = AiInvoiceScanController.class.getDeclaredMethod("saveDocument", InvoiceReconciliation.class, document.getClass());
+				save.setAccessible(true); save.invoke(controller, rows.getFirst(), document);
+				assertEquals(4, saved.getFirst().getSupplierID());
+			} finally { controller.dispose(); }
+		});
+	}
+
 	@Test
 	void doubleClickingAnEmptyStatementQueueRowOpensReviewWithoutRescanning() throws Exception {
 		CountDownLatch opened = new CountDownLatch(1);

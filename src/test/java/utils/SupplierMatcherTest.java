@@ -135,6 +135,61 @@ class SupplierMatcherTest {
 		assertSame(threeM, SupplierMatcher.findBest("Minnesota Mining Manufacturing", List.of(threeM, SIGMA)).supplier());
 	}
 
+	@ParameterizedTest
+	@ValueSource(strings = { "Clifford Hallam Healthcare Eastern Creek NSW",
+			"Clifford Hallam Healthcare Pty Ltd 5 Eucalyptus Place Eastern Creek NSW 2766",
+			"Clifford Hallom Healthcare Eastern Creek NSW", "ParagonCare", "Paragon Care Pty Ltd",
+			"ParagonCare Clifford Hallam Healthcare Pty Ltd", "C.H.²" })
+	void matchesCh2StatementIssuerAndBrandToTheExistingContact(String extracted) {
+		SupplierMatcher.Match match = SupplierMatcher.findBest(extracted, List.of(SIGMA, CH2, SYMBION, API));
+		assertSame(CH2, match.supplier());
+		assertTrue(match.sufficientlyConfident());
+	}
+
+	@Test
+	void ch2CorrelationUsesTheSavedContactNameWithoutIncreasingOcrConfidence() {
+		ScannedInvoice scanned = new ScannedInvoice("statement.pdf", "Clifford Hallam Healthcare Eastern Creek NSW",
+				"73646116", LocalDate.of(2026, 8, 3), null, ScannedInvoice.DocumentType.INVOICE, 57019,
+				new ScannedInvoice.FieldConfidences(0.7, 0.99, 0.99, null, 0.99, 0.99));
+		ScannedInvoice correlated = SupplierMatcher.correlate(scanned, List.of(CH2, SIGMA));
+		assertEquals("CH2", correlated.supplierName());
+		assertEquals(0.7, correlated.fieldConfidences().supplier());
+		assertEquals(scanned.invoiceNo(), correlated.invoiceNo());
+		assertEquals(scanned.amountCents(), correlated.amountCents());
+	}
+
+	@Test
+	void exactParagonCareContactTakesPrecedenceOverCh2Alias() {
+		InvoiceSupplier paragon = supplier(5, "ParagonCare");
+		SupplierMatcher.Match match = SupplierMatcher.findBest("ParagonCare", List.of(CH2, paragon, SIGMA));
+		assertSame(paragon, match.supplier());
+		assertTrue(match.sufficientlyConfident());
+	}
+
+	@Test
+	void ch2AliasOnlyUsesAnExistingStoreContact() {
+		ScannedInvoice scanned = new ScannedInvoice("statement.pdf", "Clifford Hallam Healthcare Eastern Creek NSW",
+				"73646116", LocalDate.of(2026, 8, 3), null, ScannedInvoice.DocumentType.INVOICE, 57019, 0.99);
+		ScannedInvoice correlated = SupplierMatcher.correlate(scanned, List.of(SIGMA, SYMBION));
+		assertEquals(scanned.supplierName(), correlated.supplierName());
+		assertTrue(correlated.fieldConfidences().supplier() < InvoiceReconciler.REVIEW_CONFIDENCE);
+	}
+
+	@Test
+	void duplicateCh2ContactsRemainAmbiguous() {
+		SupplierMatcher.Match match = SupplierMatcher.findBest("Clifford Hallam Healthcare Eastern Creek NSW",
+				List.of(CH2, supplier(5, "CH2"), SIGMA));
+		assertFalse(match.sufficientlyConfident());
+		assertTrue(match.confidence() < InvoiceReconciler.REVIEW_CONFIDENCE);
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "Eastern Creek NSW", "5 Eucalyptus Place Eastern Creek NSW 2766",
+			"Clifford Healthcare", "Hallam Healthcare", "ParagonCare Diagnostics", "Paragon Medical" })
+	void addressOrUnrelatedSimilarNameDoesNotConfidentlySelectCh2(String extracted) {
+		assertFalse(SupplierMatcher.findBest(extracted, List.of(CH2, SIGMA, SYMBION)).sufficientlyConfident());
+	}
+
 	@Test
 	void ambiguousMatchIsProposedButRequiresReview() {
 		InvoiceSupplier first = supplier(7, "Acme Health Group");

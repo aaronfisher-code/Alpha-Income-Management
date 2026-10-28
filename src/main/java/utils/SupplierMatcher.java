@@ -77,6 +77,8 @@ public final class SupplierMatcher {
 		}
 		String leftCompact = compact(left);
 		String rightCompact = compact(right);
+		if (isCh2Shorthand(leftCompact) && isCh2Issuer(right)
+				|| isCh2Shorthand(rightCompact) && isCh2Issuer(left)) return 0.97;
 		if (isShorthandOf(leftCompact, right) || isShorthandOf(rightCompact, left)) return 0.97;
 
 		double score = jaroWinkler(leftCompact, rightCompact);
@@ -108,6 +110,19 @@ public final class SupplierMatcher {
 	private static String dcoBranch(String name) {
 		return name.replace(DCO_NAME, " ").replaceAll("\\bPHARMACY\\b", " ")
 				.replaceAll("\\s+", " ").trim();
+	}
+
+	private static boolean isCh2Shorthand(String name) {
+		return name.equals("CH2");
+	}
+
+	private static boolean isCh2Issuer(String name) {
+		// Statements can append the issuer's postal address. Match the complete legal
+		// name as words rather than relying on the initials of that entire OCR string.
+		String words = " " + name + " ";
+		return words.contains(" CLIFFORD HALLAM HEALTHCARE ")
+				|| words.contains(" CLIFFORD HALLOM HEALTHCARE ")
+				|| name.equals("PARAGONCARE") || name.equals("PARAGON CARE");
 	}
 
 	private static boolean isShorthandOf(String possibleShorthand, String fullName) {
