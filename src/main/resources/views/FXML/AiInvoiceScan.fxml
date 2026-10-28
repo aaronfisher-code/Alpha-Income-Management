@@ -184,6 +184,13 @@
                            </HBox>
                         </right>
                      </BorderPane>
+                     <HBox fx:id="statementPdfSourceBar" alignment="CENTER_LEFT" managed="false" spacing="8.0" visible="false">
+                        <Label text="View source:" />
+                        <Button fx:id="statementPdfButton" onAction="#showStatementPdf" styleClass="secondary-scan-button" text="Statement PDF" />
+                        <Button fx:id="matchedInvoicePdfButton" onAction="#showMatchedInvoicePdf" styleClass="secondary-scan-button" text="Invoice PDF">
+                           <tooltip><Tooltip text="Review the original scanned invoice or credit PDF associated with this statement row." /></tooltip>
+                        </Button>
+                     </HBox>
                      <HBox alignment="CENTER_LEFT" spacing="7.0" styleClass="evidence-legend">
                         <Region styleClass="evidence-key evidence-supplier" />
                         <Label text="Supplier" />
@@ -225,7 +232,7 @@
                            <content>
                               <VBox spacing="10.0">
                                  <Label fx:id="reviewTitleLabel" styleClass="review-editor-title" text="Review invoice" />
-                                 <Label styleClass="review-editor-help" text="Correct the scanned values, then accept this document for the final save." wrapText="true" />
+                                 <Label fx:id="reviewHelpLabel" styleClass="review-editor-help" text="Correct the scanned values, then accept this document for the final save." wrapText="true" />
                                  <Label fx:id="reviewErrorLabel" managed="false" styleClass="review-editor-error" visible="false" wrapText="true" />
                                  <Label fx:id="reviewClassificationWarningLabel" managed="false" styleClass="scan-warning" visible="false" wrapText="true" />
                                  <Label styleClass="review-field-label" text="Supplier" />
@@ -251,11 +258,11 @@
                                  <Label fx:id="reviewDueDateLabel" styleClass="review-field-label" text="Due date" />
                                  <DatePicker fx:id="reviewDueDateField" maxWidth="1.7976931348623157E308" />
                                  <Label fx:id="reviewDueDateHintLabel" managed="false" styleClass="review-estimated-hint" text="Due date was estimated 30 days from the invoice date." visible="false" wrapText="true" />
-                                 <Label styleClass="review-field-label" text="Amount ($)" />
+                                 <Label fx:id="reviewAmountTitleLabel" styleClass="review-field-label" text="Amount ($)" />
                                  <TextField fx:id="reviewAmountField" promptText="0.00" />
                                  <HBox alignment="CENTER" spacing="28.0" styleClass="review-reconciliation-summary">
                                     <VBox alignment="CENTER" spacing="3.0">
-                                       <Label styleClass="review-reconciliation-label" text="Z-Office amount" />
+                                       <Label fx:id="reviewExpectedAmountTitleLabel" styleClass="review-reconciliation-label" text="Expected amount" />
                                        <Label fx:id="reviewExpectedAmountLabel" styleClass="review-reconciliation-value" text="N/A" />
                                     </VBox>
                                     <VBox alignment="CENTER" spacing="3.0">

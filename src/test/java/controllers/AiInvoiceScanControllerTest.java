@@ -244,7 +244,9 @@ class AiInvoiceScanControllerTest {
 						if (url.contains("/complete?")) {
 							assertEquals(77, savedReferences.size());
 							List<?> entered = assertInstanceOf(List.class, entity.getBody());
-							assertEquals(detail.documents().stream().map(document -> new EnteredDocument(document.id(), DATE)).toList(), entered);
+							assertEquals(detail.documents().stream().map(ExtractedDocument::id).toList(),
+                                    entered.stream().map(value -> ((EnteredDocument) value).documentId()).toList());
+                            assertTrue(entered.stream().allMatch(value -> !((EnteredDocument) value).rows().isEmpty()));
 							attempts.add(id);
 							if (id == 2 && java.util.Collections.frequency(attempts, id) == 1) {
 								throw new org.springframework.web.client.ResourceAccessException("Drive completion timed out");
@@ -300,7 +302,7 @@ class AiInvoiceScanControllerTest {
 
 	@ParameterizedTest
 	@ValueSource(strings = { "Clifford Hallam Healthcare Eastern Creek NSW", "ParagonCare" })
-	void ch2StatementIssuerSelectsAndSavesTheExistingCh2Contact(String extractedSupplier) throws Exception {
+	void ch2InvoiceIssuerSelectsAndSavesTheExistingCh2Contact(String extractedSupplier) throws Exception {
 		onFxThread(() -> {
 			var controller = controller();
 			try {
@@ -320,7 +322,7 @@ class AiInvoiceScanControllerTest {
 				});
 				var scanned = new ScannedInvoice("statement.pdf", extractedSupplier, "73646116", DATE, null,
 						ScannedInvoice.DocumentType.INVOICE, 57019, 0.99);
-				var summary = new BatchSummary(1, BatchKind.STATEMENT, BatchStatus.REVIEW_REQUIRED, "CH2 statement", 1, 1, null, null);
+				var summary = new BatchSummary(1, BatchKind.INVOICE_BATCH, BatchStatus.REVIEW_REQUIRED, "CH2 invoice", 1, 1, null, null);
 				var detail = new BatchDetail(summary, List.of(new ExtractedDocument(101, "statement.pdf", List.of(scanned),
 						List.of(), null, null, null, null, null)));
 				Method load = AiInvoiceScanController.class.getDeclaredMethod("loadBatch", BatchDetail.class, List.class);
@@ -358,6 +360,7 @@ class AiInvoiceScanControllerTest {
 					BatchSummary batch = new BatchSummary(17, BatchKind.STATEMENT, BatchStatus.REVIEW_REQUIRED, "Empty", 1, 0, null, null);
 					setField(controller, "documentAiService", documentService(url -> {
 						calls.add(url);
+						if (url.contains("/statement-comparison")) return new StatementComparison(List.of(), 0);
 						assertTrue(url.endsWith("/review-batches/17?storeId=1"));
 						return new BatchDetail(batch, List.of());
 					}));
@@ -373,7 +376,7 @@ class AiInvoiceScanControllerTest {
 							false, false, false, false, false, false, false, false, false, false, null));
 				});
 				assertTrue(opened.await(5, TimeUnit.SECONDS));
-				assertEquals(1, calls.size());
+				assertEquals(2, calls.size());
 			} finally { if (holder[0] != null) onFxThread(holder[0]::dispose); }
 		}
 	}
@@ -392,7 +395,7 @@ class AiInvoiceScanControllerTest {
 		for (int batch = 0; batch < batchCount; batch++) {
 			var rows = new ArrayList<ScannedInvoice>();
 			for (int row = 0; row < 500 / batchCount; row++) rows.add(scanned("INV-" + batch + "-" + row, 10000));
-			var summary = new BatchSummary(batch + 1, combined ? BatchKind.INVOICE_BATCH : BatchKind.STATEMENT,
+			var summary = new BatchSummary(batch + 1, BatchKind.INVOICE_BATCH,
 					BatchStatus.REVIEW_REQUIRED, "Batch " + batch, 1, rows.size(), null, null);
 			details.add(new BatchDetail(summary, List.of(new ExtractedDocument(batch + 101, "statement.pdf", rows,
 					List.of(), null, null, null, null, null))));
@@ -1225,6 +1228,7 @@ class AiInvoiceScanControllerTest {
 				@Override public List<Invoice> getInvoiceAmountsForReview(int storeId, List<ScannedInvoice> requestedRows) { return List.of(imported); }
 				@Override public Invoice getInvoice(String reference, int storeId) { throw new AssertionError("Already loaded"); }
 			});
+			setField(controller, "documentAiService", documentService(url -> new StatementComparison(List.of(scanned("INV-1", 10000)), 0)));
 			String warning = flagged ? "Wrong folder: check the detected document type before saving." : null;
 			BatchSummary batch = new BatchSummary(17, kind, BatchStatus.REVIEW_REQUIRED, "Source", 1, 1, null, warning);
 			assertEquals(flagged ? warning : "Ready to open and review", batch.getStatusDetail());
@@ -1460,7 +1464,7 @@ class AiInvoiceScanControllerTest {
 	}
 
 	@Test
-	void denseStatementMatchesTwoHundredAndTwoRowsUsingBoundedRequests() throws Exception {
+	void denseInvoiceBatchMatchesTwoHundredAndTwoRowsUsingBoundedRequests() throws Exception {
 		onFxThread(() -> {
 			AiInvoiceScanController controller = controller();
 			List<ScannedInvoice> scanned = new ArrayList<>();
@@ -1488,8 +1492,8 @@ class AiInvoiceScanControllerTest {
 				}
 			});
 			try {
-				BatchSummary summary = new BatchSummary(1, BatchKind.STATEMENT, BatchStatus.REVIEW_REQUIRED,
-						"Statement", 1, scanned.size(), null, null);
+				BatchSummary summary = new BatchSummary(1, BatchKind.INVOICE_BATCH, BatchStatus.REVIEW_REQUIRED,
+						"Invoices", 1, scanned.size(), null, null);
 				BatchDetail detail = new BatchDetail(summary, List.of(new ExtractedDocument(101, "statement.pdf", scanned,
 						List.of(), DATE.withDayOfMonth(1), DATE.withDayOfMonth(30), null, null, null)));
 				Method load = AiInvoiceScanController.class.getDeclaredMethod("loadBatch", BatchDetail.class, List.class);
@@ -1897,8 +1901,206 @@ class AiInvoiceScanControllerTest {
 			invoke(controller, "updateAcceptanceControls");
 			assertEquals("Retry completion", save.getText());
 			assertTrue(save.isVisible());
-			assertEquals(List.of(new EnteredDocument(101, DATE), new EnteredDocument(201, DATE)),
-					invoke(controller, "buildEnteredDocuments"));
+			@SuppressWarnings("unchecked")
+			List<EnteredDocument> entered = (List<EnteredDocument>) invoke(controller, "buildEnteredDocuments");
+			assertEquals(List.of(101L, 201L), entered.stream().map(EnteredDocument::documentId).toList());
+			assertTrue(entered.stream().allMatch(document -> DATE.equals(document.invoiceDate()) && !document.rows().isEmpty()));
+		});
+	}
+
+	@Test
+	void statementUsesEnteredInvoiceEvidenceAndCannotCreateInvoiceEntries() throws Exception {
+		onFxThread(() -> {
+			var controller = controller();
+			try {
+				configureReconciliation(controller, new InvoiceService() {
+					@Override public List<Invoice> getInvoiceAmountsForReview(int store, List<ScannedInvoice> rows) {
+						throw new AssertionError("Statements must not query Z-Office");
+					}
+				});
+				var source = scanned("INV-1", 10000);
+				var entered = scanned("INV-1", 12000);
+				setField(controller, "documentAiService", documentService(url -> {
+					assertTrue(url.contains("/statement-comparison?storeId=1"));
+					return new StatementComparison(List.of(entered), 0);
+				}));
+				var summary = new BatchSummary(17, BatchKind.STATEMENT, BatchStatus.REVIEW_REQUIRED, "Statement", 1, 1, null, null);
+				var detail = new BatchDetail(summary, List.of(new ExtractedDocument(101, "statement.pdf", List.of(source), List.of(),
+						DATE.withDayOfMonth(1), DATE.withDayOfMonth(30), 10000L, .99, null)));
+				Method load = AiInvoiceScanController.class.getDeclaredMethod("loadBatch", BatchDetail.class, List.class);
+				load.setAccessible(true);
+				invoke(controller, "showLoadedBatches", List.class, List.of(load.invoke(controller, detail, List.of(new InvoiceSupplier(1, "Supplier", 1)))));
+				ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
+				assertEquals(InvoiceReconciliation.Status.AMOUNT_MISMATCH, rows.getFirst().getStatus());
+				assertEquals("$20.00", rows.getFirst().getVarianceString());
+				assertEquals(List.of(), invoke(controller, "buildPendingSaves"));
+				assertEquals(List.of(), invoke(controller, "buildEnteredDocuments"));
+				invoke(controller, "review", InvoiceReconciliation.class, rows.getFirst());
+				TextField amount = field(controller, "reviewAmountField");
+				assertTrue(amount.isDisabled());
+				Button refresh = field(controller, "refreshInvoiceAmountButton"); assertFalse(refresh.isVisible());
+				invoke(controller, "acceptReview");
+				assertEquals(InvoiceReconciliation.Status.ACCEPTED, rows.getFirst().getStatus());
+				Button complete = field(controller, "saveAcceptedButton"); assertEquals("Complete reconciliation", complete.getText());
+				assertFalse(complete.isDisabled());
+				assertEquals(List.of(), invoke(controller, "buildPendingSaves"));
+			} finally { controller.dispose(); }
+		});
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void statementInvoiceEditsAreDraftedThenSentToTheirOriginalEntryOnFinalSave(boolean credit) throws Exception {
+		var saved = new CountDownLatch(1); var refreshed = new CountDownLatch(1);
+		var requests = new CopyOnWriteArrayList<StatementCompletion>();
+		var tableRefreshes = new AtomicInteger();
+		AiInvoiceScanController[] holder = new AiInvoiceScanController[1];
+		try (var workers = Executors.newSingleThreadExecutor()) {
+			try {
+				onFxThread(() -> {
+					var controller = controller(); holder[0] = controller;
+					configureReconciliation(controller, new InvoiceService() {
+						@Override public void saveOrUpdateInvoice(Invoice invoice, String ref, int supplier) {
+							throw new AssertionError("Statement edits must use the atomic completion endpoint");
+						}
+					});
+					setField(controller,"executor",workers);
+					setField(controller,"parent",new InvoiceEntryController() {
+						{ dialogPane = new com.dlsc.gemsfx.DialogPane(); }
+						@Override public void fillInvoiceTable() { tableRefreshes.incrementAndGet(); }
+						@Override public void fillCreditTable() { tableRefreshes.incrementAndGet(); }
+					});
+					var source = scanned(credit ? "C1" : "INV-1", credit ? -10000 : 10000);
+					var original = new StatementInvoice(7,2,scanned(source.invoiceNo(),credit ? -12000 : 12000),"original note");
+					setField(controller,"documentAiService",documentService((url,entity) -> {
+						if (url.contains("/statement-comparison")) return new StatementComparison(List.of(original.values()),0,List.of(original));
+						if (url.contains("/complete-statement?")) {
+							assertFalse(Platform.isFxApplicationThread());
+							requests.add(assertInstanceOf(StatementCompletion.class,entity.getBody())); saved.countDown(); return null;
+						}
+						assertTrue(url.endsWith("/review-queue")); refreshed.countDown(); return "[]";
+					}));
+					var summary = new BatchSummary(17,BatchKind.STATEMENT,BatchStatus.REVIEW_REQUIRED,"Statement",1,1,null,null);
+					var detail = new BatchDetail(summary,List.of(new ExtractedDocument(101,"statement.pdf",List.of(source),List.of(),
+							DATE.withDayOfMonth(1),DATE.withDayOfMonth(30),10000L,.99,null)));
+					Method load = AiInvoiceScanController.class.getDeclaredMethod("loadBatch",BatchDetail.class,List.class); load.setAccessible(true);
+					invoke(controller,"showLoadedBatches",List.class,List.of(load.invoke(controller,detail,List.of(new InvoiceSupplier(1,"Supplier",1)))));
+					ObservableList<InvoiceReconciliation> rows = field(controller,"allResults");
+					invoke(controller,"review",InvoiceReconciliation.class,rows.getFirst());
+					TextField amount = field(controller,"reviewAmountField"); assertFalse(amount.isDisabled()); assertEquals("120.00",amount.getText());
+					TextField reference = field(controller,"reviewReferenceField"); assertTrue(reference.isDisabled());
+					amount.setText("135.50");
+					javafx.scene.control.DatePicker date = field(controller,"reviewDateField"); date.setValue(DATE.minusDays(1));
+					TextArea notes = field(controller,"reviewNotesField"); notes.setText("corrected note");
+					invoke(controller,"acceptReview");
+					assertTrue(requests.isEmpty(),"Accepting a row must only create a draft");
+					assertEquals(credit ? -135.5 : 135.5,rows.getFirst().getImported().getImportedInvoiceAmount());
+					assertEquals(source.amountCents(),rows.getFirst().getScanned().amountCents(),"Statement evidence stays unchanged");
+					invoke(controller,"review",InvoiceReconciliation.class,rows.getFirst());
+					assertEquals("135.50",amount.getText()); assertEquals("corrected note",notes.getText());
+					invoke(controller,"backToResults");
+					invoke(controller,"saveAccepted");
+				});
+				assertTrue(saved.await(5,TimeUnit.SECONDS)); assertTrue(refreshed.await(5,TimeUnit.SECONDS));
+				workers.submit(() -> {}).get(5,TimeUnit.SECONDS);
+				onFxThread(() -> {
+					assertEquals(1,requests.size()); var edit = requests.getFirst().edits().getFirst();
+					assertEquals(7,edit.original().documentId()); assertEquals(2,edit.original().rowIndex());
+					assertEquals(credit ? -13550L : 13550L,edit.amountCents()); assertEquals(DATE.minusDays(1),edit.invoiceDate());
+					assertEquals("corrected note",edit.notes()); assertEquals(2,tableRefreshes.get());
+				});
+			} finally { if (holder[0] != null) onFxThread(holder[0]::dispose); }
+		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void statementReviewCanSwitchToTheMatchedPdfAndBackWithoutLosingInvoiceEdits(boolean credit) throws Exception {
+		var statementRendered = new CountDownLatch(1); var invoiceRendered = new CountDownLatch(1); var statementReturned = new CountDownLatch(1);
+		var statementRenders = new AtomicInteger(); var requested = new CopyOnWriteArrayList<Long>();
+		byte[] statementPdf = pdf(72), invoicePdf = pdf(144);
+		AiInvoiceScanController[] holder = new AiInvoiceScanController[1];
+		try (var workers = Executors.newCachedThreadPool(); var cache = new DocumentPdfCache((document,store,path,limit) -> {
+			assertEquals(1,store); assertTrue(document == 101 || document == 7); requested.add(document);
+			Files.write(path,document == 101 ? statementPdf : invoicePdf); return true;
+		})) {
+			try {
+				onFxThread(() -> {
+					var controller = controller(); holder[0] = controller;
+					configureReconciliation(controller,new InvoiceService());
+					setField(controller,"executor",workers); setField(controller,"pdfCache",cache); setField(controller,"reviewStoreId",1);
+					var source = new ScannedInvoice("statement.pdf","Supplier",credit ? "C1" : "INV-1",DATE,null,
+							credit ? ScannedInvoice.DocumentType.CREDIT : ScannedInvoice.DocumentType.INVOICE,credit ? -10000 : 10000,.99);
+					var entered = new StatementInvoice(7,2,new ScannedInvoice("archived invoice.pdf","Supplier",source.invoiceNo(),DATE,null,
+							source.documentType(),credit ? -12000 : 12000,.99),"original note");
+					setField(controller,"documentAiService",documentService(url -> new StatementComparison(List.of(entered.values()),0,List.of(entered))));
+					var summary = new BatchSummary(17,BatchKind.STATEMENT,BatchStatus.REVIEW_REQUIRED,"Statement",1,1,null,null);
+					var evidence = Map.of(models.PdfEvidenceField.REFERENCE,new models.PdfEvidenceLocation(0,5,5,20,10,72,72));
+					var detail = new BatchDetail(summary,List.of(new ExtractedDocument(101,"statement.pdf",List.of(source),List.of(evidence),
+							DATE.withDayOfMonth(1),DATE.withDayOfMonth(30),10000L,.99,null)));
+					Method load = AiInvoiceScanController.class.getDeclaredMethod("loadBatch",BatchDetail.class,List.class); load.setAccessible(true);
+					invoke(controller,"showLoadedBatches",List.class,List.of(load.invoke(controller,detail,List.of(new InvoiceSupplier(1,"Supplier",1)))));
+					ImageView preview = field(controller,"pdfPreviewImage"); preview.imageProperty().addListener((_,_,image) -> {
+						if (image == null) return;
+						if (image.getWidth() == 288) invoiceRendered.countDown();
+						else if (statementRenders.incrementAndGet() == 1) statementRendered.countDown(); else statementReturned.countDown();
+					});
+					ObservableList<InvoiceReconciliation> rows = field(controller,"allResults");
+					invoke(controller,"review",InvoiceReconciliation.class,rows.getFirst());
+				});
+				assertTrue(statementRendered.await(10,TimeUnit.SECONDS));
+				onFxThread(() -> {
+					var controller = holder[0];
+					javafx.scene.layout.HBox sources = field(controller,"statementPdfSourceBar"); assertTrue(sources.isVisible());
+					TextField amount = field(controller,"reviewAmountField"); amount.setText("135.50");
+					TextArea notes = field(controller,"reviewNotesField"); notes.setText("Keep my draft while reading the PDF");
+					javafx.scene.control.DatePicker date = field(controller,"reviewDateField"); date.setValue(DATE.minusDays(1));
+					Button invoice = field(controller,"matchedInvoicePdfButton"); assertEquals(credit ? "Credit PDF" : "Invoice PDF",invoice.getText());
+					assertFalse(invoice.isDisabled()); invoice.fire();
+				});
+				assertTrue(invoiceRendered.await(10,TimeUnit.SECONDS));
+				onFxThread(() -> {
+					var controller = holder[0]; assertEquals(7L,(Long)field(controller,"currentPreviewDocumentId"));
+					Map<?,?> evidence = field(controller,"currentEvidence"); assertTrue(evidence.isEmpty());
+					javafx.scene.layout.Pane overlay = field(controller,"pdfOverlayPane"); assertTrue(overlay.getChildren().isEmpty());
+					Label label = field(controller,"previewDocumentLabel"); assertTrue(label.getText().contains("archived invoice.pdf"));
+					assertTrue(label.getText().startsWith(credit ? "Credit" : "Invoice"));
+					TextField amount = field(controller,"reviewAmountField"); assertEquals("135.50",amount.getText());
+					Button statement = field(controller,"statementPdfButton"); statement.fire();
+				});
+				assertTrue(statementReturned.await(10,TimeUnit.SECONDS));
+				onFxThread(() -> {
+					var controller = holder[0]; assertEquals(101L,(Long)field(controller,"currentPreviewDocumentId"));
+					javafx.scene.layout.Pane overlay = field(controller,"pdfOverlayPane"); assertEquals(1,overlay.getChildren().size());
+					Label label = field(controller,"previewDocumentLabel"); assertTrue(label.getText().startsWith("Statement"));
+					TextArea notes = field(controller,"reviewNotesField"); assertEquals("Keep my draft while reading the PDF",notes.getText());
+					javafx.scene.control.DatePicker date = field(controller,"reviewDateField"); assertEquals(DATE.minusDays(1),date.getValue());
+					invoke(controller,"acceptReview");
+					Map<ScannedInvoice,StatementInvoiceEdit> edits = field(controller,"statementInvoiceEdits"); assertEquals(1,edits.size());
+					var edit = edits.values().iterator().next(); assertEquals(7,edit.original().documentId());
+					assertEquals(credit ? -13550L : 13550L,edit.amountCents());
+				});
+				assertTrue(requested.containsAll(List.of(101L,7L)));
+			} finally { if (holder[0] != null) onFxThread(holder[0]::dispose); }
+		}
+	}
+
+	@ParameterizedTest
+	@EnumSource(value = InvoiceReconciliation.Status.class,names = {"MISSING_SCANNED_INVOICE","AMBIGUOUS"})
+	void statementRowsWithoutAUniqueInvoiceCannotOpenAnUnrelatedPdf(InvoiceReconciliation.Status status) throws Exception {
+		onFxThread(() -> {
+			var controller = controller();
+			try {
+				var source = scanned("INV-1",10000);
+				invoke(controller,"showLoadedBatches",List.class,List.of(loaded(17,101,BatchKind.STATEMENT,List.of(source),10000L,status)));
+				Map<ScannedInvoice,StatementInvoice> invoices = field(controller,"statementInvoicesByRow");
+				invoices.put(source,new StatementInvoice(7,0,source,""));
+				ObservableList<InvoiceReconciliation> rows = field(controller,"allResults"); invoke(controller,"review",InvoiceReconciliation.class,rows.getFirst());
+				invoke(controller,"showEvidence",InvoiceReconciliation.class,rows.getFirst());
+				Button invoice = field(controller,"matchedInvoicePdfButton"); assertTrue(invoice.isDisabled());
+				invoke(controller,"showMatchedInvoicePdf"); assertEquals(101L,(Long)field(controller,"currentPreviewDocumentId"));
+				assertTrue(invoice.getTooltip().getText().contains("No uniquely matched"));
+			} finally { controller.dispose(); }
 		});
 	}
 
@@ -1948,7 +2150,7 @@ class AiInvoiceScanControllerTest {
 		Object run = record("ScanRun", rows.stream().map(InvoiceReconciliation::getScanned).toList(), rows,
 				Map.of(), ids, DATE.withDayOfMonth(1), DATE.withDayOfMonth(30), null, null,
 				List.of(new InvoiceSupplier(1, "Supplier", 1)));
-		BatchSummary batch = new BatchSummary(1, kind, BatchStatus.REVIEW_REQUIRED, "Review test", 1, rows.size(), null, null);
+		BatchSummary batch = new BatchSummary(1, BatchKind.INVOICE_BATCH, BatchStatus.REVIEW_REQUIRED, "Review test", 1, rows.size(), null, null);
 		invoke(controller, "showLoadedBatches", List.class, List.of(record("LoadedBatch", batch, run, List.of(101L))));
 	}
 

@@ -1,4 +1,6 @@
-# Statement review loading
+# Invoice review loading (previously also used for statements)
+
+Statements now use [invoice-first reconciliation](statement-reconciliation.md) and do not use the Z-Office lookup path below. These bounded lookups remain in use for individual invoice review.
 
 A statement previously sent all its invoice rows to `/invoices/reconciliation/resolve` in one HTTP request. The API read the MySQL cache, then queried the site's z-agent once per missing or mismatched reference. Symbion aliases could double those queries. Recently checked exceptions were retried on every opening. The accumulated database and network latency could exceed the gateway timeout.
 

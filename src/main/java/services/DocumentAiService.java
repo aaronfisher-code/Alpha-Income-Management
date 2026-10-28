@@ -75,6 +75,9 @@ public final class DocumentAiService {
     public BatchDetail batch(long batchId, int storeId) {
         return get("/review-batches/" + batchId + "?storeId=" + storeId, BatchDetail.class);
     }
+    public StatementComparison statementComparison(long batchId, int storeId) {
+        return get("/review-batches/" + batchId + "/statement-comparison?storeId=" + storeId, StatementComparison.class);
+    }
     public byte[] pdf(long documentId, int storeId) {
         return exchange("/review-documents/" + documentId + "/pdf?storeId=" + storeId,
                 HttpMethod.GET, null, byte[].class);
@@ -103,9 +106,14 @@ public final class DocumentAiService {
         complete(batchId, storeId, List.of());
     }
     public void complete(long batchId, int storeId, List<EnteredDocument> enteredDocuments) {
+        completeRequest(batchId, storeId, "/complete", enteredDocuments == null ? List.of() : enteredDocuments);
+    }
+    public void completeStatement(long batchId, int storeId, StatementCompletion completion) {
+        completeRequest(batchId, storeId, "/complete-statement", completion);
+    }
+    private void completeRequest(long batchId, int storeId, String action, Object body) {
         try {
-            exchange("/review-batches/" + batchId + "/complete?storeId=" + storeId, HttpMethod.POST,
-                    enteredDocuments == null ? List.of() : enteredDocuments, Void.class);
+            exchange("/review-batches/" + batchId + action + "?storeId=" + storeId, HttpMethod.POST, body, Void.class);
         } catch (RestClientException failure) {
             if (failure instanceof HttpClientErrorException clientError
                     && clientError.getStatusCode().value() != 409) throw failure;

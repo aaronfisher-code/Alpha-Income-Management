@@ -13,6 +13,8 @@ public final class InvoiceReconciliation {
 		WITHIN_TOLERANCE("Within tolerance"),
 		AMOUNT_MISMATCH("Amount mismatch"),
 		NOT_IN_Z_OFFICE("Not in Z-Office"),
+		MISSING_SCANNED_INVOICE("Missing entered invoice"),
+		WAITING_FOR_INVOICES("Waiting for invoices"),
 		AMBIGUOUS("Ambiguous reference"),
 		NEEDS_REVIEW("Needs review");
 

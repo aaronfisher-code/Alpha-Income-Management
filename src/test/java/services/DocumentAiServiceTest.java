@@ -30,6 +30,51 @@ import static org.junit.jupiter.api.Assertions.*;
 class DocumentAiServiceTest {
 	@TempDir Path temporary;
 
+	@Test
+	void statementComparisonUsesTheStoreScopedEnteredScanEndpoint() {
+		var rest = new RestTemplate();
+		rest.getInterceptors().add((request, body, execution) -> {
+			assertEquals(HttpMethod.GET, request.getMethod());
+			assertEquals("/document-ai/review-batches/17/statement-comparison", request.getURI().getPath());
+			assertEquals("storeId=7", request.getURI().getQuery());
+			return jsonResponse(HttpStatus.OK, "{\"enteredRows\":[{\"sourceFile\":\"credit.pdf\",\"supplierName\":\"Supplier\","
+					+ "\"invoiceNo\":\"C1\",\"invoiceDate\":\"2026-09-30\",\"documentType\":\"CREDIT\",\"amountCents\":-2500}],\"pendingDocuments\":2}");
+		});
+		var properties = new Properties(); properties.setProperty("api.base.url", "https://example.invalid");
+		var comparison = new DocumentAiService(rest, properties).statementComparison(17, 7);
+		assertEquals(2, comparison.pendingDocuments());
+		assertEquals(-2500, comparison.enteredRows().getFirst().amountCents());
+		assertEquals("credit.pdf", comparison.enteredRows().getFirst().sourceFile());
+	}
+
+	@ParameterizedTest
+	@CsvSource({"true", "false"})
+	void statementCompletionSendsInvoiceEditsAndConfirmsATimedOutCommit(boolean timeout) throws Exception {
+		var requests = new ArrayList<String>();
+		var rest = new RestTemplate();
+		rest.getInterceptors().add((request, body, execution) -> {
+			requests.add(request.getMethod() + " " + request.getURI().getPath());
+			if (request.getMethod() == HttpMethod.POST) {
+				assertTrue(request.getURI().getPath().endsWith("/complete-statement"));
+				var json = new com.fasterxml.jackson.databind.ObjectMapper().readTree(body);
+				assertEquals(7, json.path("edits").get(0).path("original").path("documentId").asLong());
+				assertEquals(2, json.path("edits").get(0).path("original").path("rowIndex").asInt());
+				assertEquals(-13550, json.path("edits").get(0).path("amountCents").asLong());
+				assertEquals("corrected", json.path("edits").get(0).path("notes").asText());
+				if (timeout) throw new ResourceAccessException("Read timed out");
+				return jsonResponse(HttpStatus.OK, "{}");
+			}
+			return jsonResponse(HttpStatus.OK,"{\"batch\":{\"id\":17,\"kind\":\"STATEMENT\",\"status\":\"COMPLETED\"},\"documents\":[]}");
+		});
+		var date = java.time.LocalDate.of(2026,9,30);
+		var values = new models.ScannedInvoice("credit.pdf","Supplier","C1",date,null,models.ScannedInvoice.DocumentType.CREDIT,-12000,.99);
+		var original = new models.DocumentAiModels.StatementInvoice(7,2,values,"old note");
+		var edit = new models.DocumentAiModels.StatementInvoiceEdit(original,date,null,-13550L,"corrected");
+		var service = new DocumentAiService(rest,new Properties());
+		service.completeStatement(17,7,new models.DocumentAiModels.StatementCompletion(List.of(edit)));
+		assertEquals(timeout ? 2 : 1,requests.size());
+	}
+
 	@ParameterizedTest
 	@CsvSource({ "0, COMPLETED, true", "409, COMPLETED, true", "502, COMPLETED, true",
 			"0, REVIEW_REQUIRED, false", "409, REVIEW_REQUIRED, false", "409, DISMISSED, false",

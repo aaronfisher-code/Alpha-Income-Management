@@ -30,7 +30,22 @@ public final class DocumentAiModels {
             Instant lastRunAt, boolean running, String lastError) {}
     public record ScanScheduleInput(boolean enabled, int intervalMinutes) {}
     /** A reviewed invoice document and the date used for its Drive filing month. */
-    public record EnteredDocument(long documentId, LocalDate invoiceDate) {}
+    public record EnteredDocument(long documentId, LocalDate invoiceDate, List<ScannedInvoice> rows) {
+        public EnteredDocument(long documentId, LocalDate invoiceDate) { this(documentId, invoiceDate, List.of()); }
+        public EnteredDocument { rows = rows == null ? List.of() : List.copyOf(rows); }
+    }
+    public record StatementInvoice(long documentId, int rowIndex, ScannedInvoice values, String notes) {
+        public StatementInvoice { notes = notes == null ? "" : notes; }
+    }
+    public record StatementInvoiceEdit(StatementInvoice original, LocalDate invoiceDate,
+            LocalDate dueDate, Long amountCents, String notes) {}
+    public record StatementCompletion(List<StatementInvoiceEdit> edits) {
+        public StatementCompletion { edits = edits == null ? List.of() : List.copyOf(edits); }
+    }
+    public record StatementComparison(List<ScannedInvoice> enteredRows, int pendingDocuments, List<StatementInvoice> enteredInvoices) {
+        public StatementComparison(List<ScannedInvoice> enteredRows, int pendingDocuments) { this(enteredRows, pendingDocuments, List.of()); }
+        public StatementComparison { enteredInvoices = enteredInvoices == null ? List.of() : List.copyOf(enteredInvoices); }
+    }
     public record BatchSummary(long id, BatchKind kind, BatchStatus status, String sourceLabel,
             int documentCount, int transactionCount, Instant createdAt, String error) {
         public String getSourceLabel() { return sourceLabel; }
@@ -67,6 +82,14 @@ public final class DocumentAiModels {
     public record ExtractedDocument(long id, String fileName, List<ScannedInvoice> rows,
             List<Map<PdfEvidenceField, PdfEvidenceLocation>> evidenceByRow,
             LocalDate periodStart, LocalDate periodEnd, Long statementAmountCents,
-            Double statementAmountConfidence, String error) {}
+            Double statementAmountConfidence, String error, boolean entered) {
+        public ExtractedDocument(long id, String fileName, List<ScannedInvoice> rows,
+                List<Map<PdfEvidenceField, PdfEvidenceLocation>> evidenceByRow,
+                LocalDate periodStart, LocalDate periodEnd, Long statementAmountCents,
+                Double statementAmountConfidence, String error) {
+            this(id, fileName, rows, evidenceByRow, periodStart, periodEnd, statementAmountCents,
+                    statementAmountConfidence, error, false);
+        }
+    }
     public record BatchDetail(BatchSummary batch, List<ExtractedDocument> documents) {}
 }

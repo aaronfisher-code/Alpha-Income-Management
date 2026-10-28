@@ -55,6 +55,9 @@ import models.DocumentAiModels.BatchDetail;
 import models.DocumentAiModels.BatchStatus;
 import models.DocumentAiModels.BatchSummary;
 import models.DocumentAiModels.EnteredDocument;
+import models.DocumentAiModels.StatementInvoice;
+import models.DocumentAiModels.StatementInvoiceEdit;
+import models.DocumentAiModels.StatementCompletion;
 import services.InvoiceService;
 import services.InvoiceSupplierService;
 import services.CreditService;
@@ -66,6 +69,7 @@ import services.DocumentReviewCommitService.SaveOperation;
 import services.GeminiInvoiceScanService;
 import services.PdfPreviewService;
 import utils.InvoiceReconciler;
+import utils.StatementReconciler;
 import utils.SupplierMatcher;
 
 import java.io.File;
@@ -141,12 +145,18 @@ public final class AiInvoiceScanController extends Controller {
 	@FXML private ImageView pdfPreviewImage;
 	@FXML private Pane pdfOverlayPane;
 	@FXML private Label previewDocumentLabel;
+	@FXML private HBox statementPdfSourceBar;
+	@FXML private Button statementPdfButton;
+	@FXML private Button matchedInvoicePdfButton;
 	@FXML private Label previewPageLabel;
 	@FXML private Label previewHintLabel;
 	@FXML private Button rotatePreviewButton;
 	@FXML private Button previousPageButton;
 	@FXML private Button nextPageButton;
 	@FXML private Label reviewTitleLabel;
+	@FXML private Label reviewHelpLabel;
+	@FXML private Label reviewAmountTitleLabel;
+	@FXML private Label reviewExpectedAmountTitleLabel;
 	@FXML private Label reviewErrorLabel;
 	@FXML private Label reviewClassificationWarningLabel;
 	@FXML private ComboBox<InvoiceSupplier> reviewSupplierChoice;
@@ -182,6 +192,8 @@ public final class AiInvoiceScanController extends Controller {
 	private final SortedList<InvoiceReconciliation> sortedResults = new SortedList<>(filteredResults);
 	private final ObservableList<BatchSummary> queuedBatches = FXCollections.observableArrayList();
 	private final Map<ScannedInvoice, AcceptedDocument> acceptedDocuments = new IdentityHashMap<>();
+	private final Map<ScannedInvoice, StatementInvoice> statementInvoicesByRow = new IdentityHashMap<>();
+	private final Map<ScannedInvoice, StatementInvoiceEdit> statementInvoiceEdits = new IdentityHashMap<>();
 	private final Map<ScannedInvoice, AcceptedDocument> pendingEdits = new IdentityHashMap<>();
 	private final Map<ScannedInvoice, String> customSupplierDrafts = new IdentityHashMap<>();
 	private final Map<Long, List<RetainedApproval>> retainedApprovals = new HashMap<>();
@@ -206,9 +218,12 @@ public final class AiInvoiceScanController extends Controller {
 	private LocalDate currentStatementPeriodStart;
 	private LocalDate currentStatementPeriodEnd;
 	private boolean currentResultIsStatement;
+	private TableColumn<InvoiceReconciliation, String> scannedAmountColumn;
+	private TableColumn<InvoiceReconciliation, String> expectedAmountColumn;
 	private Long currentStatementAmountCents;
 	private Double currentStatementAmountConfidence;
 	private Long currentPreviewDocumentId;
+	private boolean viewingMatchedInvoicePdf;
 	private Map<PdfEvidenceField, PdfEvidenceLocation> currentEvidence = Map.of();
 	private Image currentPreviewImage;
 	private int currentPageIndex;
@@ -487,6 +502,8 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	private void openBatches(List<BatchSummary> batches) {
+		statementInvoicesByRow.clear();
+		statementInvoiceEdits.clear();
 		lastSavedReviewBatchIds = Set.of();
 		if (pdfCache != null) pdfCache.stopPrefetch();
 		setQueueBusy(true, "Loading invoice and reconciliation data…");
@@ -586,11 +603,32 @@ public final class AiInvoiceScanController extends Controller {
 		}
 		GeminiInvoiceScanService.ScanKind kind = batch.kind() == DocumentAiModels.BatchKind.STATEMENT
 				? GeminiInvoiceScanService.ScanKind.STATEMENT : GeminiInvoiceScanService.ScanKind.INDIVIDUAL_INVOICE;
-		List<Invoice> imported = loadImportedRows(scanned, kind, periodStart, periodEnd, context);
-		List<InvoiceReconciliation> reconciliations = InvoiceReconciler.reconcile(scanned, imported);
+		List<InvoiceReconciliation> reconciliations;
+		if (batch.kind() == DocumentAiModels.BatchKind.STATEMENT) {
+			var comparison = documentAiService.statementComparison(batch.id(), context.storeId);
+			List<ScannedInvoice> entered = comparison.enteredRows().stream()
+					.map(row -> SupplierMatcher.correlate(row, suppliers)).toList();
+			reconciliations = StatementReconciler.reconcile(scanned, entered, comparison.pendingDocuments());
+			for (var row : reconciliations) {
+				if (!row.hasExpectedAmount()) continue;
+				var matches = comparison.enteredInvoices().stream()
+						.filter(invoice -> StatementReconciler.sameDocument(row.getScanned(), SupplierMatcher.correlate(invoice.values(), suppliers))).toList();
+				if (matches.size() == 1) statementInvoicesByRow.put(row.getScanned(), matches.getFirst());
+			}
+			context.progress.accept(scanned.size(), scanned.size());
+		} else {
+			List<Invoice> imported = loadImportedRows(scanned, kind, periodStart, periodEnd, context);
+			reconciliations = InvoiceReconciler.reconcile(scanned, imported);
+		}
+		Set<Long> enteredIds = detail.documents().stream().filter(DocumentAiModels.ExtractedDocument::entered)
+				.map(DocumentAiModels.ExtractedDocument::id).collect(java.util.stream.Collectors.toSet());
+		if (!enteredIds.isEmpty()) reconciliations = reconciliations.stream().map(row ->
+				enteredIds.contains(documentIds.get(row.getScanned())) ? row.withStatus(InvoiceReconciliation.Status.SAVED) : row).toList();
 		if (batch.error() != null && !batch.error().isBlank()) {
 			reconciliations = reconciliations.stream()
-					.map(row -> row.withStatus(InvoiceReconciliation.Status.NEEDS_REVIEW)).toList();
+					.map(row -> row.getStatus() == InvoiceReconciliation.Status.SAVED
+							|| batch.kind() == DocumentAiModels.BatchKind.STATEMENT && !row.isAccepted() ? row
+							: row.withStatus(InvoiceReconciliation.Status.NEEDS_REVIEW)).toList();
 		}
 		ScanRun run = new ScanRun(scanned, reconciliations, locations,
 			documentIds, periodStart, periodEnd, statementAmount, statementConfidence, suppliers);
@@ -619,6 +657,11 @@ public final class AiInvoiceScanController extends Controller {
 		currentStatementPeriodEnd = first.run().periodEnd();
 		currentStatementAmountCents = first.run().statementAmountCents();
 		currentStatementAmountConfidence = first.run().statementAmountConfidence();
+		scannedAmountColumn.setText(currentResultIsStatement ? "STATEMENT" : "SCANNED");
+		expectedAmountColumn.setText(currentResultIsStatement ? "ENTERED INVOICE" : "EXPECTED");
+		resultsTable.setPlaceholder(new Label(currentResultIsStatement
+				? "No statement transactions were extracted. Rescan the statement PDF."
+				: "No invoice exceptions require review."));
 		resolvedCustomSupplierIds.clear();
 		deactivateCustomSupplier();
 		availableSuppliers = loaded.getFirst().run().suppliers();
@@ -640,7 +683,10 @@ public final class AiInvoiceScanController extends Controller {
 		combinedReviewHint.setText(invoiceReview ? "Reviewing " + loaded.size()
 				+ " invoice batches together. Saving will complete each original batch. Statements are reviewed separately."
 				+ (skipped > 0 ? " " + skipped + " failed or unfinished invoice batch(es) remain in the queue." : "") : "");
-		boolean showHint = invoiceReview && (loaded.size() > 1 || skipped > 0);
+		if (currentResultIsStatement) combinedReviewHint.setText(
+				"Statement rows are compared with entered invoice and credit PDFs. Review a matched row to edit its invoice amount, dates or notes. "
+				+ "Accepted invoice edits are saved when you complete the statement. Reopen waiting statements after invoice entry.");
+		boolean showHint = currentResultIsStatement || invoiceReview && (loaded.size() > 1 || skipped > 0);
 		combinedReviewHint.setVisible(showHint); combinedReviewHint.setManaged(showHint);
 		setQueueBusy(false, null);
 		updateSummary(allResults.size());
@@ -650,6 +696,8 @@ public final class AiInvoiceScanController extends Controller {
 
 	@FXML
 	private void backToQueue() {
+		statementInvoicesByRow.clear();
+		statementInvoiceEdits.clear();
 		if (pdfCache != null) pdfCache.stopPrefetch();
 		previewRequest++;
 		currentReview = null;
@@ -767,6 +815,8 @@ public final class AiInvoiceScanController extends Controller {
 		TableColumn<InvoiceReconciliation, String> scanned = confidenceColumn(
 				"SCANNED", "scannedAmountString", 100, InvoiceReconciliation::getAmountConfidence, "document AI");
 		TableColumn<InvoiceReconciliation, String> imported = column("EXPECTED", "importedAmountString", 100);
+		scannedAmountColumn = scanned;
+		expectedAmountColumn = imported;
 		TableColumn<InvoiceReconciliation, String> variance = column("VARIANCE", "varianceString", 100);
 		TableColumn<InvoiceReconciliation, InvoiceReconciliation> action = new TableColumn<>("ACTION");
 		action.setMinWidth(205);
@@ -866,19 +916,62 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	private void showEvidence(InvoiceReconciliation reconciliation) {
+		showEvidenceSource(reconciliation, false);
+	}
+
+	@FXML
+	private void showStatementPdf() {
+		if (currentResultIsStatement && !commitBusy) showEvidenceSource(currentReview, false);
+	}
+
+	@FXML
+	private void showMatchedInvoicePdf() {
+		if (currentResultIsStatement && !commitBusy && matchedInvoiceForPreview(currentReview) != null) {
+			showEvidenceSource(currentReview, true);
+		}
+	}
+
+	private StatementInvoice matchedInvoiceForPreview(InvoiceReconciliation row) {
+		if (!currentResultIsStatement || row == null || !row.hasExpectedAmount()
+				|| row.getStatus() == InvoiceReconciliation.Status.AMBIGUOUS) return null;
+		StatementInvoice invoice = statementInvoicesByRow.get(row.getScanned());
+		return invoice != null && invoice.documentId() > 0 ? invoice : null;
+	}
+
+	private void updateEvidenceSourceControls(InvoiceReconciliation row) {
+		statementPdfSourceBar.setVisible(currentResultIsStatement);
+		statementPdfSourceBar.setManaged(currentResultIsStatement);
+		StatementInvoice invoice = matchedInvoiceForPreview(row);
+		matchedInvoicePdfButton.setText(invoice != null && invoice.values().documentType() == ScannedInvoice.DocumentType.CREDIT
+				? "Credit PDF" : "Invoice PDF");
+		matchedInvoicePdfButton.setDisable(commitBusy || invoice == null || viewingMatchedInvoicePdf);
+		statementPdfButton.setDisable(commitBusy || !viewingMatchedInvoicePdf);
+		matchedInvoicePdfButton.setTooltip(new Tooltip(invoice == null
+				? "No uniquely matched scanned invoice or credit PDF is available for this statement row."
+				: "Review the original scanned invoice or credit PDF associated with this statement row."));
+	}
+
+	private void showEvidenceSource(InvoiceReconciliation reconciliation, boolean matchedInvoice) {
 		if (reconciliation == null || reconciliation.getScanned() == null) return;
-		ScannedInvoice scanned = reconciliation.getScanned();
+		StatementInvoice invoice = matchedInvoice ? matchedInvoiceForPreview(reconciliation) : null;
+		if (matchedInvoice && invoice == null) return;
+		viewingMatchedInvoicePdf = matchedInvoice;
+		updateEvidenceSourceControls(reconciliation);
+		ScannedInvoice scanned = invoice == null ? reconciliation.getScanned() : invoice.values();
 		previewRequest++;
-		currentPreviewDocumentId = documentIdsByRow.get(scanned);
+		currentPreviewDocumentId = invoice == null ? documentIdsByRow.get(scanned) : invoice.documentId();
 		currentPreviewImage = null;
 		previewRotationQuarterTurns = 0;
-		currentEvidence = evidenceLocations.getOrDefault(scanned, Map.of());
+		// Statement boxes refer to its table cells, not coordinates on the invoice PDF.
+		currentEvidence = invoice == null ? evidenceLocations.getOrDefault(scanned, Map.of()) : Map.of();
 		pdfPreviewImage.setImage(null);
 		pdfOverlayPane.getChildren().clear();
 		previousPageButton.setDisable(true);
 		nextPageButton.setDisable(true);
 		rotatePreviewButton.setDisable(true);
-		previewDocumentLabel.setText(scanned.sourceFile() + " · " + scanned.invoiceNo());
+		String sourceLabel = !currentResultIsStatement ? "" : invoice == null ? "Statement · "
+				: scanned.documentType() == ScannedInvoice.DocumentType.CREDIT ? "Credit · " : "Invoice · ";
+		previewDocumentLabel.setText(sourceLabel + scanned.sourceFile() + " · " + scanned.invoiceNo());
 		if (currentPreviewDocumentId == null) {
 			previewPageLabel.setText("No PDF loaded");
 			previewHintLabel.setText("The original PDF is no longer available for preview.");
@@ -925,10 +1018,13 @@ public final class AiInvoiceScanController extends Controller {
 			previousPageButton.setDisable(currentPageIndex <= 0);
 			nextPageButton.setDisable(currentPageIndex >= currentPageCount - 1);
 			rotatePreviewButton.setDisable(false);
-			previewHintLabel.setText(currentEvidence.isEmpty()
-					? "No searchable OCR values were found; inspect the rendered PDF manually."
+			previewHintLabel.setText(viewingMatchedInvoicePdf
+					? "Inspect the invoice or credit line items and annotations before accepting your changes. Switch back to Statement PDF to compare."
+					: currentEvidence.isEmpty() ? "No searchable OCR values were found; inspect the rendered PDF manually."
 					: "Colour-coded boxes mark the supplier, invoice reference, date, and amount when found.");
-			prefetchNextInvoice(documentId);
+			StatementInvoice matched = matchedInvoiceForPreview(currentReview);
+			if (!viewingMatchedInvoicePdf && matched != null) pdfCache.prefetch(matched.documentId(), reviewStoreId);
+			else prefetchNextInvoice(documentId);
 		});
 		task.setOnFailed(_ -> {
 			if (request != previewRequest) return;
@@ -1107,6 +1203,8 @@ public final class AiInvoiceScanController extends Controller {
 		if (row == null || row.getScanned() == null || row.getStatus() == InvoiceReconciliation.Status.SAVED) return;
 		showBulkReviewMessage(null, false);
 		currentReview = row;
+		viewingMatchedInvoicePdf = false;
+		updateEvidenceSourceControls(row);
 		invoiceAmountRefreshMessageLabel.setText("");
 		invoiceAmountRefreshMessageLabel.setVisible(false);
 		invoiceAmountRefreshMessageLabel.setManaged(false);
@@ -1146,6 +1244,42 @@ public final class AiInvoiceScanController extends Controller {
 		reviewClassificationWarningLabel.setManaged(!classificationWarning.isBlank());
 		reviewAcceptButton.setText(nextPendingReview(row) == null ? "Accept" : "Accept and next");
 		updateAmountRefreshControls();
+		for (Control control : List.of(reviewSupplierChoice, customSupplierButton, customSupplierNameField,
+				reviewTypeChoice, reviewReferenceField, reviewDateField, reviewDueDateField, reviewAmountField, reviewNotesField)) {
+			control.setDisable(currentResultIsStatement);
+		}
+		if (customSupplierSelected) reviewSupplierChoice.setDisable(true);
+		reviewDueDateField.setDisable(currentResultIsStatement || type == ScannedInvoice.DocumentType.CREDIT);
+		reviewAcceptButton.setVisible(!currentResultIsStatement || canAcknowledgeStatementRow(row));
+		reviewAcceptButton.setManaged(reviewAcceptButton.isVisible());
+		if (currentResultIsStatement) reviewAcceptButton.setText("Acknowledge difference");
+		reviewHelpLabel.setText("Correct the scanned values, then accept this document for the final save.");
+		reviewAmountTitleLabel.setText("Amount ($)");
+		reviewExpectedAmountTitleLabel.setText("Expected amount");
+		if (currentResultIsStatement) {
+			reviewTitleLabel.setText("Statement row · " + row.getStatusLabel());
+			reviewHelpLabel.setText("Review the statement against the entered invoice. Differences can be acknowledged without changing the invoice.");
+			StatementInvoice invoice = statementInvoicesByRow.get(scanned);
+			if (invoice != null && row.getStatus() != InvoiceReconciliation.Status.WAITING_FOR_INVOICES
+					&& row.getStatus() != InvoiceReconciliation.Status.AMBIGUOUS) {
+				var draft = statementInvoiceEdits.get(scanned);
+				var values = invoice.values();
+				reviewTitleLabel.setText("Edit entered " + (values.documentType() == ScannedInvoice.DocumentType.CREDIT ? "credit" : "invoice"));
+				reviewHelpLabel.setText("Accept changes here, then complete the statement to save them to this invoice or credit.");
+				reviewReferenceField.setText(values.invoiceNo());
+				reviewDateField.setValue(draft == null ? values.invoiceDate() : draft.invoiceDate());
+				reviewDueDateField.setValue(draft == null ? values.dueDate() : draft.dueDate());
+				reviewAmountField.setText(BigDecimal.valueOf(Math.abs(draft == null ? values.amountCents() : draft.amountCents()), 2).toPlainString());
+				reviewNotesField.setText(draft == null ? invoice.notes() : draft.notes());
+				for (Control control : List.of(reviewDateField, reviewAmountField, reviewNotesField)) control.setDisable(false);
+				reviewDueDateField.setDisable(values.documentType() == ScannedInvoice.DocumentType.CREDIT);
+				reviewAcceptButton.setVisible(true); reviewAcceptButton.setManaged(true);
+				reviewAcceptButton.setText("Accept invoice changes");
+				reviewAmountTitleLabel.setText("Entered invoice / credit amount ($)");
+				reviewExpectedAmountTitleLabel.setText("Statement amount");
+				updateReviewReconciliationValues();
+			}
+		}
         if (row.getImported() != null && Boolean.TRUE.equals(row.getImported().getReconciliationStale()))
             showAmountRefreshMessage("Showing a cached credit amount. Refresh to verify the current Z-Office value.");
 		resultsView.setVisible(false);
@@ -1154,7 +1288,7 @@ public final class AiInvoiceScanController extends Controller {
 		reviewView.setVisible(true);
 		reviewView.setManaged(true);
 		Platform.runLater(() -> {
-			if (!disposed && currentReview == row) showEvidence(row);
+			if (!disposed && currentReview == row) showEvidenceSource(row, viewingMatchedInvoicePdf);
 		});
 	}
 
@@ -1351,6 +1485,12 @@ public final class AiInvoiceScanController extends Controller {
 
 	@FXML
 	private void acceptReview() {
+		if (currentResultIsStatement) {
+			if (currentReview != null && statementInvoicesByRow.containsKey(currentReview.getScanned())
+					&& !reviewAmountField.isDisabled()) acceptStatementInvoiceEdit();
+			else if (currentReview != null) acknowledgeStatementRows(List.of(currentReview));
+			return;
+		}
 		if (currentReview == null || commitBusy || amountRefreshBusy) return;
 		InvoiceSupplier supplier = reviewSupplierChoice.getValue();
 		String supplierName;
@@ -1518,6 +1658,7 @@ public final class AiInvoiceScanController extends Controller {
 
 	@FXML
 	private void applyBulkEdit() {
+		if (currentResultIsStatement) return;
 		if (commitBusy || amountRefreshBusy) return;
 		String field = bulkEditFieldChoice.getValue();
 		InvoiceSupplier supplier = "Supplier".equals(field) ? bulkEditSupplier() : null;
@@ -1665,6 +1806,10 @@ public final class AiInvoiceScanController extends Controller {
 
 	@FXML
 	private void acceptSelected() {
+		if (currentResultIsStatement) {
+			acknowledgeStatementRows(List.copyOf(resultsTable.getSelectionModel().getSelectedItems()));
+			return;
+		}
 		if (commitBusy || amountRefreshBusy) return;
 		List<InvoiceReconciliation> selected = List.copyOf(resultsTable.getSelectionModel().getSelectedItems());
 		List<PendingSave> approvals = new ArrayList<>();
@@ -1694,6 +1839,23 @@ public final class AiInvoiceScanController extends Controller {
 		showBulkReviewMessage("Accepted " + approvals.size() + (approvals.size() == 1 ? " document." : " documents."), false);
 	}
 
+	private static boolean canAcknowledgeStatementRow(InvoiceReconciliation row) {
+		return row.hasExpectedAmount() && (row.getStatus() == InvoiceReconciliation.Status.AMOUNT_MISMATCH
+				|| row.getStatus() == InvoiceReconciliation.Status.NEEDS_REVIEW);
+	}
+
+	private void acknowledgeStatementRows(List<InvoiceReconciliation> selected) {
+		if (commitBusy || amountRefreshBusy) return;
+		for (InvoiceReconciliation row : selected) {
+			if (canAcknowledgeStatementRow(row)) allResults.set(resultIndex(allResults, row), row.withStatus(InvoiceReconciliation.Status.ACCEPTED));
+		}
+		if (reviewView.isVisible()) backToResults();
+		applyResultFilter();
+		updateSummary(allResults.size());
+		showBulkReviewMessage("Differences acknowledged. Statement reconciliation does not change any invoice amounts.", false);
+	}
+
+
 	private void showBulkReviewMessage(String message, boolean error) {
 		boolean visible = message != null && !message.isBlank();
 		bulkReviewMessageLabel.setText(visible ? message : "");
@@ -1710,12 +1872,19 @@ public final class AiInvoiceScanController extends Controller {
 		long selected = resultsTable.getSelectionModel().getSelectedItems().stream()
 				.filter(AiInvoiceScanController::needsAcceptance).count();
 		acceptSelectedButton.setText(selected == 0 ? "Accept selected" : "Accept selected (" + selected + ")");
-		acceptSelectedButton.setDisable(commitBusy || amountRefreshBusy || selected == 0);
+		acceptSelectedButton.setVisible(true);
+		acceptSelectedButton.setManaged(true);
+		if (currentResultIsStatement) acceptSelectedButton.setText("Acknowledge selected");
+		editSelectedButton.setVisible(!currentResultIsStatement);
+		editSelectedButton.setManaged(!currentResultIsStatement);
+		acceptSelectedButton.setDisable(commitBusy || amountRefreshBusy || (currentResultIsStatement
+				? resultsTable.getSelectionModel().getSelectedItems().stream().noneMatch(AiInvoiceScanController::canAcknowledgeStatementRow)
+				: selected == 0));
 		long selectedEditable = resultsTable.getSelectionModel().getSelectedItems().stream().filter(AiInvoiceScanController::editable).count();
 		bulkEditSelectionLabel.setText(selectedEditable == 0 ? "Select rows in the table to edit them together."
 				: "Changes will apply to " + selectedEditable + (selectedEditable == 1 ? " selected row." : " selected rows."));
 		editSelectedButton.setText(selectedEditable == 0 ? "Edit selected" : "Edit selected (" + selectedEditable + ")");
-		editSelectedButton.setDisable(commitBusy || amountRefreshBusy || selectedEditable == 0);
+		editSelectedButton.setDisable(currentResultIsStatement || commitBusy || amountRefreshBusy || selectedEditable == 0);
 		applyBulkEditButton.setText("Apply to selected (" + selectedEditable + ")");
 		applyBulkEditButton.setDisable(commitBusy || amountRefreshBusy || selectedEditable == 0);
 		bulkEditFieldChoice.setDisable(commitBusy || amountRefreshBusy);
@@ -1737,6 +1906,8 @@ public final class AiInvoiceScanController extends Controller {
 					"Review and accept every document that needs attention before saving.");
 			return;
 		}
+
+		if (currentResultIsStatement) { saveStatement(); return; }
 
 		List<PendingSave> pending;
 		try {
@@ -1818,7 +1989,74 @@ public final class AiInvoiceScanController extends Controller {
 		}
 	}
 
+	private void acceptStatementInvoiceEdit() {
+		if (commitBusy || amountRefreshBusy || currentReview == null) return;
+		var scanned = currentReview.getScanned();
+		var original = statementInvoicesByRow.get(scanned);
+		if (original == null) return;
+		long cents;
+		try {
+			String text = reviewAmountField.getText().replace("$", "").replace(",", "").trim();
+			BigDecimal amount = new BigDecimal(text).setScale(2, RoundingMode.HALF_UP);
+			if (amount.signum() < 0) throw new NumberFormatException();
+			cents = amount.movePointRight(2).longValueExact();
+		} catch (NumberFormatException | ArithmeticException exception) {
+			showReviewError("Enter a valid amount of zero or more."); return;
+		}
+		if (reviewDateField.getValue() == null) { showReviewError("Enter the invoice or credit date."); return; }
+		boolean credit = original.values().documentType() == ScannedInvoice.DocumentType.CREDIT;
+		if (!credit && reviewDueDateField.getValue() == null) { showReviewError("Enter the invoice due date."); return; }
+		var edit = new StatementInvoiceEdit(original, reviewDateField.getValue(), credit ? null : reviewDueDateField.getValue(),
+				credit ? -cents : cents, reviewNotesField.getText() == null ? "" : reviewNotesField.getText());
+		boolean changed = edit.amountCents() != original.values().amountCents()
+				|| !java.util.Objects.equals(edit.invoiceDate(), original.values().invoiceDate())
+				|| !java.util.Objects.equals(edit.dueDate(), original.values().dueDate()) || !edit.notes().equals(original.notes());
+		if (changed) statementInvoiceEdits.put(scanned, edit); else statementInvoiceEdits.remove(scanned);
+		Invoice expected = new Invoice();
+		expected.setInvoiceNo(original.values().invoiceNo()); expected.setSupplierName(original.values().supplierName());
+		expected.setReconciliationType(original.values().documentType()); expected.setImportedInvoiceAmount(edit.amountCents() / 100.0);
+		expected.setImportExists(true);
+		var updated = new InvoiceReconciliation(InvoiceReconciliation.Status.ACCEPTED, scanned, expected, edit.amountCents() - scanned.amountCents());
+		allResults.set(resultIndex(allResults, currentReview), updated);
+		currentReview = updated;
+		backToResults(); applyResultFilter(); updateSummary(allResults.size());
+		showBulkReviewMessage(changed ? "Invoice changes accepted. Complete the statement to save them." : "Statement difference acknowledged.", false);
+	}
+
+	private void saveStatement() {
+		if (currentBatches.size() != 1) return;
+		long batchId = currentBatches.getFirst().batch().id();
+		int requestedStore = storeId();
+		var edits = allResults.stream().map(row -> statementInvoiceEdits.get(row.getScanned()))
+				.filter(java.util.Objects::nonNull).toList();
+		setCommitBusy(true);
+		summaryLabel.setText("Saving invoice changes and completing the statement…");
+		Task<Void> task = new Task<>() {
+			@Override protected Void call() {
+				documentAiService.completeStatement(batchId, requestedStore, new StatementCompletion(edits)); return null;
+			}
+		};
+		task.setOnSucceeded(_ -> {
+			setCommitBusy(false);
+			if (disposed) return;
+			if (!edits.isEmpty()) { parent.fillInvoiceTable(); parent.fillCreditTable(); }
+			lastSavedReviewBatchIds = Set.of(batchId);
+			backToQueue();
+		});
+		task.setOnFailed(_ -> {
+			setCommitBusy(false);
+			if (!disposed) parent.getDialogPane().showError("Statement save failed", errorMessage(task.getException()),
+					task.getException() instanceof Exception exception ? exception : new RuntimeException(task.getException()));
+		});
+		task.setOnCancelled(_ -> setCommitBusy(false));
+		try { executor.submit(task); }
+		catch (RejectedExecutionException exception) {
+			setCommitBusy(false); parent.getDialogPane().showError("Statement save could not start", errorMessage(exception), exception);
+		}
+	}
+
 	private List<PendingSave> buildPendingSaves() {
+		if (currentResultIsStatement) return List.of();
 		List<PendingSave> pending = new ArrayList<>();
 		for (InvoiceReconciliation row : allResults) {
 			if (row.getStatus() == InvoiceReconciliation.Status.SAVED) continue;
@@ -1833,6 +2071,7 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	private List<EnteredDocument> buildEnteredDocuments() {
+		if (currentResultIsStatement) return List.of();
 		Map<Long, LocalDate> datesByDocument = new LinkedHashMap<>();
 		for (InvoiceReconciliation row : allResults) {
 			ScannedInvoice scanned = row.getScanned();
@@ -1844,7 +2083,13 @@ public final class AiInvoiceScanController extends Controller {
 					(left, right) -> left.isBefore(right) ? left : right);
 		}
 		return datesByDocument.entrySet().stream()
-				.map(entry -> new EnteredDocument(entry.getKey(), entry.getValue())).toList();
+				.map(entry -> new EnteredDocument(entry.getKey(), entry.getValue(), allResults.stream()
+						.filter(row -> entry.getKey().equals(documentIdsByRow.get(row.getScanned())))
+						.map(row -> {
+							AcceptedDocument accepted = acceptedDocuments.get(row.getScanned());
+							if (accepted == null) accepted = draftDocument(row);
+							return reviewValues(row, accepted, null);
+						}).toList())).toList();
 	}
 
 	private AcceptedDocument acceptedDocumentFromScanned(InvoiceReconciliation row) {
@@ -1872,6 +2117,7 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	private void saveDocument(InvoiceReconciliation row, AcceptedDocument accepted) {
+		if (currentResultIsStatement) throw new IllegalStateException("Statements cannot create invoice or credit entries.");
 		int supplierId = resolveSupplierId(accepted);
 		if (accepted.documentType() == ScannedInvoice.DocumentType.CREDIT) {
 			Credit credit = new Credit();
@@ -1958,7 +2204,7 @@ public final class AiInvoiceScanController extends Controller {
 
 	@FXML
 	private void refreshInvoiceAmount() {
-		if (currentReview == null || commitBusy || amountRefreshBusy) return;
+		if (currentResultIsStatement || currentReview == null || commitBusy || amountRefreshBusy) return;
 		ScannedInvoice scanned = currentReview.getScanned();
 		String reference = reviewReferenceField.getText() == null ? "" : reviewReferenceField.getText().trim();
 		if (reference.isBlank()) { showAmountRefreshMessage("Enter the document reference before refreshing its amount."); return; }
@@ -2045,7 +2291,7 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	private void updateAmountRefreshControls() {
-		boolean document = currentReview != null && currentReview.getScanned() != null;
+		boolean document = !currentResultIsStatement && currentReview != null && currentReview.getScanned() != null;
 		refreshInvoiceAmountButton.setVisible(document);
 		refreshInvoiceAmountButton.setManaged(document);
 		refreshInvoiceAmountButton.setDisable(!document || amountRefreshBusy || commitBusy);
@@ -2057,6 +2303,19 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	private void updateReviewReconciliationValues() {
+		if (currentResultIsStatement && currentReview != null && statementInvoicesByRow.containsKey(currentReview.getScanned())) {
+			reviewExpectedAmountLabel.setText(CURRENCY.format(currentReview.getScanned().amount()));
+			reviewExpectedAmountLabel.setTooltip(null);
+			try {
+				BigDecimal amount = new BigDecimal(reviewAmountField.getText().replace("$", "").replace(",", "").trim());
+				if (currentReview.getScanned().documentType() == ScannedInvoice.DocumentType.CREDIT) amount = amount.abs().negate();
+				double variance = amount.doubleValue() - currentReview.getScanned().amount();
+				reviewVarianceLabel.setText(CURRENCY.format(variance));
+				reviewVarianceLabel.getStyleClass().remove("review-variance-attention");
+				if (Math.abs(variance) > InvoiceReconciler.DEFAULT_TOLERANCE_CENTS / 100.0) reviewVarianceLabel.getStyleClass().add("review-variance-attention");
+			} catch (NumberFormatException exception) { reviewVarianceLabel.setText("N/A"); }
+			return;
+		}
 		reviewExpectedAmountLabel.getStyleClass().remove("review-reconciliation-attention");
 		reviewExpectedAmountLabel.setTooltip(null);
 		if (currentReview == null || currentReview.getImported() == null
@@ -2067,7 +2326,8 @@ public final class AiInvoiceScanController extends Controller {
 			if (currentReview != null && !currentReview.isAccepted()) {
 				reviewExpectedAmountLabel.getStyleClass().add("review-reconciliation-attention");
 				reviewExpectedAmountLabel.setTooltip(new Tooltip(
-						"No matching Z-Office amount is available; verify the scanned amount manually."));
+						currentResultIsStatement ? "No individually scanned, entered invoice is available for this statement row."
+						: "No matching Z-Office amount is available; verify the scanned amount manually."));
 			}
 			reviewVarianceLabel.setText("N/A");
 			reviewVarianceLabel.getStyleClass().remove("review-variance-attention");
@@ -2085,7 +2345,7 @@ public final class AiInvoiceScanController extends Controller {
 		try {
 			double entered = Double.parseDouble(rawAmount);
             if ("Credit".equals(reviewTypeChoice.getValue())) entered = -Math.abs(entered);
-			double variance = entered - expected;
+			double variance = currentResultIsStatement ? expected - entered : entered - expected;
 			reviewVarianceLabel.setText(CURRENCY.format(variance));
 			reviewVarianceLabel.getStyleClass().remove("review-variance-attention");
 			if (Math.abs(variance) > InvoiceReconciler.DEFAULT_TOLERANCE_CENTS / 100.0) {
@@ -2211,7 +2471,8 @@ public final class AiInvoiceScanController extends Controller {
 				: !currentResultIsStatement || currentStatementPeriodStart == null || currentStatementPeriodEnd == null ? ""
 				: "Statement period " + periodLabel(currentStatementPeriodStart, currentStatementPeriodEnd) + " · ";
 		summaryLabel.setText(period + extractedCount + " extracted · " + accepted + " accepted · "
-				+ notable + " need attention. Variance is scanned minus Z-Office."
+				+ notable + (currentResultIsStatement ? " need attention. Variance is entered invoice minus statement."
+						: " need attention. Variance is scanned minus Z-Office.")
 				+ (allResults.stream().anyMatch(row -> !classificationWarning(row).isBlank())
 						? " Wrong folder detected: review each flagged document before saving." : ""));
 		updateAcceptanceControls();
@@ -2229,11 +2490,15 @@ public final class AiInvoiceScanController extends Controller {
 		boolean completionPending = currentBatches.stream().anyMatch(batch ->
 				batchIdsByDocument.containsValue(batch.batch().id()) && !completedBatchIds.contains(batch.batch().id()));
 		boolean showSave = allAccepted && (pendingSave > 0 || completionPending);
-		saveAcceptedButton.setText(pendingSave == 0 && completionPending ? "Retry completion" : "Save accepted documents");
+		saveAcceptedButton.setText(currentResultIsStatement ? statementInvoiceEdits.isEmpty()
+				? "Complete reconciliation" : "Save statement and invoice changes"
+				: pendingSave == 0 && completionPending ? "Retry completion" : "Save accepted documents");
 		acceptanceSummaryLabel.setText(allResults.isEmpty()
 				? "" : pendingSave == 0
 						? "Saved " + accepted + "/" + allResults.size()
 						: accepted + "/" + allResults.size() + " accepted");
+		if (currentResultIsStatement && !statementInvoiceEdits.isEmpty()) acceptanceSummaryLabel.setText(
+				acceptanceSummaryLabel.getText() + " · " + statementInvoiceEdits.size() + " invoice change(s) to save");
 		saveAcceptedButton.setVisible(showSave || commitBusy);
 		saveAcceptedButton.setManaged(showSave || commitBusy);
 		saveAcceptedButton.setDisable(!showSave || commitBusy || amountRefreshBusy);
@@ -2316,6 +2581,7 @@ public final class AiInvoiceScanController extends Controller {
 		updateAcceptanceControls();
 		updateBulkAcceptanceControls();
 		updateAmountRefreshControls();
+		updateEvidenceSourceControls(currentReview);
 	}
 
 	private static Throwable rootCause(Throwable value) {
