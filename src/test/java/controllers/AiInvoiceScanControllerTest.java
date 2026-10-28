@@ -11,6 +11,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
@@ -78,6 +79,224 @@ class AiInvoiceScanControllerTest {
 
 	@AfterAll
 	static void stopJavaFx() { if (toolkitStarted) Platform.exit(); }
+
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void savingSeventySevenDocumentsFinishesAndFilingTimeoutCanRetryWithoutResaving(boolean filingTimeout) throws Exception {
+		var saving = new CountDownLatch(1);
+		var releaseSave = new CountDownLatch(1);
+		var filing = new CountDownLatch(1);
+		var releaseFiling = new CountDownLatch(1);
+		var stopped = new CountDownLatch(1);
+		var queueRefreshed = new CountDownLatch(1);
+		var saves = new AtomicInteger();
+		var completions = new AtomicInteger();
+		var tableRefreshes = new AtomicInteger();
+		AiInvoiceScanController[] holder = new AiInvoiceScanController[1];
+		try (var workers = Executors.newSingleThreadExecutor()) {
+			try {
+				onFxThread(() -> {
+					var controller = controller(); holder[0] = controller;
+					configureReconciliation(controller, new InvoiceService() {
+						@Override public void saveOrUpdateInvoice(Invoice invoice, String original, int supplier) {
+							assertFalse(Platform.isFxApplicationThread());
+							if (saves.incrementAndGet() == 38) {
+								saving.countDown(); awaitRelease(releaseSave);
+							}
+						}
+					});
+					setField(controller, "parent", new InvoiceEntryController() {
+						{ dialogPane = new com.dlsc.gemsfx.DialogPane(); }
+						@Override public void fillInvoiceTable() { tableRefreshes.incrementAndGet(); }
+						@Override public void fillCreditTable() { tableRefreshes.incrementAndGet(); }
+					});
+					setField(controller, "executor", workers);
+					setField(controller, "documentAiService", documentService(url -> {
+						if (url.contains("/complete?")) {
+							assertEquals(77, saves.get());
+							int attempt = completions.incrementAndGet();
+							filing.countDown(); awaitRelease(releaseFiling);
+							if (filingTimeout && attempt == 1) throw new org.springframework.web.client.ResourceAccessException(
+									"Read timed out", new java.net.SocketTimeoutException("Read timed out"));
+							return null;
+						}
+						if (url.endsWith("/review-batches/1?storeId=1")) {
+							return new BatchDetail(new BatchSummary(1, BatchKind.INVOICE_BATCH, BatchStatus.REVIEW_REQUIRED,
+									"Review test", 1, 77, null, null), List.of());
+						}
+						assertTrue(url.endsWith("/review-queue"));
+						queueRefreshed.countDown();
+						return "[]";
+					}));
+					List<InvoiceReconciliation> rows = new ArrayList<>();
+					for (int i = 0; i < 77; i++) rows.add(pending("INV-" + i, 10000).withStatus(InvoiceReconciliation.Status.ACCEPTED));
+					showAcceptanceRows(controller, rows, BatchKind.INVOICE_BATCH);
+					TableView<InvoiceReconciliation> table = field(controller, "resultsTable");
+					table.getColumns().get(2).setSortType(TableColumn.SortType.DESCENDING);
+					table.getSortOrder().setAll(table.getColumns().get(2));
+					table.getSelectionModel().selectAll();
+					ProgressIndicator spinner = field(controller, "saveAcceptedProgress");
+					spinner.visibleProperty().addListener((_, _, visible) -> { if (!visible) stopped.countDown(); });
+					invoke(controller, "saveAccepted");
+				});
+				assertTrue(saving.await(5, TimeUnit.SECONDS));
+				onFxThread(() -> {
+					ProgressIndicator spinner = field(holder[0], "saveAcceptedProgress");
+					assertTrue(spinner.isVisible());
+					assertTrue(spinner.getProgress() > 0 && spinner.getProgress() < 1);
+					Label summary = field(holder[0], "summaryLabel");
+					assertTrue(summary.getText().contains("Saving documents"));
+				});
+				releaseSave.countDown();
+				assertTrue(filing.await(5, TimeUnit.SECONDS));
+				onFxThread(() -> {
+					ProgressIndicator spinner = field(holder[0], "saveAcceptedProgress");
+					assertTrue(spinner.isVisible());
+					Label summary = field(holder[0], "summaryLabel");
+					assertTrue(summary.getText().contains("Filing source PDFs"));
+				});
+				releaseFiling.countDown();
+				assertTrue(stopped.await(5, TimeUnit.SECONDS));
+				onFxThread(() -> {
+					var controller = holder[0];
+					assertEquals(Boolean.FALSE, field(controller, "commitBusy"));
+					ProgressIndicator spinner = field(controller, "saveAcceptedProgress");
+					assertFalse(spinner.isVisible()); assertFalse(spinner.isManaged());
+					assertFalse(spinner.progressProperty().isBound());
+					ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
+					assertEquals(77, rows.size());
+					assertTrue(rows.stream().allMatch(row -> row.getStatus() == InvoiceReconciliation.Status.SAVED));
+					if (filingTimeout) {
+						Button save = field(controller, "saveAcceptedButton");
+						assertEquals("Retry completion", save.getText()); assertFalse(save.isDisabled());
+						invoke(controller, "saveAccepted");
+					}
+				});
+				assertTrue(queueRefreshed.await(5, TimeUnit.SECONDS));
+				onFxThread(() -> {
+					javafx.scene.layout.VBox queue = field(holder[0], "queueView");
+					assertTrue(queue.isVisible());
+					assertEquals(Boolean.FALSE, field(holder[0], "commitBusy"));
+				});
+				assertEquals(77, saves.get());
+				assertEquals(filingTimeout ? 2 : 1, completions.get());
+				assertEquals(2, tableRefreshes.get());
+			} finally {
+				releaseSave.countDown(); releaseFiling.countDown();
+				if (holder[0] != null) onFxThread(holder[0]::dispose);
+			}
+		}
+	}
+
+	@Test
+	void reviewAllRefreshesItsSnapshotAndCompletesEverySourceBatchDespiteOneFilingFailure() throws Exception {
+		var opened = new CountDownLatch(1);
+		var stopped = new CountDownLatch(1);
+		var queueLoaded = new CountDownLatch(1);
+		var savedReferences = new CopyOnWriteArrayList<String>();
+		var attempts = new CopyOnWriteArrayList<Long>();
+		var completed = java.util.concurrent.ConcurrentHashMap.<Long>newKeySet();
+		var details = new ArrayList<BatchDetail>();
+		for (long batch = 1; batch <= 6; batch++) {
+			var documents = new ArrayList<ExtractedDocument>();
+			for (int document = 0; document < (batch == 6 ? 12 : 13); document++) {
+				documents.add(new ExtractedDocument(batch * 100 + document, "invoice.pdf",
+						List.of(scanned("INV-" + batch + "-" + document, 10000)), List.of(), null, null, null, null, null));
+			}
+			details.add(new BatchDetail(new BatchSummary(batch, BatchKind.INVOICE_BATCH, BatchStatus.REVIEW_REQUIRED,
+					"Batch " + batch, documents.size(), documents.size(), null, null), documents));
+		}
+		var failed = new BatchSummary(7, BatchKind.INVOICE_BATCH, BatchStatus.FAILED, "Failed scan", 1, 0, null, "Scan failed");
+		var newlyReady = new BatchSummary(8, BatchKind.INVOICE_BATCH, BatchStatus.REVIEW_REQUIRED, "Later scan", 1, 1, null, null);
+		var mapper = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules()
+				.setVisibility(com.fasterxml.jackson.annotation.PropertyAccessor.GETTER, com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility.NONE)
+				.setVisibility(com.fasterxml.jackson.annotation.PropertyAccessor.FIELD, com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility.ANY);
+		var initialQueue = new ArrayList<>(details.stream().map(BatchDetail::batch).toList()); initialQueue.add(failed);
+		String initialJson = mapper.writeValueAsString(initialQueue);
+		String remainingJson = mapper.writeValueAsString(List.of(failed, newlyReady));
+		AiInvoiceScanController[] holder = new AiInvoiceScanController[1];
+		try (var workers = Executors.newSingleThreadExecutor()) {
+			try {
+				onFxThread(() -> {
+					var controller = controller(); holder[0] = controller;
+					configureReconciliation(controller, new InvoiceService() {
+						@Override public List<Invoice> getInvoiceAmountsForReview(int store, List<ScannedInvoice> rows) { return List.of(); }
+						@Override public void saveOrUpdateInvoice(Invoice invoice, String original, int supplier) {
+							savedReferences.add(invoice.getInvoiceNo());
+						}
+					});
+					setField(controller, "supplierLoad", java.util.concurrent.CompletableFuture.completedFuture(
+							List.of(new InvoiceSupplier(1, "Supplier", 1))));
+					setField(controller, "parent", new InvoiceEntryController() {
+						{ dialogPane = new com.dlsc.gemsfx.DialogPane(); }
+						@Override public void fillInvoiceTable() {}
+						@Override public void fillCreditTable() {}
+					});
+					setField(controller, "executor", workers);
+					setField(controller, "documentAiService", documentService((url, entity) -> {
+						if (url.endsWith("/review-queue")) {
+							if (completed.size() == 6) { queueLoaded.countDown(); return remainingJson; }
+							return initialJson;
+						}
+						BatchDetail detail = details.stream().filter(item -> url.contains("/review-batches/" + item.batch().id() + "?")
+								|| url.contains("/review-batches/" + item.batch().id() + "/complete?")).findFirst().orElseThrow();
+						long id = detail.batch().id();
+						if (url.contains("/complete?")) {
+							assertEquals(77, savedReferences.size());
+							List<?> entered = assertInstanceOf(List.class, entity.getBody());
+							assertEquals(detail.documents().stream().map(document -> new EnteredDocument(document.id(), DATE)).toList(), entered);
+							attempts.add(id);
+							if (id == 2 && java.util.Collections.frequency(attempts, id) == 1) {
+								throw new org.springframework.web.client.ResourceAccessException("Drive completion timed out");
+							}
+							completed.add(id); return null;
+						}
+						return detail;
+					}));
+					// The displayed queue is stale: five further batches have become ready.
+					ObservableList<BatchSummary> queue = field(controller, "queuedBatches"); queue.setAll(details.getFirst().batch());
+					javafx.scene.layout.VBox results = field(controller, "resultsView");
+					results.visibleProperty().addListener((_, _, visible) -> { if (visible) opened.countDown(); });
+					invoke(controller, "reviewAll");
+				});
+				assertTrue(opened.await(5, TimeUnit.SECONDS));
+				onFxThread(() -> {
+					ObservableList<InvoiceReconciliation> rows = field(holder[0], "allResults"); assertEquals(77, rows.size());
+					Label hint = field(holder[0], "combinedReviewHint");
+					assertTrue(hint.getText().contains("6 invoice batches"));
+					assertTrue(hint.getText().contains("1 failed or unfinished"));
+					TableView<InvoiceReconciliation> table = field(holder[0], "resultsTable"); table.getSelectionModel().selectAll();
+					invoke(holder[0], "acceptSelected");
+					ProgressIndicator spinner = field(holder[0], "saveAcceptedProgress");
+					spinner.visibleProperty().addListener((_, _, visible) -> { if (!visible) stopped.countDown(); });
+					invoke(holder[0], "saveAccepted");
+				});
+				assertTrue(stopped.await(5, TimeUnit.SECONDS));
+				onFxThread(() -> {
+					assertEquals(List.of(1L, 2L, 3L, 4L, 5L, 6L), attempts);
+					assertEquals(Set.of(1L, 3L, 4L, 5L, 6L), field(holder[0], "completedBatchIds"));
+					Button save = field(holder[0], "saveAcceptedButton"); assertEquals("Retry completion", save.getText());
+					assertFalse(save.isDisabled()); invoke(holder[0], "saveAccepted");
+				});
+				assertTrue(queueLoaded.await(5, TimeUnit.SECONDS));
+				// Drain the worker's queue response and its FX completion callback.
+				workers.submit(() -> {}).get(5, TimeUnit.SECONDS);
+				onFxThread(() -> {
+					ObservableList<BatchSummary> queue = field(holder[0], "queuedBatches"); assertEquals(List.of(failed, newlyReady), queue);
+					Label hint = field(holder[0], "combinedReviewHint");
+					assertTrue(hint.getText().contains("All batches from the saved review have cleared"));
+					assertTrue(hint.getText().contains("1 other invoice batch(es) are ready"));
+				});
+				assertEquals(List.of(1L, 2L, 3L, 4L, 5L, 6L, 2L), attempts);
+				assertEquals(77, savedReferences.size()); assertEquals(77, Set.copyOf(savedReferences).size());
+			} finally { if (holder[0] != null) onFxThread(holder[0]::dispose); }
+		}
+	}
+
+	private static void awaitRelease(CountDownLatch release) {
+		try { if (!release.await(10, TimeUnit.SECONDS)) throw new AssertionError("Save was not released"); }
+		catch (InterruptedException exception) { Thread.currentThread().interrupt(); throw new RuntimeException(exception); }
+	}
 
 	@Test
 	void doubleClickingAnEmptyStatementQueueRowOpensReviewWithoutRescanning() throws Exception {
@@ -1597,6 +1816,9 @@ class AiInvoiceScanControllerTest {
 			Button save = field(controller, "saveAcceptedButton");
 			assertFalse(save.isVisible());
 			assertTrue(save.isDisabled());
+			Label hint = field(controller, "combinedReviewHint");
+			assertTrue(hint.isVisible());
+			assertTrue(hint.getText().contains("2 failed or unfinished"));
 		});
 	}
 
@@ -1757,11 +1979,15 @@ class AiInvoiceScanControllerTest {
 	}
 
 	private static services.DocumentAiService documentService(java.util.function.Function<String, Object> response) throws Exception {
+		return documentService((url, _) -> response.apply(url));
+	}
+
+	private static services.DocumentAiService documentService(java.util.function.BiFunction<String, org.springframework.http.HttpEntity<?>, Object> response) throws Exception {
 		var rest = new org.springframework.web.client.RestTemplate() {
 			@Override public <T> org.springframework.http.ResponseEntity<T> exchange(String url,
 					org.springframework.http.HttpMethod method, org.springframework.http.HttpEntity<?> entity,
 					Class<T> type, Object... variables) {
-				return org.springframework.http.ResponseEntity.ok(type.cast(response.apply(url)));
+				return org.springframework.http.ResponseEntity.ok(type.cast(response.apply(url, entity)));
 			}
 		};
 		var constructor = services.DocumentAiService.class.getDeclaredConstructor(

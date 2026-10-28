@@ -90,6 +90,7 @@ import java.util.Set;
 import javafx.util.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Function;
 
 /** Controller for the review-first PDF scan and reconciliation dialog. */
@@ -189,6 +190,7 @@ public final class AiInvoiceScanController extends Controller {
 	private final Map<Long, Long> batchIdsByDocument = new HashMap<>();
 	private final List<LoadedBatch> currentBatches = new ArrayList<>();
 	private final Set<Long> completedBatchIds = new HashSet<>();
+	private Set<Long> lastSavedReviewBatchIds = Set.of();
 	private DocumentAiService documentAiService;
 	private DocumentPdfCache pdfCache;
 	private int reviewStoreId;
@@ -302,6 +304,10 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	private void loadQueue(boolean interactive) {
+		loadQueue(interactive, () -> {});
+	}
+
+	private void loadQueue(boolean interactive, Runnable afterLoaded) {
 		if (documentAiService == null || main == null || main.getCurrentStore() == null) return;
 		if (queueBusy) return;
 		if (interactive) setQueueBusy(true, "Refreshing the document review queue…");
@@ -312,12 +318,14 @@ public final class AiInvoiceScanController extends Controller {
 		task.setOnSucceeded(_ -> {
 			queuedBatches.setAll(task.getValue());
 			queueTable.setItems(queuedBatches);
+			updateQueueReviewNotice();
 			queueBusy = false;
 			if (interactive) setQueueBusy(false, queueSummary());
 			else {
 				updateQueueVisualState();
 				summaryLabel.setText(queueSummary());
 			}
+			afterLoaded.run();
 		});
 		task.setOnFailed(_ -> {
 			if (interactive) queueFailure("Unable to load the document review queue", task.getException());
@@ -464,8 +472,12 @@ public final class AiInvoiceScanController extends Controller {
 	@FXML
 	private void reviewAll() {
 		if (queueBusy || commitBusy) return;
-		List<BatchSummary> ready = readyInvoiceBatches();
-		if (!ready.isEmpty()) openBatches(ready);
+		// Include batches that became ready since the last five-second queue refresh.
+		loadQueue(true, () -> {
+			if (disposed) return;
+			List<BatchSummary> ready = readyInvoiceBatches();
+			if (!ready.isEmpty()) openBatches(ready);
+		});
 	}
 
 	private List<BatchSummary> readyInvoiceBatches() {
@@ -475,6 +487,7 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	private void openBatches(List<BatchSummary> batches) {
+		lastSavedReviewBatchIds = Set.of();
 		if (pdfCache != null) pdfCache.stopPrefetch();
 		setQueueBusy(true, "Loading invoice and reconciliation data…");
 		reviewLoadProgress.setVisible(true);
@@ -623,10 +636,12 @@ public final class AiInvoiceScanController extends Controller {
 		reviewBatchControls.setVisible(true); reviewBatchControls.setManaged(true);
 		long skipped = queuedBatches.stream().filter(batch -> batch.kind() == DocumentAiModels.BatchKind.INVOICE_BATCH
 				&& batch.status() != BatchStatus.REVIEW_REQUIRED).count();
-		combinedReviewHint.setText(loaded.size() > 1 ? "Reviewing " + loaded.size()
+		boolean invoiceReview = !currentResultIsStatement;
+		combinedReviewHint.setText(invoiceReview ? "Reviewing " + loaded.size()
 				+ " invoice batches together. Saving will complete each original batch. Statements are reviewed separately."
 				+ (skipped > 0 ? " " + skipped + " failed or unfinished invoice batch(es) remain in the queue." : "") : "");
-		combinedReviewHint.setVisible(loaded.size() > 1); combinedReviewHint.setManaged(loaded.size() > 1);
+		boolean showHint = invoiceReview && (loaded.size() > 1 || skipped > 0);
+		combinedReviewHint.setVisible(showHint); combinedReviewHint.setManaged(showHint);
 		setQueueBusy(false, null);
 		updateSummary(allResults.size());
 		if (!resultsTable.getItems().isEmpty()) resultsTable.getSelectionModel().selectFirst();
@@ -690,6 +705,18 @@ public final class AiInvoiceScanController extends Controller {
 		return queuedBatches.size() + " batch(es) · " + scanning + " scanning · " + queued + " queued · "
 				+ ready + " ready · " + failed + " failed · Updated "
 				+ LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+	}
+
+	private void updateQueueReviewNotice() {
+		if (lastSavedReviewBatchIds.isEmpty()) return;
+		long remaining = queuedBatches.stream().filter(batch -> lastSavedReviewBatchIds.contains(batch.id())).count();
+		long otherReady = readyInvoiceBatches().stream().filter(batch -> !lastSavedReviewBatchIds.contains(batch.id())).count();
+		combinedReviewHint.setText((remaining == 0 ? "All batches from the saved review have cleared the queue."
+				: "Invoice entries were saved, but " + remaining + " reviewed batch(es) still appear in the queue. "
+						+ "Reopen those batches to finish completion.")
+				+ (otherReady == 0 ? "" : " " + otherReady + " other invoice batch(es) are ready to review."));
+		combinedReviewHint.setVisible(true);
+		combinedReviewHint.setManaged(true);
 	}
 
 	private void queueFailure(String title, Throwable error) {
@@ -1729,31 +1756,49 @@ public final class AiInvoiceScanController extends Controller {
 		int requestedStoreId = storeId();
 
 		setCommitBusy(true);
+		summaryLabel.setText("Preparing to save " + saves.size() + " documents…");
 		Task<DocumentReviewCommitService.Result> task = new Task<>() {
 			@Override
 			protected DocumentReviewCommitService.Result call() {
 				return DocumentReviewCommitService.commit(saves, completions,
-						completion -> documentAiService.complete(completion.batch().id(), requestedStoreId, completion.documents()));
+						completion -> documentAiService.complete(completion.batch().id(), requestedStoreId, completion.documents()),
+						(done, message) -> {
+							updateProgress(done, Math.max(1, saves.size() + completions.size()));
+							updateMessage(message);
+						});
 			}
 		};
+		saveAcceptedProgress.progressProperty().bind(task.progressProperty());
+		task.messageProperty().addListener((_, _, message) -> {
+			if (!disposed && commitBusy) summaryLabel.setText(message);
+		});
 		task.setOnSucceeded(_ -> {
 			DocumentReviewCommitService.Result result = task.getValue();
-			completedBatchIds.addAll(result.completedBatchIds());
-			for (InvoiceReconciliation saved : result.savedRows()) {
-				int index = allResults.indexOf(saved);
-				if (index >= 0) allResults.set(index, saved.withStatus(InvoiceReconciliation.Status.SAVED));
+			try {
+				completedBatchIds.addAll(result.completedBatchIds());
+				Set<InvoiceReconciliation> saved = new HashSet<>(result.savedRows());
+				List<InvoiceReconciliation> updated = allResults.stream().map(row -> saved.contains(row)
+						? row.withStatus(InvoiceReconciliation.Status.SAVED) : row).toList();
+				// Publish one change through the filtered/sorted table instead of one per document.
+				resultsTable.getSelectionModel().clearSelection();
+				allResults.setAll(updated);
+				applyResultFilter();
+				updateSummary(allResults.size());
+			} finally {
+				setCommitBusy(false);
 			}
-			applyResultFilter();
-			updateSummary(allResults.size());
-			setCommitBusy(false);
+			if (disposed) return;
+			if (result.failureMessage() == null) {
+				lastSavedReviewBatchIds = currentBatches.stream().map(batch -> batch.batch().id())
+						.collect(java.util.stream.Collectors.toUnmodifiableSet());
+				backToQueue();
+			}
 			if (!result.savedRows().isEmpty()) {
 				parent.fillInvoiceTable();
 				parent.fillCreditTable();
 			}
 			if (result.failureMessage() != null) {
 				parent.getDialogPane().showError("Save incomplete", result.failureMessage());
-			} else {
-				backToQueue();
 			}
 		});
 		task.setOnFailed(_ -> {
@@ -1761,7 +1806,16 @@ public final class AiInvoiceScanController extends Controller {
 			parent.getDialogPane().showError("Save failed", errorMessage(task.getException()),
 					task.getException() instanceof Exception exception ? exception : new RuntimeException(task.getException()));
 		});
-		executor.submit(task);
+		task.setOnCancelled(_ -> {
+			setCommitBusy(false);
+			updateSummary(allResults.size());
+		});
+		try {
+			executor.submit(task);
+		} catch (RejectedExecutionException exception) {
+			setCommitBusy(false);
+			parent.getDialogPane().showError("Save could not start", errorMessage(exception), exception);
+		}
 	}
 
 	private List<PendingSave> buildPendingSaves() {
@@ -2247,6 +2301,10 @@ public final class AiInvoiceScanController extends Controller {
 	private void setCommitBusy(boolean busy) {
 		commitBusy = busy;
 		if (busy && pdfCache != null) pdfCache.stopPrefetch();
+		if (!busy) {
+			saveAcceptedProgress.progressProperty().unbind();
+			saveAcceptedProgress.setProgress(ProgressIndicator.INDETERMINATE_PROGRESS);
+		}
 		saveAcceptedProgress.setVisible(busy);
 		saveAcceptedProgress.setManaged(busy);
 		showMatchedCheck.setDisable(busy);

@@ -22,7 +22,11 @@ public class CreditService {
     private ObjectMapper objectMapper;
 
     public CreditService() throws IOException {
-        this(new RestTemplate(), loadProperties());
+        this(loadProperties());
+    }
+
+    private CreditService(Properties properties) throws IOException {
+        this(ApiHttpClient.create(properties), properties);
     }
 
     CreditService(RestTemplate restTemplate, Properties properties) {

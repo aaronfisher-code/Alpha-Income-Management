@@ -40,7 +40,11 @@ public class InvoiceService {
     private ObjectMapper objectMapper;
 
     public InvoiceService() throws IOException {
-        this(new RestTemplate(), loadProperties());
+        this(loadProperties());
+    }
+
+    private InvoiceService(Properties properties) throws IOException {
+        this(ApiHttpClient.create(properties), properties);
     }
 
     InvoiceService(RestTemplate restTemplate, Properties properties) {

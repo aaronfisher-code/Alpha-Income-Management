@@ -83,6 +83,44 @@ class DocumentReviewCommitServiceTest {
 	}
 
 	@Test
+	void failedFilingDoesNotStrandLaterBatchesAndRetryOnlyIncludesFailures() {
+		List<BatchSummary> batches = java.util.stream.LongStream.rangeClosed(1, 6)
+				.mapToObj(id -> batch(id, BatchKind.INVOICE_BATCH)).toList();
+		Map<Long, Long> owners = new java.util.LinkedHashMap<>();
+		List<EnteredDocument> documents = new ArrayList<>();
+		for (BatchSummary batch : batches) {
+			owners.put(batch.id() + 100, batch.id());
+			documents.add(new EnteredDocument(batch.id() + 100, DATE));
+		}
+		var saves = new java.util.concurrent.atomic.AtomicInteger();
+		List<Long> attempted = new ArrayList<>();
+		List<Integer> progress = new ArrayList<>();
+		var result = DocumentReviewCommitService.commit(
+				List.of(new SaveOperation(row("A"), saves::incrementAndGet)),
+				DocumentReviewCommitService.completions(batches, owners, documents, Set.of()), completion -> {
+					long id = completion.batch().id();
+					attempted.add(id);
+					if (id == 2 || id == 4) throw new IllegalStateException("Drive unavailable for " + id);
+				}, (done, _) -> progress.add(done));
+
+		assertEquals(List.of(1L, 2L, 3L, 4L, 5L, 6L), attempted);
+		assertEquals(List.of(1L, 3L, 5L, 6L), result.completedBatchIds());
+		assertTrue(result.failureMessage().contains("Completed 4 of 6 batches"));
+		assertTrue(result.failureMessage().contains("Batch 2” (batch 2): Drive unavailable for 2"));
+		assertTrue(result.failureMessage().contains("Batch 4” (batch 4): Drive unavailable for 4"));
+		assertEquals(List.of(0, 1, 2, 3, 4, 5, 6, 7), progress);
+
+		attempted.clear();
+		var retry = DocumentReviewCommitService.commit(List.of(),
+				DocumentReviewCommitService.completions(batches, owners, documents, Set.copyOf(result.completedBatchIds())),
+				completion -> attempted.add(completion.batch().id()));
+		assertEquals(List.of(2L, 4L), attempted);
+		assertEquals(List.of(2L, 4L), retry.completedBatchIds());
+		assertEquals(1, saves.get());
+		assertNull(retry.failureMessage());
+	}
+
+	@Test
 	void fullyTrashedBatchIsSkippedAndStatementCanCompleteWithoutInvoiceDates() {
 		BatchSummary statement = batch(3, BatchKind.STATEMENT);
 		List<Completion> plan = DocumentReviewCommitService.completions(List.of(FIRST, statement),

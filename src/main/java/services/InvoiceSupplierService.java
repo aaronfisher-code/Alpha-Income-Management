@@ -20,10 +20,12 @@ public class InvoiceSupplierService {
     private ObjectMapper objectMapper;
 
     public InvoiceSupplierService() throws IOException {
-        this.restTemplate = new RestTemplate();
         this.objectMapper = new ObjectMapper();
         Properties properties = new Properties();
-        properties.load(InvoiceSupplierService.class.getClassLoader().getResourceAsStream("application.properties"));
+        try (var input = InvoiceSupplierService.class.getClassLoader().getResourceAsStream("application.properties")) {
+            properties.load(input);
+        }
+        this.restTemplate = ApiHttpClient.create(properties);
         this.apiToken = properties.getProperty("api.token");
         this.apiBaseUrl = properties.getProperty("api.base.url") + "/invoice-suppliers";
     }

@@ -9,12 +9,12 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.List;
 import java.util.Properties;
 import org.springframework.http.*;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.HttpClientErrorException;
 
 /** Typed client for Alpha API's store-scoped Drive and review-queue endpoints. */
 public final class DocumentAiService {
@@ -28,7 +28,7 @@ public final class DocumentAiService {
     }
 
     private DocumentAiService(Properties properties) throws IOException {
-        this(restTemplate(properties), properties);
+        this(ApiHttpClient.create(properties), properties);
     }
 
     DocumentAiService(RestTemplate rest, Properties properties) {
@@ -44,13 +44,6 @@ public final class DocumentAiService {
             properties.load(input);
         }
         return properties;
-    }
-
-    private static RestTemplate restTemplate(Properties properties) throws IOException {
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(timeout(properties, "api.connect.timeout.seconds", 10));
-        requestFactory.setReadTimeout(timeout(properties, "api.read.timeout.seconds", 60));
-        return new RestTemplate(requestFactory);
     }
 
     public DriveStatus driveStatus(int storeId) { return get("/stores/" + storeId + "/drive/status", DriveStatus.class); }
@@ -110,8 +103,21 @@ public final class DocumentAiService {
         complete(batchId, storeId, List.of());
     }
     public void complete(long batchId, int storeId, List<EnteredDocument> enteredDocuments) {
-        exchange("/review-batches/" + batchId + "/complete?storeId=" + storeId, HttpMethod.POST,
-                enteredDocuments == null ? List.of() : enteredDocuments, Void.class);
+        try {
+            exchange("/review-batches/" + batchId + "/complete?storeId=" + storeId, HttpMethod.POST,
+                    enteredDocuments == null ? List.of() : enteredDocuments, Void.class);
+        } catch (RestClientException failure) {
+            if (failure instanceof HttpClientErrorException clientError
+                    && clientError.getStatusCode().value() != 409) throw failure;
+            // A slow Drive move can finish after the response times out. A subsequent retry
+            // then returns 409 because the batch is already completed. Confirm before retrying.
+            try {
+                if (batch(batchId, storeId).batch().status() == BatchStatus.COMPLETED) return;
+            } catch (RuntimeException lookupFailure) {
+                failure.addSuppressed(lookupFailure);
+            }
+            throw failure;
+        }
     }
     public void retry(long batchId, int storeId) {
         exchange("/review-batches/" + batchId + "/retry?storeId=" + storeId, HttpMethod.POST, null, Void.class);
@@ -150,14 +156,4 @@ public final class DocumentAiService {
     }
     private static String enc(String value) { return URLEncoder.encode(value, StandardCharsets.UTF_8); }
 
-    private static Duration timeout(Properties properties, String key, int defaultSeconds) throws IOException {
-        String configured = properties.getProperty(key, Integer.toString(defaultSeconds)).trim();
-        try {
-            int seconds = Integer.parseInt(configured);
-            if (seconds < 1) throw new NumberFormatException("must be positive");
-            return Duration.ofSeconds(seconds);
-        } catch (NumberFormatException exception) {
-            throw new IOException(key + " must be a positive whole number", exception);
-        }
-    }
 }
