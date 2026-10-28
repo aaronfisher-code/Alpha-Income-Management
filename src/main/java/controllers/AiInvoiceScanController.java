@@ -145,9 +145,7 @@ public final class AiInvoiceScanController extends Controller {
 	@FXML private ImageView pdfPreviewImage;
 	@FXML private Pane pdfOverlayPane;
 	@FXML private Label previewDocumentLabel;
-	@FXML private HBox statementPdfSourceBar;
-	@FXML private Button statementPdfButton;
-	@FXML private Button matchedInvoicePdfButton;
+	@FXML private Button toggleStatementPdfButton;
 	@FXML private Label previewPageLabel;
 	@FXML private Label previewHintLabel;
 	@FXML private Button rotatePreviewButton;
@@ -920,14 +918,10 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	@FXML
-	private void showStatementPdf() {
-		if (currentResultIsStatement && !commitBusy) showEvidenceSource(currentReview, false);
-	}
-
-	@FXML
-	private void showMatchedInvoicePdf() {
-		if (currentResultIsStatement && !commitBusy && matchedInvoiceForPreview(currentReview) != null) {
-			showEvidenceSource(currentReview, true);
+	private void toggleStatementPdf() {
+		if (!currentResultIsStatement || commitBusy) return;
+		if (viewingMatchedInvoicePdf || matchedInvoiceForPreview(currentReview) != null) {
+			showEvidenceSource(currentReview, !viewingMatchedInvoicePdf);
 		}
 	}
 
@@ -939,16 +933,15 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	private void updateEvidenceSourceControls(InvoiceReconciliation row) {
-		statementPdfSourceBar.setVisible(currentResultIsStatement);
-		statementPdfSourceBar.setManaged(currentResultIsStatement);
+		toggleStatementPdfButton.setVisible(currentResultIsStatement);
+		toggleStatementPdfButton.setManaged(currentResultIsStatement);
 		StatementInvoice invoice = matchedInvoiceForPreview(row);
-		matchedInvoicePdfButton.setText(invoice != null && invoice.values().documentType() == ScannedInvoice.DocumentType.CREDIT
-				? "Credit PDF" : "Invoice PDF");
-		matchedInvoicePdfButton.setDisable(commitBusy || invoice == null || viewingMatchedInvoicePdf);
-		statementPdfButton.setDisable(commitBusy || !viewingMatchedInvoicePdf);
-		matchedInvoicePdfButton.setTooltip(new Tooltip(invoice == null
+		String document = invoice != null && invoice.values().documentType() == ScannedInvoice.DocumentType.CREDIT ? "credit" : "invoice";
+		toggleStatementPdfButton.setText(viewingMatchedInvoicePdf ? "Show statement PDF" : "Show " + document + " PDF");
+		toggleStatementPdfButton.setDisable(commitBusy || invoice == null && !viewingMatchedInvoicePdf);
+		toggleStatementPdfButton.setTooltip(new Tooltip(invoice == null
 				? "No uniquely matched scanned invoice or credit PDF is available for this statement row."
-				: "Review the original scanned invoice or credit PDF associated with this statement row."));
+				: "Switch between the statement and its matched invoice or credit PDF. Your draft edits are kept."));
 	}
 
 	private void showEvidenceSource(InvoiceReconciliation reconciliation, boolean matchedInvoice) {
@@ -1019,7 +1012,7 @@ public final class AiInvoiceScanController extends Controller {
 			nextPageButton.setDisable(currentPageIndex >= currentPageCount - 1);
 			rotatePreviewButton.setDisable(false);
 			previewHintLabel.setText(viewingMatchedInvoicePdf
-					? "Inspect the invoice or credit line items and annotations before accepting your changes. Switch back to Statement PDF to compare."
+					? "Inspect the invoice or credit line items and annotations before accepting your changes. Use Show statement PDF to compare."
 					: currentEvidence.isEmpty() ? "No searchable OCR values were found; inspect the rendered PDF manually."
 					: "Colour-coded boxes mark the supplier, invoice reference, date, and amount when found.");
 			StatementInvoice matched = matchedInvoiceForPreview(currentReview);

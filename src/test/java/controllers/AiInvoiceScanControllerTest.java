@@ -2045,17 +2045,20 @@ class AiInvoiceScanControllerTest {
 						if (image.getWidth() == 288) invoiceRendered.countDown();
 						else if (statementRenders.incrementAndGet() == 1) statementRendered.countDown(); else statementReturned.countDown();
 					});
-					ObservableList<InvoiceReconciliation> rows = field(controller,"allResults");
-					invoke(controller,"review",InvoiceReconciliation.class,rows.getFirst());
+					TableView<InvoiceReconciliation> table = field(controller,"resultsTable");
+					var row = table.getRowFactory().call(table); row.updateTableView(table); row.updateIndex(0);
+					row.getOnMouseClicked().handle(new javafx.scene.input.MouseEvent(javafx.scene.input.MouseEvent.MOUSE_CLICKED,
+							0,0,0,0,javafx.scene.input.MouseButton.PRIMARY,2,
+							false,false,false,false,false,false,false,false,false,false,null));
 				});
 				assertTrue(statementRendered.await(10,TimeUnit.SECONDS));
 				onFxThread(() -> {
 					var controller = holder[0];
-					javafx.scene.layout.HBox sources = field(controller,"statementPdfSourceBar"); assertTrue(sources.isVisible());
+					Button toggle = field(controller,"toggleStatementPdfButton"); assertTrue(toggle.isVisible());
 					TextField amount = field(controller,"reviewAmountField"); amount.setText("135.50");
 					TextArea notes = field(controller,"reviewNotesField"); notes.setText("Keep my draft while reading the PDF");
 					javafx.scene.control.DatePicker date = field(controller,"reviewDateField"); date.setValue(DATE.minusDays(1));
-					Button invoice = field(controller,"matchedInvoicePdfButton"); assertEquals(credit ? "Credit PDF" : "Invoice PDF",invoice.getText());
+					Button invoice = field(controller,"toggleStatementPdfButton"); assertEquals(credit ? "Show credit PDF" : "Show invoice PDF",invoice.getText());
 					assertFalse(invoice.isDisabled()); invoice.fire();
 				});
 				assertTrue(invoiceRendered.await(10,TimeUnit.SECONDS));
@@ -2066,7 +2069,7 @@ class AiInvoiceScanControllerTest {
 					Label label = field(controller,"previewDocumentLabel"); assertTrue(label.getText().contains("archived invoice.pdf"));
 					assertTrue(label.getText().startsWith(credit ? "Credit" : "Invoice"));
 					TextField amount = field(controller,"reviewAmountField"); assertEquals("135.50",amount.getText());
-					Button statement = field(controller,"statementPdfButton"); statement.fire();
+					Button statement = field(controller,"toggleStatementPdfButton"); assertEquals("Show statement PDF",statement.getText()); statement.fire();
 				});
 				assertTrue(statementReturned.await(10,TimeUnit.SECONDS));
 				onFxThread(() -> {
@@ -2097,8 +2100,8 @@ class AiInvoiceScanControllerTest {
 				invoices.put(source,new StatementInvoice(7,0,source,""));
 				ObservableList<InvoiceReconciliation> rows = field(controller,"allResults"); invoke(controller,"review",InvoiceReconciliation.class,rows.getFirst());
 				invoke(controller,"showEvidence",InvoiceReconciliation.class,rows.getFirst());
-				Button invoice = field(controller,"matchedInvoicePdfButton"); assertTrue(invoice.isDisabled());
-				invoke(controller,"showMatchedInvoicePdf"); assertEquals(101L,(Long)field(controller,"currentPreviewDocumentId"));
+				Button invoice = field(controller,"toggleStatementPdfButton"); assertTrue(invoice.isDisabled());
+				invoke(controller,"toggleStatementPdf"); assertEquals(101L,(Long)field(controller,"currentPreviewDocumentId"));
 				assertTrue(invoice.getTooltip().getText().contains("No uniquely matched"));
 			} finally { controller.dispose(); }
 		});

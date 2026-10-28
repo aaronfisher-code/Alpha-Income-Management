@@ -174,6 +174,9 @@
                         </left>
                         <right>
                            <HBox alignment="CENTER_RIGHT" spacing="5.0" BorderPane.alignment="CENTER_RIGHT">
+                              <Button fx:id="toggleStatementPdfButton" managed="false" onAction="#toggleStatementPdf" styleClass="secondary-scan-button" text="Show invoice PDF" visible="false">
+                                 <tooltip><Tooltip text="Switch between the statement and its matched invoice or credit PDF." /></tooltip>
+                              </Button>
                               <Button onAction="#zoomPreviewOut" styleClass="preview-control" text="−" />
                               <Button onAction="#zoomPreviewIn" styleClass="preview-control" text="+" />
                               <Button fx:id="rotatePreviewButton" accessibleText="Rotate PDF preview clockwise" disable="true" onAction="#rotatePreview" styleClass="preview-control preview-rotate-control" text="↻">
@@ -184,13 +187,6 @@
                            </HBox>
                         </right>
                      </BorderPane>
-                     <HBox fx:id="statementPdfSourceBar" alignment="CENTER_LEFT" managed="false" spacing="8.0" visible="false">
-                        <Label text="View source:" />
-                        <Button fx:id="statementPdfButton" onAction="#showStatementPdf" styleClass="secondary-scan-button" text="Statement PDF" />
-                        <Button fx:id="matchedInvoicePdfButton" onAction="#showMatchedInvoicePdf" styleClass="secondary-scan-button" text="Invoice PDF">
-                           <tooltip><Tooltip text="Review the original scanned invoice or credit PDF associated with this statement row." /></tooltip>
-                        </Button>
-                     </HBox>
                      <HBox alignment="CENTER_LEFT" spacing="7.0" styleClass="evidence-legend">
                         <Region styleClass="evidence-key evidence-supplier" />
                         <Label text="Supplier" />
