@@ -105,8 +105,8 @@ class InvoiceReconcilerTest {
 		assertEquals("$0.00", result.getVarianceString());
 		stored.setInvoiceDate(null);
 		result = reconcile(scanned, List.of(stored));
-		assertEquals(InvoiceReconciliation.Status.NEEDS_REVIEW, result.getStatus());
-		assertTrue(result.hasExpectedAmount(), "A missing Z-Office date must not hide a found amount");
+		assertEquals(InvoiceReconciliation.Status.MATCHED, result.getStatus());
+		assertTrue(result.isAccepted(), "A missing receipt date must not block a confirmed invoice match");
 	}
 
 	@Test
@@ -171,6 +171,7 @@ class InvoiceReconcilerTest {
 		ScannedInvoice scanned = scanned("Symbion", "I123", ScannedInvoice.DocumentType.INVOICE);
 		Invoice snapshot = imported("", "123", 100);
 		assertSame(snapshot, reconcile(scanned, List.of(snapshot)).getImported());
+		assertTrue(reconcile(scanned, List.of(snapshot)).isAccepted());
 		Invoice named = imported("Symbion Pty Ltd", "123", 100);
 		assertSame(named, reconcile(scanned, List.of(snapshot, named)).getImported());
 	}
@@ -201,21 +202,49 @@ class InvoiceReconcilerTest {
 	}
 
 	@Test
-	void genericFallbackRequiresSupplierAndDateEvidenceAndCannotChooseBetweenDistinctAffixesByAmount() {
+	void genericFallbackRejectsKnownSupplierConflictsAndCannotChooseBetweenDistinctAffixesByAmount() {
 		var scan = scanned("New Supplier", "74040054", ScannedInvoice.DocumentType.INVOICE);
 		var first = imported("New Supplier", "A74040054", 100);
 		var second = imported("New Supplier", "74040054B", 200);
 		assertEquals(InvoiceReconciliation.Status.AMBIGUOUS, reconcile(scan, List.of(first, second)).getStatus());
 		first.setInvoiceDate(null);
-		assertEquals(InvoiceReconciliation.Status.NEEDS_REVIEW, reconcile(scan, List.of(first)).getStatus());
+		assertEquals(InvoiceReconciliation.Status.MATCHED, reconcile(scan, List.of(first)).getStatus());
 		first.setInvoiceDate(DATE.plusDays(1));
-		assertEquals(InvoiceReconciliation.Status.NEEDS_REVIEW, reconcile(scan, List.of(first)).getStatus());
+		assertEquals(InvoiceReconciliation.Status.MATCHED, reconcile(scan, List.of(first)).getStatus());
 		first.setInvoiceDate(DATE); first.setSupplierName("");
-		assertEquals(InvoiceReconciliation.Status.NEEDS_REVIEW, reconcile(scan, List.of(first)).getStatus());
+		assertEquals(InvoiceReconciliation.Status.MATCHED, reconcile(scan, List.of(first)).getStatus());
 		first.setSupplierName("Unrelated Supplier");
 		assertEquals(InvoiceReconciliation.Status.NOT_IN_Z_OFFICE, reconcile(scan, List.of(first)).getStatus());
 		assertEquals(InvoiceReconciliation.Status.NOT_IN_Z_OFFICE, reconcile(
 				scanned("New Supplier", "B74040054", ScannedInvoice.DocumentType.INVOICE), List.of(second)).getStatus());
+	}
+
+	@ParameterizedTest
+	@NullSource
+	@ValueSource(ints = {0, 1, 30})
+	void aReceiptDateNeverBlocksAcceptanceOrHidesAnAmountMismatch(Integer receivedDaysLater) {
+		var scan = scanned("CH2", "74180032 RI", ScannedInvoice.DocumentType.INVOICE);
+		var stored = imported("ParagonCare CH2", "74180032", 100);
+		stored.setInvoiceDate(receivedDaysLater == null ? null : DATE.plusDays(receivedDaysLater));
+		assertTrue(reconcile(scan, List.of(stored)).isAccepted());
+		stored.setImportedInvoiceAmount(100.20);
+		assertEquals(InvoiceReconciliation.Status.WITHIN_TOLERANCE, reconcile(scan, List.of(stored)).getStatus());
+		assertTrue(reconcile(scan, List.of(stored)).isAccepted());
+		stored.setImportedInvoiceAmount(101);
+		assertEquals(InvoiceReconciliation.Status.AMOUNT_MISMATCH, reconcile(scan, List.of(stored)).getStatus());
+		assertFalse(reconcile(scan, List.of(stored)).isAccepted());
+		stored.setImportedInvoiceAmount(100); stored.setReconciliationStale(true);
+		assertEquals(InvoiceReconciliation.Status.NEEDS_REVIEW, reconcile(scan, List.of(stored)).getStatus());
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"74180032", "74180032 RI"})
+	void aMissingScannedInvoiceDateStillRequiresReview(String printedReference) {
+		var scan = new ScannedInvoice("invoice.pdf", "CH2", printedReference, null, null,
+				ScannedInvoice.DocumentType.INVOICE, 10000, .99);
+		var result = reconcile(scan, List.of(imported("ParagonCare CH2", "74180032", 100)));
+		assertEquals(InvoiceReconciliation.Status.NEEDS_REVIEW, result.getStatus());
+		assertFalse(result.isAccepted());
 	}
 
 	@ParameterizedTest

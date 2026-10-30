@@ -58,14 +58,12 @@ public final class InvoiceReconciler {
 				long variance = scanned.amountCents() - importedCents;
 				InvoiceReconciliation.Status status;
 				if (Boolean.TRUE.equals(imported.getReconciliationStale())) {
-                    status = NEEDS_REVIEW;
-                } else if (isReferenceFallback(scanned, imported) && !supportedFallback(scanned, imported)) {
 					status = NEEDS_REVIEW;
 				} else if (scanned.amountCents() == 0 && !confident(scanned.fieldConfidences().amount())) {
 					// Missing/uncertain amounts may stand for zero, but require a reliable
 					// identity and an actual Z-Office zero before automatic acceptance.
 					status = !confidentIdentity(scanned) ? NEEDS_REVIEW : importedCents == 0 ? MATCHED : AMOUNT_MISMATCH;
-				} else if (scanned.supplierName().isBlank() || scanned.requiredFieldConfidence() == null
+				} else if (scanned.supplierName().isBlank() || scanned.invoiceDate() == null || scanned.requiredFieldConfidence() == null
 						|| scanned.requiredFieldConfidence() < REVIEW_CONFIDENCE) {
 					status = NEEDS_REVIEW;
 				} else {
@@ -163,11 +161,6 @@ public final class InvoiceReconciler {
 	public static boolean isReferenceFallback(ScannedInvoice scanned, Invoice imported) {
 		return scanned.documentType() == ScannedInvoice.DocumentType.INVOICE
 				&& !reference(scanned.invoiceNo()).equals(reference(imported.getInvoiceNo()));
-	}
-
-	private static boolean supportedFallback(ScannedInvoice scanned, Invoice imported) {
-		return SupplierMatcher.sameSupplier(scanned.supplierName(), imported.getSupplierName())
-				&& scanned.invoiceDate() != null && scanned.invoiceDate().equals(imported.getInvoiceDate());
 	}
 
 	/** Retain the internal reference of a unique comparison; OCR evidence remains unchanged. */

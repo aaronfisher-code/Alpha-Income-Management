@@ -1386,22 +1386,27 @@ class AiInvoiceScanControllerTest {
 	}
 
 	@ParameterizedTest
-	@CsvSource({"ParagonCare CH2,true,MATCHED", "ParagonCare CH2,false,NEEDS_REVIEW", "Unrelated Supplier,true,NOT_IN_Z_OFFICE"})
-	void screenshotInvoiceRefreshShowsFoundAmountsOrExplainsASupplierMismatch(String storedSupplier, boolean hasDate,
+	@CsvSource({"ParagonCare CH2,0,MATCHED", "ParagonCare CH2,-1,MATCHED", "ParagonCare CH2,2,MATCHED", "Unrelated Supplier,0,NOT_IN_Z_OFFICE"})
+	void screenshotInvoiceRefreshShowsFoundAmountsOrExplainsASupplierMismatch(String storedSupplier, int receivedDaysLater,
 			InvoiceReconciliation.Status expectedStatus) throws Exception {
 		CountDownLatch finished = new CountDownLatch(1);
+		List<Invoice> saved = new ArrayList<>();
 		AiInvoiceScanController[] holder = new AiInvoiceScanController[1];
 		try (var workers = Executors.newSingleThreadExecutor()) {
 			try {
 				onFxThread(() -> {
 					var controller = controller(); holder[0] = controller;
 					var imported = symbionImport("74180032"); imported.setSupplierName(storedSupplier);
-					imported.setImportedInvoiceAmount(1813.06); if (!hasDate) imported.setInvoiceDate(null);
+					imported.setImportedInvoiceAmount(1813.06);
+					imported.setInvoiceDate(receivedDaysLater < 0 ? null : DATE.plusDays(receivedDaysLater));
 					configureReconciliation(controller, new InvoiceService() {
 						@Override public List<Invoice> getInvoiceAmountsForReview(int store, List<ScannedInvoice> rows) { return List.of(); }
 						@Override public List<Invoice> refreshInvoiceAmount(int store, ScannedInvoice row) {
 							assertEquals("74180032 RI", row.invoiceNo()); assertEquals("CH2", row.supplierName());
 							return List.of(imported);
+						}
+						@Override public void saveOrUpdateInvoice(Invoice invoice, String originalReference, int originalSupplierId) {
+							assertEquals("74180032", originalReference); saved.add(invoice);
 						}
 					});
 					setField(controller, "executor", workers);
@@ -1428,7 +1433,17 @@ class AiInvoiceScanControllerTest {
 					if (expectedStatus == InvoiceReconciliation.Status.NOT_IN_Z_OFFICE) {
 						assertEquals("N/A", amount.getText()); assertTrue(message.getText().contains(storedSupplier));
 						assertTrue(message.getText().contains("selected supplier CH2"));
-					} else assertEquals("$1,813.06", amount.getText());
+						assertFalse(rows.getFirst().isAccepted()); assertTrue(saved.isEmpty());
+					} else {
+						assertEquals("$1,813.06", amount.getText());
+						assertTrue(rows.getFirst().isAccepted());
+						Button saveButton = field(controller, "saveAcceptedButton"); assertFalse(saveButton.isDisabled());
+						Object accepted = invoke(controller, "acceptedDocumentFromScanned", InvoiceReconciliation.class, rows.getFirst());
+						Method save = AiInvoiceScanController.class.getDeclaredMethod("saveDocument", InvoiceReconciliation.class, accepted.getClass());
+						save.setAccessible(true); save.invoke(controller, rows.getFirst(), accepted);
+						assertEquals("74180032", saved.getFirst().getInvoiceNo());
+						assertEquals(DATE, saved.getFirst().getInvoiceDate());
+					}
 				});
 			} finally { if (holder[0] != null) onFxThread(holder[0]::dispose); }
 		}
