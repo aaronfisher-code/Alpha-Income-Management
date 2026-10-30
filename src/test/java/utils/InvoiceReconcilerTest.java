@@ -109,15 +109,15 @@ class InvoiceReconcilerTest {
 	}
 
 	@Test
-	void riFallbackIsLimitedToCh2NumericInvoicesAndPreservesLeadingZeros() {
+	void genericFallbackPreservesLeadingZerosAndKeepsCreditsAndMultiPartNumbersDistinct() {
 		for (String supplier : List.of("Sigma", "", "Other Paragon Supplier")) {
-			assertEquals(List.of("74040054 RI"), InvoiceReconciler.lookupReferences(
+			assertEquals(List.of("74040054 RI", "74040054"), InvoiceReconciler.lookupReferences(
 					scanned(supplier, "74040054 RI", ScannedInvoice.DocumentType.INVOICE)));
 		}
 		assertEquals(List.of("74040054 RI"), InvoiceReconciler.lookupReferences(
 				scanned("CH2", "74040054 RI", ScannedInvoice.DocumentType.CREDIT)));
-		for (String reference : List.of("RI74040054", "INV74040054RI", "74040054R", "74040054RIRI", "RI")) {
-			assertEquals(List.of(reference), InvoiceReconciler.lookupReferences(scanned("CH2", reference, ScannedInvoice.DocumentType.INVOICE)));
+		for (String reference : List.of("INV2026-74040054", "74040054/2", "RI", "")) {
+			assertEquals(reference.isBlank() ? List.of() : List.of(reference), InvoiceReconciler.lookupReferences(scanned("CH2", reference, ScannedInvoice.DocumentType.INVOICE)));
 		}
 		assertEquals(InvoiceReconciliation.Status.NOT_IN_Z_OFFICE, reconcile(
 				scanned("CH2", "000123 RI", ScannedInvoice.DocumentType.INVOICE), List.of(imported("CH2", "123", 100))).getStatus());
@@ -139,7 +139,7 @@ class InvoiceReconcilerTest {
 	void wrongSupplierDoesNotHideTheSymbionMatchAndAmbiguousMatchesRequireReview() {
 		ScannedInvoice scanned = scanned("Symbion", "I123", ScannedInvoice.DocumentType.INVOICE);
 		Invoice other = imported("Sigma", "I123", 100);
-		Invoice symbion = imported("Symbion Healthcare Pty Ltd", "123", 100);
+		Invoice symbion = imported("Symbion Pty Ltd", "123", 100);
 		assertSame(symbion, reconcile(scanned, List.of(other, symbion)).getImported());
 		assertEquals(InvoiceReconciliation.Status.NOT_IN_Z_OFFICE, reconcile(scanned,
 				List.of(imported("Sigma", "123", 100))).getStatus());
@@ -157,18 +157,46 @@ class InvoiceReconcilerTest {
 	}
 
 	@Test
-	void leadingZerosOtherPrefixesOtherSuppliersAndCreditsRemainDistinct() {
+	void genericPrefixesWorkForEverySupplierWhileLeadingZerosAndCreditsRemainDistinct() {
 		assertEquals(InvoiceReconciliation.Status.NOT_IN_Z_OFFICE, reconcile(
 				scanned("Symbion", "I000123", ScannedInvoice.DocumentType.INVOICE),
 				List.of(imported("Symbion", "123", 100))).getStatus());
 		for (String reference : List.of("C123", "A123", "II123", "INV123")) {
-			assertEquals(InvoiceReconciliation.Status.NOT_IN_Z_OFFICE, reconcile(
+			assertEquals(InvoiceReconciliation.Status.MATCHED, reconcile(
 					scanned("Symbion", reference, ScannedInvoice.DocumentType.INVOICE),
 					List.of(imported("Symbion", "123", 100))).getStatus());
 		}
-		assertEquals(List.of("I123"), InvoiceReconciler.lookupReferences(scanned("Sigma", "I123", ScannedInvoice.DocumentType.INVOICE)));
-		assertEquals(List.of("I123"), InvoiceReconciler.lookupReferences(scanned("", "I123", ScannedInvoice.DocumentType.INVOICE)));
+		assertEquals(List.of("I123", "123"), InvoiceReconciler.lookupReferences(scanned("Sigma", "I123", ScannedInvoice.DocumentType.INVOICE)));
+		assertEquals(List.of("I123", "123"), InvoiceReconciler.lookupReferences(scanned("", "I123", ScannedInvoice.DocumentType.INVOICE)));
 		assertEquals(List.of("I123"), InvoiceReconciler.lookupReferences(scanned("Symbion", "I123", ScannedInvoice.DocumentType.CREDIT)));
+	}
+
+	@ParameterizedTest
+	@CsvSource({"New Supplier,INV-74040054,74040054", "New Supplier,74040054 ABC,74040054",
+			"New Supplier,74040054,REF-74040054", "Another Supplier,000123-XYZ,000123"})
+	void genericAffixesNeedNoSupplierOrAffixConfiguration(String supplier, String scannedReference, String storedReference) {
+		var scan = scanned(supplier, scannedReference, ScannedInvoice.DocumentType.INVOICE);
+		var result = reconcile(scan, List.of(imported(supplier, storedReference, 100)));
+		assertEquals(InvoiceReconciliation.Status.MATCHED, result.getStatus());
+		assertEquals(storedReference, InvoiceReconciler.entryReference(result));
+	}
+
+	@Test
+	void genericFallbackRequiresSupplierAndDateEvidenceAndCannotChooseBetweenDistinctAffixesByAmount() {
+		var scan = scanned("New Supplier", "74040054", ScannedInvoice.DocumentType.INVOICE);
+		var first = imported("New Supplier", "A74040054", 100);
+		var second = imported("New Supplier", "74040054B", 200);
+		assertEquals(InvoiceReconciliation.Status.AMBIGUOUS, reconcile(scan, List.of(first, second)).getStatus());
+		first.setInvoiceDate(null);
+		assertEquals(InvoiceReconciliation.Status.NEEDS_REVIEW, reconcile(scan, List.of(first)).getStatus());
+		first.setInvoiceDate(DATE.plusDays(1));
+		assertEquals(InvoiceReconciliation.Status.NEEDS_REVIEW, reconcile(scan, List.of(first)).getStatus());
+		first.setInvoiceDate(DATE); first.setSupplierName("");
+		assertEquals(InvoiceReconciliation.Status.NEEDS_REVIEW, reconcile(scan, List.of(first)).getStatus());
+		first.setSupplierName("Unrelated Supplier");
+		assertEquals(InvoiceReconciliation.Status.NOT_IN_Z_OFFICE, reconcile(scan, List.of(first)).getStatus());
+		assertEquals(InvoiceReconciliation.Status.NOT_IN_Z_OFFICE, reconcile(
+				scanned("New Supplier", "B74040054", ScannedInvoice.DocumentType.INVOICE), List.of(second)).getStatus());
 	}
 
 	@ParameterizedTest
@@ -247,6 +275,7 @@ class InvoiceReconcilerTest {
 		Invoice invoice = new Invoice();
 		invoice.setSupplierName(supplier);
 		invoice.setInvoiceNo(reference);
+		invoice.setInvoiceDate(DATE);
 		invoice.setImportedInvoiceAmount(amount);
 		invoice.setImportExists(true);
 		return invoice;

@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.regex.Pattern;
 
 import static models.InvoiceReconciliation.Status.AMBIGUOUS;
 import static models.InvoiceReconciliation.Status.AMOUNT_MISMATCH;
@@ -25,6 +25,8 @@ public final class InvoiceReconciler {
 	public static final long DEFAULT_TOLERANCE_CENTS = 20;
 	public static final double REVIEW_CONFIDENCE = 0.90;
 	private static final Set<String> COMPANY_SUFFIXES = Set.of("PTY", "LTD", "LIMITED", "AUSTRALIA", "THE");
+
+	private static final Pattern NUMBER_WITH_AFFIXES = Pattern.compile("^[A-Za-z\\s\\p{Punct}]*([0-9]+)[A-Za-z\\s\\p{Punct}]*$");
 
 	private InvoiceReconciler() {}
 
@@ -57,7 +59,9 @@ public final class InvoiceReconciler {
 				InvoiceReconciliation.Status status;
 				if (Boolean.TRUE.equals(imported.getReconciliationStale())) {
                     status = NEEDS_REVIEW;
-                } else if (scanned.amountCents() == 0 && !confident(scanned.fieldConfidences().amount())) {
+                } else if (isReferenceFallback(scanned, imported) && !supportedFallback(scanned, imported)) {
+					status = NEEDS_REVIEW;
+				} else if (scanned.amountCents() == 0 && !confident(scanned.fieldConfidences().amount())) {
 					// Missing/uncertain amounts may stand for zero, but require a reliable
 					// identity and an actual Z-Office zero before automatic acceptance.
 					status = !confidentIdentity(scanned) ? NEEDS_REVIEW : importedCents == 0 ? MATCHED : AMOUNT_MISMATCH;
@@ -84,9 +88,25 @@ public final class InvoiceReconciler {
 	private static boolean confident(Double value) { return value != null && value >= REVIEW_CONFIDENCE; }
 
 	public static Map<String, List<Invoice>> indexImportedRows(List<Invoice> importedRows) {
-		return importedRows.stream().filter(Invoice::isImportExists)
-				.filter(invoice -> invoice.getInvoiceNo() != null && !invoice.getInvoiceNo().isBlank())
-				.collect(Collectors.groupingBy(InvoiceReconciler::importKey, LinkedHashMap::new, Collectors.toList()));
+		Map<String, List<Invoice>> index = new LinkedHashMap<>();
+		for (Invoice invoice : importedRows) {
+			if (!invoice.isImportExists() || text(invoice.getInvoiceNo()).isBlank()) continue;
+			index.computeIfAbsent(importKey(invoice), ignored -> new ArrayList<>()).add(invoice);
+			if (invoice.getReconciliationType() != ScannedInvoice.DocumentType.CREDIT) {
+				String number = numericReference(invoice.getInvoiceNo());
+				if (!number.isBlank()) index.computeIfAbsent("INVOICE_NUMBER:" + number, ignored -> new ArrayList<>()).add(invoice);
+			}
+		}
+		return index;
+	}
+
+	public static void removeLookupRows(Map<String, List<Invoice>> rows, List<ScannedInvoice> requested) {
+		for (ScannedInvoice scanned : requested) {
+			rows.entrySet().removeIf(entry -> entry.getKey().equals(lookupKey(scanned, scanned.invoiceNo()))
+					|| scanned.documentType() == ScannedInvoice.DocumentType.INVOICE && entry.getValue().stream()
+					.anyMatch(invoice -> invoice.getReconciliationType() != ScannedInvoice.DocumentType.CREDIT
+							&& alternativeReferences(scanned.invoiceNo(), invoice.getInvoiceNo())));
+		}
 	}
 
 	public static String importKey(Invoice invoice) {
@@ -99,70 +119,67 @@ public final class InvoiceReconciler {
 				? text(reference).toUpperCase(Locale.ROOT) : reference(reference));
 	}
 
-	/** Exact references come first; supported invoice suppliers allow their known numeric-reference affixes. */
+	/** Probe the printed reference and its numeric part, without guessing a supplier's affixes. */
 	public static List<String> lookupReferences(ScannedInvoice scanned) {
 		String original = text(scanned.invoiceNo());
 		if (original.isBlank()) return List.of();
-		String normalized = reference(original);
-		if (isSymbionInvoice(scanned)) {
-			if (normalized.matches("I[0-9]+")) return List.of(original, normalized.substring(1));
-			if (normalized.matches("[0-9]+")) return List.of(original, "I" + normalized);
-		}
-		if (isCh2Invoice(scanned)) {
-			if (normalized.matches("[0-9]+RI")) return List.of(original, normalized.substring(0, normalized.length() - 2));
-			if (normalized.matches("[0-9]+")) return List.of(original, normalized + "RI", normalized + " RI");
-		}
-		return List.of(original);
+		String number = numericReference(original);
+		return scanned.documentType() == ScannedInvoice.DocumentType.INVOICE && !number.isBlank()
+				&& !number.equals(reference(original)) ? List.of(original, number) : List.of(original);
 	}
 
 	public static List<Invoice> matchingImportedRows(ScannedInvoice scanned, Map<String, List<Invoice>> byReference) {
-		for (String candidateReference : lookupReferences(scanned)) {
-			List<Invoice> candidates = byReference.getOrDefault(lookupKey(scanned, candidateReference), List.of());
-			if (scanned.documentType() == ScannedInvoice.DocumentType.CREDIT && !scanned.supplierName().isBlank()) {
-				candidates = candidates.stream().filter(invoice -> supplier(invoice.getSupplierName()).equals(supplier(scanned.supplierName()))).toList();
-			}
-			if (isSymbionInvoice(scanned) || isCh2Invoice(scanned)) {
-				List<Invoice> named = candidates.stream().filter(invoice -> sameSupplierFamily(scanned, invoice.getSupplierName())).toList();
-				candidates = named.isEmpty()
-						? candidates.stream().filter(invoice -> text(invoice.getSupplierName()).isBlank()).toList() : named;
-			} else if (candidates.size() > 1 && !scanned.supplierName().isBlank()) {
-				List<Invoice> named = candidates.stream()
-						.filter(invoice -> supplier(invoice.getSupplierName()).equals(supplier(scanned.supplierName()))).toList();
-				if (!named.isEmpty()) candidates = named;
-			}
-			if (!candidates.isEmpty()) return candidates;
-		}
-		return List.of();
+		List<Invoice> exact = supplierCandidates(scanned,
+				byReference.getOrDefault(lookupKey(scanned, scanned.invoiceNo()), List.of()));
+		if (!exact.isEmpty() || scanned.documentType() == ScannedInvoice.DocumentType.CREDIT) return exact;
+		String number = numericReference(scanned.invoiceNo());
+		if (number.isBlank()) return List.of();
+		return supplierCandidates(scanned, byReference.getOrDefault("INVOICE_NUMBER:" + number, List.of()).stream()
+				.filter(invoice -> alternativeReferences(scanned.invoiceNo(), invoice.getInvoiceNo())).toList());
 	}
 
-	/** Keep the matched internal reference for supplier aliases; retain OCR text on the scanned row. */
+	private static List<Invoice> supplierCandidates(ScannedInvoice scanned, List<Invoice> candidates) {
+		if (scanned.supplierName().isBlank()) return candidates.stream().filter(invoice -> text(invoice.getSupplierName()).isBlank()).toList();
+		if (scanned.documentType() == ScannedInvoice.DocumentType.CREDIT) return candidates.stream()
+				.filter(invoice -> supplier(scanned.supplierName()).equals(supplier(invoice.getSupplierName()))).toList();
+		List<Invoice> named = candidates.stream().filter(invoice -> SupplierMatcher.sameSupplier(scanned.supplierName(), invoice.getSupplierName())).toList();
+		if (!named.isEmpty()) return named;
+		return candidates.stream().filter(invoice -> text(invoice.getSupplierName()).isBlank()).toList();
+	}
+
+	/** A single uninterrupted number, with optional text outside it. Never merge digit groups or drop zeros. */
+	public static String numericReference(String value) {
+		var matcher = NUMBER_WITH_AFFIXES.matcher(text(value));
+		return matcher.matches() ? matcher.group(1) : "";
+	}
+
+	/** At least one side must be the bare number; A123 and B123 remain distinct references. */
+	public static boolean alternativeReferences(String left, String right) {
+		String number = numericReference(left);
+		return !number.isBlank() && number.equals(numericReference(right))
+				&& (reference(left).equals(number) || reference(right).equals(number));
+	}
+
+	public static boolean isReferenceFallback(ScannedInvoice scanned, Invoice imported) {
+		return scanned.documentType() == ScannedInvoice.DocumentType.INVOICE
+				&& !reference(scanned.invoiceNo()).equals(reference(imported.getInvoiceNo()));
+	}
+
+	private static boolean supportedFallback(ScannedInvoice scanned, Invoice imported) {
+		return SupplierMatcher.sameSupplier(scanned.supplierName(), imported.getSupplierName())
+				&& scanned.invoiceDate() != null && scanned.invoiceDate().equals(imported.getInvoiceDate());
+	}
+
+	/** Retain the internal reference of a unique comparison; OCR evidence remains unchanged. */
 	public static String entryReference(InvoiceReconciliation row) {
 		ScannedInvoice scanned = row.getScanned();
 		if (scanned == null) return row.getInvoiceNo();
 		Invoice imported = row.getImported();
-		if ((isSymbionInvoice(scanned) || isCh2Invoice(scanned)) && imported != null && !text(imported.getInvoiceNo()).isBlank()
-				&& (text(imported.getSupplierName()).isBlank() || sameSupplierFamily(scanned, imported.getSupplierName()))
-				&& lookupReferences(scanned).stream().anyMatch(value -> reference(value).equals(reference(imported.getInvoiceNo())))) {
-			return imported.getInvoiceNo();
-		}
+		if (scanned.documentType() == ScannedInvoice.DocumentType.INVOICE && imported != null
+				&& !text(imported.getInvoiceNo()).isBlank()
+				&& (reference(scanned.invoiceNo()).equals(reference(imported.getInvoiceNo()))
+						|| alternativeReferences(scanned.invoiceNo(), imported.getInvoiceNo()))) return imported.getInvoiceNo();
 		return scanned.invoiceNo();
-	}
-
-	private static boolean isCh2Invoice(ScannedInvoice scanned) {
-		return scanned != null && scanned.documentType() == ScannedInvoice.DocumentType.INVOICE
-				&& SupplierMatcher.isCh2Supplier(scanned.supplierName());
-	}
-
-	private static boolean sameSupplierFamily(ScannedInvoice scanned, String name) {
-		return isSymbionInvoice(scanned) ? isSymbionSupplier(name) : SupplierMatcher.isCh2Supplier(name);
-	}
-
-	private static boolean isSymbionInvoice(ScannedInvoice scanned) {
-		return scanned != null && scanned.documentType() == ScannedInvoice.DocumentType.INVOICE && isSymbionSupplier(scanned.supplierName());
-	}
-
-	private static boolean isSymbionSupplier(String name) {
-		return List.of(supplier(name).split(" ")).contains("SYMBION");
 	}
 
 	public static String reference(String value) {

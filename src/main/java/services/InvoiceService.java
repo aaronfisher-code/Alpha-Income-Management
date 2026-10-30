@@ -189,8 +189,7 @@ public class InvoiceService {
             Map<String, List<Invoice>> batch = new LinkedHashMap<>();
             responses.get(index).forEach(invoice -> batch.computeIfAbsent(utils.InvoiceReconciler.importKey(invoice),
                     ignored -> new ArrayList<>()).add(invoice));
-            chunks.get(index).forEach(row -> utils.InvoiceReconciler.lookupReferences(row).forEach(reference ->
-                    byReference.remove(utils.InvoiceReconciler.lookupKey(row, reference))));
+            utils.InvoiceReconciler.removeLookupRows(byReference, chunks.get(index));
             byReference.putAll(batch);
         }
         return byReference.values().stream().flatMap(List::stream).toList();

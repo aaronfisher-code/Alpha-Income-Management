@@ -103,6 +103,21 @@ class InvoiceServiceTest {
     }
 
     @Test
+    void aLaterMissingLookupRemovesAPreviouslyDiscoveredInternalFormat() {
+        var rest = new RestTemplate();
+        var requests = new java.util.concurrent.atomic.AtomicInteger();
+        rest.getInterceptors().add((request, body, execution) -> jsonResponse(requests.incrementAndGet() == 1
+                ? "[{\"invoiceNo\":\"REF-74040054\",\"supplierName\":\"Supplier\",\"importExists\":true}]" : "[]"));
+        var props = new Properties(); props.setProperty("api.base.url", "https://example.invalid");
+        var service = new InvoiceService(rest, props);
+        var scanned = java.util.stream.IntStream.range(0, 51).mapToObj(i -> new models.ScannedInvoice("file" + i,
+                "Supplier", i == 0 || i == 50 ? "74040054" : "OTHER" + i, java.time.LocalDate.of(2026, 9, 10),
+                null, models.ScannedInvoice.DocumentType.INVOICE, 10000, .99)).toList();
+        assertTrue(service.getInvoiceAmountsForReview(7, scanned).isEmpty());
+        assertEquals(2, requests.get());
+    }
+
+    @Test
     void genuineAmbiguitySurvivesChunkMergingAndFailedChunksDoNotReturnPartialData() {
         var rest = new RestTemplate();
         var count = new java.util.concurrent.atomic.AtomicInteger();

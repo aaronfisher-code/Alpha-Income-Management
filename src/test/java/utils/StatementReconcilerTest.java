@@ -73,7 +73,21 @@ class StatementReconcilerTest {
                 .allMatch(result -> result.getStatus() == AMBIGUOUS));
         assertEquals(AMBIGUOUS, StatementReconciler.reconcile(List.of(statement), List.of(statement, entered), 0).getFirst().getStatus());
         assertFalse(StatementReconciler.sameDocument(row("CH2", "000123 RI", -100), row("CH2", "000123", -100)));
-        assertFalse(StatementReconciler.sameDocument(row("Sigma", "000123 RI", 100), row("Sigma", "000123", 100)));
+        assertTrue(StatementReconciler.sameDocument(row("Sigma", "000123 RI", 100), row("Sigma", "000123", 100)));
+    }
+
+    @Test void genericStatementFallbackKeepsExactReferencesAndUncertainDatesSeparate() {
+        var bare = row("New Supplier", "74040054", 100);
+        var prefixed = row("New Supplier", "INV-74040054", 100);
+        var suffixed = row("New Supplier", "74040054 XYZ", 100);
+        assertEquals(MATCHED, StatementReconciler.reconcile(List.of(bare), List.of(prefixed), 0).getFirst().getStatus());
+        assertEquals(AMBIGUOUS, StatementReconciler.reconcile(List.of(bare), List.of(prefixed, suffixed), 0).getFirst().getStatus());
+        assertTrue(StatementReconciler.reconcile(List.of(prefixed, suffixed), List.of(prefixed, suffixed), 0).stream()
+                .allMatch(result -> result.getStatus() == MATCHED));
+        var differentDate = new ScannedInvoice(bare.sourceFile(), bare.supplierName(), bare.invoiceNo(), bare.invoiceDate().plusDays(1), null,
+                bare.documentType(), bare.amountCents(), .99);
+        assertEquals(NEEDS_REVIEW, StatementReconciler.reconcile(List.of(differentDate), List.of(prefixed), 0).getFirst().getStatus());
+        assertFalse(StatementReconciler.sameDocument(differentDate, prefixed));
     }
 
     @Test void invoicesAndCreditsHaveSeparateIdentities() {

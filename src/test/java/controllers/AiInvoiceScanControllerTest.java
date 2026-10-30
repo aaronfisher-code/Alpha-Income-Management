@@ -1386,7 +1386,7 @@ class AiInvoiceScanControllerTest {
 	}
 
 	@ParameterizedTest
-	@CsvSource({"Symbion,I000123,Symbion", "CH2,000123 RI,CH2", "ParagonCare,000123RI,CH2"})
+	@CsvSource({"Symbion,I000123,Symbion", "CH2,000123 RI,CH2", "ParagonCare,000123RI,CH2", "New Supplier,000123 XYZ,New Supplier", "New Supplier,INV-000123,New Supplier"})
 	void supplierAffixesMatchLoadedDataAndKeepTheInternalReferenceForReviewAndSaving(
 			String supplier, String printedReference, String storedSupplier) throws Exception {
 		onFxThread(() -> {
@@ -2199,6 +2199,7 @@ class AiInvoiceScanControllerTest {
 		invoice.setInvoiceNo(reference);
 		invoice.setSupplierID(9);
 		invoice.setSupplierName("SYMBION");
+		invoice.setInvoiceDate(DATE);
 		invoice.setStoreID(1);
 		invoice.setImportedInvoiceAmount(100);
 		invoice.setImportExists(true);

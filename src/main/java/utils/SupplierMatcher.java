@@ -112,10 +112,14 @@ public final class SupplierMatcher {
 				.replaceAll("\\s+", " ").trim();
 	}
 
-	/** CH2 and the printed issuer names supported by the supplier matcher. */
-	public static boolean isCh2Supplier(String name) {
-		String normalized = normalizedName(name);
-		return isCh2Shorthand(compact(normalized)) || isCh2Issuer(normalized);
+	/** Use the existing name matcher for identity checks across printed and saved supplier names. */
+	public static boolean sameSupplier(String left, String right) {
+		if (left == null || left.isBlank() || right == null || right.isBlank()) return false;
+		String first = normalizedName(left), second = normalizedName(right);
+		return first.equals(second)
+				|| isCh2Shorthand(compact(first)) && isCh2Issuer(second)
+				|| isCh2Shorthand(compact(second)) && isCh2Issuer(first)
+				|| isShorthandOf(compact(first), second) || isShorthandOf(compact(second), first);
 	}
 
 	private static boolean isCh2Shorthand(String name) {

@@ -790,8 +790,7 @@ public final class AiInvoiceScanController extends Controller {
 		List<Invoice> cached = invoiceService.getInvoiceAmountsForReview(context.storeId, missing, context.progress);
 		Map<String, List<Invoice>> groups = cached.stream().filter(Invoice::isImportExists)
 		        .collect(java.util.stream.Collectors.groupingBy(InvoiceReconciler::importKey));
-		missing.forEach(row -> InvoiceReconciler.lookupReferences(row).forEach(reference ->
-		        context.cachedByReference.remove(InvoiceReconciler.lookupKey(row, reference))));
+		InvoiceReconciler.removeLookupRows(context.cachedByReference, missing);
 		context.cachedByReference.putAll(groups);
 		return context.cachedByReference.values().stream().flatMap(List::stream).toList();
 	}
@@ -2210,6 +2209,8 @@ public final class AiInvoiceScanController extends Controller {
 		AcceptedDocument approved = acceptedDocuments.get(scanned);
 		boolean updateUnderlyingRow = scanned.documentType() == lookup.documentType() && InvoiceReconciler.lookupReferences(scanned).stream()
 				.anyMatch(candidate -> InvoiceReconciler.lookupKey(lookup, candidate).equals(lookupReference))
+				|| scanned.documentType() == ScannedInvoice.DocumentType.INVOICE && lookup.documentType() == scanned.documentType()
+				&& InvoiceReconciler.alternativeReferences(scanned.invoiceNo(), reference)
 				|| approved != null && approved.documentType() == lookup.documentType()
                 && InvoiceReconciler.lookupKey(lookup, approved.reference()).equals(lookupReference);
 		int requestedStore = storeId();
