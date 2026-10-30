@@ -146,6 +146,25 @@ class SupplierMatcherTest {
 		assertTrue(match.sufficientlyConfident());
 	}
 
+	@ParameterizedTest
+	@ValueSource(strings = { "ParagonCare CH2", "Paragon Care CH2", "CH2 ParagonCare", "ParagonCare (CH2)" })
+	void combinedLabelsMustIdentifyTheSameSupplierInBothParts(String label) {
+		assertTrue(SupplierMatcher.sameSupplier("CH2", label));
+		assertTrue(SupplierMatcher.sameSupplier(label, "CH2"));
+		assertTrue(SupplierMatcher.findBest(label, List.of(CH2, SIGMA)).sufficientlyConfident());
+		assertTrue(SupplierMatcher.sameSupplier("API", "Australian Pharmaceutical Industries API"));
+		assertTrue(SupplierMatcher.sameSupplier("AB", "Acme Brand AB"));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "Another Supplier", "Supplier South", "ParagonCare Diagnostics CH2", "ParagonCare CH2 South" })
+	void combinedLabelsCannotIgnoreAnUnrelatedNameOrBranch(String label) {
+		assertFalse(SupplierMatcher.sameSupplier("CH2", label));
+		assertFalse(SupplierMatcher.sameSupplier("Supplier", label));
+		assertFalse(SupplierMatcher.sameSupplier("AB", "Acme Brand South AB"));
+		assertFalse(SupplierMatcher.sameSupplier("DCO Hillside", "DCO Gladstone"));
+	}
+
 	@Test
 	void ch2CorrelationUsesTheSavedContactNameWithoutIncreasingOcrConfidence() {
 		ScannedInvoice scanned = new ScannedInvoice("statement.pdf", "Clifford Hallam Healthcare Eastern Creek NSW",

@@ -1386,6 +1386,55 @@ class AiInvoiceScanControllerTest {
 	}
 
 	@ParameterizedTest
+	@CsvSource({"ParagonCare CH2,true,MATCHED", "ParagonCare CH2,false,NEEDS_REVIEW", "Unrelated Supplier,true,NOT_IN_Z_OFFICE"})
+	void screenshotInvoiceRefreshShowsFoundAmountsOrExplainsASupplierMismatch(String storedSupplier, boolean hasDate,
+			InvoiceReconciliation.Status expectedStatus) throws Exception {
+		CountDownLatch finished = new CountDownLatch(1);
+		AiInvoiceScanController[] holder = new AiInvoiceScanController[1];
+		try (var workers = Executors.newSingleThreadExecutor()) {
+			try {
+				onFxThread(() -> {
+					var controller = controller(); holder[0] = controller;
+					var imported = symbionImport("74180032"); imported.setSupplierName(storedSupplier);
+					imported.setImportedInvoiceAmount(1813.06); if (!hasDate) imported.setInvoiceDate(null);
+					configureReconciliation(controller, new InvoiceService() {
+						@Override public List<Invoice> getInvoiceAmountsForReview(int store, List<ScannedInvoice> rows) { return List.of(); }
+						@Override public List<Invoice> refreshInvoiceAmount(int store, ScannedInvoice row) {
+							assertEquals("74180032 RI", row.invoiceNo()); assertEquals("CH2", row.supplierName());
+							return List.of(imported);
+						}
+					});
+					setField(controller, "executor", workers);
+					var contacts = List.of(new InvoiceSupplier(9, "CH2", 1));
+					setField(controller, "availableSuppliers", contacts);
+					var scanned = new ScannedInvoice("invoice.pdf", "CH2", "74180032 RI", DATE, null,
+							ScannedInvoice.DocumentType.INVOICE, 181306, .99);
+					invoke(controller, "showLoadedBatches", List.class, List.of(loadTestBatch(controller, List.of(scanned), contacts)));
+					ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
+					invoke(controller, "review", InvoiceReconciliation.class, rows.getFirst());
+					Label message = field(controller, "invoiceAmountRefreshMessageLabel");
+					message.textProperty().addListener((_, _, value) -> {
+						if (value.contains("refreshed") || value.contains("Verify the supplier")) finished.countDown();
+					});
+					Button refresh = field(controller, "refreshInvoiceAmountButton"); refresh.fire();
+				});
+				assertTrue(finished.await(5, TimeUnit.SECONDS));
+				onFxThread(() -> {
+					var controller = holder[0];
+					ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
+					assertEquals(expectedStatus, rows.getFirst().getStatus());
+					Label amount = field(controller, "reviewExpectedAmountLabel");
+					Label message = field(controller, "invoiceAmountRefreshMessageLabel");
+					if (expectedStatus == InvoiceReconciliation.Status.NOT_IN_Z_OFFICE) {
+						assertEquals("N/A", amount.getText()); assertTrue(message.getText().contains(storedSupplier));
+						assertTrue(message.getText().contains("selected supplier CH2"));
+					} else assertEquals("$1,813.06", amount.getText());
+				});
+			} finally { if (holder[0] != null) onFxThread(holder[0]::dispose); }
+		}
+	}
+
+	@ParameterizedTest
 	@CsvSource({"Symbion,I000123,Symbion", "CH2,000123 RI,CH2", "ParagonCare,000123RI,CH2", "New Supplier,000123 XYZ,New Supplier", "New Supplier,INV-000123,New Supplier"})
 	void supplierAffixesMatchLoadedDataAndKeepTheInternalReferenceForReviewAndSaving(
 			String supplier, String printedReference, String storedSupplier) throws Exception {

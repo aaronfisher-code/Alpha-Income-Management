@@ -91,6 +91,25 @@ class InvoiceReconcilerTest {
 	}
 
 	@Test
+	void screenshotInvoiceMatchesTheCombinedZOfficeSupplierLabel() {
+		var date = LocalDate.of(2026, 10, 1);
+		var scanned = new ScannedInvoice("invoice.pdf", "CH2", "74180032 RI", date, null,
+				ScannedInvoice.DocumentType.INVOICE, 181306, .99);
+		var stored = imported("ParagonCare CH2", "74180032", 1813.06);
+		stored.setInvoiceDate(date);
+		assertEquals(List.of("74180032 RI", "74180032"), InvoiceReconciler.lookupReferences(scanned));
+		var result = reconcile(scanned, List.of(stored));
+		assertEquals(InvoiceReconciliation.Status.MATCHED, result.getStatus());
+		assertEquals("74180032", InvoiceReconciler.entryReference(result));
+		assertTrue(result.hasExpectedAmount());
+		assertEquals("$0.00", result.getVarianceString());
+		stored.setInvoiceDate(null);
+		result = reconcile(scanned, List.of(stored));
+		assertEquals(InvoiceReconciliation.Status.NEEDS_REVIEW, result.getStatus());
+		assertTrue(result.hasExpectedAmount(), "A missing Z-Office date must not hide a found amount");
+	}
+
+	@Test
 	void ch2ExactReferenceWinsAndDuplicateOrWrongSupplierMatchesCannotAutoAccept() {
 		var scanned = scanned("CH2", "74040054 RI", ScannedInvoice.DocumentType.INVOICE);
 		var exact = imported("CH2", "74040054 RI", 200);

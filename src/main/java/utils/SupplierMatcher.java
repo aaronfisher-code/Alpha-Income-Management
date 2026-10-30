@@ -80,6 +80,7 @@ public final class SupplierMatcher {
 		if (isCh2Shorthand(leftCompact) && isCh2Issuer(right)
 				|| isCh2Shorthand(rightCompact) && isCh2Issuer(left)) return 0.97;
 		if (isShorthandOf(leftCompact, right) || isShorthandOf(rightCompact, left)) return 0.97;
+		if (hasRedundantIdentity(left, right) || hasRedundantIdentity(right, left)) return 0.97;
 
 		double score = jaroWinkler(leftCompact, rightCompact);
 		Set<String> leftTokens = tokens(left);
@@ -116,10 +117,23 @@ public final class SupplierMatcher {
 	public static boolean sameSupplier(String left, String right) {
 		if (left == null || left.isBlank() || right == null || right.isBlank()) return false;
 		String first = normalizedName(left), second = normalizedName(right);
+		return sameIdentity(first, second) || hasRedundantIdentity(first, second) || hasRedundantIdentity(second, first);
+	}
+
+	private static boolean sameIdentity(String first, String second) {
 		return first.equals(second)
 				|| isCh2Shorthand(compact(first)) && isCh2Issuer(second)
 				|| isCh2Shorthand(compact(second)) && isCh2Issuer(first)
 				|| isShorthandOf(compact(first), second) || isShorthandOf(compact(second), first);
+	}
+
+	/** A combined label is safe only when both parts independently identify the same supplier. */
+	private static boolean hasRedundantIdentity(String identity, String combined) {
+		for (int split = combined.indexOf(' '); split >= 0; split = combined.indexOf(' ', split + 1)) {
+			if (sameIdentity(identity, combined.substring(0, split))
+					&& sameIdentity(identity, combined.substring(split + 1))) return true;
+		}
+		return false;
 	}
 
 	private static boolean isCh2Shorthand(String name) {

@@ -2258,7 +2258,7 @@ public final class AiInvoiceScanController extends Controller {
 					showAmountRefreshMessage(updated.hasExpectedAmount() ? "Z-Office amount refreshed for " + lookup.invoiceNo() + "."
 							: updated.getStatus() == InvoiceReconciliation.Status.AMBIGUOUS
 									? "Multiple Z-Office matches found. Verify this document before accepting."
-									: "No matching " + (lookup.documentType() == ScannedInvoice.DocumentType.CREDIT ? "credit" : "invoice") + " was found in Z-Office.");
+									: missingAmountMessage(lookup, task.getValue()));
 				}
 			}
 			applyResultFilter();
@@ -2282,6 +2282,18 @@ public final class AiInvoiceScanController extends Controller {
 		invoiceAmountRefreshMessageLabel.setText(message);
 		invoiceAmountRefreshMessageLabel.setVisible(true);
 		invoiceAmountRefreshMessageLabel.setManaged(true);
+	}
+
+	private static String missingAmountMessage(ScannedInvoice lookup, List<Invoice> returned) {
+		var suppliers = returned.stream().filter(Invoice::isImportExists)
+				.filter(invoice -> InvoiceReconciler.importKey(invoice).equals(InvoiceReconciler.lookupKey(lookup, lookup.invoiceNo()))
+						|| lookup.documentType() == ScannedInvoice.DocumentType.INVOICE
+						&& invoice.getReconciliationType() != ScannedInvoice.DocumentType.CREDIT
+						&& InvoiceReconciler.alternativeReferences(lookup.invoiceNo(), invoice.getInvoiceNo()))
+				.map(Invoice::getSupplierName).filter(name -> name != null && !name.isBlank()).distinct().limit(3).toList();
+		if (!suppliers.isEmpty()) return "Z-Office returned this reference under supplier " + String.join(", ", suppliers)
+				+ ", which did not match the selected supplier " + lookup.supplierName() + ". Verify the supplier before accepting.";
+		return "No matching " + (lookup.documentType() == ScannedInvoice.DocumentType.CREDIT ? "credit" : "invoice") + " was found in Z-Office.";
 	}
 
 	private void updateAmountRefreshControls() {
