@@ -1385,11 +1385,14 @@ class AiInvoiceScanControllerTest {
 		});
 	}
 
-	@Test
-	void symbionPrefixMatchesLoadedDataAndKeepsTheNumericReferenceForReviewAndSaving() throws Exception {
+	@ParameterizedTest
+	@CsvSource({"Symbion,I000123,Symbion", "CH2,000123 RI,CH2", "ParagonCare,000123RI,CH2"})
+	void supplierAffixesMatchLoadedDataAndKeepTheInternalReferenceForReviewAndSaving(
+			String supplier, String printedReference, String storedSupplier) throws Exception {
 		onFxThread(() -> {
 			AiInvoiceScanController controller = controller();
 			Invoice imported = symbionImport("000123");
+			imported.setSupplierName(storedSupplier);
 			List<Invoice> saved = new ArrayList<>();
 			InvoiceService service = new InvoiceService() {
 				@Override public List<Invoice> getInvoiceAmountsForReview(int storeId, List<ScannedInvoice> requestedRows) { return List.of(imported); }
@@ -1404,13 +1407,15 @@ class AiInvoiceScanControllerTest {
 			};
 			try {
 				configureReconciliation(controller, service);
-				ScannedInvoice scanned = new ScannedInvoice("statement.pdf", "Symbion", "I000123", DATE, null,
+				var contacts = List.of(new InvoiceSupplier(9, storedSupplier, 1));
+				setField(controller, "availableSuppliers", contacts);
+				ScannedInvoice scanned = new ScannedInvoice("statement.pdf", supplier, printedReference, DATE, null,
 						ScannedInvoice.DocumentType.INVOICE, 10000, 0.99);
-				invoke(controller, "showLoadedBatches", List.class, List.of(loadTestBatch(controller, List.of(scanned))));
+				invoke(controller, "showLoadedBatches", List.class, List.of(loadTestBatch(controller, List.of(scanned), contacts)));
 				ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
 				InvoiceReconciliation row = rows.getFirst();
 				assertEquals(InvoiceReconciliation.Status.MATCHED, row.getStatus());
-				assertEquals("I000123", row.getScanned().invoiceNo());
+				assertEquals(printedReference, row.getScanned().invoiceNo());
 				Object accepted = invoke(controller, "acceptedDocumentFromScanned", InvoiceReconciliation.class, row);
 				Method save = AiInvoiceScanController.class.getDeclaredMethod("saveDocument", InvoiceReconciliation.class, accepted.getClass());
 				save.setAccessible(true);
@@ -2176,12 +2181,17 @@ class AiInvoiceScanControllerTest {
 	}
 
 	private static Object loadTestBatch(AiInvoiceScanController controller, List<ScannedInvoice> scanned) throws Exception {
+		return loadTestBatch(controller, scanned, List.of(new InvoiceSupplier(9, "Symbion Pty Ltd", 1)));
+	}
+
+	private static Object loadTestBatch(AiInvoiceScanController controller, List<ScannedInvoice> scanned,
+			List<InvoiceSupplier> suppliers) throws Exception {
 		BatchSummary summary = new BatchSummary(1, BatchKind.INVOICE_BATCH, BatchStatus.REVIEW_REQUIRED, "Test", 1, scanned.size(), null, null);
 		BatchDetail detail = new BatchDetail(summary, List.of(new ExtractedDocument(101, "statement.pdf", scanned,
 				List.of(), null, null, null, null, null)));
 		Method load = AiInvoiceScanController.class.getDeclaredMethod("loadBatch", BatchDetail.class, List.class);
 		load.setAccessible(true);
-		return load.invoke(controller, detail, List.of(new InvoiceSupplier(9, "Symbion Pty Ltd", 1)));
+		return load.invoke(controller, detail, suppliers);
 	}
 
 	private static Invoice symbionImport(String reference) {

@@ -76,6 +76,55 @@ class InvoiceReconcilerTest {
 		assertEquals(storedReference, InvoiceReconciler.entryReference(row));
 	}
 
+	@ParameterizedTest
+	@CsvSource({"CH2,74040054 RI,74040054", "CH2,74040054RI,74040054", "CH2,74040054 ri,74040054",
+			"ParagonCare,74040054 RI,74040054", "Paragon Care Pty Ltd,74040054,74040054 RI",
+			"Clifford Hallam Healthcare Eastern Creek NSW,000123RI,000123", "CH2,000123,000123RI"})
+	void ch2ReferencesMatchWithOrWithoutRiAndRetainTheInternalReference(String supplier, String printed, String stored) {
+		var scanned = scanned(supplier, printed, ScannedInvoice.DocumentType.INVOICE);
+		var expected = imported("CH2", stored, 100);
+		var result = reconcile(scanned, List.of(expected));
+		assertEquals(InvoiceReconciliation.Status.MATCHED, result.getStatus());
+		assertSame(expected, result.getImported());
+		assertEquals(stored, InvoiceReconciler.entryReference(result));
+		assertEquals(printed, result.getScanned().invoiceNo());
+	}
+
+	@Test
+	void ch2ExactReferenceWinsAndDuplicateOrWrongSupplierMatchesCannotAutoAccept() {
+		var scanned = scanned("CH2", "74040054 RI", ScannedInvoice.DocumentType.INVOICE);
+		var exact = imported("CH2", "74040054 RI", 200);
+		var alternate = imported("Paragon Care", "74040054", 100);
+		var result = reconcile(scanned, List.of(alternate, exact));
+		assertSame(exact, result.getImported());
+		assertEquals(InvoiceReconciliation.Status.AMOUNT_MISMATCH, result.getStatus());
+		assertEquals(InvoiceReconciliation.Status.AMBIGUOUS,
+				reconcile(scanned, List.of(alternate, imported("CH2", "74040054", 100))).getStatus());
+		assertEquals(InvoiceReconciliation.Status.NOT_IN_Z_OFFICE,
+				reconcile(scanned, List.of(imported("Sigma", "74040054", 100))).getStatus());
+		assertSame(alternate, reconcile(scanned, List.of(imported("Sigma", "74040054 RI", 100), alternate)).getImported());
+		var unnamed = imported("", "74040054", 100);
+		assertSame(unnamed, reconcile(scanned, List.of(unnamed)).getImported());
+		assertSame(alternate, reconcile(scanned, List.of(unnamed, alternate)).getImported());
+	}
+
+	@Test
+	void riFallbackIsLimitedToCh2NumericInvoicesAndPreservesLeadingZeros() {
+		for (String supplier : List.of("Sigma", "", "Other Paragon Supplier")) {
+			assertEquals(List.of("74040054 RI"), InvoiceReconciler.lookupReferences(
+					scanned(supplier, "74040054 RI", ScannedInvoice.DocumentType.INVOICE)));
+		}
+		assertEquals(List.of("74040054 RI"), InvoiceReconciler.lookupReferences(
+				scanned("CH2", "74040054 RI", ScannedInvoice.DocumentType.CREDIT)));
+		for (String reference : List.of("RI74040054", "INV74040054RI", "74040054R", "74040054RIRI", "RI")) {
+			assertEquals(List.of(reference), InvoiceReconciler.lookupReferences(scanned("CH2", reference, ScannedInvoice.DocumentType.INVOICE)));
+		}
+		assertEquals(InvoiceReconciliation.Status.NOT_IN_Z_OFFICE, reconcile(
+				scanned("CH2", "000123 RI", ScannedInvoice.DocumentType.INVOICE), List.of(imported("CH2", "123", 100))).getStatus());
+		var missing = reconcile(scanned("CH2", "74040054 RI", ScannedInvoice.DocumentType.INVOICE), List.of());
+		assertEquals("74040054 RI", InvoiceReconciler.entryReference(missing));
+	}
+
 	@Test
 	void exactReferenceWinsWithoutChoosingAnAlternateByAmount() {
 		ScannedInvoice scanned = scanned("Symbion", "I123", ScannedInvoice.DocumentType.INVOICE);

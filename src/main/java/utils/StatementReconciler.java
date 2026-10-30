@@ -62,6 +62,9 @@ public final class StatementReconciler {
                 && List.of(InvoiceReconciler.supplier(row.supplierName()).split(" ")).contains("SYMBION")) {
             reference = "INVOICE:" + InvoiceReconciler.reference(row.invoiceNo()).replaceFirst("^I(?=[0-9]+$)", "");
         }
+        if (row.documentType() == ScannedInvoice.DocumentType.INVOICE && SupplierMatcher.isCh2Supplier(row.supplierName())) {
+            reference = "INVOICE:" + InvoiceReconciler.reference(row.invoiceNo()).replaceFirst("^([0-9]+)RI$", "$1");
+        }
         return InvoiceReconciler.supplier(row.supplierName()) + ":" + reference;
     }
 }

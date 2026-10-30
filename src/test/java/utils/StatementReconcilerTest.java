@@ -61,6 +61,21 @@ class StatementReconcilerTest {
                 .allMatch(result -> result.getStatus() == AMBIGUOUS));
     }
 
+    @Test void ch2RiStatementRowsRecogniseSavedNumbersAndCannotBeCountedTwice() {
+        var statement = row("CH2", "000123 RI", 100);
+        var entered = row("CH2", "000123", 100);
+        assertEquals(MATCHED, StatementReconciler.reconcile(List.of(statement), List.of(entered), 0).getFirst().getStatus());
+        assertEquals(MATCHED, StatementReconciler.reconcile(List.of(entered), List.of(statement), 0).getFirst().getStatus());
+        assertTrue(StatementReconciler.sameDocument(statement, entered));
+        assertEquals(MISSING_SCANNED_INVOICE, StatementReconciler.reconcile(List.of(statement),
+                List.of(row("CH2", "123", 100)), 0).getFirst().getStatus());
+        assertTrue(StatementReconciler.reconcile(List.of(statement, entered), List.of(entered), 0).stream()
+                .allMatch(result -> result.getStatus() == AMBIGUOUS));
+        assertEquals(AMBIGUOUS, StatementReconciler.reconcile(List.of(statement), List.of(statement, entered), 0).getFirst().getStatus());
+        assertFalse(StatementReconciler.sameDocument(row("CH2", "000123 RI", -100), row("CH2", "000123", -100)));
+        assertFalse(StatementReconciler.sameDocument(row("Sigma", "000123 RI", 100), row("Sigma", "000123", 100)));
+    }
+
     @Test void invoicesAndCreditsHaveSeparateIdentities() {
         var invoice = row("Supplier", "123", 100);
         var credit = row("Supplier", "123", -100);

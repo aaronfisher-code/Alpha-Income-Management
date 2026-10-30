@@ -99,14 +99,19 @@ public final class InvoiceReconciler {
 				? text(reference).toUpperCase(Locale.ROOT) : reference(reference));
 	}
 
-	/** Exact references come first; only Symbion invoices allow an optional I before a numeric reference. */
+	/** Exact references come first; supported invoice suppliers allow their known numeric-reference affixes. */
 	public static List<String> lookupReferences(ScannedInvoice scanned) {
 		String original = text(scanned.invoiceNo());
 		if (original.isBlank()) return List.of();
-		if (!isSymbionInvoice(scanned)) return List.of(original);
 		String normalized = reference(original);
-		if (normalized.matches("I[0-9]+")) return List.of(original, normalized.substring(1));
-		if (normalized.matches("[0-9]+")) return List.of(original, "I" + normalized);
+		if (isSymbionInvoice(scanned)) {
+			if (normalized.matches("I[0-9]+")) return List.of(original, normalized.substring(1));
+			if (normalized.matches("[0-9]+")) return List.of(original, "I" + normalized);
+		}
+		if (isCh2Invoice(scanned)) {
+			if (normalized.matches("[0-9]+RI")) return List.of(original, normalized.substring(0, normalized.length() - 2));
+			if (normalized.matches("[0-9]+")) return List.of(original, normalized + "RI", normalized + " RI");
+		}
 		return List.of(original);
 	}
 
@@ -116,8 +121,8 @@ public final class InvoiceReconciler {
 			if (scanned.documentType() == ScannedInvoice.DocumentType.CREDIT && !scanned.supplierName().isBlank()) {
 				candidates = candidates.stream().filter(invoice -> supplier(invoice.getSupplierName()).equals(supplier(scanned.supplierName()))).toList();
 			}
-			if (isSymbionInvoice(scanned)) {
-				List<Invoice> named = candidates.stream().filter(invoice -> isSymbionSupplier(invoice.getSupplierName())).toList();
+			if (isSymbionInvoice(scanned) || isCh2Invoice(scanned)) {
+				List<Invoice> named = candidates.stream().filter(invoice -> sameSupplierFamily(scanned, invoice.getSupplierName())).toList();
 				candidates = named.isEmpty()
 						? candidates.stream().filter(invoice -> text(invoice.getSupplierName()).isBlank()).toList() : named;
 			} else if (candidates.size() > 1 && !scanned.supplierName().isBlank()) {
@@ -130,17 +135,26 @@ public final class InvoiceReconciler {
 		return List.of();
 	}
 
-	/** Keep the matched internal reference when entering a Symbion invoice; retain OCR text on the scanned row. */
+	/** Keep the matched internal reference for supplier aliases; retain OCR text on the scanned row. */
 	public static String entryReference(InvoiceReconciliation row) {
 		ScannedInvoice scanned = row.getScanned();
 		if (scanned == null) return row.getInvoiceNo();
 		Invoice imported = row.getImported();
-		if (isSymbionInvoice(scanned) && imported != null && !text(imported.getInvoiceNo()).isBlank()
-				&& (text(imported.getSupplierName()).isBlank() || isSymbionSupplier(imported.getSupplierName()))
+		if ((isSymbionInvoice(scanned) || isCh2Invoice(scanned)) && imported != null && !text(imported.getInvoiceNo()).isBlank()
+				&& (text(imported.getSupplierName()).isBlank() || sameSupplierFamily(scanned, imported.getSupplierName()))
 				&& lookupReferences(scanned).stream().anyMatch(value -> reference(value).equals(reference(imported.getInvoiceNo())))) {
 			return imported.getInvoiceNo();
 		}
 		return scanned.invoiceNo();
+	}
+
+	private static boolean isCh2Invoice(ScannedInvoice scanned) {
+		return scanned != null && scanned.documentType() == ScannedInvoice.DocumentType.INVOICE
+				&& SupplierMatcher.isCh2Supplier(scanned.supplierName());
+	}
+
+	private static boolean sameSupplierFamily(ScannedInvoice scanned, String name) {
+		return isSymbionInvoice(scanned) ? isSymbionSupplier(name) : SupplierMatcher.isCh2Supplier(name);
 	}
 
 	private static boolean isSymbionInvoice(ScannedInvoice scanned) {
