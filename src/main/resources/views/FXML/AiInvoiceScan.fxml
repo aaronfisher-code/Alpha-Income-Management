@@ -52,6 +52,9 @@
          </Button>
          <ProgressIndicator fx:id="scanProgress" managed="true" maxHeight="28.0" maxWidth="28.0" prefHeight="28.0" prefWidth="28.0" progress="-1.0" visible="false" />
          <Region HBox.hgrow="ALWAYS" />
+         <Button fx:id="refreshAllAmountsButton" disable="true" onAction="#refreshAllAmounts" styleClass="secondary-scan-button" text="Refresh all Z-Office amounts">
+            <tooltip><Tooltip text="Fetch fresh Z-Office amounts for every ready invoice batch in this store and open the combined review. PDFs are not rescanned." /></tooltip>
+         </Button>
          <Button fx:id="reviewAllButton" disable="true" onAction="#reviewAll" styleClass="primary-scan-button" text="Review all invoices">
             <tooltip><Tooltip text="Review all ready invoice batches together, then save them in one go. Review statements individually to compare their printed and extracted totals." /></tooltip>
          </Button>
@@ -229,6 +232,7 @@
                               <VBox spacing="10.0">
                                  <Label fx:id="reviewTitleLabel" styleClass="review-editor-title" text="Review invoice" />
                                  <Label fx:id="reviewHelpLabel" styleClass="review-editor-help" text="Correct the scanned values, then accept this document for the final save." wrapText="true" />
+                                 <Button fx:id="chooseStatementInvoiceButton" managed="false" visible="false" onAction="#chooseStatementInvoice" styleClass="secondary-scan-button" text="Choose matching invoice" />
                                  <Label fx:id="reviewErrorLabel" managed="false" styleClass="review-editor-error" visible="false" wrapText="true" />
                                  <Label fx:id="reviewClassificationWarningLabel" managed="false" styleClass="scan-warning" visible="false" wrapText="true" />
                                  <Label styleClass="review-field-label" text="Supplier" />

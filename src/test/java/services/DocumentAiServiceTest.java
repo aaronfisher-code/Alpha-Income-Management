@@ -49,7 +49,7 @@ class DocumentAiServiceTest {
 
 	@ParameterizedTest
 	@CsvSource({"true", "false"})
-	void statementCompletionSendsInvoiceEditsAndConfirmsATimedOutCommit(boolean timeout) throws Exception {
+	void statementCompletionSendsInvoiceEditsAndSelectionsAndConfirmsATimedOutCommit(boolean timeout) throws Exception {
 		var requests = new ArrayList<String>();
 		var rest = new RestTemplate();
 		rest.getInterceptors().add((request, body, execution) -> {
@@ -61,6 +61,11 @@ class DocumentAiServiceTest {
 				assertEquals(2, json.path("edits").get(0).path("original").path("rowIndex").asInt());
 				assertEquals(-13550, json.path("edits").get(0).path("amountCents").asLong());
 				assertEquals("corrected", json.path("edits").get(0).path("notes").asText());
+				var selection = json.path("selections").get(0);
+				assertEquals(101, selection.path("statementDocumentId").asLong());
+				assertEquals(3, selection.path("statementRowIndex").asInt());
+				assertEquals("C1", selection.path("invoice").path("values").path("invoiceNo").asText());
+				assertEquals(-12000, selection.path("statementValues").path("amountCents").asLong());
 				if (timeout) throw new ResourceAccessException("Read timed out");
 				return jsonResponse(HttpStatus.OK, "{}");
 			}
@@ -71,7 +76,8 @@ class DocumentAiServiceTest {
 		var original = new models.DocumentAiModels.StatementInvoice(7,2,values,"old note");
 		var edit = new models.DocumentAiModels.StatementInvoiceEdit(original,date,null,-13550L,"corrected");
 		var service = new DocumentAiService(rest,new Properties());
-		service.completeStatement(17,7,new models.DocumentAiModels.StatementCompletion(List.of(edit)));
+		service.completeStatement(17,7,new models.DocumentAiModels.StatementCompletion(List.of(edit),
+				List.of(new models.DocumentAiModels.StatementInvoiceSelection(101,3,values,original))));
 		assertEquals(timeout ? 2 : 1,requests.size());
 	}
 

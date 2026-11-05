@@ -90,6 +90,19 @@ class InvoiceReconcilerTest {
 		assertEquals(printed, result.getScanned().invoiceNo());
 	}
 
+	@ParameterizedTest
+	@ValueSource(strings = {"74339273", "74339273 RI"})
+	void octoberTwentiethInvoiceAcceptsTheOneCentDifferenceShownInZOffice(String reference) {
+		var scanned = new ScannedInvoice("invoice.pdf", "CH2", reference, LocalDate.of(2026, 10, 20), null,
+				ScannedInvoice.DocumentType.INVOICE, 32129, .99);
+		var expected = imported("ParagonCare CH2", "74339273", 321.30);
+		var result = reconcile(scanned, List.of(expected));
+		assertEquals(InvoiceReconciliation.Status.WITHIN_TOLERANCE, result.getStatus());
+		assertTrue(result.isAccepted());
+		assertTrue(result.hasExpectedAmount());
+		assertEquals("-$0.01", result.getVarianceString());
+	}
+
 	@Test
 	void screenshotInvoiceMatchesTheCombinedZOfficeSupplierLabel() {
 		var date = LocalDate.of(2026, 10, 1);

@@ -104,4 +104,46 @@ class StatementReconcilerTest {
         assertEquals(NEEDS_REVIEW, StatementReconciler.reconcile(List.of(uncertain), List.of(entered), 0).getFirst().getStatus());
         assertEquals(NEEDS_REVIEW, StatementReconciler.reconcile(List.of(row("Supplier", "", 100)), List.of(entered), 0).getFirst().getStatus());
     }
+
+    @Test void explicitSelectionResolvesCandidatesWithoutChangingStatementEvidence() {
+        var statement = row("CH2", "74399655", 1223);
+        var exact = row("CH2", "74399655", 1300);
+        var alternative = row("CH2", "74399655 RI", 1223);
+        var candidates = List.of(exact, alternative);
+        assertEquals(AMBIGUOUS, StatementReconciler.reconcile(List.of(statement), candidates, 0).getFirst().getStatus());
+        var result = StatementReconciler.reconcile(List.of(statement), candidates, 0, java.util.Map.of(0, alternative)).getFirst();
+        assertEquals(MATCHED, result.getStatus());
+        assertEquals("74399655 RI", result.getImported().getInvoiceNo());
+        assertSame(statement, result.getScanned());
+        assertEquals("$0.00", result.getVarianceString());
+    }
+
+    @Test void repeatedStatementReferencesCanChooseDistinctEntriesButCannotReuseOneInvoice() {
+        var statement = row("Supplier", "123", 100);
+        var first = row("Supplier", "INV-123", 100);
+        var second = row("Supplier", "123 RI", 100);
+        var rows = List.of(statement, statement);
+        var entered = List.of(first, second);
+        assertTrue(StatementReconciler.reconcile(rows, entered, 0, java.util.Map.of(0, first, 1, second))
+                .stream().allMatch(result -> result.getStatus() == MATCHED));
+        assertTrue(StatementReconciler.reconcile(rows, entered, 0, java.util.Map.of(0, first, 1, first))
+                .stream().allMatch(result -> result.getStatus() == AMBIGUOUS));
+    }
+
+    @Test void choosingAReferenceCannotHideDuplicateSavedRecordsOrSelectAnotherSupplier() {
+        var statement = row("Supplier", "123", 100);
+        assertEquals(AMBIGUOUS, StatementReconciler.reconcile(List.of(statement), List.of(statement, statement), 0,
+                java.util.Map.of(0, statement)).getFirst().getStatus());
+        assertEquals(MISSING_SCANNED_INVOICE, StatementReconciler.reconcile(List.of(statement), List.of(statement), 0,
+                java.util.Map.of(0, row("Other", "123", 100))).getFirst().getStatus());
+    }
+
+    @Test void explicitChoicesKeepPunctuationVariantsDistinctAndStillWaitForPendingInvoices() {
+        var first = row("Supplier", "INV-123", 100);
+        var second = row("Supplier", "INV123", 100);
+        assertTrue(StatementReconciler.reconcile(List.of(first, first), List.of(first, second), 0,
+                java.util.Map.of(0, first, 1, second)).stream().allMatch(result -> result.getStatus() == MATCHED));
+        assertEquals(WAITING_FOR_INVOICES, StatementReconciler.reconcile(List.of(first), List.of(first, second), 1,
+                java.util.Map.of(0, first)).getFirst().getStatus());
+    }
 }

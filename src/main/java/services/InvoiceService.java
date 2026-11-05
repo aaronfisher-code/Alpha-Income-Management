@@ -143,6 +143,18 @@ public class InvoiceService {
         return loadReviewChunks(rows, chunk -> getInvoiceAmountsForReview(storeId, chunk), progress);
     }
 
+    /** Fresh exact-reference lookups in the same bounded chunks used by ordinary review. */
+    public List<Invoice> refreshInvoiceAmountsForReview(int storeId, List<ScannedInvoice> rows) {
+        return loadReviewChunks(rows, chunk -> invoiceAmountRequest(
+                (hasCredits(chunk) ? "/reconciliation/documents/refresh-batch" : "/reconciliation/refresh-batch")
+                        + "?storeId=" + storeId, chunk), (completed, total) -> {});
+    }
+
+    public List<Invoice> refreshInvoiceAmountsForReview(int storeId, List<ScannedInvoice> rows,
+            BiConsumer<Integer, Integer> progress) {
+        return loadReviewChunks(rows, chunk -> refreshInvoiceAmountsForReview(storeId, chunk), progress);
+    }
+
     private List<Invoice> loadReviewChunks(List<ScannedInvoice> rows,
             Function<List<ScannedInvoice>, List<Invoice>> fetch, BiConsumer<Integer, Integer> progress) {
         List<ScannedInvoice> requested = rows.stream().filter(row -> !row.invoiceNo().isBlank()).distinct().toList();

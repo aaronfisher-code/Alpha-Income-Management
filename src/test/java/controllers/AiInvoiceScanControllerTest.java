@@ -188,8 +188,9 @@ class AiInvoiceScanControllerTest {
 		}
 	}
 
-	@Test
-	void reviewAllRefreshesItsSnapshotAndCompletesEverySourceBatchDespiteOneFilingFailure() throws Exception {
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void reviewAllRefreshesItsSnapshotAndCompletesEverySourceBatchDespiteOneFilingFailure(boolean freshAmounts) throws Exception {
 		var opened = new CountDownLatch(1);
 		var stopped = new CountDownLatch(1);
 		var queueLoaded = new CountDownLatch(1);
@@ -220,7 +221,12 @@ class AiInvoiceScanControllerTest {
 				onFxThread(() -> {
 					var controller = controller(); holder[0] = controller;
 					configureReconciliation(controller, new InvoiceService() {
-						@Override public List<Invoice> getInvoiceAmountsForReview(int store, List<ScannedInvoice> rows) { return List.of(); }
+						@Override public List<Invoice> getInvoiceAmountsForReview(int store, List<ScannedInvoice> rows) {
+							assertFalse(freshAmounts); return List.of();
+						}
+						@Override public List<Invoice> refreshInvoiceAmountsForReview(int store, List<ScannedInvoice> rows) {
+							assertTrue(freshAmounts); assertEquals(1, store); return List.of();
+						}
 						@Override public void saveOrUpdateInvoice(Invoice invoice, String original, int supplier) {
 							savedReferences.add(invoice.getInvoiceNo());
 						}
@@ -259,7 +265,11 @@ class AiInvoiceScanControllerTest {
 					ObservableList<BatchSummary> queue = field(controller, "queuedBatches"); queue.setAll(details.getFirst().batch());
 					javafx.scene.layout.VBox results = field(controller, "resultsView");
 					results.visibleProperty().addListener((_, _, visible) -> { if (visible) opened.countDown(); });
-					invoke(controller, "reviewAll");
+					if (freshAmounts) {
+						invoke(controller, "updateQueueVisualState");
+						Button refreshAll = field(controller, "refreshAllAmountsButton");
+						assertFalse(refreshAll.isDisabled()); refreshAll.fire(); assertTrue(refreshAll.isDisabled());
+					} else invoke(controller, "reviewAll");
 				});
 				assertTrue(opened.await(5, TimeUnit.SECONDS));
 				onFxThread(() -> {
@@ -1920,12 +1930,13 @@ class AiInvoiceScanControllerTest {
 			Button reviewAll = field(controller, "reviewAllButton");
 			assertEquals("Review all invoices (1)", reviewAll.getText());
 			assertFalse(reviewAll.isDisabled());
+			Button refreshAll = field(controller, "refreshAllAmountsButton"); assertFalse(refreshAll.isDisabled());
 			assertEquals(List.of(queue.getFirst()), invoke(controller, "readyInvoiceBatches"));
 			queue.removeFirst();
 			invoke(controller, "updateQueueVisualState");
 			assertEquals(List.of(), invoke(controller, "readyInvoiceBatches"));
 			assertEquals("Review all invoices", reviewAll.getText());
-			assertTrue(reviewAll.isDisabled());
+			assertTrue(reviewAll.isDisabled()); assertTrue(refreshAll.isDisabled());
 
 			invoke(controller, "showLoadedBatches", List.class,
 					List.of(loaded(1, 101, BatchKind.INVOICE_BATCH, List.of(scanned("INV-1", 10000)), null)));
@@ -2017,9 +2028,161 @@ class AiInvoiceScanControllerTest {
 		});
 	}
 
+	@Test
+	void ambiguousStatementDialogCanCancelChooseAndSaveTheSelectedInvoiceWithEdits() throws Exception {
+		var saved = new CountDownLatch(1); var refreshed = new CountDownLatch(1);
+		var requests = new CopyOnWriteArrayList<StatementCompletion>();
+		AiInvoiceScanController[] holder = new AiInvoiceScanController[1];
+		try (var workers = Executors.newSingleThreadExecutor()) {
+			try {
+				onFxThread(() -> {
+					var controller = controller(); holder[0] = controller;
+					configureReconciliation(controller, new InvoiceService()); setField(controller, "executor", workers);
+					setField(controller, "parent", new InvoiceEntryController() {
+						{ dialogPane = new com.dlsc.gemsfx.DialogPane(); }
+						@Override public void fillInvoiceTable() {}
+						@Override public void fillCreditTable() {}
+					});
+					var source = scanned("74399655", 1223);
+					var first = new StatementInvoice(0, 0, scanned("74399655", 1223), "First invoice");
+					var second = new StatementInvoice(0, 0, scanned("74399655 RI", 1300), "Second invoice");
+					setField(controller, "documentAiService", documentService((url, entity) -> {
+						if (url.contains("/statement-comparison")) return new StatementComparison(List.of(first.values(), second.values()), 0, List.of(first, second));
+						if (url.contains("/complete-statement")) {
+							requests.add(assertInstanceOf(StatementCompletion.class, entity.getBody())); saved.countDown(); return null;
+						}
+						assertTrue(url.endsWith("/review-queue")); refreshed.countDown(); return "[]";
+					}));
+					loadStatementReview(controller, List.of(source));
+					ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
+					assertEquals(InvoiceReconciliation.Status.AMBIGUOUS, rows.getFirst().getStatus());
+					invoke(controller, "review", InvoiceReconciliation.class, rows.getFirst());
+				});
+				onFxThread(() -> {
+					var controller = holder[0];
+					StatementInvoiceMatchDialog dialog = field(controller, "statementMatchDialog");
+					assertNotNull(dialog); assertTrue(dialog.isShowing());
+					var table = matchCandidates(dialog); assertEquals(2, table.getItems().size());
+					assertEquals("74399655 RI", table.getItems().get(1).values().invoiceNo());
+					assertTrue(matchConfirm(dialog).isDisabled(), "The reviewer must explicitly select a candidate");
+					dialog.close();
+					Map<ScannedInvoice, StatementInvoiceSelection> selections = field(controller, "statementSelections"); assertTrue(selections.isEmpty());
+					ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
+					assertEquals(InvoiceReconciliation.Status.AMBIGUOUS, rows.getFirst().getStatus());
+					Button choose = field(controller, "chooseStatementInvoiceButton"); choose.fire();
+					dialog = field(controller, "statementMatchDialog");
+					matchCandidates(dialog).getSelectionModel().select(1);
+					assertFalse(matchConfirm(dialog).isDisabled()); matchConfirm(dialog).fire();
+					assertEquals(InvoiceReconciliation.Status.NEEDS_REVIEW, rows.getFirst().getStatus());
+					TextField reference = field(controller, "reviewReferenceField"); assertEquals("74399655 RI", reference.getText());
+					TextField amount = field(controller, "reviewAmountField"); assertEquals("13.00", amount.getText());
+					assertFalse(amount.isDisabled()); amount.setText("12.23");
+					invoke(controller, "acceptReview");
+					assertEquals("74399655", rows.getFirst().getScanned().invoiceNo(), "Selecting a match must preserve the statement evidence");
+					assertEquals(InvoiceReconciliation.Status.ACCEPTED, rows.getFirst().getStatus());
+					invoke(controller, "review", InvoiceReconciliation.class, rows.getFirst());
+					choose.fire(); dialog = field(controller, "statementMatchDialog");
+					matchCandidates(dialog).getSelectionModel().select(0); matchConfirm(dialog).fire();
+					Map<ScannedInvoice, StatementInvoiceEdit> drafts = field(controller, "statementInvoiceEdits");
+					assertTrue(drafts.isEmpty(), "Changing the selected invoice must clear edits to the previous invoice");
+					assertEquals("74399655", reference.getText());
+					choose.fire(); dialog = field(controller, "statementMatchDialog");
+					matchCandidates(dialog).getSelectionModel().select(1); matchConfirm(dialog).fire();
+					amount.setText("12.23"); invoke(controller, "acceptReview");
+					assertTrue(requests.isEmpty(), "The choice and edits stay local until statement completion");
+					invoke(controller, "saveAccepted");
+				});
+				assertTrue(saved.await(5, TimeUnit.SECONDS)); assertTrue(refreshed.await(5, TimeUnit.SECONDS));
+				workers.submit(() -> {}).get(5, TimeUnit.SECONDS);
+				var completion = requests.getFirst(); assertEquals(1, completion.selections().size());
+				var choice = completion.selections().getFirst();
+				assertEquals(101, choice.statementDocumentId()); assertEquals(0, choice.statementRowIndex());
+				assertEquals("74399655", choice.statementValues().invoiceNo());
+				assertEquals("74399655 RI", choice.invoice().values().invoiceNo());
+				assertEquals("74399655 RI", completion.edits().getFirst().original().values().invoiceNo());
+				assertEquals(1223L, completion.edits().getFirst().amountCents());
+			} finally { if (holder[0] != null) onFxThread(holder[0]::dispose); }
+		}
+	}
+
+	@ParameterizedTest @ValueSource(booleans = {false, true})
+	void ambiguousDialogExplainsDuplicateSavedEntriesAndRepeatedStatementRows(boolean duplicateStatement) throws Exception {
+		AiInvoiceScanController[] holder = new AiInvoiceScanController[1];
+		try {
+			onFxThread(() -> {
+				var controller = controller(); holder[0] = controller; configureReconciliation(controller, new InvoiceService());
+				var source = scanned("74399655", 1223); var invoice = new StatementInvoice(0, 0, source, "");
+				var candidates = duplicateStatement ? List.of(invoice) : List.of(invoice, invoice);
+				setField(controller, "documentAiService", documentService(url ->
+						new StatementComparison(candidates.stream().map(StatementInvoice::values).toList(), 0, candidates)));
+				loadStatementReview(controller, duplicateStatement ? List.of(source, source) : List.of(source));
+				ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
+				invoke(controller, "review", InvoiceReconciliation.class, rows.getFirst());
+			});
+			onFxThread(() -> {
+				StatementInvoiceMatchDialog dialog = field(holder[0], "statementMatchDialog"); assertNotNull(dialog);
+				matchCandidates(dialog).getSelectionModel().selectFirst();
+				assertTrue(matchConfirm(dialog).isDisabled());
+				Label explanation = (Label) dialog.getDialogPane().lookup("#statement-match-explanation");
+				assertTrue(explanation.getText().contains(duplicateStatement ? "Another statement row" : "Multiple saved entries"));
+			});
+		} finally { if (holder[0] != null) onFxThread(holder[0]::dispose); }
+	}
+
+	@SuppressWarnings("unchecked")
+	private static TableView<StatementInvoice> matchCandidates(StatementInvoiceMatchDialog dialog) {
+		return (TableView<StatementInvoice>) dialog.getDialogPane().lookup("#statement-match-candidates");
+	}
+
+	private static Button matchConfirm(StatementInvoiceMatchDialog dialog) {
+		return (Button) dialog.getDialogPane().lookupButton(dialog.getDialogPane().getButtonTypes().getFirst());
+	}
+
+	private static void loadStatementReview(AiInvoiceScanController controller, List<ScannedInvoice> source) throws Exception {
+		var summary = new BatchSummary(17, BatchKind.STATEMENT, BatchStatus.REVIEW_REQUIRED, "Statement", 1, source.size(), null, null);
+		var detail = new BatchDetail(summary, List.of(new ExtractedDocument(101, "statement.pdf", source, List.of(), DATE.withDayOfMonth(1), DATE.withDayOfMonth(30), null, null, null)));
+		Method load = AiInvoiceScanController.class.getDeclaredMethod("loadBatch", BatchDetail.class, List.class); load.setAccessible(true);
+		invoke(controller, "showLoadedBatches", List.class, List.of(load.invoke(controller, detail, List.of(new InvoiceSupplier(1, "Supplier", 1)))));
+	}
+
+	@Test
+	void septemberInvoice73906962MatchesSavedAmountWithoutPdfOrZOfficeLookup() throws Exception {
+		onFxThread(() -> {
+			var controller = controller();
+			try {
+				configureReconciliation(controller, new InvoiceService() {
+					@Override public List<Invoice> getInvoiceAmountsForReview(int store, List<ScannedInvoice> rows) {
+						throw new AssertionError("Statement comparison must use saved Alpha amounts");
+					}
+				});
+				var source = new ScannedInvoice("statement.pdf", "CH2", "73906962", LocalDate.of(2026, 9, 1), null,
+						ScannedInvoice.DocumentType.INVOICE, 250537, .99);
+				var saved = new ScannedInvoice("", "CH2", "73906962", source.invoiceDate(), LocalDate.of(2026, 10, 25),
+						ScannedInvoice.DocumentType.INVOICE, 250537, (Double) null);
+				setField(controller, "documentAiService", documentService(url ->
+						new StatementComparison(List.of(saved), 0, List.of(new StatementInvoice(0, 0, saved, "September entry")))));
+				var summary = new BatchSummary(17, BatchKind.STATEMENT, BatchStatus.REVIEW_REQUIRED, "Statement", 1, 1, null, null);
+				var detail = new BatchDetail(summary, List.of(new ExtractedDocument(101, "statement.pdf", List.of(source), List.of(),
+						LocalDate.of(2026, 7, 1), LocalDate.of(2026, 10, 31), 250537L, .99, null)));
+				Method load = AiInvoiceScanController.class.getDeclaredMethod("loadBatch", BatchDetail.class, List.class);
+				load.setAccessible(true);
+				invoke(controller, "showLoadedBatches", List.class, List.of(load.invoke(controller, detail, List.of(new InvoiceSupplier(1, "CH2", 1)))));
+				ObservableList<InvoiceReconciliation> rows = field(controller, "allResults");
+				assertEquals(InvoiceReconciliation.Status.MATCHED, rows.getFirst().getStatus());
+				assertEquals("$0.00", rows.getFirst().getVarianceString());
+				assertEquals(2505.37, rows.getFirst().getImported().getImportedInvoiceAmount());
+				assertEquals(List.of(), invoke(controller, "buildPendingSaves"));
+				invoke(controller, "review", InvoiceReconciliation.class, rows.getFirst());
+				TextField amount = field(controller, "reviewAmountField"); assertFalse(amount.isDisabled());
+				Button pdfToggle = field(controller, "toggleStatementPdfButton"); assertTrue(pdfToggle.isDisabled());
+				assertTrue(pdfToggle.getTooltip().getText().contains("no linked scanned PDF"));
+			} finally { controller.dispose(); }
+		});
+	}
+
 	@ParameterizedTest
-	@ValueSource(booleans = {false, true})
-	void statementInvoiceEditsAreDraftedThenSentToTheirOriginalEntryOnFinalSave(boolean credit) throws Exception {
+	@CsvSource({"false,7", "true,7", "false,0", "true,0"})
+	void statementInvoiceEditsAreDraftedThenSentToTheirOriginalEntryOnFinalSave(boolean credit, long documentId) throws Exception {
 		var saved = new CountDownLatch(1); var refreshed = new CountDownLatch(1);
 		var requests = new CopyOnWriteArrayList<StatementCompletion>();
 		var tableRefreshes = new AtomicInteger();
@@ -2040,7 +2203,7 @@ class AiInvoiceScanControllerTest {
 						@Override public void fillCreditTable() { tableRefreshes.incrementAndGet(); }
 					});
 					var source = scanned(credit ? "C1" : "INV-1", credit ? -10000 : 10000);
-					var original = new StatementInvoice(7,2,scanned(source.invoiceNo(),credit ? -12000 : 12000),"original note");
+					var original = new StatementInvoice(documentId,documentId == 0 ? 0 : 2,scanned(source.invoiceNo(),credit ? -12000 : 12000),"original note");
 					setField(controller,"documentAiService",documentService((url,entity) -> {
 						if (url.contains("/statement-comparison")) return new StatementComparison(List.of(original.values()),0,List.of(original));
 						if (url.contains("/complete-statement?")) {
@@ -2057,6 +2220,8 @@ class AiInvoiceScanControllerTest {
 					ObservableList<InvoiceReconciliation> rows = field(controller,"allResults");
 					invoke(controller,"review",InvoiceReconciliation.class,rows.getFirst());
 					TextField amount = field(controller,"reviewAmountField"); assertFalse(amount.isDisabled()); assertEquals("120.00",amount.getText());
+					Button pdfToggle = field(controller,"toggleStatementPdfButton");
+					assertEquals(documentId == 0, pdfToggle.isDisabled(), "Editing a saved entry does not require a source PDF");
 					TextField reference = field(controller,"reviewReferenceField"); assertTrue(reference.isDisabled());
 					amount.setText("135.50");
 					javafx.scene.control.DatePicker date = field(controller,"reviewDateField"); date.setValue(DATE.minusDays(1));
@@ -2074,7 +2239,7 @@ class AiInvoiceScanControllerTest {
 				workers.submit(() -> {}).get(5,TimeUnit.SECONDS);
 				onFxThread(() -> {
 					assertEquals(1,requests.size()); var edit = requests.getFirst().edits().getFirst();
-					assertEquals(7,edit.original().documentId()); assertEquals(2,edit.original().rowIndex());
+					assertEquals(documentId,edit.original().documentId()); assertEquals(documentId == 0 ? 0 : 2,edit.original().rowIndex());
 					assertEquals(credit ? -13550L : 13550L,edit.amountCents()); assertEquals(DATE.minusDays(1),edit.invoiceDate());
 					assertEquals("corrected note",edit.notes()); assertEquals(2,tableRefreshes.get());
 				});

@@ -46,6 +46,20 @@ class InvoiceServiceTest {
     }
 
     @Test
+    void freshMixedDocumentsUseTheTypedBatchEndpointAndFailuresArePropagated() {
+        var rest = new RestTemplate();
+        rest.getInterceptors().add((request, body, execution) -> {
+            assertEquals("/invoices/reconciliation/documents/refresh-batch", request.getURI().getPath());
+            throw new java.io.IOException("agent unavailable");
+        });
+        var props = new Properties(); props.setProperty("api.base.url", "https://example.invalid");
+        var credit = new models.ScannedInvoice("credit.pdf", "Supplier", "CR-1", java.time.LocalDate.of(2026, 9, 10), null,
+                models.ScannedInvoice.DocumentType.CREDIT, -10000, .99);
+        assertThrows(org.springframework.web.client.ResourceAccessException.class,
+                () -> new InvoiceService(rest, props).refreshInvoiceAmountsForReview(7, List.of(credit)));
+    }
+
+    @Test
     void requestsAllReconciliationRowsWithStoreMonthAndAuthentication() {
         List<String> paths = new ArrayList<>();
         var invoices = service(HttpStatus.OK, paths).getReconciliationTableData(7, YearMonth.of(2026, 9));
@@ -70,13 +84,14 @@ class InvoiceServiceTest {
         assertEquals(1, paths.size());
     }
 
-    @Test
-    void fiveHundredRowsAreBatchedAndDuplicateResponsesRemainUnambiguous() throws Exception {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void fiveHundredRowsAreBatchedAndDuplicateResponsesRemainUnambiguous(boolean fresh) throws Exception {
         var mapper = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
         RestTemplate rest = new RestTemplate();
         List<Integer> sizes = java.util.Collections.synchronizedList(new ArrayList<>());
         rest.getInterceptors().add((request, body, execution) -> {
-            assertEquals("/invoices/reconciliation/resolve", request.getURI().getPath());
+            assertEquals(fresh ? "/invoices/reconciliation/refresh-batch" : "/invoices/reconciliation/resolve", request.getURI().getPath());
             var requested = mapper.readTree(body);
             sizes.add(requested.size());
             assertTrue(requested.size() <= 50);
@@ -96,7 +111,12 @@ class InvoiceServiceTest {
         // A different source PDF can contain the same reference in a later HTTP chunk.
         scanned.set(499, new models.ScannedInvoice("another.pdf", "Supplier", "INV0", java.time.LocalDate.of(2026, 9, 10),
                 null, models.ScannedInvoice.DocumentType.INVOICE, 10000, 0.99));
-        assertEquals(499, service.getInvoiceAmountsForReview(7, scanned).size());
+        var progress = new ArrayList<Integer>();
+        var results = fresh ? service.refreshInvoiceAmountsForReview(7, scanned, (done, total) -> {
+            assertEquals(500, total); progress.add(done);
+        }) : service.getInvoiceAmountsForReview(7, scanned);
+        assertEquals(499, results.size());
+        if (fresh) { assertEquals(0, progress.getFirst()); assertEquals(500, progress.getLast()); }
         assertEquals(10, sizes.size());
         assertTrue(service.getInvoiceAmountsForReview(7, List.of()).isEmpty());
         assertEquals(10, sizes.size());

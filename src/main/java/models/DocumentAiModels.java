@@ -34,13 +34,21 @@ public final class DocumentAiModels {
         public EnteredDocument(long documentId, LocalDate invoiceDate) { this(documentId, invoiceDate, List.of()); }
         public EnteredDocument { rows = rows == null ? List.of() : List.copyOf(rows); }
     }
+    /** documentId=0 and rowIndex=0 identify a saved entry without a linked scanned PDF. */
     public record StatementInvoice(long documentId, int rowIndex, ScannedInvoice values, String notes) {
         public StatementInvoice { notes = notes == null ? "" : notes; }
     }
     public record StatementInvoiceEdit(StatementInvoice original, LocalDate invoiceDate,
             LocalDate dueDate, Long amountCents, String notes) {}
-    public record StatementCompletion(List<StatementInvoiceEdit> edits) {
-        public StatementCompletion { edits = edits == null ? List.of() : List.copyOf(edits); }
+    /** Explicit match for an immutable statement PDF row; draft until final completion. */
+    public record StatementInvoiceSelection(long statementDocumentId, int statementRowIndex,
+            ScannedInvoice statementValues, StatementInvoice invoice) {}
+    public record StatementCompletion(List<StatementInvoiceEdit> edits, List<StatementInvoiceSelection> selections) {
+        public StatementCompletion(List<StatementInvoiceEdit> edits) { this(edits, List.of()); }
+        public StatementCompletion {
+            edits = edits == null ? List.of() : List.copyOf(edits);
+            selections = selections == null ? List.of() : List.copyOf(selections);
+        }
     }
     public record StatementComparison(List<ScannedInvoice> enteredRows, int pendingDocuments, List<StatementInvoice> enteredInvoices) {
         public StatementComparison(List<ScannedInvoice> enteredRows, int pendingDocuments) { this(enteredRows, pendingDocuments, List.of()); }

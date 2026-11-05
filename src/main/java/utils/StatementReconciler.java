@@ -6,12 +6,18 @@ import models.ScannedInvoice;
 import java.util.*;
 import static models.InvoiceReconciliation.Status.*;
 
-/** Compares statement rows only with values entered from independent invoice/credit PDFs. */
+/** Compares statement rows with saved Alpha invoice/credit values; PDF provenance is optional. */
 public final class StatementReconciler {
     private StatementReconciler() {}
 
     public static List<InvoiceReconciliation> reconcile(List<ScannedInvoice> statement,
             List<ScannedInvoice> entered, int pendingDocuments) {
+        return reconcile(statement, entered, pendingDocuments, Map.of());
+    }
+
+    /** Choices narrow eligible candidates; they never permit one saved entry to be used twice. */
+    public static List<InvoiceReconciliation> reconcile(List<ScannedInvoice> statement,
+            List<ScannedInvoice> entered, int pendingDocuments, Map<Integer, ScannedInvoice> selections) {
         Map<String, List<ScannedInvoice>> entries = new HashMap<>();
         entered.forEach(row -> entries.computeIfAbsent(key(row), ignored -> new ArrayList<>()).add(row));
         Map<String, List<ScannedInvoice>> byNumber = new HashMap<>();
@@ -20,9 +26,15 @@ public final class StatementReconciler {
                 .forEach(row -> byNumber.computeIfAbsent(numberKey(row), ignored -> new ArrayList<>()).add(row));
         Map<String, Long> occurrences = statement.stream().collect(java.util.stream.Collectors.groupingBy(
                 StatementReconciler::key, java.util.stream.Collectors.counting()));
-        var matches = statement.stream().map(row -> candidates(row, entries, byNumber)).toList();
-        Map<ScannedInvoice, Integer> uses = new HashMap<>();
-        matches.stream().filter(rows -> rows.size() == 1).forEach(rows -> uses.merge(rows.getFirst(), 1, Integer::sum));
+        List<List<ScannedInvoice>> matches = new ArrayList<>();
+        for (int index = 0; index < statement.size(); index++) {
+            var options = candidates(statement.get(index), entries, byNumber);
+            var selection = selections.get(index);
+            matches.add(selection == null ? options : options.stream()
+                    .filter(option -> entryKey(option).equals(entryKey(selection))).toList());
+        }
+        Map<String, Integer> uses = new HashMap<>();
+        matches.stream().filter(rows -> rows.size() == 1).forEach(rows -> uses.merge(entryKey(rows.getFirst()), 1, Integer::sum));
         List<InvoiceReconciliation> results = new ArrayList<>();
         for (int index = 0; index < statement.size(); index++) {
             ScannedInvoice row = statement.get(index);
@@ -31,7 +43,8 @@ public final class StatementReconciler {
             Long variance = null;
             InvoiceReconciliation.Status status;
             if (row.supplierName().isBlank() || row.invoiceNo().isBlank()) status = NEEDS_REVIEW;
-            else if (occurrences.get(key(row)) > 1 || candidates.size() > 1 || candidates.size() == 1 && uses.get(candidates.getFirst()) > 1) status = AMBIGUOUS;
+            else if ((!selections.containsKey(index) && occurrences.get(key(row)) > 1) || candidates.size() > 1
+                    || candidates.size() == 1 && uses.get(entryKey(candidates.getFirst())) > 1) status = AMBIGUOUS;
             else if (candidates.isEmpty()) status = MISSING_SCANNED_INVOICE;
             else {
                 ScannedInvoice invoice = candidates.getFirst();
@@ -55,6 +68,23 @@ public final class StatementReconciler {
             results.add(new InvoiceReconciliation(status, row, expected, variance));
         }
         return List.copyOf(results);
+    }
+
+    /** Exact saved reference identity, keeping punctuation variants separate for explicit selection. */
+    public static String entryKey(ScannedInvoice row) {
+        return InvoiceReconciler.supplier(row.supplierName()) + ":" + row.documentType() + ":" + row.invoiceNo().toUpperCase(Locale.ROOT);
+    }
+
+    public static List<ScannedInvoice> candidates(ScannedInvoice row, List<ScannedInvoice> entered) {
+        Map<String, List<ScannedInvoice>> exact = new HashMap<>(), numbers = new HashMap<>();
+        for (var invoice : entered) {
+            exact.computeIfAbsent(key(invoice), ignored -> new ArrayList<>()).add(invoice);
+            if (invoice.documentType() == ScannedInvoice.DocumentType.INVOICE
+                    && !InvoiceReconciler.numericReference(invoice.invoiceNo()).isBlank()) {
+                numbers.computeIfAbsent(numberKey(invoice), ignored -> new ArrayList<>()).add(invoice);
+            }
+        }
+        return candidates(row, exact, numbers);
     }
 
     private static boolean confident(Double value) {

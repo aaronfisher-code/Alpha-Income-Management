@@ -58,6 +58,7 @@ import models.DocumentAiModels.EnteredDocument;
 import models.DocumentAiModels.StatementInvoice;
 import models.DocumentAiModels.StatementInvoiceEdit;
 import models.DocumentAiModels.StatementCompletion;
+import models.DocumentAiModels.StatementInvoiceSelection;
 import services.InvoiceService;
 import services.InvoiceSupplierService;
 import services.CreditService;
@@ -177,10 +178,12 @@ public final class AiInvoiceScanController extends Controller {
 	@FXML private TextArea reviewNotesField;
 	@FXML private Button reviewBackButton;
 	@FXML private Button reviewAcceptButton;
+	@FXML private Button chooseStatementInvoiceButton;
 	@FXML private VBox queueView;
 	@FXML private TableView<BatchSummary> queueTable;
 	@FXML private Button refreshQueueButton;
 	@FXML private Button reviewAllButton;
+	@FXML private Button refreshAllAmountsButton;
 	@FXML private Label combinedReviewHint;
 	@FXML private Button resultsBackButton;
 	@FXML private HBox reviewBatchControls;
@@ -192,6 +195,12 @@ public final class AiInvoiceScanController extends Controller {
 	private final Map<ScannedInvoice, AcceptedDocument> acceptedDocuments = new IdentityHashMap<>();
 	private final Map<ScannedInvoice, StatementInvoice> statementInvoicesByRow = new IdentityHashMap<>();
 	private final Map<ScannedInvoice, StatementInvoiceEdit> statementInvoiceEdits = new IdentityHashMap<>();
+	private final Map<ScannedInvoice, List<StatementInvoice>> statementCandidatesByRow = new IdentityHashMap<>();
+	private final Map<ScannedInvoice, StatementInvoiceSelection> statementSelections = new IdentityHashMap<>();
+	private final Map<ScannedInvoice, Integer> statementRowIndices = new IdentityHashMap<>();
+	private List<ScannedInvoice> statementEnteredRows = List.of();
+	private int statementPendingDocuments;
+	private StatementInvoiceMatchDialog statementMatchDialog;
 	private final Map<ScannedInvoice, AcceptedDocument> pendingEdits = new IdentityHashMap<>();
 	private final Map<ScannedInvoice, String> customSupplierDrafts = new IdentityHashMap<>();
 	private final Map<Long, List<RetainedApproval>> retainedApprovals = new HashMap<>();
@@ -483,13 +492,22 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	@FXML
+	private void refreshAllAmounts() {
+		reviewAll(true);
+	}
+
+	@FXML
 	private void reviewAll() {
+		reviewAll(false);
+	}
+
+	private void reviewAll(boolean freshAmounts) {
 		if (queueBusy || commitBusy) return;
 		// Include batches that became ready since the last five-second queue refresh.
 		loadQueue(true, () -> {
 			if (disposed) return;
 			List<BatchSummary> ready = readyInvoiceBatches();
-			if (!ready.isEmpty()) openBatches(ready);
+			if (!ready.isEmpty()) openBatches(ready, freshAmounts);
 		});
 	}
 
@@ -500,11 +518,18 @@ public final class AiInvoiceScanController extends Controller {
 	}
 
 	private void openBatches(List<BatchSummary> batches) {
+		openBatches(batches, false);
+	}
+
+	private void openBatches(List<BatchSummary> batches, boolean freshAmounts) {
 		statementInvoicesByRow.clear();
 		statementInvoiceEdits.clear();
+		statementCandidatesByRow.clear(); statementSelections.clear(); statementRowIndices.clear();
+		statementEnteredRows = List.of(); statementPendingDocuments = 0;
+		if (statementMatchDialog != null) statementMatchDialog.close();
 		lastSavedReviewBatchIds = Set.of();
 		if (pdfCache != null) pdfCache.stopPrefetch();
-		setQueueBusy(true, "Loading invoice and reconciliation data…");
+		setQueueBusy(true, freshAmounts ? "Refreshing Z-Office amounts for all ready invoice batches…" : "Loading invoice and reconciliation data…");
 		reviewLoadProgress.setVisible(true);
 		reviewLoadProgress.setManaged(true);
 		int requestedStoreId = storeId();
@@ -515,7 +540,7 @@ public final class AiInvoiceScanController extends Controller {
 				List<InvoiceSupplier> suppliers = supplierLoad.get();
 				List<LoadedBatch> loaded = new ArrayList<>();
 				List<BatchDetail> details = new ArrayList<>();
-				ReviewLoadContext context = new ReviewLoadContext(requestedStoreId, requestedMonth);
+				ReviewLoadContext context = new ReviewLoadContext(requestedStoreId, requestedMonth, freshAmounts);
 				for (BatchSummary batch : batches) {
 					updateMessage("Loading review documents… " + (details.size() + 1) + " of " + batches.size());
 					BatchDetail detail = documentAiService.batch(batch.id(), requestedStoreId);
@@ -533,7 +558,7 @@ public final class AiInvoiceScanController extends Controller {
 					context.progress = (done, total) -> {
 						int completed = completedBefore + batchRecords - total + done;
 						updateProgress(completed, Math.max(1, totalRecords));
-						updateMessage("Loading document records… " + completed + " of " + totalRecords);
+						updateMessage((freshAmounts ? "Refreshing Z-Office amounts… " : "Loading document records… ") + completed + " of " + totalRecords);
 					};
 					loaded.add(loadBatch(detail, suppliers, context));
 					completedRecords += batchRecords;
@@ -553,7 +578,7 @@ public final class AiInvoiceScanController extends Controller {
 			showLoadedBatches(task.getValue());
 		});
 		task.setOnFailed(_ -> {
-			if (!disposed) queueFailure("Unable to open the review batches", task.getException());
+			if (!disposed) queueFailure(freshAmounts ? "Unable to refresh Z-Office amounts" : "Unable to open the review batches", task.getException());
 		});
 		executor.submit(task);
 	}
@@ -566,13 +591,19 @@ public final class AiInvoiceScanController extends Controller {
 	private static final class ReviewLoadContext {
 		final int storeId;
 		final YearMonth defaultMonth;
+		final boolean freshAmounts;
 		java.util.function.BiConsumer<Integer, Integer> progress = (_, _) -> {};
 		final Set<String> requested = new HashSet<>();
 		final Map<String, List<Invoice>> cachedByReference = new LinkedHashMap<>();
 
 		ReviewLoadContext(int storeId, YearMonth defaultMonth) {
+			this(storeId, defaultMonth, false);
+		}
+
+		ReviewLoadContext(int storeId, YearMonth defaultMonth, boolean freshAmounts) {
 			this.storeId = storeId;
 			this.defaultMonth = defaultMonth;
+			this.freshAmounts = freshAmounts;
 		}
 	}
 
@@ -590,6 +621,7 @@ public final class AiInvoiceScanController extends Controller {
 				ScannedInvoice row = SupplierMatcher.correlate(document.rows().get(index), suppliers);
 				scanned.add(row);
 				documentIds.put(row, document.id());
+				if (batch.kind() == DocumentAiModels.BatchKind.STATEMENT) statementRowIndices.put(row, index);
 				if (index < document.evidenceByRow().size()) locations.put(row, document.evidenceByRow().get(index));
 			}
 			if (document.periodStart() != null) periodStart = document.periodStart();
@@ -606,11 +638,18 @@ public final class AiInvoiceScanController extends Controller {
 			var comparison = documentAiService.statementComparison(batch.id(), context.storeId);
 			List<ScannedInvoice> entered = comparison.enteredRows().stream()
 					.map(row -> SupplierMatcher.correlate(row, suppliers)).toList();
+			statementEnteredRows = entered;
+			statementPendingDocuments = comparison.pendingDocuments();
+			for (var row : scanned) {
+				var eligible = StatementReconciler.candidates(row, entered).stream().map(StatementReconciler::entryKey).collect(java.util.stream.Collectors.toSet());
+				statementCandidatesByRow.put(row, comparison.enteredInvoices().stream()
+						.filter(invoice -> eligible.contains(StatementReconciler.entryKey(SupplierMatcher.correlate(invoice.values(), suppliers)))).toList());
+			}
 			reconciliations = StatementReconciler.reconcile(scanned, entered, comparison.pendingDocuments());
 			for (var row : reconciliations) {
 				if (!row.hasExpectedAmount()) continue;
 				var matches = comparison.enteredInvoices().stream()
-						.filter(invoice -> StatementReconciler.sameDocument(row.getScanned(), SupplierMatcher.correlate(invoice.values(), suppliers))).toList();
+						.filter(invoice -> matchesEnteredReference(row, invoice)).toList();
 				if (matches.size() == 1) statementInvoicesByRow.put(row.getScanned(), matches.getFirst());
 			}
 			context.progress.accept(scanned.size(), scanned.size());
@@ -682,7 +721,7 @@ public final class AiInvoiceScanController extends Controller {
 				+ " invoice batches together. Saving will complete each original batch. Statements are reviewed separately."
 				+ (skipped > 0 ? " " + skipped + " failed or unfinished invoice batch(es) remain in the queue." : "") : "");
 		if (currentResultIsStatement) combinedReviewHint.setText(
-				"Statement rows are compared with entered invoice and credit PDFs. Review a matched row to edit its invoice amount, dates or notes. "
+				"Statement rows are compared with saved invoices and credits. Review an ambiguous row to choose its matching invoice. "
 				+ "Accepted invoice edits are saved when you complete the statement. Reopen waiting statements after invoice entry.");
 		boolean showHint = currentResultIsStatement || invoiceReview && (loaded.size() > 1 || skipped > 0);
 		combinedReviewHint.setVisible(showHint); combinedReviewHint.setManaged(showHint);
@@ -696,6 +735,9 @@ public final class AiInvoiceScanController extends Controller {
 	private void backToQueue() {
 		statementInvoicesByRow.clear();
 		statementInvoiceEdits.clear();
+		statementCandidatesByRow.clear(); statementSelections.clear(); statementRowIndices.clear();
+		statementEnteredRows = List.of(); statementPendingDocuments = 0;
+		if (statementMatchDialog != null) statementMatchDialog.close();
 		if (pdfCache != null) pdfCache.stopPrefetch();
 		previewRequest++;
 		currentReview = null;
@@ -736,8 +778,10 @@ public final class AiInvoiceScanController extends Controller {
 		queueTable.setDisable(queueBusy);
 		long ready = readyInvoiceBatches().size();
 		reviewAllButton.setDisable(queueBusy || commitBusy || ready == 0);
+		refreshAllAmountsButton.setDisable(queueBusy || commitBusy || ready == 0);
 		reviewAllButton.setText(ready == 0 ? "Review all invoices" : "Review all invoices (" + ready + ")");
 		reviewAllButton.setVisible(queueView.isVisible()); reviewAllButton.setManaged(queueView.isVisible());
+		refreshAllAmountsButton.setVisible(queueView.isVisible()); refreshAllAmountsButton.setManaged(queueView.isVisible());
 	}
 
 	private String queueSummary() {
@@ -775,6 +819,7 @@ public final class AiInvoiceScanController extends Controller {
 
 	void dispose() {
 		disposed = true;
+		if (statementMatchDialog != null) statementMatchDialog.close();
 		previewRequest++;
 		if (queueRefreshTimeline != null) queueRefreshTimeline.stop();
 		if (pdfCache != null) pdfCache.close();
@@ -787,7 +832,9 @@ public final class AiInvoiceScanController extends Controller {
 			String key = InvoiceReconciler.supplier(row.supplierName()) + ":" + InvoiceReconciler.lookupKey(row, row.invoiceNo()) + ":" + row.amountCents();
 			if (!row.invoiceNo().isBlank() && context.requested.add(key)) missing.add(row);
 		}
-		List<Invoice> cached = invoiceService.getInvoiceAmountsForReview(context.storeId, missing, context.progress);
+		List<Invoice> cached = context.freshAmounts
+				? invoiceService.refreshInvoiceAmountsForReview(context.storeId, missing, context.progress)
+				: invoiceService.getInvoiceAmountsForReview(context.storeId, missing, context.progress);
 		Map<String, List<Invoice>> groups = cached.stream().filter(Invoice::isImportExists)
 		        .collect(java.util.stream.Collectors.groupingBy(InvoiceReconciler::importKey));
 		InvoiceReconciler.removeLookupRows(context.cachedByReference, missing);
@@ -935,11 +982,14 @@ public final class AiInvoiceScanController extends Controller {
 		toggleStatementPdfButton.setVisible(currentResultIsStatement);
 		toggleStatementPdfButton.setManaged(currentResultIsStatement);
 		StatementInvoice invoice = matchedInvoiceForPreview(row);
-		String document = invoice != null && invoice.values().documentType() == ScannedInvoice.DocumentType.CREDIT ? "credit" : "invoice";
+		StatementInvoice entered = row == null ? null : statementInvoicesByRow.get(row.getScanned());
+		String document = entered != null && entered.values().documentType() == ScannedInvoice.DocumentType.CREDIT ? "credit" : "invoice";
 		toggleStatementPdfButton.setText(viewingMatchedInvoicePdf ? "Show statement PDF" : "Show " + document + " PDF");
 		toggleStatementPdfButton.setDisable(commitBusy || invoice == null && !viewingMatchedInvoicePdf);
 		toggleStatementPdfButton.setTooltip(new Tooltip(invoice == null
-				? "No uniquely matched scanned invoice or credit PDF is available for this statement row."
+				? entered != null && entered.documentId() == 0
+						? "This entered invoice or credit has no linked scanned PDF. You can still review and edit its saved values."
+						: "No uniquely matched scanned invoice or credit PDF is available for this statement row."
 				: "Switch between the statement and its matched invoice or credit PDF. Your draft edits are kept."));
 	}
 
@@ -1245,6 +1295,11 @@ public final class AiInvoiceScanController extends Controller {
 		reviewAcceptButton.setVisible(!currentResultIsStatement || canAcknowledgeStatementRow(row));
 		reviewAcceptButton.setManaged(reviewAcceptButton.isVisible());
 		if (currentResultIsStatement) reviewAcceptButton.setText("Acknowledge difference");
+		boolean canChoose = currentResultIsStatement && (row.getStatus() == InvoiceReconciliation.Status.AMBIGUOUS
+				|| statementSelections.containsKey(scanned) || statementCandidatesByRow.getOrDefault(scanned, List.of()).size() > 1);
+		chooseStatementInvoiceButton.setVisible(canChoose); chooseStatementInvoiceButton.setManaged(canChoose);
+		chooseStatementInvoiceButton.setDisable(commitBusy || amountRefreshBusy || row.getStatus() == InvoiceReconciliation.Status.WAITING_FOR_INVOICES);
+		chooseStatementInvoiceButton.setText(statementSelections.containsKey(scanned) ? "Change matched invoice" : "Choose matching invoice");
 		reviewHelpLabel.setText("Correct the scanned values, then accept this document for the final save.");
 		reviewAmountTitleLabel.setText("Amount ($)");
 		reviewExpectedAmountTitleLabel.setText("Expected amount");
@@ -1280,8 +1335,89 @@ public final class AiInvoiceScanController extends Controller {
 		reviewView.setVisible(true);
 		reviewView.setManaged(true);
 		Platform.runLater(() -> {
-			if (!disposed && currentReview == row) showEvidenceSource(row, viewingMatchedInvoicePdf);
+			if (!disposed && currentReview == row) {
+				showEvidenceSource(row, viewingMatchedInvoicePdf);
+				if (currentResultIsStatement && row.getStatus() == InvoiceReconciliation.Status.AMBIGUOUS) chooseStatementInvoice();
+			}
 		});
+	}
+
+	@FXML
+	private void chooseStatementInvoice() {
+		if (!currentResultIsStatement || currentReview == null || commitBusy || amountRefreshBusy || disposed) return;
+		if (statementMatchDialog != null && statementMatchDialog.isShowing()) return;
+		var row = currentReview;
+		var dialog = new StatementInvoiceMatchDialog(row.getScanned(), statementCandidatesByRow.getOrDefault(row.getScanned(), List.of()),
+				candidate -> statementSelectionProblem(row, candidate));
+		if (resultsTable.getScene() != null && resultsTable.getScene().getWindow() != null) dialog.initOwner(resultsTable.getScene().getWindow());
+		statementMatchDialog = dialog;
+		dialog.setOnHidden(_ -> {
+			statementMatchDialog = null;
+			if (!disposed && dialog.getResult() != null) selectStatementInvoice(row, dialog.getResult());
+		});
+		dialog.show();
+	}
+
+	private Map<Integer, ScannedInvoice> selectedStatementRows() {
+		Map<Integer, ScannedInvoice> selected = new HashMap<>();
+		for (int i = 0; i < allResults.size(); i++) {
+			var choice = statementSelections.get(allResults.get(i).getScanned());
+			if (choice != null) selected.put(i, choice.invoice().values());
+		}
+		return selected;
+	}
+
+	private String statementSelectionProblem(InvoiceReconciliation row, StatementInvoice candidate) {
+		if (statementPendingDocuments > 0) return "Finish the pending supplier invoices, then reopen this statement before choosing a match.";
+		String key = StatementReconciler.entryKey(candidate.values());
+		if (statementCandidatesByRow.getOrDefault(row.getScanned(), List.of()).stream()
+				.filter(invoice -> StatementReconciler.entryKey(invoice.values()).equals(key)).count() != 1) {
+			return "Multiple saved entries have this exact reference. Correct those duplicates before choosing a match.";
+		}
+		int index = resultIndex(allResults, row);
+		if (index < 0) return "This statement row is no longer available. Reopen the statement.";
+		var selected = selectedStatementRows(); selected.put(index, candidate.values());
+		var result = StatementReconciler.reconcile(allResults.stream().map(InvoiceReconciliation::getScanned).toList(),
+				statementEnteredRows, statementPendingDocuments, selected).get(index);
+		return result.getStatus() == InvoiceReconciliation.Status.AMBIGUOUS
+				? "Another statement row would use this same invoice. Each saved invoice can match only one row. Check the statement PDF for repeated rows."
+				: !result.hasExpectedAmount() ? "This invoice is no longer an eligible match. Reopen the statement." : "";
+	}
+
+	private void selectStatementInvoice(InvoiceReconciliation row, StatementInvoice candidate) {
+		String problem = statementSelectionProblem(row, candidate);
+		if (!problem.isEmpty()) { showReviewError(problem); return; }
+		var scanned = row.getScanned();
+		var documentId = documentIdsByRow.get(scanned); var rowIndex = statementRowIndices.get(scanned);
+		if (documentId == null || rowIndex == null) { showReviewError("Reopen the statement before choosing its matching invoice."); return; }
+		statementSelections.put(scanned, new StatementInvoiceSelection(documentId, rowIndex, scanned, candidate));
+		statementInvoiceEdits.remove(scanned);
+		var recalculated = StatementReconciler.reconcile(allResults.stream().map(InvoiceReconciliation::getScanned).toList(),
+				statementEnteredRows, statementPendingDocuments, selectedStatementRows());
+		List<InvoiceReconciliation> updated = new ArrayList<>();
+		statementInvoicesByRow.clear();
+		for (int i = 0; i < recalculated.size(); i++) {
+			var comparison = recalculated.get(i);
+			var result = comparison; var previous = allResults.get(i);
+			var invoices = statementCandidatesByRow.getOrDefault(result.getScanned(), List.of()).stream()
+					.filter(invoice -> matchesEnteredReference(comparison, invoice)).toList();
+			if (result.hasExpectedAmount() && invoices.size() == 1) statementInvoicesByRow.put(result.getScanned(), invoices.getFirst());
+			boolean sameMatch = result.hasExpectedAmount() && previous.hasExpectedAmount()
+					&& result.getStatus() != InvoiceReconciliation.Status.AMBIGUOUS
+					&& result.getImported().getInvoiceNo().equalsIgnoreCase(previous.getImported().getInvoiceNo());
+			if (result.getScanned() == scanned) result = result.withStatus(InvoiceReconciliation.Status.NEEDS_REVIEW);
+			else if (sameMatch && previous.isAccepted()) result = previous;
+			else if (!sameMatch) statementInvoiceEdits.remove(result.getScanned());
+			updated.add(result);
+		}
+		allResults.setAll(updated); applyResultFilter(); updateSummary(allResults.size());
+		review(updated.get(resultIndex(allResults, row)));
+	}
+
+	private static boolean matchesEnteredReference(InvoiceReconciliation row, StatementInvoice invoice) {
+		return row.hasExpectedAmount() && row.getImported().getInvoiceNo().equalsIgnoreCase(invoice.values().invoiceNo())
+				&& row.getImported().getReconciliationType() == invoice.values().documentType()
+				&& InvoiceReconciler.supplier(row.getImported().getSupplierName()).equals(InvoiceReconciler.supplier(invoice.values().supplierName()));
 	}
 
 	private boolean canRescanSource(InvoiceReconciliation row) {
@@ -2021,11 +2157,12 @@ public final class AiInvoiceScanController extends Controller {
 		int requestedStore = storeId();
 		var edits = allResults.stream().map(row -> statementInvoiceEdits.get(row.getScanned()))
 				.filter(java.util.Objects::nonNull).toList();
+		var selections = allResults.stream().map(row -> statementSelections.get(row.getScanned())).filter(java.util.Objects::nonNull).toList();
 		setCommitBusy(true);
 		summaryLabel.setText("Saving invoice changes and completing the statement…");
 		Task<Void> task = new Task<>() {
 			@Override protected Void call() {
-				documentAiService.completeStatement(batchId, requestedStore, new StatementCompletion(edits)); return null;
+				documentAiService.completeStatement(batchId, requestedStore, new StatementCompletion(edits, selections)); return null;
 			}
 		};
 		task.setOnSucceeded(_ -> {
@@ -2583,6 +2720,7 @@ public final class AiInvoiceScanController extends Controller {
 		scanButton.setDisable(busy);
 		refreshQueueButton.setDisable(busy);
 		reviewAllButton.setDisable(busy || queueBusy);
+		refreshAllAmountsButton.setDisable(busy || queueBusy);
 		resultsBackButton.setDisable(busy);
 		updateAcceptanceControls();
 		updateBulkAcceptanceControls();
