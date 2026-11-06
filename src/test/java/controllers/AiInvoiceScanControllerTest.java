@@ -30,7 +30,6 @@ import models.Store;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -64,21 +63,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class AiInvoiceScanControllerTest {
 	private static final LocalDate DATE = LocalDate.of(2026, 9, 10);
-	private static boolean toolkitStarted;
-
 	@BeforeAll
 	static void startJavaFx() throws Exception {
-		System.setProperty("java.awt.headless", "true");
-		System.setProperty("glass.platform", "Headless");
-		System.setProperty("prism.order", "sw");
-		FutureTask<Void> started = new FutureTask<>(() -> { Platform.setImplicitExit(false); return null; });
-		Platform.startup(started);
-		started.get(10, TimeUnit.SECONDS);
-		toolkitStarted = true;
+		utils.FxTestSupport.start();
 	}
-
-	@AfterAll
-	static void stopJavaFx() { if (toolkitStarted) Platform.exit(); }
 
 	@ParameterizedTest
 	@ValueSource(booleans = { false, true })

@@ -23,12 +23,27 @@ public class AccountPaymentContactService {
     private ObjectMapper objectMapper;
 
     public AccountPaymentContactService() throws IOException {
-        this.restTemplate = new RestTemplate();
+        this(loadProperties());
+    }
+
+    private AccountPaymentContactService(Properties properties) throws IOException {
+        this(ApiHttpClient.create(properties), properties);
+    }
+
+    AccountPaymentContactService(RestTemplate restTemplate, Properties properties) {
+        this.restTemplate = restTemplate;
         this.objectMapper = new ObjectMapper();
-        Properties properties = new Properties();
-        properties.load(AccountPaymentContactService.class.getClassLoader().getResourceAsStream("application.properties"));
         this.apiToken = properties.getProperty("api.token");
         this.apiBaseUrl = properties.getProperty("api.base.url") + "/account-payment-contacts";
+    }
+
+    private static Properties loadProperties() throws IOException {
+        Properties properties = new Properties();
+        try (var input = AccountPaymentContactService.class.getClassLoader().getResourceAsStream("application.properties")) {
+            if (input == null) throw new IOException("Missing application.properties");
+            properties.load(input);
+        }
+        return properties;
     }
 
     private HttpHeaders createHeaders() {

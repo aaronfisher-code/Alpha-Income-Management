@@ -22,6 +22,7 @@ import javafx.stage.FileChooser;
 import models.*;
 import services.AccountPaymentContactService;
 import services.AccountPaymentService;
+import org.springframework.web.client.HttpClientErrorException;
 import utils.AnimationUtils;
 import utils.TableUtils;
 import utils.ValidatorUtils;
@@ -35,6 +36,7 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.Executors;
 
 public class AccountPaymentsPageController extends DateSelectController{
@@ -58,6 +60,8 @@ public class AccountPaymentsPageController extends DateSelectController{
 	private AccountPaymentContactService accountPaymentContactService;
     private TableColumn<AccountPayment,String> descriptionCol;
     private ActionableFilterComboBox<AccountPaymentContactDataPoint> afx;
+	private boolean paymentChangeInProgress;
+	private long tableLoadVersion;
 
 	@FXML
 	private void initialize() {
@@ -216,67 +220,90 @@ public class AccountPaymentsPageController extends DateSelectController{
 	}
 
 	public void fillTable() {
+		reloadTable().exceptionally(failure -> {
+			if (!(unwrapAsyncFailure(failure) instanceof CancellationException)) {
+				dialogPane.showError("Error", "An error occurred while trying to retrieve account payment information", unwrapAsyncFailure(failure));
+			}
+			return null;
+		});
+	}
+
+	private CompletableFuture<List<AccountPayment>> reloadTable() {
 		progressSpinner.setVisible(true);
-		YearMonth yearMonthObject = YearMonth.of(main.getCurrentDate().getYear(), main.getCurrentDate().getMonth());
-		CompletableFuture<List<AccountPayment>> accountPaymentsFuture = CompletableFuture.supplyAsync(() -> {
+		int storeId = main.getCurrentStore().getStoreID();
+		YearMonth month = YearMonth.from(main.getCurrentDate());
+		long version = ++tableLoadVersion;
+		var payments = CompletableFuture.supplyAsync(() -> accountPaymentService.getAccountPaymentsForMonth(storeId, month), executor);
+		var contacts = CompletableFuture.supplyAsync(() -> accountPaymentContactService.getAllAccountPaymentContacts(storeId), executor);
+		var displayed = new CompletableFuture<List<AccountPayment>>();
+		payments.thenCombine(contacts, PaymentTableData::new).whenComplete((data, failure) -> Platform.runLater(() -> {
 			try {
-				return accountPaymentService.getAccountPaymentsForMonth(main.getCurrentStore().getStoreID(), yearMonthObject);
-			} catch (Exception e) {
-				throw new RuntimeException(e);
-			}
-		}, executor);
-		CompletableFuture<List<AccountPaymentContactDataPoint>> contactsFuture = CompletableFuture.supplyAsync(() -> {
-			try {
-				return accountPaymentContactService.getAllAccountPaymentContacts(main.getCurrentStore().getStoreID());
-			} catch (Exception e) {
-				throw new RuntimeException(e);
-			}
-		}, executor);
-		CompletableFuture.allOf(accountPaymentsFuture, contactsFuture).thenRunAsync(() -> {
-			try {
-				List<AccountPayment> currentAccountPaymentDataPoints = accountPaymentsFuture.get();
-				List<AccountPaymentContactDataPoint> contacts = contactsFuture.get();
-				// Create a map to store the totals for each contact
-				Map<String, AccountPaymentContactDataPoint> contactTotalsMap = new HashMap<>();
-				double supplierTotal = 0;
-				for (AccountPayment a : currentAccountPaymentDataPoints) {
-					AccountPaymentContactDataPoint contact = contacts.stream()
-							.filter(c -> c.getContactName().equals(a.getContactName()))
-							.findFirst()
-							.orElse(null);
+				if (version != tableLoadVersion || storeId != main.getCurrentStore().getStoreID()
+						|| !month.equals(YearMonth.from(main.getCurrentDate()))) {
+					displayed.cancel(false);
+					return;
+				}
+				if (failure != null) throw new java.util.concurrent.CompletionException(failure);
+				Map<Integer, AccountPaymentContactDataPoint> contactTotals = new LinkedHashMap<>();
+				for (AccountPayment payment : data.payments()) {
+					AccountPaymentContactDataPoint contact = data.contacts().stream()
+							.filter(c -> c.getContactID() == payment.getContactID()).findFirst().orElse(null);
 					if (contact != null) {
-						// Get or create the contact total
-						AccountPaymentContactDataPoint contactTotal = contactTotalsMap.computeIfAbsent(
-								contact.getContactName(),
-								_ -> new AccountPaymentContactDataPoint(contact.getContactID(), contact.getContactName(), 0)
-						);
-						// Update the total
-						contactTotal.setTotalValue(contactTotal.getTotalValue() + a.getUnitAmount());
-						supplierTotal += a.getUnitAmount();
+						AccountPaymentContactDataPoint total = contactTotals.computeIfAbsent(contact.getContactID(),
+								_ -> new AccountPaymentContactDataPoint(contact.getContactID(), contact.getContactName(), storeId));
+						total.setTotalValue(total.getTotalValue() + payment.getUnitAmount());
 					}
 				}
-				// Convert the map values to a list
-				ObservableList<AccountPaymentContactDataPoint> currentContactTotals =
-						FXCollections.observableArrayList(contactTotalsMap.values());
-				double finalSupplierTotal = supplierTotal;
-				Platform.runLater(() -> {
-					accountPaymentTable.setItems(FXCollections.observableArrayList(currentAccountPaymentDataPoints));
-					accountTotalsTable.setItems(currentContactTotals);
-					supplierTotalLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(finalSupplierTotal));
-
-					if (main.getCurrentUser().getPermissions().stream().anyMatch(permission -> permission.getPermissionName().equals("Account Payments - Edit"))) {
-						addDoubleClickFunction();
-					}
-					TableUtils.resizeTableColumns(accountPaymentTable, descriptionCol);
-					progressSpinner.setVisible(false);
-				});
-			} catch (Exception e) {
-				Platform.runLater(() -> {
-					progressSpinner.setVisible(false);
-					dialogPane.showError("Error", "An error occurred while trying to retrieve account payment information", e);
-				});
+				accountPaymentTable.setItems(FXCollections.observableArrayList(data.payments()));
+				accountTotalsTable.setItems(FXCollections.observableArrayList(contactTotals.values()));
+				double total = data.payments().stream().mapToDouble(AccountPayment::getUnitAmount).sum();
+				supplierTotalLabel.setText(NumberFormat.getCurrencyInstance(Locale.US).format(total));
+				TableUtils.resizeTableColumns(accountPaymentTable, descriptionCol);
+				displayed.complete(data.payments());
+			} catch (Exception error) {
+				displayed.completeExceptionally(unwrapAsyncFailure(error));
+			} finally {
+				if (version == tableLoadVersion && !paymentChangeInProgress) progressSpinner.setVisible(false);
 			}
-		}, executor);
+		}));
+		return displayed;
+	}
+
+	private record PaymentTableData(List<AccountPayment> payments, List<AccountPaymentContactDataPoint> contacts) {}
+
+	private void setPaymentChangeInProgress(boolean busy) {
+		paymentChangeInProgress = busy;
+		addPaymentPopover.setDisable(busy);
+		addList.setDisable(busy);
+		accountPaymentTable.setDisable(busy);
+		monthSelector.setDisable(busy);
+		progressSpinner.setVisible(busy);
+	}
+
+	private void finishPaymentChange(String successMessage, AccountPayment deletedPayment) {
+		closePopover();
+		reloadTable().whenComplete((payments, failure) -> {
+			setPaymentChangeInProgress(false);
+			if (failure != null) {
+				dialogPane.showError("Refresh failed", "The request completed, but the payment list could not be refreshed. Refresh it before making more changes.", unwrapAsyncFailure(failure));
+			} else if (deletedPayment != null && payments.stream().anyMatch(p ->
+					p.getStoreID() == deletedPayment.getStoreID() && p.getInvoiceNumber().equals(deletedPayment.getInvoiceNumber()))) {
+				dialogPane.showError("Deletion not confirmed", "The payment is still present after refreshing. It has not been confirmed as deleted.", "");
+			} else {
+				dialogPane.showInformation("Success", successMessage);
+			}
+		});
+	}
+
+	private void paymentChangeFailed(String action, Throwable failure) {
+		setPaymentChangeInProgress(false);
+		String message = "An error occurred while trying to " + action + " the payment. Refresh the list before retrying if the request timed out.";
+		if (failure instanceof HttpClientErrorException.Conflict) {
+			message = "That invoice number is already used for this store, possibly in another month. Use a different invoice number. The payment was not saved.";
+		} else if (failure instanceof HttpClientErrorException.NotFound) {
+			message = "This payment no longer exists. Refresh the payment list before trying again.";
+		}
+		dialogPane.showError("Unable to " + action + " payment", message, failure);
 	}
 
 	public void exportToXero() {
@@ -332,6 +359,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 	}
 
 	public void openPopover(){
+		if (paymentChangeInProgress) return;
 		saveButton.setOnAction(_ -> addPayment());
 		paymentPopoverTitle.setText("Add new account payment");
 		deleteButton.setVisible(false);
@@ -360,6 +388,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 	}
 
 	public void openPopover(AccountPayment ap){
+		if (paymentChangeInProgress) return;
 		Task<AccountPaymentContactDataPoint> contactsTask = new Task<>() {
 			@Override
 			protected AccountPaymentContactDataPoint call() {
@@ -397,6 +426,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 
 	@Override
 	public void setDate(LocalDate date) {
+		if (paymentChangeInProgress) return;
 		main.setCurrentDate(date);
 		updateMonthSelectorField();
 		fillTable();
@@ -404,6 +434,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 	}
 
 	public void addPayment(){
+		if (paymentChangeInProgress) return;
 		if(!afx.isValid()){afx.requestFocus();}
 		else if(!invoiceNoField.isValid()){invoiceNoField.requestFocus();}
 		else if(!dueDateField.isValid()){dueDateField.requestFocus();}
@@ -415,7 +446,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 		}else{
 			invoiceDateValidationLabel.setVisible(false);
 			AccountPayment newPayment = getNewPayment();
-			progressSpinner.setVisible(true);
+			setPaymentChangeInProgress(true);
 			Task<Void> addPaymentTask = new Task<>() {
 				@Override
 				protected Void call() {
@@ -429,13 +460,14 @@ public class AccountPaymentsPageController extends DateSelectController{
 				descriptionField.clear();
 				amountField.clear();
 				accountAdjustedBox.setSelected(false);
-				fillTable();
-				Platform.runLater(() -> invoiceNoField.requestFocus());
-				progressSpinner.setVisible(false);
+				reloadTable().whenComplete((_, failure) -> {
+					setPaymentChangeInProgress(false);
+					if (failure != null) dialogPane.showError("Refresh failed", "The payment was added, but the list could not be refreshed. Refresh it before adding the payment again.", unwrapAsyncFailure(failure));
+					else invoiceNoField.requestFocus();
+				});
 			});
 			addPaymentTask.setOnFailed(_ -> {
-				dialogPane.showError("Error", "An error occurred while trying to add the payment", addPaymentTask.getException());
-				progressSpinner.setVisible(false);
+				paymentChangeFailed("add", addPaymentTask.getException());
 			});
 			executor.submit(addPaymentTask);
 		}
@@ -453,6 +485,7 @@ public class AccountPaymentsPageController extends DateSelectController{
 	}
 
 	public void editPayment(AccountPayment accountPayment){
+		if (paymentChangeInProgress) return;
 		if(!afx.isValid()){afx.requestFocus();}
 		else if(!invoiceNoField.isValid()){invoiceNoField.requestFocus();}
 		else if(!dueDateField.isValid()){dueDateField.requestFocus();}
@@ -471,60 +504,48 @@ public class AccountPaymentsPageController extends DateSelectController{
 			String description = descriptionField.getText();
 			double unitAmount = Double.parseDouble(amountField.getText());
 			String taxRate = taxRateField.getText();
-			accountPayment.setContactName(contact.getContactName());
-			accountPayment.setContactID(contact.getContactID());
-			accountPayment.setInvoiceNumber(invoiceNo);
-			accountPayment.setInvDate(invoiceDate);
-			accountPayment.setDueDate(dueDate);
-			accountPayment.setDescription(description);
-			accountPayment.setUnitAmount(unitAmount);
-			accountPayment.setAccountAdjusted(accountAdjustedBox.isSelected());
-			accountPayment.setAccountCode(contact.getAccountCode());
-			accountPayment.setTaxRate(taxRate);
-			progressSpinner.setVisible(true);
+			AccountPayment editedPayment = new AccountPayment(
+					contact.getContactName(), contact.getContactID(), accountPayment.getStoreID(),
+					invoiceNo, invoiceDate, dueDate, description, accountPayment.getQuantity(),
+					unitAmount, accountAdjustedBox.isSelected(), contact.getAccountCode(), taxRate);
+			setPaymentChangeInProgress(true);
 			Task<Void> editPaymentTask = new Task<>() {
 				@Override
 				protected Void call() {
-					accountPaymentService.updateAccountPayment(originalInvoiceNo, accountPayment);
+					accountPaymentService.updateAccountPayment(originalInvoiceNo, editedPayment);
 					return null;
 				}
 			};
 			editPaymentTask.setOnSucceeded(_ -> {
-				closePopover();
-				fillTable();
-				dialogPane.showInformation("Success", "Payment was successfully edited");
-				progressSpinner.setVisible(false);
+				finishPaymentChange("Payment was successfully edited", null);
 			});
 			editPaymentTask.setOnFailed(_ -> {
-				dialogPane.showError("Error", "An error occurred while trying to edit the payment", editPaymentTask.getException());
-				progressSpinner.setVisible(false);
+				paymentChangeFailed("edit", editPaymentTask.getException());
 			});
 			executor.submit(editPaymentTask);
 		}
 	}
 
 	public void deletePayment(AccountPayment accountPayment) {
+		if (paymentChangeInProgress) return;
 		dialogPane.showWarning("Confirm Delete",
-				"This action will permanently delete this Account payment from all systems,\n" +
-						"Are you sure you still want to delete this Account payment?").onClose(buttonType -> {
+				"Permanently delete invoice " + accountPayment.getInvoiceNumber() + " for " +
+						accountPayment.getContactName() + " (" + accountPayment.getUnitAmountString() + ")?").onClose(buttonType -> {
 			if (buttonType.equals(ButtonType.OK)) {
-				progressSpinner.setVisible(true);
+				if (paymentChangeInProgress) return;
+				setPaymentChangeInProgress(true);
 				Task<Void> deletePaymentTask = new Task<>() {
 					@Override
 					protected Void call() {
-						accountPaymentService.deleteAccountPayment(accountPayment.getStoreID(), accountPayment.getInvoiceNumber());
+						accountPaymentService.deleteAccountPayment(accountPayment);
 						return null;
 					}
 				};
 				deletePaymentTask.setOnSucceeded(_ -> {
-					closePopover();
-					fillTable();
-					dialogPane.showInformation("Success", "Payment was successfully deleted");
-					progressSpinner.setVisible(false);
+					finishPaymentChange("Payment was successfully deleted", accountPayment);
 				});
 				deletePaymentTask.setOnFailed(event -> {
-					dialogPane.showError("Error", "An error occurred while trying to delete the payment", deletePaymentTask.getException());
-					progressSpinner.setVisible(false);
+					paymentChangeFailed("delete", deletePaymentTask.getException());
 				});
 				executor.submit(deletePaymentTask);
 			}

@@ -25,6 +25,14 @@ operation and updates only Govt Recovery and Script Count in Alpha's database;
 no forwarder upgrade or scheduled-export backfill is required for these live
 report requests. The live agent must be configured and connected.
 
+## Account payment safety
+
+Account payment edits preserve the original record through duplicate-number
+failures. Deletion preserves spaces and reserved characters in invoice references,
+verifies the payment was removed, and refreshes rows and totals before reporting
+success. Deploy the matching Alpha API first, then update all desktops. See
+[behavior, regression coverage, and rollout](docs/account-payment-safety.md).
+
 ## Run locally on Linux/Wayland
 
 The desktop client requires:

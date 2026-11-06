@@ -8,8 +8,6 @@ import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Properties;
@@ -21,13 +19,28 @@ public class AccountPaymentService {
     private ObjectMapper objectMapper;
 
     public AccountPaymentService() throws IOException {
-        this.restTemplate = new RestTemplate();
+        this(loadProperties());
+    }
+
+    private AccountPaymentService(Properties properties) throws IOException {
+        this(ApiHttpClient.create(properties), properties);
+    }
+
+    AccountPaymentService(RestTemplate restTemplate, Properties properties) {
+        this.restTemplate = restTemplate;
         this.objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-        Properties properties = new Properties();
-        properties.load(AccountPaymentService.class.getClassLoader().getResourceAsStream("application.properties"));
         this.apiToken = properties.getProperty("api.token");
         this.apiBaseUrl = properties.getProperty("api.base.url") + "/account-payments";
+    }
+
+    private static Properties loadProperties() throws IOException {
+        Properties properties = new Properties();
+        try (var input = AccountPaymentService.class.getClassLoader().getResourceAsStream("application.properties")) {
+            if (input == null) throw new IOException("Missing application.properties");
+            properties.load(input);
+        }
+        return properties;
     }
 
     private HttpHeaders createHeaders() {
@@ -64,10 +77,17 @@ public class AccountPaymentService {
         );
     }
 
-    public void deleteAccountPayment(int storeId, String invoiceNumber) {
-        String url = apiBaseUrl + "/" + storeId + "/" + URLEncoder.encode(invoiceNumber, StandardCharsets.UTF_8);
+    public void deleteAccountPayment(AccountPayment payment) {
+        int storeId = payment.getStoreID();
+        String invoiceNumber = payment.getInvoiceNumber();
+        String url = apiBaseUrl + "/{storeId}/{invoiceNumber}";
         HttpEntity<?> entity = new HttpEntity<>(createHeaders());
-        restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
+        restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class, storeId, invoiceNumber);
+        boolean stillPresent = getAccountPaymentsForMonth(storeId, YearMonth.from(payment.getInvDate())).stream()
+                .anyMatch(row -> row.getStoreID() == storeId && invoiceNumber.equals(row.getInvoiceNumber()));
+        if (stillPresent) {
+            throw new IllegalStateException("The payment is still present after refreshing. Deletion was not confirmed.");
+        }
     }
 
     public double getTotalPayment(int storeId, YearMonth yearMonth, PaymentType type) {
